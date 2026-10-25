@@ -70,7 +70,7 @@ export default function VisitPage() {
             <Facts
               items={[
                 { label: "Neighborhood", value: "Bankers Hill, near Balboa Park’s west entrance" },
-                { label: "Hours", value: `${site.hours} · ${site.extendedCare.toLowerCase()}` },
+                { label: "Hours", value: `${site.hours} · Early Bird care from 8:00am` },
                 { label: "Parking", value: <ToConfirm /> },
                 { label: "Arriving", value: <>Entrance & check-in <ToConfirm /></> },
                 { label: "Tour length", value: <ToConfirm /> },

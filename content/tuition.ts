@@ -20,7 +20,7 @@ export type Cohort = {
   note?: string;
   /** [days per week, full day, half day] */
   weekly: [number, number, number][];
-  daily: { full: number; half: number } | null;
+  daily: { full: number; half: number };
 };
 
 export const cohorts: Cohort[] = [
@@ -29,7 +29,7 @@ export const cohorts: Cohort[] = [
     name: "Seedlings",
     ratio: "1:4",
     maxSize: 8,
-    note: "Our 2026–2027 Seedlings cohort is full. Rates shown are for 2027–2028.",
+    note: "Our 2026–2027 Seedlings cohort is full. Monthly tuition shown is for 2027–2028.",
     weekly: [
       [5, 2800, 1600],
       [4, 2600, 1300],
@@ -37,7 +37,7 @@ export const cohorts: Cohort[] = [
       [2, 1400, 715],
       [1, 720, 370],
     ],
-    daily: null,
+    daily: { full: 180, half: 90 },
   },
   {
     id: "saplings",

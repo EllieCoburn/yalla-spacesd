@@ -131,11 +131,11 @@ export default function ExperiencePage() {
               <Draft note="Yalla to confirm the day’s rhythm">
                 <ol className="divide-y divide-chalk/20 border-y border-chalk/20">
                   {[
-                    ["8:30", "Arrival & welcome", "Families arrive together; children ease in with open play."],
+                    ["8:30", "Arrival & welcome", "Families arrive together; children ease in with open play. Early Bird care starts at 8:00."],
                     ["Morning", "Gathering & invitations", "A small-group gathering, then invitations to create, build and explore."],
                     ["Midday", "Lunch & rest", "Shared meals and rest, shaped to each child’s age and needs."],
                     ["Afternoon", "Outdoors", "Time in the yard and the neighborhood: digging, climbing, noticing."],
-                    ["4:30", "Together again", "Pick-up, a few stories from the day, and home. Extended care is available."],
+                    ["4:30", "Together again", "Pick-up, a few stories from the day, and home together."],
                   ].map(([t, h, b]) => (
                     <li key={h} className="grid grid-cols-[5.5rem_1fr] gap-4 py-6 sm:grid-cols-[7rem_1fr]">
                       <span className="font-serif text-[1.05rem] text-mist italic">{t}</span>

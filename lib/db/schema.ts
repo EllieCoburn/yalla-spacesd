@@ -252,7 +252,7 @@ export const memberships = pgTable("memberships", {
   childId: text("child_id").notNull().references(() => children.id, { onDelete: "cascade" }),
   programId: text("program_id").notNull().references(() => programs.id),
   weekdays: integer("weekdays").array().notNull(),
-  extendedCare: boolean("extended_care").default(false).notNull(),
+  earlyBird: boolean("early_bird").default(false).notNull(),
   status: membershipStatus("status").default("applied").notNull(),
   startsOn: date("starts_on"),
   stripeSubscriptionId: text("stripe_subscription_id"),

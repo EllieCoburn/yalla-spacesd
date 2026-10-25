@@ -66,7 +66,7 @@ export function TuitionExplorer() {
                   <td className="py-4 text-right font-serif text-[1.35rem]">{usd(day === "full" ? full : half)}</td>
                 </tr>
               ))}
-              {c.daily ? (
+              {(
                 <tr>
                   <td className="py-4 text-[1rem]">
                     Yalla Flex <span className="text-ink-soft">· drop-in day</span>
@@ -76,7 +76,7 @@ export function TuitionExplorer() {
                     <span className="ml-1 font-sans text-[0.75rem] text-ink-soft">/ day</span>
                   </td>
                 </tr>
-              ) : null}
+              )}
             </tbody>
           </table>
         </div>

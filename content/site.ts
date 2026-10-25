@@ -10,7 +10,7 @@ export const site = {
   locationLine: "Historic Bankers Hill, near Balboa Park’s west entrance",
   ages: "4 months – 5 years",
   hours: "Weekdays, 8:30am – 4:30pm",
-  extendedCare: "Optional extended care",
+  extendedCare: "Early Bird care from 8:00am",
   yearRound: true,
   email: { value: "hello@yallaspacesd.com", confirm: false },
   address: { value: null as string | null, confirm: true },

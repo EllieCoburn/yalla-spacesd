@@ -25,7 +25,7 @@
 | Holds | Checkout places short holds (`bookings.hold_expires_at`) so availability stays honest in real time; expired holds are released. |
 | Recurrence | Repeat bookings ("every Tuesday for 8 weeks") materialise booking lines ahead of time; individual dates stay cancellable. |
 | Waitlist | Per session, ordered; families are notified when a space opens. |
-| Membership | Recurring enrollment (weekdays, extended care) billed by Stripe subscription. |
+| Membership | Recurring enrollment (weekdays, full/half day, Early Bird care) billed by Stripe subscription. |
 | Payments / credits | Stripe payment intents; optional session packs as family credits. |
 
 The UI talks to the `BookingProvider` interface in `lib/booking/types.ts`. Today

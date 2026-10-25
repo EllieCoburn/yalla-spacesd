@@ -54,7 +54,7 @@ export default function Home() {
             {[
               ["Ages", site.ages],
               ["Weekdays", "8:30am – 4:30pm"],
-              ["All year", "With optional extended care"],
+              ["All year", "Early Bird care from 8:00am"],
               ["Where", "Bankers Hill, by Balboa Park"],
             ].map(([k, v]) => (
               <div key={k}>
