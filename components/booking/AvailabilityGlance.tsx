@@ -6,10 +6,11 @@ import { useEffect, useState } from "react";
 import { availabilityFor, previewSessions, type PreviewSession } from "@/lib/booking/preview";
 
 const kindLabel: Record<string, string> = {
-  drop_in: "Drop-in",
-  weekend: "Weekend",
-  parents_night: "Night out",
+  drop_in: "Flex",
+  weekend: "Weekends",
+  parents_night: "After Hours",
   camp: "Camp",
+  happening: "Happening",
 };
 
 /** A small live window into the booking calendar for the home page. */

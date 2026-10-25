@@ -28,7 +28,7 @@ export default function MembershipPage() {
             Belong here, <em>week after week.</em>
           </>
         }
-        lede="Membership is our recurring enrollment for The Yalla Day: a steady place for your child in their classroom, and for you in the coworking space."
+        lede="Membership is our recurring enrollment for Yalla Everyday: a steady place for your child in their classroom, and for you in the coworking space."
         image={{ src: "/photos/dinosaurs.jpg", alt: "A child absorbed in play outdoors" }}
       />
 

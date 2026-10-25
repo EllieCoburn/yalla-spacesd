@@ -28,9 +28,12 @@ type Template = { kind: ProgramKind; title: string; start: string; end: string; 
 
 const templates: Record<ProgramKind, Template | null> = {
   membership: null,
-  drop_in: { kind: "drop_in", title: "Drop-in day", start: "08:30", end: "16:30", capacity: 6, minMonths: 4, maxMonths: 60 },
+  nature: null,
+  private_event: null,
+  happening: { kind: "happening", title: "Happening · Pop-up workshop", start: "10:00", end: "11:30", capacity: 14, minMonths: 12, maxMonths: 60 },
+  drop_in: { kind: "drop_in", title: "Flex day", start: "08:30", end: "16:30", capacity: 6, minMonths: 4, maxMonths: 60 },
   weekend: { kind: "weekend", title: "Weekend morning", start: "09:00", end: "12:30", capacity: 10, minMonths: 12, maxMonths: 60 },
-  parents_night: { kind: "parents_night", title: "Parents’ Night Out", start: "17:30", end: "21:00", capacity: 12, minMonths: 12, maxMonths: 60 },
+  parents_night: { kind: "parents_night", title: "After Hours evening", start: "17:30", end: "21:00", capacity: 12, minMonths: 12, maxMonths: 60 },
   camp: { kind: "camp", title: "Camp day", start: "08:30", end: "16:30", capacity: 10, minMonths: 24, maxMonths: 60 },
 };
 
@@ -64,11 +67,12 @@ export function previewSessions(q: AvailabilityQuery): PreviewSession[] {
     };
     const isCampWeek = weekIndex % 6 === 3;
     if (dow >= 1 && dow <= 5) {
-      if (isCampWeek) push(templates.camp!, { groupId: `camp-w${weekIndex}`, title: "Camp week · Little Builders" });
+      if (isCampWeek) push(templates.camp!, { groupId: `camp-w${weekIndex}`, title: "Camp Yalla · Little Builders week" });
       else push(templates.drop_in!);
     }
     if (dow === 6) push(templates.weekend!);
     if (dow === 5 && weekIndex % 2 === 0) push(templates.parents_night!);
+    if (dow === 0 && weekIndex % 2 === 1) push(templates.happening!);
   }
   return out.filter((s) => {
     if (q.kinds?.length && !q.kinds.includes(s.kind)) return false;

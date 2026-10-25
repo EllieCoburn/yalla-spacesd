@@ -126,12 +126,12 @@ export default function Home() {
             </Button>
           </div>
         </div>
-        <div className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-4 lg:mx-auto lg:grid lg:max-w-[1320px] lg:grid-cols-5 lg:overflow-visible">
+        <div className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-4 lg:mx-auto lg:grid lg:max-w-[1320px] lg:grid-cols-4 lg:gap-y-16 lg:overflow-visible">
           {programs.map((p, i) => (
             <Reveal key={p.slug} delay={i * 90} className="w-[72vw] shrink-0 snap-start sm:w-[42vw] lg:w-auto">
               <Link href={`/programs/${p.slug}`} className="group block">
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-                  <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:1024px) 20vw, 70vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
+                  <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:1024px) 25vw, 70vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
                 </div>
                 <p className="eyebrow mt-6 text-[0.6rem] text-ink-soft">{p.short}</p>
                 <h3 className="display mt-2 text-[1.55rem] transition-colors group-hover:text-blue">{p.name}</h3>
@@ -179,7 +179,7 @@ export default function Home() {
                 The next two weeks, <em className="text-mist!">at a glance.</em>
               </h2>
               <p className="mt-6 max-w-md text-chalk/70">
-                Drop-in days, weekend mornings, Parents’ Night Out and camps live in one calendar. Choose a date, add your children and reserve in a
+                Flex days, Weekends, After Hours, Camp Yalla and Happenings live in one calendar. Choose a date, add your children and reserve in a
                 few taps.
               </p>
               <Button href="/book" variant="light" className="mt-10">

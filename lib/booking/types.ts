@@ -7,7 +7,15 @@
  * See docs/ARCHITECTURE.md for the full picture.
  */
 
-export type ProgramKind = "membership" | "drop_in" | "camp" | "parents_night" | "weekend";
+export type ProgramKind =
+  | "membership" // Yalla Everyday
+  | "drop_in" // Yalla Flex
+  | "nature" // Yalla Outside
+  | "camp" // Camp Yalla
+  | "weekend" // Yalla Weekends
+  | "happening" // Yalla Happenings
+  | "parents_night" // Yalla After Hours
+  | "private_event"; // Yalla Celebrations
 
 /** How a family takes the next step for a program. */
 export type BookingMode =
@@ -32,7 +40,7 @@ export interface Program {
 }
 
 /**
- * A bookable occurrence — one drop-in day, one Parents' Night Out evening,
+ * A bookable occurrence — one Flex day, one After Hours evening,
  * one weekend morning. Camps are a SessionGroup that books all days together.
  */
 export interface Session {

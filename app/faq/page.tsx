@@ -18,8 +18,8 @@ const groups: { title: string; items: QA[] }[] = [
         q: "Do I need to stay onsite while my child is in care?",
         a: (
           <>
-            Our everyday program, The Yalla Day, is designed around parents and caregivers working onsite in our coworking space, close to
-            their children all day. Some offerings, like Parents’ Night Out, are drop-off by design. Each program page notes how it works.{" "}
+            Our weekly program, Yalla Everyday, is designed around parents and caregivers working onsite in our coworking space, close to
+            their children all day. Some offerings, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
             <ToConfirm>Policy details</ToConfirm>
           </>
         ),
@@ -46,7 +46,7 @@ const groups: { title: string; items: QA[] }[] = [
     title: "Booking & changes",
     items: [
       {
-        q: "How do I book drop-in days, camps or Parents’ Night Out?",
+        q: "How do I book Yalla Flex, Camp Yalla, Weekends or After Hours?",
         a: "Head to Book Care, filter by offering, your child’s age and date, then choose your sessions and reserve. Your bookings live in the Family Portal, where you can view or change them.",
       },
       {

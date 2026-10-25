@@ -8,7 +8,7 @@ import { programs } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "Programs",
-  description: "Ongoing childcare, drop-in days, camps, Parents’ Night Out and weekend care at Yalla in Bankers Hill, San Diego.",
+  description: "Weekly childcare, drop-in days, nature playschool in Balboa Park, camps, weekend care, Happenings, parents’ nights out and private celebrations at Yalla.",
 };
 
 export default function ProgramsPage() {
@@ -41,7 +41,7 @@ export default function ProgramsPage() {
                     <p className="mt-4 max-w-lg text-ink-soft">{p.summary}</p>
                   </div>
                   <span className="flex items-center gap-3 text-[0.85rem] md:col-span-2 md:justify-end">
-                    {p.bookingMode === "enroll" ? "Enrollment" : "Book online"}
+                    {p.bookingMode === "enroll" ? "Enrollment" : p.bookingMode === "inquire" ? "Enquire" : "Book online"}
                     <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/20 transition-all duration-500 group-hover:border-ink group-hover:bg-ink group-hover:text-chalk">
                       <Arrow className="h-3 w-4" />
                     </span>

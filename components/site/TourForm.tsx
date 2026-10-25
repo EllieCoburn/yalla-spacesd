@@ -72,7 +72,7 @@ export function TourForm() {
                   on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink/60"
                 }`}
               >
-                {p.short}
+                {p.name}
               </button>
             );
           })}

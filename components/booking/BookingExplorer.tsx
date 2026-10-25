@@ -11,10 +11,11 @@ import { Checkout } from "./Checkout";
 
 export const offerings: { kind: ProgramKind | "all"; label: string }[] = [
   { kind: "all", label: "Everything" },
-  { kind: "drop_in", label: "Drop-in care" },
-  { kind: "weekend", label: "Weekend care" },
-  { kind: "parents_night", label: "Parents’ Night Out" },
-  { kind: "camp", label: "Camps" },
+  { kind: "drop_in", label: "Yalla Flex" },
+  { kind: "weekend", label: "Yalla Weekends" },
+  { kind: "parents_night", label: "Yalla After Hours" },
+  { kind: "camp", label: "Camp Yalla" },
+  { kind: "happening", label: "Yalla Happenings" },
 ];
 
 export const ageBands = [
@@ -242,11 +243,14 @@ export function BookingExplorer() {
 }
 
 const kindName: Record<ProgramKind, string> = {
-  membership: "Membership",
-  drop_in: "Drop-in care",
-  weekend: "Weekend care",
-  parents_night: "Parents’ Night Out",
-  camp: "Camp",
+  membership: "Yalla Everyday",
+  drop_in: "Yalla Flex · Drop-in",
+  nature: "Yalla Outside",
+  weekend: "Yalla Weekends",
+  happening: "Yalla Happenings",
+  parents_night: "Yalla After Hours",
+  camp: "Camp Yalla",
+  private_event: "Yalla Celebrations",
 };
 
 function SessionRow({ s, childAge, selected, onToggle }: { s: PreviewSession; childAge?: number; selected: boolean; onToggle: () => void }) {

@@ -5,7 +5,7 @@ import { Eyebrow } from "@/components/ui/primitives";
 
 export const metadata: Metadata = {
   title: "Book Care",
-  description: "Browse live availability for drop-in care, weekend care, Parents’ Night Out and camps at Yalla, and reserve in moments.",
+  description: "Browse live availability for Yalla Flex, Yalla Weekends, Yalla After Hours, Camp Yalla and Yalla Happenings, and reserve in moments.",
 };
 
 export default function BookPage() {

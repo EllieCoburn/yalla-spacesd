@@ -31,7 +31,16 @@ const timestamps = {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 };
 
-export const programKind = pgEnum("program_kind", ["membership", "drop_in", "camp", "parents_night", "weekend"]);
+export const programKind = pgEnum("program_kind", [
+  "membership",
+  "drop_in",
+  "nature",
+  "camp",
+  "weekend",
+  "happening",
+  "parents_night",
+  "private_event",
+]);
 export const bookingMode = pgEnum("booking_mode", ["instant", "request", "enroll", "inquire"]);
 export const bookingStatus = pgEnum("booking_status", ["held", "pending_payment", "requested", "confirmed", "waitlisted", "cancelled"]);
 export const formStatus = pgEnum("form_status", ["missing", "submitted", "approved", "expiring", "expired"]);
