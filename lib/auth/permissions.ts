@@ -144,3 +144,7 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
     ],
   },
 ];
+
+export const PERMISSION_ITEMS: { key: Permission; label: string; group: string }[] = PERMISSION_GROUPS.flatMap((g) =>
+  (g.items as readonly { key: string; label: string }[]).map((i) => ({ key: i.key as Permission, label: i.label, group: g.group })),
+);

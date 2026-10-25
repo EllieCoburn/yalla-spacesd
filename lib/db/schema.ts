@@ -866,3 +866,34 @@ export const messages = pgTable(
   },
   (t) => [index("messages_family_idx").on(t.familyId), index("messages_related_idx").on(t.relatedType, t.relatedId)],
 );
+
+/* ───────────────────────── Family portal sign-in ───────────────────────── */
+
+/** Passwordless sign-in links for guardians (stored hashed, single use, short-lived). */
+export const familyAuthTokens = pgTable("family_auth_tokens", {
+  id: id(),
+  guardianId: text("guardian_id")
+    .notNull()
+    .references(() => guardians.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  createdAt: createdAt(),
+});
+
+/** Each guardian signs in separately; access to billing/sensitive data follows their own flags. */
+export const familySessions = pgTable(
+  "family_sessions",
+  {
+    id: id(),
+    guardianId: text("guardian_id")
+      .notNull()
+      .references(() => guardians.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdAt: createdAt(),
+    lastSeenAt: ts("last_seen_at").defaultNow().notNull(),
+    expiresAt: ts("expires_at").notNull(),
+    revokedAt: ts("revoked_at"),
+  },
+  (t) => [index("family_sessions_guardian_idx").on(t.guardianId)],
+);

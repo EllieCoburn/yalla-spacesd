@@ -137,7 +137,7 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
       const age = ageInMonths(c.birthDate, s.localDate);
       const name = c.preferredName || c.firstName;
       if ((p.minAgeMonths != null && age < p.minAgeMonths) || (p.maxAgeMonths != null && age > p.maxAgeMonths))
-        problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside ${p.name}’s age range.` });
+        problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${p.name}.` });
       if (s.cohortId && c.cohortId && c.cohortId !== s.cohortId && p.kind !== "drop_in")
         problems.push({ sessionId: s.id, childId: c.id, code: "cohort", message: `${name} is assigned to a different cohort than this session.` });
     }
