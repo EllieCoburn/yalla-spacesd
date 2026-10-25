@@ -1,0 +1,152 @@
+/**
+ * Business policies. Nothing here is assumed: every policy that affects families or money
+ * starts with a conservative default and is flagged "needs your decision" until someone at
+ * Yalla saves it in Settings → Policies.
+ */
+import { eq, inArray } from "drizzle-orm";
+import { audit, type Actor } from "@/lib/audit";
+import type { Executor } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+
+type PolicyDef<T> = { label: string; help: string; default: T; decision: boolean; group: string; options?: { value: string; label: string }[] };
+
+export const POLICIES = {
+  "booking.holdMinutes": {
+    group: "Booking",
+    label: "Checkout hold (minutes)",
+    help: "How long spots are held while a family completes checkout. Expired holds release automatically.",
+    default: 15,
+    decision: false,
+  } as PolicyDef<number>,
+  "booking.refundOnCancel": {
+    group: "Booking",
+    label: "Refunds when a booking is cancelled",
+    help: "Cancelling never issues a refund by itself. Choose whether staff should be prompted to refund, offer credit, or neither.",
+    default: "prompt",
+    decision: true,
+    options: [
+      { value: "prompt", label: "Prompt staff to decide each time" },
+      { value: "credit", label: "Suggest account credit" },
+      { value: "none", label: "No refund or credit suggested" },
+    ],
+  } as PolicyDef<string>,
+  "membership.absenceReleasesSpot": {
+    group: "Club Yalla",
+    label: "Absences release the spot for drop-in resale",
+    help: "When a member is marked absent ahead of time, may that spot be sold as Yalla Flex?",
+    default: false,
+    decision: true,
+  } as PolicyDef<boolean>,
+  "membership.makeupDays": {
+    group: "Club Yalla",
+    label: "Makeup days",
+    help: "Whether members can make up missed days, and how.",
+    default: "not_offered",
+    decision: true,
+    options: [
+      { value: "not_offered", label: "Not offered" },
+      { value: "same_month", label: "Within the same month, subject to space" },
+      { value: "staff_discretion", label: "At staff discretion" },
+    ],
+  } as PolicyDef<string>,
+  "membership.proration": {
+    group: "Club Yalla",
+    label: "Proration for mid-period starts and changes",
+    help: "How the first or changed billing period is charged.",
+    default: "none",
+    decision: true,
+    options: [
+      { value: "none", label: "No proration (full period)" },
+      { value: "daily", label: "Prorate by scheduled days" },
+      { value: "staff_discretion", label: "Staff decide each time" },
+    ],
+  } as PolicyDef<string>,
+  "membership.pause": {
+    group: "Club Yalla",
+    label: "Membership pauses",
+    help: "Whether memberships can be paused, and whether the spot is held during a pause.",
+    default: "not_offered",
+    decision: true,
+    options: [
+      { value: "not_offered", label: "Not offered" },
+      { value: "hold_spot", label: "Allowed; spot is held (billing continues unless staff adjust)" },
+      { value: "release_spot", label: "Allowed; spot may be released" },
+    ],
+  } as PolicyDef<string>,
+  "billing.siblingDiscountPercent": {
+    group: "Billing",
+    label: "Sibling discount (%)",
+    help: "Applied to each additional child in the same booking or membership. 0 = none.",
+    default: 0,
+    decision: true,
+  } as PolicyDef<number>,
+  "billing.taxPercent": {
+    group: "Billing",
+    label: "Tax rate (%)",
+    help: "Applied to taxable line items. Confirm with your accountant; childcare is often exempt.",
+    default: 0,
+    decision: true,
+  } as PolicyDef<number>,
+  "billing.depositsEnabled": {
+    group: "Billing",
+    label: "Deposits and installment plans",
+    help: "Allow programs with a deposit amount to collect it first and the balance later.",
+    default: false,
+    decision: true,
+  } as PolicyDef<boolean>,
+  "waitlist.autoOfferDefault": {
+    group: "Waitlist",
+    label: "Automatic waitlist offers",
+    help: "When a spot opens, automatically offer it to the next eligible family (programs can override).",
+    default: false,
+    decision: true,
+  } as PolicyDef<boolean>,
+  "security.requireMfaForOwners": {
+    group: "Security",
+    label: "Require two-step verification for owners",
+    help: "Owners must set up an authenticator app before using the portal (enforced on production).",
+    default: true,
+    decision: false,
+  } as PolicyDef<boolean>,
+} as const;
+
+export type PolicyKey = keyof typeof POLICIES;
+type PolicyValue<K extends PolicyKey> = (typeof POLICIES)[K]["default"];
+
+export async function getPolicy<K extends PolicyKey>(db: Executor, key: K): Promise<PolicyValue<K>> {
+  const [row] = await db.select().from(settings).where(eq(settings.key, key));
+  return (row ? row.value : POLICIES[key].default) as PolicyValue<K>;
+}
+
+export async function listPolicies(db: Executor) {
+  const keys = Object.keys(POLICIES) as PolicyKey[];
+  const rows = await db.select().from(settings).where(inArray(settings.key, keys));
+  const byKey = new Map(rows.map((r) => [r.key, r]));
+  return keys.map((key) => {
+    const def = POLICIES[key];
+    const row = byKey.get(key);
+    return {
+      key,
+      ...def,
+      value: row ? row.value : def.default,
+      needsDecision: def.decision && !row,
+      updatedAt: row?.updatedAt ?? null,
+      updatedBy: row?.updatedBy ?? null,
+    };
+  });
+}
+
+export async function setPolicy(db: Executor, actor: Actor, key: PolicyKey, value: unknown) {
+  const before = await getPolicy(db, key);
+  await db
+    .insert(settings)
+    .values({ key, value, updatedBy: actor.name })
+    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date(), updatedBy: actor.name } });
+  await audit(db, actor, {
+    action: "settings.policy",
+    entityType: "setting",
+    entityId: key,
+    summary: `Set “${POLICIES[key].label}”`,
+    changes: { [key]: { from: before, to: value } },
+  });
+}

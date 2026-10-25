@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { leavePortal } from "@/app/prospective/actions";
+import { leavePortal } from "@/app/(site)/prospective/actions";
 import { Mark } from "@/components/brand/Mark";
 import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 import { Button, Eyebrow, Index } from "@/components/ui/primitives";

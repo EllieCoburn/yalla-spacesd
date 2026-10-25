@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { enterPortal } from "@/app/prospective/actions";
+import { enterPortal } from "@/app/(site)/prospective/actions";
 import { Mark } from "@/components/brand/Mark";
 import { Field } from "@/components/site/TourForm";
 
