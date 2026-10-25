@@ -44,8 +44,8 @@ export default function MembershipPage() {
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
-              Children are cared for in four cohorts, each with a low caregiver-to-child ratio and a small maximum size. Choose full days or half
-              days, one to five days a week. <ToConfirm>Cohort age ranges</ToConfirm>
+              Children are cared for in one of our four cohorts, each with a low caregiver-to-child ratio and a small maximum size. Families
+              join our core community through a recurring membership, creating a familiar weekly rhythm with consistent days of care. <ToConfirm>Cohort age ranges</ToConfirm>
             </p>
           </div>
 
