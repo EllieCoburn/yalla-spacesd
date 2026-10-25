@@ -1,0 +1,150 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import { Mark } from "@/components/brand/Mark";
+import { CtaBand, Facts, PageHero, Section } from "@/components/site/PageParts";
+import { Draft, ToConfirm } from "@/components/ui/Draft";
+import { Index } from "@/components/ui/primitives";
+import { Reveal } from "@/components/ui/Reveal";
+
+export const metadata: Metadata = {
+  title: "Our Spaces",
+  description: "Classrooms, outdoor play spaces and a calm coworking room for parents, in Bankers Hill, San Diego.",
+};
+
+function Gallery({ images }: { images: { src: string; alt: string; className: string }[] }) {
+  return (
+    <div className="grid grid-cols-6 gap-3 sm:gap-5">
+      {images.map((img, i) => (
+        <Reveal key={img.src + i} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
+          <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 50vw, 100vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] hover:scale-[1.04]" />
+        </Reveal>
+      ))}
+    </div>
+  );
+}
+
+export default function SpacesPage() {
+  return (
+    <>
+      <PageHero
+        eyebrow="Our Spaces"
+        mark="window"
+        title={
+          <>
+            A historic corner of Bankers Hill, <em>made for little lives.</em>
+          </>
+        }
+        lede="Classrooms made for play, a shaded yard for exploring, and a calm coworking room for you, all within a few steps of each other."
+      />
+
+      <section className="pb-6">
+        <div className="shell">
+          <Gallery
+            images={[
+              { src: "/photos/garden.jpg", alt: "The outdoor yard framed by trees", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:aspect-auto sm:row-span-2" },
+              { src: "/photos/dinosaurs.jpg", alt: "A child playing outdoors with toy dinosaurs", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/lemon-play.jpg", alt: "Sensory play at the water table", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full" },
+            ]}
+          />
+          <p className="mt-6 text-[0.8rem] text-ink-soft">
+            Placeholder photography from our current site. <ToConfirm>New photography</ToConfirm>
+          </p>
+        </div>
+      </section>
+
+      {/* Classrooms */}
+      <Section>
+        <div className="shell grid gap-14 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <Index n="01">The classrooms</Index>
+            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+              Rooms that <em>invite.</em>
+            </h2>
+            <p className="mt-6 text-[1.05rem] text-ink-soft">
+              Every corner is arranged with care and intention, with materials to build with, pour, paint and wonder over, and room for
+              each child to follow their curiosity.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:col-span-6 lg:col-start-7">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
+              <Image src="/photos/painting.jpg" alt="Children painting" fill sizes="25vw" className="object-cover" />
+            </div>
+            <div className="relative mt-16 aspect-[3/4] overflow-hidden bg-sand">
+              <Image src="/photos/sunflowers.jpg" alt="Sunflowers on a classroom table" fill sizes="25vw" className="object-cover" />
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Outdoors */}
+      <Section tone="paper">
+        <div className="shell grid items-center gap-14 lg:grid-cols-12">
+          <div className="relative order-2 lg:order-1 lg:col-span-6">
+            <div className="relative aspect-[5/4] overflow-hidden bg-sand">
+              <Image src="/photos/garden.jpg" alt="Trees and picnic tables in Yalla’s yard" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
+            </div>
+            <Mark name="palm" className="absolute -right-4 -bottom-10 h-44 w-auto text-blue" />
+          </div>
+          <div className="order-1 lg:order-2 lg:col-span-5 lg:col-start-8">
+            <Index n="02">Outdoors</Index>
+            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+              Under the trees, <em>by the park.</em>
+            </h2>
+            <p className="mt-6 text-[1.05rem] text-ink-soft">
+              San Diego weather is an invitation, and we take it. Our yard sits beneath the trees, and Balboa Park’s west entrance is just
+              down the road.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* Coworking */}
+      <section className="roofline-edge bg-ink text-ink">
+        <div className="py-20 text-chalk lg:py-32">
+          <div className="shell grid gap-14 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <p className="eyebrow text-chalk/60">03 · The coworking space</p>
+              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                Your desk, <em className="text-mist!">a few steps away.</em>
+              </h2>
+              <p className="mt-6 text-chalk/75">
+                A calm, beautifully designed room for focused work, built for parents who want to do great work and stay close to their
+                children.
+              </p>
+              <div className="relative mt-12 aspect-[4/5] w-[85%] overflow-hidden rounded-t-[999px] bg-chalk/10">
+                <Image src="/photos/cowork-loft.jpg" alt="The coworking room seen from above" fill sizes="(min-width:1024px) 35vw, 85vw" className="object-cover" />
+              </div>
+            </div>
+            <div className="lg:col-span-6 lg:col-start-7 lg:pt-24">
+              <p className="eyebrow mb-6 text-chalk/60">Working onsite</p>
+              <div className="[&_dd]:text-chalk [&_dl]:border-chalk/20 [&_dl>div]:border-chalk/20 [&_dt]:text-chalk/60">
+                <Draft note="Yalla to provide onsite details">
+                  <Facts
+                    items={[
+                      { label: "Hours", value: "Weekdays 8:30am – 4:30pm, alongside childcare" },
+                      { label: "Workspace", value: <>Desk options <ToConfirm /></> },
+                      { label: "Calls", value: <>Private spots for calls <ToConfirm /></> },
+                      { label: "Wi-Fi & power", value: <>Details <ToConfirm /></> },
+                      { label: "Refreshments", value: <>Details <ToConfirm /></> },
+                      { label: "Parking", value: <>Details <ToConfirm /></> },
+                    ]}
+                  />
+                </Draft>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <CtaBand
+        title={
+          <>
+            Photos are lovely. <em>Visiting is better.</em>
+          </>
+        }
+        primary={{ href: "/visit", label: "Schedule a tour" }}
+        secondary={{ href: "/membership", label: "Membership & tuition" }}
+      />
+    </>
+  );
+}
