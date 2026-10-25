@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Mark } from "@/components/brand/Mark";
-import { CtaBand, Facts, PageHero, Section } from "@/components/site/PageParts";
-import { Draft, ToConfirm } from "@/components/ui/Draft";
+import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
+import { TuitionExplorer } from "@/components/site/TuitionExplorer";
+import { ToConfirm } from "@/components/ui/Draft";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
+import { fees, membershipIncludes, tuitionYear, workspace } from "@/content/tuition";
 
 export const metadata: Metadata = {
   title: "Membership & Tuition",
-  description: "Recurring enrollment at Yalla: what tuition includes and how families get started.",
+  description: "Yalla Everyday tuition by cohort and schedule, what every membership includes, and how families get started.",
 };
 
 const steps = [
@@ -28,57 +30,79 @@ export default function MembershipPage() {
             Belong here, <em>week after week.</em>
           </>
         }
-        lede="Membership is our recurring enrollment for Yalla Everyday: a steady place for your child in their classroom, and for you in the coworking space."
+        lede="Membership is our recurring enrollment for Yalla Everyday: a steady place for your child in their cohort, and for you in the coworking space."
         image={{ src: "/photos/dinosaurs.jpg", alt: "A child absorbed in play outdoors" }}
       />
 
+      {/* Tuition */}
       <Section tone="paper">
-        <div className="shell grid gap-14 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <Index n="01">Enrollment options</Index>
-            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-              A rhythm that <em>fits.</em>
-            </h2>
-            <p className="mt-6 text-ink-soft">Choose the weekly schedule that suits your family. Extended care can be added.</p>
+        <div className="shell">
+          <div className="grid gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <Index n="01">{tuitionYear} tuition</Index>
+              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                Small cohorts, <em>by design.</em>
+              </h2>
+            </div>
+            <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
+              Children are cared for in four cohorts, each with a low caregiver-to-child ratio and a small maximum size. Choose full days or half
+              days, one to five days a week. <ToConfirm>Cohort age ranges</ToConfirm>
+            </p>
           </div>
-          <div className="lg:col-span-7 lg:col-start-6">
-            <Draft note="Yalla to provide plans & tuition">
-              <div className="grid gap-px overflow-hidden bg-line sm:grid-cols-3">
-                {["Plan one", "Plan two", "Plan three"].map((name, i) => (
-                  <div key={name} className="flex flex-col bg-chalk p-8">
-                    <Mark name={(["arch", "window", "balcony"] as const)[i]} className="h-10 w-auto self-start text-blue" />
-                    <p className="display mt-8 text-[1.6rem]">{name}</p>
-                    <p className="mt-2 text-[0.9rem] text-ink-soft">Days per week, hours and tuition</p>
-                    <p className="mt-6">
-                      <ToConfirm />
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Draft>
+          <div className="mt-14">
+            <TuitionExplorer />
           </div>
         </div>
       </Section>
 
+      {/* Included + fees */}
       <Section>
         <div className="shell grid gap-14 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <Index n="02">What tuition includes</Index>
+          <div className="lg:col-span-5">
+            <Index n="02">Every membership includes</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Everything, <em>considered.</em>
             </h2>
+            <ul className="mt-10 space-y-4">
+              {membershipIncludes.map((x) => (
+                <li key={x} className="flex items-start gap-4 text-[1.02rem]">
+                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
+                  {x}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="lg:col-span-7 lg:col-start-6">
-            <Facts
-              items={[
-                { label: "Childcare", value: "Play-based care with Yalla educators, weekdays 8:30am – 4:30pm" },
-                { label: "Coworking", value: <>Onsite workspace for parents & caregivers <ToConfirm /></> },
-                { label: "Extended care", value: <>Optional add-on <ToConfirm>Pricing</ToConfirm></> },
-                { label: "Meals & snacks", value: <ToConfirm /> },
-                { label: "Materials", value: <ToConfirm /> },
-                { label: "Community", value: <>Family gatherings & events <ToConfirm /></> },
-              ]}
-            />
+          <div className="lg:col-span-6 lg:col-start-7">
+            <p className="eyebrow text-ink-soft">Fees</p>
+            <dl className="mt-6 divide-y divide-line border-y border-line">
+              {fees.map((f) => (
+                <div key={f.label} className="flex items-baseline justify-between gap-6 py-5">
+                  <dt>
+                    <span className="block text-[1rem]">{f.label}</span>
+                    <span className="text-[0.82rem] text-ink-soft">{f.note}</span>
+                  </dt>
+                  <dd className="font-serif text-[1.35rem] whitespace-nowrap">{f.amount}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <p className="eyebrow mt-16 text-ink-soft">Workspace upgrades</p>
+            <p className="mt-3 text-[0.95rem] text-ink-soft">Communal coworking is included. For more privacy, add a desk or office of your own.</p>
+            <div className="mt-6 grid gap-px overflow-hidden bg-line sm:grid-cols-2">
+              {workspace.map((w) => (
+                <div key={w.name} className="bg-paper p-6">
+                  <p className="display text-[1.5rem]">{w.name}</p>
+                  <dl className="mt-4 space-y-2">
+                    {w.rates.map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-[0.95rem]">
+                        <dt className="text-ink-soft">{k}</dt>
+                        <dd className="font-serif">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </Section>

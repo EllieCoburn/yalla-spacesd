@@ -16,7 +16,7 @@ type Props = {
   width?: number;
   height?: number;
   className?: string;
-  /** Pane colour and ground colour as CSS colours. */
+  /** Pane color and ground color as CSS colors. */
   pane?: string;
   ground?: string;
   /** Adds the long hand-drawn horizon line from the logo. */

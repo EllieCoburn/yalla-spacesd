@@ -29,8 +29,12 @@ const groups: { title: string; items: QA[] }[] = [
         a: "We serve families with children from around four months through five years old. Some offerings may have their own age range, shown on each program page and in the booking calendar.",
       },
       {
+        q: "What are your caregiver-to-child ratios?",
+        a: "Our cohorts are deliberately small. Seedlings and Saplings have a maximum ratio of 1:4 and at most 8 children; Sprouts 1:6 with at most 12; and Wildflowers 1:8 with at most 12.",
+      },
+      {
         q: "What are your hours?",
-        a: "Our programs run year-round on weekdays from 8:30am to 4:30pm, with optional extended care. Weekend sessions and other offerings have their own times, listed in the booking calendar.",
+        a: "Yalla Everyday runs year-round on weekdays. Full days are 8:30am to 4:30pm and half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Weekend sessions and other offerings have their own times, listed in the booking calendar.",
       },
     ],
   },

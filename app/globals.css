@@ -43,7 +43,7 @@
   }
 }
 
-/* Paper grain — a whisper of texture so flat colour reads as printed stock. */
+/* Paper grain — a whisper of texture so flat color reads as printed stock. */
 body::before {
   content: "";
   position: fixed;
@@ -93,7 +93,7 @@ body::before {
     border-color: var(--color-line);
   }
 
-  /* The scalloped parapet from the logo, used as a roofline edge on coloured bands. */
+  /* The scalloped parapet from the logo, used as a roofline edge on colored bands. */
   .roofline-edge {
     position: relative;
   }

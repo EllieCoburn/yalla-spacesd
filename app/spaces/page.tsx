@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Mark } from "@/components/brand/Mark";
 import { CtaBand, Facts, PageHero, Section } from "@/components/site/PageParts";
-import { Draft, ToConfirm } from "@/components/ui/Draft";
+import { ToConfirm } from "@/components/ui/Draft";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 
@@ -118,18 +118,17 @@ export default function SpacesPage() {
             <div className="lg:col-span-6 lg:col-start-7 lg:pt-24">
               <p className="eyebrow mb-6 text-chalk/60">Working onsite</p>
               <div className="[&_dd]:text-chalk [&_dl]:border-chalk/20 [&_dl>div]:border-chalk/20 [&_dt]:text-chalk/60">
-                <Draft note="Yalla to provide onsite details">
                   <Facts
                     items={[
                       { label: "Hours", value: "Weekdays 8:30am – 4:30pm, alongside childcare" },
-                      { label: "Workspace", value: <>Desk options <ToConfirm /></> },
-                      { label: "Calls", value: <>Private spots for calls <ToConfirm /></> },
-                      { label: "Wi-Fi & power", value: <>Details <ToConfirm /></> },
-                      { label: "Refreshments", value: <>Details <ToConfirm /></> },
+                      { label: "Workspace", value: "Communal coworking for members, with private desks and offices available to rent" },
+                      { label: "Calls", value: "Private phone booths available to rent" },
+                      { label: "Internet", value: "High-speed internet" },
+                      { label: "Refreshments", value: "Complimentary coffee, tea and light snacks, plus a shared kitchen" },
+                      { label: "Printing", value: "Unlimited color printing" },
                       { label: "Parking", value: <>Details <ToConfirm /></> },
                     ]}
                   />
-                </Draft>
               </div>
             </div>
           </div>

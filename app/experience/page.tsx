@@ -36,7 +36,7 @@ const steps = [
 
 const approach = [
   { title: "Play is the work", body: "Children learn by doing: building, pouring, painting, digging, pretending. Our days are designed around open-ended play, not worksheets." },
-  { title: "Relationships first", body: "Children thrive with adults they trust. Our cohorts let educators truly know each child, and each family." },
+  { title: "Relationships first", body: "Children thrive with adults they trust. Small cohorts, with as few as four children per educator for our youngest, let educators truly know each child and each family." },
   { title: "Guided with intention", body: "Every material, invitation and transition is chosen on purpose. The environment does a great deal of quiet teaching." },
   { title: "Raised in community", body: "Raising children is personal and communal. At Yalla, families share the everyday rhythms of work, play and care." },
 ];
@@ -96,8 +96,8 @@ export default function ExperiencePage() {
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
             <p className="lede text-ink-soft">
-              Our programs are play-based, relationship-led and unhurried. We give children beautiful materials, time and trusted adults, and
-              let their curiosity set the pace.
+              Our care is rooted in the Reggio Emilia and RIE approaches: play-based, relationship-led and unhurried. Credentialed early
+              childhood educators give children beautiful materials, time and their full attention, and let curiosity set the pace.
             </p>
             <div className="mt-14 space-y-12">
               {approach.map((a, i) => (
@@ -134,7 +134,7 @@ export default function ExperiencePage() {
                     ["8:30", "Arrival & welcome", "Families arrive together; children ease in with open play."],
                     ["Morning", "Gathering & invitations", "A small-group gathering, then invitations to create, build and explore."],
                     ["Midday", "Lunch & rest", "Shared meals and rest, shaped to each child’s age and needs."],
-                    ["Afternoon", "Outdoors", "Time in the yard and the neighbourhood: digging, climbing, noticing."],
+                    ["Afternoon", "Outdoors", "Time in the yard and the neighborhood: digging, climbing, noticing."],
                     ["4:30", "Together again", "Pick-up, a few stories from the day, and home. Extended care is available."],
                   ].map(([t, h, b]) => (
                     <li key={h} className="grid grid-cols-[5.5rem_1fr] gap-4 py-6 sm:grid-cols-[7rem_1fr]">
