@@ -243,7 +243,7 @@ export function BookingExplorer() {
 }
 
 const kindName: Record<ProgramKind, string> = {
-  membership: "Yalla Everyday",
+  membership: "Club Yalla",
   drop_in: "Yalla Flex · Drop-in",
   nature: "Yalla Outside",
   weekend: "Yalla Weekends",

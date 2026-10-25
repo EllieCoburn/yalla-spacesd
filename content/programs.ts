@@ -25,15 +25,15 @@ export interface ProgramContent {
 
 export const programs: ProgramContent[] = [
   {
-    slug: "yalla-everyday",
+    slug: "club-yalla",
     kind: "membership",
-    name: "Yalla Everyday",
+    name: "Club Yalla",
     short: "Fixed weekly care",
     tagline: "Your weekly childcare rhythm",
     summary:
       "Fixed weekly, play-based childcare while you work onsite. Your child builds lasting relationships with their educators and friends, and you get real hours of focus a short walk away.",
     body: [
-      "Yalla Everyday is the heart of what we do. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in classrooms and outdoor spaces made for them.",
+      "Club Yalla is the heart of what we do. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in classrooms and outdoor spaces made for them.",
       "Parents and caregivers work onsite in our coworking space. You get uninterrupted time for your own work, and you’re close by all day. That closeness is the reason Yalla exists.",
     ],
     image: "/photos/dinosaurs.jpg",
@@ -60,7 +60,7 @@ export const programs: ProgramContent[] = [
     summary:
       "Reserve individual days in our classrooms when there’s space. Ideal for flexible schedules, visiting family, or getting to know Yalla.",
     body: [
-      "Flex days follow the same thoughtful rhythm as Yalla Everyday, so your child joins a classroom already in full swing.",
+      "Flex days follow the same thoughtful rhythm as Club Yalla, so your child joins a classroom already in full swing.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
     ],
     image: "/photos/lemon-play.jpg",

@@ -23,7 +23,7 @@ export default async function ProspectiveHome() {
               Welcome. <em>Here’s everything.</em>
             </h1>
             <p className="mt-5 max-w-xl text-[1.05rem] text-ink-soft">
-              Current {tuitionYear} rates for Yalla Everyday and Yalla Flex, plus fees and workspace options. Questions are always welcome.
+              Current {tuitionYear} rates for Club Yalla and Yalla Flex, plus fees and workspace options. Questions are always welcome.
             </p>
           </div>
           <form action={leavePortal}>
@@ -34,7 +34,7 @@ export default async function ProspectiveHome() {
 
       <section className="bg-paper py-20 lg:py-28">
         <div className="shell">
-          <Index n="01">Yalla Everyday & Yalla Flex</Index>
+          <Index n="01">Club Yalla & Yalla Flex</Index>
           <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
             Tuition <em>by cohort.</em>
           </h2>

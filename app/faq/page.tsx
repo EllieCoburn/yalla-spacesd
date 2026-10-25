@@ -18,7 +18,7 @@ const groups: { title: string; items: QA[] }[] = [
         q: "Do I need to stay onsite while my child is in care?",
         a: (
           <>
-            Our weekly program, Yalla Everyday, is designed around parents and caregivers working onsite in our coworking space, close to
+            Club Yalla, our membership for daily and weekly families, is designed around parents and caregivers working onsite in our coworking space, close to
             their children all day. Some offerings, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
             <ToConfirm>Policy details</ToConfirm>
           </>
@@ -34,7 +34,7 @@ const groups: { title: string; items: QA[] }[] = [
       },
       {
         q: "What are your hours?",
-        a: "Yalla Everyday runs year-round on weekdays. Full days are 8:30am to 4:30pm and half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Weekend sessions and other offerings have their own times, listed in the booking calendar.",
+        a: "Club Yalla runs year-round on weekdays. Full days are 8:30am to 4:30pm and half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Weekend sessions and other offerings have their own times, listed in the booking calendar.",
       },
     ],
   },
@@ -69,7 +69,7 @@ const groups: { title: string; items: QA[] }[] = [
     items: [
       {
         q: "What happens on a first visit?",
-        a: "For Yalla Everyday, families begin with an application. Spaces open rarely, so when one fits your family we’ll reach out and invite you to tour the classrooms, the yard and the coworking space, and to ask us anything.",
+        a: "For Club Yalla, families begin with an application. Spaces open rarely, so when one fits your family we’ll reach out and invite you to tour the classrooms, the yard and the coworking space, and to ask us anything.",
       },
       {
         q: "What paperwork is needed before my child’s first day?",

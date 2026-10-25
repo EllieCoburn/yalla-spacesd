@@ -22,7 +22,7 @@ export default function ProgramsPage() {
             However your week looks, <em>there’s a Yalla for it.</em>
           </>
         }
-        lede="Enroll in our everyday program, or book care as you need it. Every offering shares the same warmth, intention and attention to detail."
+        lede="Join Club Yalla, our community of daily and weekly members, or book care as you need it. Every offering shares the same warmth, intention and attention to detail."
       />
 
       <section className="pb-10">

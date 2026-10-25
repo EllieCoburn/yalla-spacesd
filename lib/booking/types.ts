@@ -8,7 +8,7 @@
  */
 
 export type ProgramKind =
-  | "membership" // Yalla Everyday
+  | "membership" // Club Yalla
   | "drop_in" // Yalla Flex
   | "nature" // Yalla Outside
   | "camp" // Camp Yalla

@@ -9,7 +9,7 @@ import { membershipIncludes, publicCohorts, publicPricing } from "@/content/pric
 
 export const metadata: Metadata = {
   title: "Membership & Tuition",
-  description: "Yalla Everyday tuition by cohort and schedule, what every membership includes, and how families get started.",
+  description: "Club Yalla tuition by cohort and schedule, what every membership includes, and how families get started.",
 };
 
 const steps = [
@@ -30,7 +30,7 @@ export default function MembershipPage() {
             Belong here, <em>week after week.</em>
           </>
         }
-        lede="Membership is our recurring enrollment for Yalla Everyday: a steady place for your child in their cohort, and for you in the coworking space."
+        lede="Club Yalla is our membership for daily and weekly families: a steady place for your child in their cohort, and for you in the coworking space."
         image={{ src: "/photos/dinosaurs.jpg", alt: "A child absorbed in play outdoors" }}
       />
 
@@ -83,7 +83,7 @@ export default function MembershipPage() {
           <div className="mt-16 grid gap-10 border-t border-line pt-12 lg:grid-cols-12">
             <div className="grid grid-cols-2 gap-8 lg:col-span-6">
               <div>
-                <p className="eyebrow text-[0.6rem] text-ink-soft">Yalla Everyday</p>
+                <p className="eyebrow text-[0.6rem] text-ink-soft">Club Yalla</p>
                 <p className="mt-3 text-[0.9rem] text-ink-soft">Monthly tuition from</p>
                 <p className="display text-[3rem] text-blue">{publicPricing.tuitionFrom}</p>
                 <p className="text-[0.85rem] text-ink-soft">{publicPricing.tuitionFromNote}</p>

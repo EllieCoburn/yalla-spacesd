@@ -4,14 +4,14 @@ import { PageHero } from "@/components/site/PageParts";
 
 export const metadata: Metadata = {
   title: "Apply",
-  description: "Apply for a Yalla Everyday membership. We’ll reach out when a space opens for your family.",
+  description: "Apply for a Club Yalla membership. We’ll reach out when a space opens for your family.",
 };
 
 export default function ApplyPage() {
   return (
     <>
       <PageHero
-        eyebrow="Apply · Yalla Everyday"
+        eyebrow="Apply · Club Yalla"
         mark="balcony"
         title={
           <>
