@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cohortMarks } from "@/components/brand/CohortMarks";
 import { Mark } from "@/components/brand/Mark";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
@@ -49,23 +50,34 @@ export default function MembershipPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid grid-cols-2 gap-px overflow-hidden bg-line lg:grid-cols-4">
-            {publicCohorts.map((c, i) => (
-              <Reveal key={c.name} delay={i * 80} className="bg-paper p-7 lg:p-9">
-                <Mark name={(["sun", "arch", "window", "palm"] as const)[i]} className="h-10 w-auto text-blue" />
-                <p className="display mt-8 text-[1.8rem]">{c.name}</p>
-                <dl className="mt-5 space-y-2 text-[0.9rem]">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-ink-soft">Ratio</dt>
-                    <dd className="font-serif text-[1.05rem]">{c.ratio} max</dd>
+          <div className="mt-14 grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-6 lg:grid-cols-4">
+            {publicCohorts.map((c, i) => {
+              const Illustration = cohortMarks[c.name as keyof typeof cohortMarks];
+              return (
+                <Reveal key={c.name} delay={i * 90} className="group">
+                  <div className="relative flex aspect-[4/5] items-end justify-center overflow-hidden rounded-t-[999px] bg-mist">
+                    <span className="absolute top-[18%] font-serif text-[0.85rem] text-blue/60 italic">0{i + 1}</span>
+                    <Illustration
+                      title={c.name}
+                      className="mb-[4%] w-[86%] text-blue transition-transform duration-[1.2s] ease-[var(--ease-soft)] group-hover:-translate-y-1.5 group-hover:scale-[1.03]"
+                    />
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-ink-soft">Cohort size</dt>
-                    <dd className="font-serif text-[1.05rem]">{c.maxSize} children max</dd>
-                  </div>
-                </dl>
-              </Reveal>
-            ))}
+                  <p className="display mt-6 text-[1.7rem] sm:text-[1.9rem]">{c.name}</p>
+                  <dl className="hairline mt-4 grid grid-cols-2 border-t pt-4">
+                    <div>
+                      <dt className="eyebrow text-[0.55rem] text-ink-soft">Ratio</dt>
+                      <dd className="mt-1 font-serif text-[1.25rem]">{c.ratio}</dd>
+                    </div>
+                    <div>
+                      <dt className="eyebrow text-[0.55rem] text-ink-soft">Cohort</dt>
+                      <dd className="mt-1 font-serif text-[1.25rem]">
+                        {c.maxSize} <span className="font-sans text-[0.75rem] text-ink-soft">max</span>
+                      </dd>
+                    </div>
+                  </dl>
+                </Reveal>
+              );
+            })}
           </div>
 
           <div className="mt-16 grid gap-10 border-t border-line pt-12 lg:grid-cols-12">
