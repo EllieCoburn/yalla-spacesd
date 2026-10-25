@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 };
 
 const steps = [
-  { mark: "arch" as const, title: "Visit", body: "Tour Yalla, meet the team and ask everything you want to know." },
   { mark: "window" as const, title: "Apply", body: "Tell us about your family, your child and the schedule you’re hoping for." },
+  { mark: "arch" as const, title: "Visit", body: "When a space opens for your family, we’ll reach out and invite you to tour Yalla and meet the team." },
   { mark: "balcony" as const, title: "Welcome", body: "Set up your Family Portal, add your children’s profiles and complete the required forms." },
   { mark: "sun" as const, title: "First days", body: "We’ll plan a gentle start together, so your child (and you) feel at home." },
 ];
@@ -159,11 +159,11 @@ export default function MembershipPage() {
       <CtaBand
         title={
           <>
-            Start with <em>a visit.</em>
+            Begin with <em>an application.</em>
           </>
         }
-        body="Every family’s Yalla story begins with a tour."
-        primary={{ href: "/visit", label: "Schedule a tour" }}
+        body="Spaces open rarely. Apply, and we’ll reach out when there’s a place for your family."
+        primary={{ href: "/apply", label: "Apply now" }}
         secondary={{ href: "/faq", label: "Read the FAQ" }}
       />
     </>

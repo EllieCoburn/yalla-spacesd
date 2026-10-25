@@ -51,9 +51,15 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 <Button href={p.cta.href} size="lg">
                   {p.cta.label}
                 </Button>
-                <Button href="/visit" variant="outline" size="lg">
-                  Schedule a tour
-                </Button>
+                {p.kind === "membership" ? (
+                  <Button href="/membership" variant="outline" size="lg">
+                    Membership details
+                  </Button>
+                ) : (
+                  <Button href="/visit" variant="outline" size="lg">
+                    Schedule a tour
+                  </Button>
+                )}
               </Reveal>
             </div>
             <Reveal delay={150} className="lg:col-span-4 lg:col-start-9">
@@ -116,7 +122,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                   label: "How to join",
                   value:
                     p.bookingMode === "enroll"
-                      ? "Recurring enrollment. Start with a tour and application."
+                      ? "Recurring membership. Apply, and we’ll reach out when a space opens for your family."
                       : p.bookingMode === "inquire"
                         ? "Get in touch and we’ll take it from there"
                         : "Book online. Live availability, instant confirmation.",

@@ -69,7 +69,7 @@ const groups: { title: string; items: QA[] }[] = [
     items: [
       {
         q: "What happens on a first visit?",
-        a: "Start with a tour: see the classrooms, the yard and the coworking space, and ask us anything. You can request one on our Visit page.",
+        a: "For Yalla Everyday, families begin with an application. Spaces open rarely, so when one fits your family we’ll reach out and invite you to tour the classrooms, the yard and the coworking space, and to ask us anything.",
       },
       {
         q: "What paperwork is needed before my child’s first day?",

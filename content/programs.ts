@@ -49,7 +49,7 @@ export const programs: ProgramContent[] = [
     ],
     parentOnsite: true,
     bookingMode: "enroll",
-    cta: { label: "Membership & tuition", href: "/membership" },
+    cta: { label: "Apply for membership", href: "/apply" },
   },
   {
     slug: "yalla-flex",
