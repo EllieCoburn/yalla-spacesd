@@ -74,9 +74,12 @@ export function SiteFooter() {
           <div className="flex flex-col gap-4 border-t border-chalk/20 py-7 text-[0.78rem] text-chalk/60 sm:flex-row sm:items-center sm:justify-between">
             <p>© {new Date().getFullYear()} {site.fullName}. Bankers Hill, San Diego.</p>
             <p className="flex gap-6">
-              <span>Instagram</span>
-              <span>Pinterest</span>
-              <ToConfirm>Links</ToConfirm>
+              <a href={site.instagram.value} target="_blank" rel="noopener noreferrer" className="link-underline hover:text-chalk">
+                Instagram
+              </a>
+              <a href={site.pinterest.value} target="_blank" rel="noopener noreferrer" className="link-underline hover:text-chalk">
+                Pinterest
+              </a>
             </p>
           </div>
         </div>

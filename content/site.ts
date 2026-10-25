@@ -12,11 +12,11 @@ export const site = {
   hours: "Weekdays, 8:30am – 4:30pm",
   extendedCare: "Optional extended care",
   yearRound: true,
-  email: { value: "hello@yallaspacesd.com", confirm: true },
+  email: { value: "hello@yallaspacesd.com", confirm: false },
   address: { value: null as string | null, confirm: true },
   phone: { value: null as string | null, confirm: true },
-  instagram: { value: null as string | null, confirm: true },
-  pinterest: { value: null as string | null, confirm: true },
+  instagram: { value: "https://www.instagram.com/yallachildcare/", confirm: false },
+  pinterest: { value: "https://www.pinterest.com/yallachildcare/", confirm: false },
 };
 
 export const nav = [
