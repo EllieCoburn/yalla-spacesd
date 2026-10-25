@@ -9,11 +9,11 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display
 
 export const metadata: Metadata = {
   title: {
-    default: "Yalla — Childcare & Coworking in Bankers Hill, San Diego",
+    default: "Yalla — Early childhood, reimagined · San Diego",
     template: "%s · Yalla",
   },
   description:
-    "Play-based childcare for children four months to five years, with a beautiful coworking space for parents just steps away. Bankers Hill, San Diego.",
+    "Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and experiences for family life in San Diego.",
   icons: { icon: "/brand/mark.svg" },
 };
 

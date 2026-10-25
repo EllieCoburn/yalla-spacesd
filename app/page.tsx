@@ -17,25 +17,25 @@ export default function Home() {
         <div className="shell grid items-center gap-12 pb-16 lg:grid-cols-12 lg:gap-8 lg:pb-24">
           <div className="lg:col-span-6 xl:col-span-6">
             <Reveal>
-              <Eyebrow>Childcare &amp; Coworking · Bankers Hill, San Diego</Eyebrow>
+              <Eyebrow>Childcare · Coworking · Community — San Diego</Eyebrow>
             </Reveal>
             <Reveal delay={120}>
               <h1 className="display mt-7 text-[clamp(3.1rem,1.6rem+5.4vw,6.6rem)]">
-                Close to your child. <em>Connected</em> to your day.
+                Early childhood, <em>reimagined.</em>
               </h1>
             </Reveal>
             <Reveal delay={240}>
               <p className="mt-8 max-w-[34rem] text-[1.05rem] leading-relaxed text-ink-soft lg:text-[1.125rem]">
-                Yalla brings play-based childcare and a beautiful coworking space together under one roof. Your child spends the day exploring
-                with educators who know them well. You work a few steps away.
+                Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and experiences for
+                family life in San Diego.
               </p>
             </Reveal>
             <Reveal delay={360} className="mt-10 flex flex-wrap items-center gap-3">
-              <Button href="/book" size="lg">
-                Book care
+              <Button href="/membership" size="lg">
+                Discover Club Yalla
               </Button>
-              <Button href="/visit" variant="outline" size="lg">
-                Plan a visit
+              <Button href="/book" variant="outline" size="lg">
+                Book care
               </Button>
             </Reveal>
           </div>
@@ -52,10 +52,10 @@ export default function Home() {
         <div className="shell">
           <div className="hairline grid grid-cols-2 gap-y-6 border-t py-7 text-[0.85rem] sm:grid-cols-4">
             {[
-              ["Ages", site.ages],
-              ["Weekdays", "8:30am – 4:30pm"],
-              ["All year", "Early Bird care from 8:00am"],
-              ["Where", "Bankers Hill, by Balboa Park"],
+              ["For", `Children ${site.ages.replace(" – ", "–")} & their grown-ups`],
+              ["Where", "Bankers Hill, in the heart of San Diego"],
+              ["Club Yalla", "Weekdays, year-round"],
+              ["Hours", "8:30am – 4:30pm · Early Bird from 8:00"],
             ].map(([k, v]) => (
               <div key={k}>
                 <p className="eyebrow text-[0.6rem] text-ink-soft">{k}</p>
@@ -72,38 +72,59 @@ export default function Home() {
           <Reveal className="mx-auto max-w-5xl text-center">
             <Mark name="sun" className="mx-auto mb-10 h-8 w-8 text-blue" />
             <p className="display text-[clamp(1.9rem,1.2rem+2.6vw,3.6rem)] leading-[1.15]!">
-              Children spend their days playing, exploring, creating and building relationships with their educators, while their parents work
-              onsite. <em>Being close to your child, with real space for your own work,</em> is the whole idea.
+              A community in the heart of San Diego, <em>built by and for modern families</em> with young children.
             </p>
           </Reveal>
         </div>
       </section>
 
-      {/* ───────── How it works ───────── */}
+      {/* ───────── Ways to belong ───────── */}
       <section className="pb-24 lg:pb-36">
         <div className="shell">
           <div className="grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <Index n="01">How Yalla works</Index>
+              <Index n="01">Ways to belong</Index>
               <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-                One address. <em>Two</em> kinds of good day.
+                However you join, <em>you’re part of it.</em>
               </h2>
-              <Link href="/experience" className="mt-8 inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
-                <span className="link-underline">The Yalla experience</span>
-                <Arrow className="h-3 w-5" />
-              </Link>
+              <p className="mt-6 text-ink-soft">
+                Families join us for recurring childcare and coworking through Club Yalla, book care as they need it, or explore seasonal camps,
+                weekend care, and parents’ nights out. Pop-up gatherings and private events create even more ways to come together.
+              </p>
             </div>
             <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
               {[
-                { mark: "arch" as const, title: "Arrive together", body: "Come through the door side by side and settle your child in with educators who know them well." },
-                { mark: "window" as const, title: "Their day, your day", body: "They play, explore and create. You work in a calm, considered coworking space onsite." },
-                { mark: "palm" as const, title: "Close all day", body: "You're never more than a few steps away. When the day ends, you head home together." },
+                {
+                  mark: "balcony" as const,
+                  title: "Club Yalla",
+                  body: "Recurring childcare and coworking for our daily and weekly members, with a familiar rhythm and consistent days.",
+                  href: "/programs/club-yalla",
+                  link: "Membership",
+                },
+                {
+                  mark: "window" as const,
+                  title: "Care as you need it",
+                  body: "Yalla Flex drop-in days, Camp Yalla, Yalla Weekends and Yalla After Hours, all bookable in one calendar.",
+                  href: "/book",
+                  link: "Book care",
+                },
+                {
+                  mark: "sun" as const,
+                  title: "Come together",
+                  body: "Yalla Happenings bring pop-ups, workshops and gatherings. Yalla Celebrations host your private occasions.",
+                  href: "/programs/yalla-happenings",
+                  link: "Happenings",
+                },
               ].map((s, i) => (
                 <Reveal as="li" key={s.title} delay={i * 120} className="flex flex-col bg-chalk p-8 lg:p-10">
                   <Mark name={s.mark} className="h-14 w-auto self-start text-blue" />
                   <p className="mt-10 font-serif text-sm text-ink-soft italic">0{i + 1}</p>
                   <h3 className="display mt-2 text-[1.7rem]">{s.title}</h3>
-                  <p className="mt-3 text-[0.95rem] text-ink-soft">{s.body}</p>
+                  <p className="mt-3 flex-1 text-[0.95rem] text-ink-soft">{s.body}</p>
+                  <Link href={s.href} className="mt-6 inline-flex items-center gap-3 text-[0.85rem] hover:text-blue">
+                    <span className="link-underline">{s.link}</span>
+                    <Arrow className="h-3 w-5" />
+                  </Link>
                 </Reveal>
               ))}
             </ol>
@@ -118,7 +139,7 @@ export default function Home() {
             <div>
               <Index n="02">Programs</Index>
               <h2 className="display mt-6 max-w-2xl text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-                Every day of the week, <em>a way in.</em>
+                Find your <em>way in.</em>
               </h2>
             </div>
             <Button href="/programs" variant="outline">
@@ -203,12 +224,16 @@ export default function Home() {
             <h2 className="display mt-8 text-[clamp(2.2rem,1.6rem+2vw,3.2rem)]">
               Come on in.
             </h2>
-            <p className="mx-auto mt-5 max-w-sm text-ink-soft">
-              The best way to know Yalla is to stand in it. Book a tour, see the rooms and picture your days here.
+            <p className="mx-auto mt-5 max-w-md text-ink-soft">
+              Whether Yalla becomes part of your everyday rhythm or somewhere you turn to for a particular occasion, you’ll find attentive care,
+              meaningful play, and a community that welcomes your whole family.
             </p>
-            <Button href="/visit" className="mt-9">
-              Schedule a tour
-            </Button>
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <Button href="/visit">Plan a visit</Button>
+              <Button href="/experience" variant="outline">
+                The Yalla experience
+              </Button>
+            </div>
           </Reveal>
         </div>
       </section>
