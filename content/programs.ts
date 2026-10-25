@@ -69,28 +69,6 @@ export const programs: ProgramContent[] = [
     cta: { label: "See available days", href: "/book?offering=drop_in" },
   },
   {
-    slug: "yalla-outside",
-    kind: "nature",
-    name: "Yalla Outside",
-    short: "Nature play school",
-    tagline: "Nature playschool in Balboa Park",
-    summary:
-      "Our nature playschool takes place in Balboa Park, just down the road. Children climb, dig, notice and explore the park through the seasons.",
-    body: [
-      "Balboa Park is one of the great urban parks, and it’s on our doorstep. Yalla Outside gives children the time and freedom to know it well: its trees and paths, its hidden corners and its changing seasons.",
-      "Days outdoors build confidence, curiosity and a deep sense of place, guided by educators who know when to step in and when to let children lead.",
-    ],
-    image: "/photos/park-lawn.jpg",
-    imageAlt: "Open lawn and trees in Balboa Park",
-    ages: null,
-    schedule: null,
-    pricing: null,
-    included: null,
-    parentOnsite: null,
-    bookingMode: "inquire",
-    cta: { label: "Ask about Yalla Outside", href: "/visit" },
-  },
-  {
     slug: "camp-yalla",
     kind: "camp",
     name: "Camp Yalla",
@@ -185,10 +163,10 @@ export const programs: ProgramContent[] = [
     short: "Private events",
     tagline: "Private parties & special occasions",
     summary:
-      "Celebrate a birthday or special occasion at Yalla. Tell us what you have in mind and we’ll help you shape the day.",
+      "Host a private party or special occasion at Yalla. Tell us what you have in mind and we’ll help you shape it.",
     body: [
-      "Our rooms and yard were made for small people having a wonderful time, which makes them a beautiful setting for a celebration.",
-      "Every Celebration is planned with you. Share your date, your guest list and your ideas, and we’ll take it from there.",
+      "Yalla is a beautiful setting for a gathering: thoughtfully designed rooms, a leafy yard and a historic corner of Bankers Hill.",
+      "Every private event is planned with you. Share your date, your guest count and your ideas, and we’ll be in touch to plan the details.",
     ],
     image: "/photos/painting.jpg",
     imageAlt: "Bright paint and brushes on a party table",
@@ -198,7 +176,7 @@ export const programs: ProgramContent[] = [
     included: null,
     parentOnsite: null,
     bookingMode: "inquire",
-    cta: { label: "Plan a celebration", href: "/visit" },
+    cta: { label: "Enquire about a private event", href: "/programs/yalla-celebrations#enquire" },
   },
 ];
 

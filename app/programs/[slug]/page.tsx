@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
+import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
 import { CtaBand, Facts } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
@@ -77,7 +78,16 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           <div className="lg:col-span-6 lg:col-start-7">
             <Eyebrow className="mb-6">The details</Eyebrow>
             <Facts
-              items={[
+              items={
+                p.kind === "private_event"
+                  ? [
+                      { label: "Occasions", value: "Private parties & special occasions" },
+                      { label: "Guests", value: pending },
+                      { label: "Availability", value: pending },
+                      { label: "Pricing", value: p.pricing ?? pending },
+                      { label: "How to book", value: "Send an enquiry below and we’ll plan it with you" },
+                    ]
+                  : [
                 { label: "Ages", value: p.ages ?? pending },
                 { label: "Schedule", value: p.schedule ?? pending },
                 { label: "Tuition & pricing", value: p.pricing ?? pending },
@@ -111,7 +121,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                         ? "Get in touch and we’ll take it from there"
                         : "Book online. Live availability, instant confirmation.",
                 },
-              ]}
+                    ]
+              }
             />
             <div className="mt-10">
               <Button href={p.cta.href}>{p.cta.label}</Button>
@@ -119,6 +130,23 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </section>
+
+      {p.kind === "private_event" ? (
+        <section id="enquire" className="scroll-mt-24 py-20 lg:py-28">
+          <div className="shell grid gap-12 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <Eyebrow>Private events</Eyebrow>
+              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                Tell us about <em>your occasion.</em>
+              </h2>
+              <p className="mt-6 text-ink-soft">Share a few details and we’ll be in touch to plan it with you.</p>
+            </div>
+            <div className="bg-paper p-7 sm:p-12 lg:col-span-7 lg:col-start-6">
+              <EventEnquiryForm />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="py-20 lg:py-28">
         <div className="shell">

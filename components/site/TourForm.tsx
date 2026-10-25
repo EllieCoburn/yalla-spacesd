@@ -9,7 +9,7 @@ const field =
 const label =
   "pointer-events-none absolute top-0 left-0 text-[0.7rem] tracking-[0.18em] text-ink-soft uppercase transition-all peer-placeholder-shown:top-6 peer-placeholder-shown:text-[0.95rem] peer-placeholder-shown:tracking-normal peer-placeholder-shown:normal-case peer-focus:top-0 peer-focus:text-[0.7rem] peer-focus:tracking-[0.18em] peer-focus:uppercase";
 
-function Field({ name, children, type = "text", required }: { name: string; children: string; type?: string; required?: boolean }) {
+export function Field({ name, children, type = "text", required }: { name: string; children: string; type?: string; required?: boolean }) {
   return (
     <label className="relative block">
       <input name={name} type={type} required={required} placeholder={children} className={field} />

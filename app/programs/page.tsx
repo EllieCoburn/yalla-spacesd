@@ -8,7 +8,7 @@ import { programs } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "Programs",
-  description: "Weekly childcare, drop-in days, nature playschool in Balboa Park, camps, weekend care, Happenings, parents’ nights out and private celebrations at Yalla.",
+  description: "Weekly childcare, drop-in days, camps, weekend care, pop-up events, parents’ nights out and private events at Yalla in Bankers Hill, San Diego.",
 };
 
 export default function ProgramsPage() {
