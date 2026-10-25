@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { cohorts, hours, usd } from "@/content/tuition";
+import type { Cohort } from "@/content/tuition";
 
-export function TuitionExplorer() {
+const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
+
+/** Full tuition table. Only rendered inside the Prospective Family Portal; data arrives as props. */
+export function TuitionExplorer({ cohorts, hours }: { cohorts: Cohort[]; hours: { full: string; half: string } }) {
   const [cohortId, setCohortId] = useState(cohorts[0].id);
   const [day, setDay] = useState<"full" | "half">("full");
   const c = cohorts.find((x) => x.id === cohortId)!;

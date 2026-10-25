@@ -47,6 +47,13 @@ export default function PortalSignIn() {
           </form>
           <p className="mt-4 text-[0.8rem] text-ink-soft">No passwords to remember. We’ll send a secure link to your inbox.</p>
 
+          <p className="mt-8 text-[0.9rem] text-ink-soft">
+            Considering Yalla?{" "}
+            <Link href="/prospective" className="text-ink underline underline-offset-4">
+              Prospective Family Portal
+            </Link>
+          </p>
+
           <div className="mt-12 border-t border-line pt-8">
             <p className="text-[0.85rem] text-oxblood">Preview: sign-in isn’t connected yet.</p>
             <Link href="/portal/home" className="mt-3 inline-flex items-center gap-2 text-[0.95rem] text-blue underline-offset-4 hover:underline">

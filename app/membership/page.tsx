@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { Mark } from "@/components/brand/Mark";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
-import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 import { ToConfirm } from "@/components/ui/Draft";
-import { Index } from "@/components/ui/primitives";
+import { Button, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { fees, membershipIncludes, tuitionYear, workspace } from "@/content/tuition";
+import { membershipIncludes, publicCohorts, publicPricing } from "@/content/pricing-public";
 
 export const metadata: Metadata = {
   title: "Membership & Tuition",
@@ -34,12 +33,12 @@ export default function MembershipPage() {
         image={{ src: "/photos/dinosaurs.jpg", alt: "A child absorbed in play outdoors" }}
       />
 
-      {/* Tuition */}
+      {/* Cohorts & tuition overview */}
       <Section tone="paper">
         <div className="shell">
           <div className="grid gap-8 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <Index n="01">{tuitionYear} tuition</Index>
+              <Index n="01">Cohorts & tuition</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Small cohorts, <em>by design.</em>
               </h2>
@@ -49,13 +48,61 @@ export default function MembershipPage() {
               days, one to five days a week. <ToConfirm>Cohort age ranges</ToConfirm>
             </p>
           </div>
-          <div className="mt-14">
-            <TuitionExplorer />
+
+          <div className="mt-14 grid grid-cols-2 gap-px overflow-hidden bg-line lg:grid-cols-4">
+            {publicCohorts.map((c, i) => (
+              <Reveal key={c.name} delay={i * 80} className="bg-paper p-7 lg:p-9">
+                <Mark name={(["sun", "arch", "window", "palm"] as const)[i]} className="h-10 w-auto text-blue" />
+                <p className="display mt-8 text-[1.8rem]">{c.name}</p>
+                <dl className="mt-5 space-y-2 text-[0.9rem]">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-ink-soft">Ratio</dt>
+                    <dd className="font-serif text-[1.05rem]">{c.ratio} max</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-ink-soft">Cohort size</dt>
+                    <dd className="font-serif text-[1.05rem]">{c.maxSize} children max</dd>
+                  </div>
+                </dl>
+              </Reveal>
+            ))}
+          </div>
+
+          <div className="mt-16 grid gap-10 border-t border-line pt-12 lg:grid-cols-12">
+            <div className="grid grid-cols-2 gap-8 lg:col-span-6">
+              <div>
+                <p className="eyebrow text-[0.6rem] text-ink-soft">Yalla Everyday</p>
+                <p className="mt-3 text-[0.9rem] text-ink-soft">Monthly tuition from</p>
+                <p className="display text-[3rem] text-blue">{publicPricing.tuitionFrom}</p>
+                <p className="text-[0.85rem] text-ink-soft">{publicPricing.tuitionFromNote}</p>
+              </div>
+              <div>
+                <p className="eyebrow text-[0.6rem] text-ink-soft">Yalla Flex</p>
+                <p className="mt-3 text-[0.9rem] text-ink-soft">Drop-in care from</p>
+                <p className="display text-[3rem] text-blue">{publicPricing.flexFrom}</p>
+                <p className="text-[0.85rem] text-ink-soft">{publicPricing.flexFromNote}</p>
+              </div>
+            </div>
+            <div className="lg:col-span-5 lg:col-start-8">
+              <p className="display text-[1.6rem]">
+                Current rates, <em>shared personally.</em>
+              </p>
+              <p className="mt-3 text-ink-soft">
+                Full tuition by cohort and schedule, fees and workspace options are in our Prospective Family Portal. Reach out and we’ll send
+                you access.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button href="/prospective">Request access</Button>
+                <Button href="/prospective" variant="ghost">
+                  I have a code
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Section>
 
-      {/* Included + fees */}
+      {/* Included */}
       <Section>
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
@@ -63,47 +110,16 @@ export default function MembershipPage() {
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Everything, <em>considered.</em>
             </h2>
-            <ul className="mt-10 space-y-4">
-              {membershipIncludes.map((x) => (
-                <li key={x} className="flex items-start gap-4 text-[1.02rem]">
-                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
-                  {x}
-                </li>
-              ))}
-            </ul>
+            <p className="mt-6 text-ink-soft">Communal coworking is part of every membership. Private desks and offices are available for more privacy.</p>
           </div>
-          <div className="lg:col-span-6 lg:col-start-7">
-            <p className="eyebrow text-ink-soft">Fees</p>
-            <dl className="mt-6 divide-y divide-line border-y border-line">
-              {fees.map((f) => (
-                <div key={f.label} className="flex items-baseline justify-between gap-6 py-5">
-                  <dt>
-                    <span className="block text-[1rem]">{f.label}</span>
-                    <span className="text-[0.82rem] text-ink-soft">{f.note}</span>
-                  </dt>
-                  <dd className="font-serif text-[1.35rem] whitespace-nowrap">{f.amount}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <p className="eyebrow mt-16 text-ink-soft">Workspace upgrades</p>
-            <p className="mt-3 text-[0.95rem] text-ink-soft">Communal coworking is included. For more privacy, add a desk or office of your own.</p>
-            <div className="mt-6 grid gap-px overflow-hidden bg-line sm:grid-cols-2">
-              {workspace.map((w) => (
-                <div key={w.name} className="bg-paper p-6">
-                  <p className="display text-[1.5rem]">{w.name}</p>
-                  <dl className="mt-4 space-y-2">
-                    {w.rates.map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-[0.95rem]">
-                        <dt className="text-ink-soft">{k}</dt>
-                        <dd className="font-serif">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:col-span-7 lg:col-start-6 lg:pt-4">
+            {membershipIncludes.map((x) => (
+              <li key={x} className="hairline flex items-start gap-4 border-t pt-5 text-[1.02rem]">
+                <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
+                {x}
+              </li>
+            ))}
+          </ul>
         </div>
       </Section>
 

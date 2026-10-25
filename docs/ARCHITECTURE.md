@@ -40,3 +40,10 @@ Swapping in a Postgres-backed provider + server actions doesn't change the pages
 ## Review markers
 Unconfirmed facts render with a dashed **To confirm** / **Draft** marker (`components/ui/Draft.tsx`).
 Set `NEXT_PUBLIC_HIDE_DRAFT_MARKERS=true` to hide them.
+
+## Prospective Family Portal
+Detailed rates (`content/tuition.ts`, server-only) render only at `/prospective/home`, after a visitor
+enters the shared access code at `/prospective`. Public pages use "from" figures in
+`content/pricing-public.ts`. The code is set with `PROSPECTIVE_ACCESS_CODE`; preview deployments
+fall back to `yalla-preview`, production stays locked until it's set. Access is remembered for 30 days
+in an HTTP-only cookie. Stage 2 swaps the shared code for individual invitations.

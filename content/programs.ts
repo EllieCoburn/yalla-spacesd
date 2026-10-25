@@ -40,7 +40,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A young child arranging toy dinosaurs on a small wooden table outdoors",
     ages: "4 months – 5 years",
     schedule: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
-    pricing: "Monthly tuition by cohort and schedule, from $275 a month. See Membership & Tuition for the full table.",
+    pricing: "From $275 a month, depending on cohort and schedule. Current rates are shared in our Prospective Family Portal.",
     included: [
       "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
       "Credentialed early childhood educators",
@@ -67,7 +67,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A child's hand scooping lemon slices from a water table",
     ages: null,
     schedule: "Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
-    pricing: "Full day $150 – $180 · half day $75 – $90, depending on your child’s cohort. No registration fee for drop-in care.",
+    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care. Current rates are shared in our Prospective Family Portal.",
     included: null,
     parentOnsite: null,
     bookingMode: "instant",

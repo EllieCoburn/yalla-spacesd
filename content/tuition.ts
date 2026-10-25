@@ -1,5 +1,9 @@
+import "server-only";
+
 /**
  * 2026–2027 Membership & Care Rates, from Yalla's rate sheet.
+ * Detailed rates are shown only inside the Prospective Family Portal; public
+ * pages use the "from" figures in content/pricing-public.ts.
  * Cohort tuition is listed per month; daily rates are Yalla Flex (drop-in) rates.
  */
 
@@ -81,18 +85,6 @@ export const cohorts: Cohort[] = [
     ],
     daily: { full: 150, half: 75 },
   },
-];
-
-export const membershipIncludes = [
-  "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
-  "Credentialed, exceptional early childhood educators",
-  "Communal coworking access",
-  "High-speed internet",
-  "Complimentary coffee and tea",
-  "Light snacks",
-  "Access to the coworking kitchen",
-  "Unlimited color printing",
-  "Private office and phone booth rental",
 ];
 
 export const fees = [
