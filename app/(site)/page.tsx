@@ -166,11 +166,11 @@ export default function Home() {
           <div className="lg:col-span-5 lg:col-start-8">
             <Index n="03">Our spaces</Index>
             <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-              Rooms for them. <em>Room for you.</em>
+              A space to work. <em>A place to grow.</em>
             </h2>
             <p className="mt-6 text-[1.05rem] text-ink-soft">
-              Cohort spaces and a leafy play garden made for small explorers, and a quiet, beautifully made coworking room for the grown-ups. It all
-              sits in historic Bankers Hill, a short walk from Balboa Park.
+              Places to play, places to focus, and plenty of space to come together. Yalla brings thoughtfully designed children’s spaces,
+              comfortable coworking, and welcoming common areas under one roof in historic Bankers Hill.
             </p>
             <Button href="/spaces" variant="outline" className="mt-10">
               Explore our spaces
