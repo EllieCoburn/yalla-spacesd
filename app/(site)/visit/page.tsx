@@ -23,10 +23,10 @@ export default function VisitPage() {
         mark="arch"
         title={
           <>
-            Come on in. <em>Stay a while.</em>
+            Come tour <em>our community.</em>
           </>
         }
-        lede="Walk the classrooms and the yard, see the coworking space and get a feel for Yalla. Tell us a little about your family and we’ll find a time."
+        lede="Explore our indoor play spaces, wander through the play garden, and take a look around our coworking spaces. We’d love to hear about your family, answer your questions, and help you picture your days at Yalla."
       />
 
       <section className="pb-20 lg:pb-32">
