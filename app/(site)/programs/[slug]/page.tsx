@@ -100,9 +100,11 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 {
                   label: "What’s included",
                   value: p.included ? (
-                    <ul className="space-y-1">
+                    <ul className="list-disc space-y-2 pl-5 marker:text-blue">
                       {p.included.map((x) => (
-                        <li key={x}>{x}</li>
+                        <li key={x} className="pl-1">
+                          {x}
+                        </li>
                       ))}
                     </ul>
                   ) : (
