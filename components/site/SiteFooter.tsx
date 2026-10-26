@@ -75,7 +75,7 @@ export function SiteFooter() {
 
         <div className="shell">
           <div className="flex flex-col gap-4 border-t border-chalk/20 py-7 text-[0.78rem] text-chalk/60 sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} {site.fullName}. Bankers Hill, San Diego.</p>
+            <p>© {new Date().getFullYear()} {site.fullName}.</p>
             <p className="flex gap-6">
               <a href={site.instagram.value} target="_blank" rel="noopener noreferrer" className="link-underline hover:text-chalk">
                 Instagram
