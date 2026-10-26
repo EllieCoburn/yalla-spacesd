@@ -157,23 +157,6 @@ export default function ClubYallaPage() {
             })}
           </div>
 
-          <div className="mt-20 grid gap-14 border-t border-line pt-14 lg:grid-cols-12">
-            <div className="lg:col-span-5">
-              <h3 className="display text-[clamp(1.8rem,1.4rem+1.4vw,2.6rem)]">
-                Every membership <em>includes.</em>
-              </h3>
-              <p className="mt-4 text-ink-soft">Communal coworking is part of every membership. Private desks and offices are available for more privacy.</p>
-            </div>
-            <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:col-span-7 lg:col-start-6">
-              {membershipIncludes.map((x) => (
-                <li key={x} className="hairline flex items-start gap-4 border-t pt-5 text-[1.02rem]">
-                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
-                  {x}
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Rates callout */}
           <Reveal className="mt-20 flex flex-col items-start justify-between gap-8 bg-mist p-8 sm:p-12 md:flex-row md:items-center">
             <div>
@@ -190,27 +173,47 @@ export default function ClubYallaPage() {
         </div>
       </Section>
 
-      {/* Joining */}
+      {/* Every membership includes */}
       <section className="roofline-edge bg-blue text-blue">
-        <div className="py-20 text-chalk lg:py-32">
-          <div className="shell">
-            <p className="eyebrow text-chalk/60">03 · Joining Club Yalla</p>
-            <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-              Four steps <em className="text-mist!">to your first day.</em>
-            </h2>
-            <ol className="mt-16 grid gap-px overflow-hidden bg-chalk/20 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <Reveal as="li" key={s.title} delay={i * 100} className="bg-blue p-8 lg:p-10">
-                  <Mark name={s.mark} className="h-12 w-auto text-chalk" />
-                  <p className="mt-10 font-serif text-mist italic">0{i + 1}</p>
-                  <h3 className="display mt-2 text-[1.8rem]">{s.title}</h3>
-                  <p className="mt-3 text-chalk/75">{s.body}</p>
-                </Reveal>
+        <div className="py-20 text-chalk lg:py-28">
+          <div className="shell grid gap-14 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <h2 className="display text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                Every membership <em className="text-mist!">includes.</em>
+              </h2>
+              <p className="mt-6 text-chalk/75">Communal coworking is part of every membership. Private desks and offices are available for more privacy.</p>
+            </div>
+            <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:col-span-7 lg:col-start-6">
+              {membershipIncludes.map((x) => (
+                <li key={x} className="flex items-start gap-4 border-t border-chalk/25 pt-5 text-[1.02rem]">
+                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-chalk" />
+                  {x}
+                </li>
               ))}
-            </ol>
+            </ul>
           </div>
         </div>
       </section>
+
+      {/* Joining */}
+      <Section tone="paper">
+        <div className="shell">
+          <Index n="03">Joining Club Yalla</Index>
+          <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+            Four steps <em>to your first day.</em>
+          </h2>
+          <ol className="mt-16 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((s, i) => (
+              <Reveal as="li" key={s.title} delay={i * 100} className="bg-paper p-8 lg:p-10">
+                <Mark name={s.mark} className="h-12 w-auto text-blue" />
+                <p className="mt-10 font-serif text-ink-soft italic">0{i + 1}</p>
+                <h3 className="display mt-2 text-[1.8rem]">{s.title}</h3>
+                <p className="mt-3 text-ink-soft">{s.body}</p>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </Section>
 
       <CtaBand
         title={
