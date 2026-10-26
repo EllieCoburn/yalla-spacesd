@@ -5,7 +5,7 @@ import type { Cohort } from "@/content/tuition";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 
-/** Full tuition table. Only rendered inside the Prospective Family Portal; data arrives as props. */
+/** Full tuition table by cohort; data arrives as props from the server. */
 export function TuitionExplorer({ cohorts, hours }: { cohorts: Cohort[]; hours: { full: string; half: string } }) {
   const [cohortId, setCohortId] = useState(cohorts[0].id);
   const [day, setDay] = useState<"full" | "half">("full");

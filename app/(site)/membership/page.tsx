@@ -5,7 +5,9 @@ import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Button, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { membershipIncludes, publicCohorts, publicPricing } from "@/content/pricing-public";
+import { membershipIncludes, publicCohorts } from "@/content/pricing-public";
+import { cohorts, fees, hours, tuitionYear, workspace } from "@/content/tuition";
+import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 
 export const metadata: Metadata = {
   title: "Membership & Tuition",
@@ -80,35 +82,15 @@ export default function MembershipPage() {
             })}
           </div>
 
-          <div className="mt-16 grid gap-10 border-t border-line pt-12 lg:grid-cols-12">
-            <div className="grid grid-cols-2 gap-8 lg:col-span-6">
-              <div>
-                <p className="eyebrow text-[0.6rem] text-ink-soft">Club Yalla</p>
-                <p className="mt-3 text-[0.9rem] text-ink-soft">Monthly tuition from</p>
-                <p className="display text-[3rem] text-blue">{publicPricing.tuitionFrom}</p>
-                <p className="text-[0.85rem] text-ink-soft">{publicPricing.tuitionFromNote}</p>
-              </div>
-              <div>
-                <p className="eyebrow text-[0.6rem] text-ink-soft">Yalla Flex</p>
-                <p className="mt-3 text-[0.9rem] text-ink-soft">Drop-in care from</p>
-                <p className="display text-[3rem] text-blue">{publicPricing.flexFrom}</p>
-                <p className="text-[0.85rem] text-ink-soft">{publicPricing.flexFromNote}</p>
-              </div>
-            </div>
-            <div className="lg:col-span-5 lg:col-start-8">
-              <p className="display text-[1.6rem]">
-                Current rates, <em>shared personally.</em>
-              </p>
-              <p className="mt-3 text-ink-soft">
-                Full tuition by cohort and schedule, fees and workspace options are in our Prospective Family Portal. Reach out and we’ll send
-                you access.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Button href="/prospective">Request access</Button>
-                <Button href="/prospective" variant="ghost">
-                  I have a code
-                </Button>
-              </div>
+          <div className="mt-20 border-t border-line pt-14">
+            <h3 className="display text-[clamp(1.8rem,1.4rem+1.4vw,2.6rem)]">
+              {tuitionYear} <em>tuition.</em>
+            </h3>
+            <p className="mt-3 max-w-2xl text-ink-soft">
+              Monthly tuition for one to five days a week, full or half days. Each table ends with the Yalla Flex drop-in rate for that cohort.
+            </p>
+            <div className="mt-10">
+              <TuitionExplorer cohorts={cohorts} hours={hours} />
             </div>
           </div>
         </div>
@@ -124,14 +106,47 @@ export default function MembershipPage() {
             </h2>
             <p className="mt-6 text-ink-soft">Communal coworking is part of every membership. Private desks and offices are available for more privacy.</p>
           </div>
-          <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:col-span-7 lg:col-start-6 lg:pt-4">
-            {membershipIncludes.map((x) => (
-              <li key={x} className="hairline flex items-start gap-4 border-t pt-5 text-[1.02rem]">
-                <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
-                {x}
-              </li>
-            ))}
-          </ul>
+          <div className="lg:col-span-7 lg:col-start-6 lg:pt-4">
+            <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+              {membershipIncludes.map((x) => (
+                <li key={x} className="hairline flex items-start gap-4 border-t pt-5 text-[1.02rem]">
+                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-blue" />
+                  {x}
+                </li>
+              ))}
+            </ul>
+
+            <p className="eyebrow mt-16 text-ink-soft">Fees</p>
+            <dl className="mt-5 divide-y divide-line border-y border-line">
+              {fees.map((f) => (
+                <div key={f.label} className="flex items-baseline justify-between gap-6 py-5">
+                  <dt>
+                    <span className="block text-[1rem]">{f.label}</span>
+                    <span className="text-[0.82rem] text-ink-soft">{f.note}</span>
+                  </dt>
+                  <dd className="font-serif text-[1.35rem] whitespace-nowrap">{f.amount}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <p className="eyebrow mt-16 text-ink-soft">Workspace upgrades</p>
+            <p className="mt-3 text-[0.95rem] text-ink-soft">For more privacy, add a desk or office of your own.</p>
+            <div className="mt-6 grid gap-px overflow-hidden bg-line sm:grid-cols-2">
+              {workspace.map((w) => (
+                <div key={w.name} className="bg-paper p-6">
+                  <p className="display text-[1.5rem]">{w.name}</p>
+                  <dl className="mt-4 space-y-2">
+                    {w.rates.map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-[0.95rem]">
+                        <dt className="text-ink-soft">{k}</dt>
+                        <dd className="font-serif">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </Section>
 

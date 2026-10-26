@@ -20,7 +20,6 @@ Admin portal (/admin) ────────┘          │
 | `AUTH_SECRET` | Yes | 32+ random characters. Encrypts two-step secrets and signs test webhooks. Generate with `openssl rand -base64 48`. |
 | `ADMIN_SETUP_TOKEN` | First run | A one-time secret you type on `/admin/setup` to create the first owner. Remove after setup. |
 | `PUBLIC_BASE_URL` | Recommended | e.g. `https://yallaspacesd.com`. Used in emails and payment links. |
-| `PROSPECTIVE_ACCESS_CODE` | Optional | Shared code for the Prospective Family Portal. |
 | `CRON_SECRET` | For jobs | Protects `/api/cron/housekeeping` (expires holds/offers, applies membership changes, reminders). |
 | `NOTIFICATIONS_MODE` | Optional | `test` (default — nothing is sent, messages are captured in Admin → Messages) or `live`. |
 | `RESEND_API_KEY`, `NOTIFICATIONS_FROM` | For live email | Email delivery via Resend. Both required, plus `NOTIFICATIONS_MODE=live`. |

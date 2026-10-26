@@ -2,8 +2,7 @@ import "server-only";
 
 /**
  * 2026–2027 Membership & Care Rates, from Yalla's rate sheet.
- * Detailed rates are shown only inside the Prospective Family Portal; public
- * pages use the "from" figures in content/pricing-public.ts.
+ * Shown in full on the Membership & Tuition page.
  * Cohort tuition is listed per month; daily rates are Yalla Flex (drop-in) rates.
  */
 

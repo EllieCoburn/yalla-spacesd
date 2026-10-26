@@ -57,8 +57,8 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
 
           <p className="mt-10 text-[0.9rem] text-ink-soft">
             Considering Yalla?{" "}
-            <Link href="/prospective" className="text-ink underline underline-offset-4">
-              Prospective Family Portal
+            <Link href="/membership" className="text-ink underline underline-offset-4">
+              Membership & tuition
             </Link>
           </p>
         </div>

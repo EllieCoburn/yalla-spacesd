@@ -1,6 +1,5 @@
 /**
- * Pricing that's safe to show publicly. Current, detailed rates live in
- * content/tuition.ts and are only shown inside the Prospective Family Portal.
+ * Pricing that's safe to show publicly. Full rates live in content/tuition.ts.
  */
 
 export const publicPricing = {
