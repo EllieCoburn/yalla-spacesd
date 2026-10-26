@@ -6,7 +6,7 @@ import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { programs } from "@/content/programs";
+import { otherPrograms } from "@/content/programs";
 import { site } from "@/content/site";
 
 export default function Home() {
@@ -112,7 +112,7 @@ export default function Home() {
                   mark: "balcony" as const,
                   title: "A weekly rhythm",
                   body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
-                  href: "/programs/club-yalla",
+                  href: "/club-yalla",
                   link: "Club Yalla",
                 },
               ].map((s, i) => (
@@ -148,7 +148,7 @@ export default function Home() {
           </div>
         </div>
         <div className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-4 lg:mx-auto lg:grid lg:max-w-[1320px] lg:grid-cols-4 lg:gap-y-16 lg:overflow-visible">
-          {programs.map((p, i) => (
+          {otherPrograms.map((p, i) => (
             <Reveal key={p.slug} delay={i * 90} className="w-[72vw] shrink-0 snap-start sm:w-[42vw] lg:w-auto">
               <Link href={`/programs/${p.slug}`} className="group block">
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">

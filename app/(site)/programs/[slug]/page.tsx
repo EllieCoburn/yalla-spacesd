@@ -4,15 +4,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
-import { ClubYallaDay } from "@/components/site/ClubYallaDay";
 import { CtaBand, Facts } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { getProgram, programs } from "@/content/programs";
+import { getProgram, otherPrograms } from "@/content/programs";
 
 export function generateStaticParams() {
-  return programs.map((p) => ({ slug: p.slug }));
+  return otherPrograms.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -24,8 +23,8 @@ const pending = <span className="text-ink-soft">Details coming soon <ToConfirm /
 
 export default async function ProgramPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = getProgram((await params).slug);
-  if (!p) notFound();
-  const others = programs.filter((o) => o.slug !== p.slug);
+  if (!p || p.kind === "membership") notFound();
+  const others = otherPrograms.filter((o) => o.slug !== p.slug);
 
   return (
     <>
@@ -52,15 +51,9 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 <Button href={p.cta.href} size="lg">
                   {p.cta.label}
                 </Button>
-                {p.kind === "membership" ? (
-                  <Button href="/membership" variant="outline" size="lg">
-                    Tuition & rates
-                  </Button>
-                ) : (
-                  <Button href="/visit" variant="outline" size="lg">
-                    Schedule a tour
-                  </Button>
-                )}
+                <Button href="/visit" variant="outline" size="lg">
+                  Schedule a tour
+                </Button>
               </Reveal>
             </div>
             <Reveal delay={150} className="lg:col-span-4 lg:col-start-9">
@@ -137,8 +130,6 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </section>
-
-      {p.kind === "membership" ? <ClubYallaDay /> : null}
 
       {p.kind === "private_event" ? (
         <section id="enquire" className="scroll-mt-24 py-20 lg:py-28">

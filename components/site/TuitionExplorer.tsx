@@ -69,17 +69,6 @@ export function TuitionExplorer({ cohorts, hours }: { cohorts: Cohort[]; hours: 
                   <td className="py-4 text-right font-serif text-[1.35rem]">{usd(day === "full" ? full : half)}</td>
                 </tr>
               ))}
-              {(
-                <tr>
-                  <td className="py-4 text-[1rem]">
-                    Yalla Flex <span className="text-ink-soft">· drop-in day</span>
-                  </td>
-                  <td className="py-4 text-right font-serif text-[1.35rem]">
-                    {usd(day === "full" ? c.daily.full : c.daily.half)}
-                    <span className="ml-1 font-sans text-[0.75rem] text-ink-soft">/ day</span>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

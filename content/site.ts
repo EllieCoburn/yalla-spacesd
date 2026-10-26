@@ -22,9 +22,9 @@ export const site = {
 
 export const nav = [
   { href: "/experience", label: "The Yalla Experience", short: "Experience" },
+  { href: "/club-yalla", label: "Club Yalla", short: "Club Yalla" },
   { href: "/programs", label: "Programs", short: "Programs" },
   { href: "/spaces", label: "Our Spaces", short: "Spaces" },
-  { href: "/membership", label: "Tuition & Rates", short: "Rates" },
   { href: "/about", label: "About Yalla", short: "About" },
   { href: "/visit", label: "Visit Yalla", short: "Visit" },
 ] as const;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
 import { Arrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { programs } from "@/content/programs";
+import { otherPrograms } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "Programs",
@@ -22,13 +22,13 @@ export default function ProgramsPage() {
             However your week looks, <em>there’s a Yalla for it.</em>
           </>
         }
-        lede="Drop-in days, camps, weekend care, evenings out, pop-ups, private celebrations and a weekly membership. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
+        lede="Drop-in days, camps, weekend care, evenings out, pop-ups and private celebrations. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
       />
 
       <section className="pb-10">
         <div className="shell">
           <ul className="hairline border-t">
-            {programs.map((p, i) => (
+            {otherPrograms.map((p, i) => (
               <Reveal as="li" key={p.slug} className="hairline border-b">
                 <Link
                   href={`/programs/${p.slug}`}

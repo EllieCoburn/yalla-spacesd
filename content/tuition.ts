@@ -2,8 +2,8 @@ import "server-only";
 
 /**
  * 2026–2027 Membership & Care Rates, from Yalla's rate sheet.
- * Shown in full on the Tuition & Rates page.
- * Cohort tuition is listed per month; daily rates are Yalla Flex (drop-in) rates.
+ * Club Yalla tuition is shown in full on the Membership rates page.
+ * Cohort tuition is listed per month; daily rates are Yalla Flex (drop-in) rates and are not shown there.
  */
 
 export const tuitionYear = "2026–2027";
@@ -87,7 +87,7 @@ export const cohorts: Cohort[] = [
 ];
 
 export const fees = [
-  { label: "One-time registration", amount: "$125", note: "Not charged for drop-in (daily rate) care" },
+  { label: "One-time registration", amount: "$125", note: null },
   { label: "Annual materials", amount: "$175", note: "All members" },
   { label: "Early Bird care", amount: "$16 / day", note: hours.earlyBird },
 ];

@@ -40,7 +40,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A child's hand scooping lemon slices from a water table",
     ages: null,
     schedule: "Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
-    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care. See Tuition & Rates for current rates.",
+    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care.",
     included: null,
     parentOnsite: null,
     bookingMode: "instant",
@@ -128,7 +128,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A young child arranging toy dinosaurs on a small wooden table outdoors",
     ages: "4 months – 5 years",
     schedule: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
-    pricing: "From $275 a month, depending on cohort and schedule. See Tuition & Rates for current rates.",
+    pricing: "From $275 a month, depending on cohort and schedule. See membership rates for full tuition.",
     included: [
       "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
       "Credentialed early childhood educators",
@@ -186,4 +186,9 @@ export const programs: ProgramContent[] = [
 ];
 
 export const getProgram = (slug: string) => programs.find((p) => p.slug === slug);
+
+/** Club Yalla has its own top-level page; every other program lives under /programs. */
+export const clubYalla = programs.find((p) => p.kind === "membership")!;
+export const otherPrograms = programs.filter((p) => p.kind !== "membership");
+export const programHref = (p: Pick<ProgramContent, "kind" | "slug">) => (p.kind === "membership" ? "/club-yalla" : `/programs/${p.slug}`);
 export const programByKind = (kind: ProgramKind) => programs.find((p) => p.kind === kind)!;

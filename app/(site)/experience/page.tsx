@@ -6,7 +6,7 @@ import type { MarkName } from "@/components/brand/marks";
 import { CtaBand, PageHero, Section, SectionTitle } from "@/components/site/PageParts";
 import { Arrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { getProgram } from "@/content/programs";
+import { getProgram, programHref } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "The Yalla Experience",
@@ -126,7 +126,7 @@ export default function ExperiencePage() {
                     const p = getProgram(it.slug)!;
                     return (
                       <Reveal as="li" key={it.slug} delay={i * 80} className={`bg-chalk ${w.items.length === 1 ? "sm:col-span-2" : ""}`}>
-                        <Link href={`/programs/${p.slug}`} className="group flex h-full flex-col p-7 lg:p-8">
+                        <Link href={programHref(p)} className="group flex h-full flex-col p-7 lg:p-8">
                           <p className="eyebrow text-[0.58rem] text-ink-soft">{p.short}</p>
                           <p className="display mt-2 text-[1.55rem] transition-colors group-hover:text-blue">{p.name}</p>
                           <p className="mt-3 flex-1 text-[0.95rem] text-ink-soft">{it.how}</p>

@@ -60,7 +60,7 @@ export default function TeamPage() {
               <div key={g.key} className="grid gap-8 border-t border-line pt-10 lg:grid-cols-12">
                 <div className="lg:col-span-3">
                   <h3 className="display text-[1.9rem]">{g.title}</h3>
-                  <Link href="/membership" className="mt-3 inline-flex items-center gap-2 text-[0.85rem] text-ink-soft hover:text-blue">
+                  <Link href="/club-yalla" className="mt-3 inline-flex items-center gap-2 text-[0.85rem] text-ink-soft hover:text-blue">
                     <span className="link-underline">About our cohorts</span>
                     <Arrow className="h-3 w-4" />
                   </Link>

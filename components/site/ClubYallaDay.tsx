@@ -35,13 +35,13 @@ const rhythm = [
 ];
 
 /** How a Club Yalla weekday works: parents onsite, children in their cohort. Shown on the Club Yalla program page only. */
-export function ClubYallaDay() {
+export function ClubYallaDay({ start = 1 }: { start?: number }) {
   return (
     <>
       <section className="py-20 lg:py-28">
         <div className="shell grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <Index n="01">A Club Yalla day</Index>
+            <Index n={String(start).padStart(2, "0")}>A Club Yalla day</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Down the hall, <em>not across town.</em>
             </h2>
@@ -65,7 +65,7 @@ export function ClubYallaDay() {
         <div className="py-20 text-chalk lg:py-32">
           <div className="shell grid gap-14 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="eyebrow text-chalk/60">02 · Daily rhythm</p>
+              <p className="eyebrow text-chalk/60">{String(start + 1).padStart(2, "0")} · Daily rhythm</p>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Predictable, <em className="text-mist!">never rigid.</em>
               </h2>
