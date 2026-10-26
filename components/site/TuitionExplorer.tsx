@@ -27,12 +27,12 @@ const clock = (m: number) => {
 const round5 = (n: number) => Math.round(n / 5) * 5;
 
 /**
- * Custom tuition, prorated by hours of care (from 8:30) between the half-day and full-day rates.
- * Anything up to a half day's length is billed at the half-day rate.
+ * Custom tuition, prorated by hours of care (from 8:30). Up to a half day it is the half-day rate
+ * per hour; beyond that it scales between the half-day and full-day rates.
  */
 const customTuition = (half: number, full: number, start: number, end: number) => {
   const hrs = Math.max(0, end - Math.max(start, CARE_START)) / 60;
-  return hrs <= HALF_HOURS ? half : half + ((full - half) * (hrs - HALF_HOURS)) / (FULL_HOURS - HALF_HOURS);
+  return hrs <= HALF_HOURS ? (half * hrs) / HALF_HOURS : half + ((full - half) * (hrs - HALF_HOURS)) / (FULL_HOURS - HALF_HOURS);
 };
 
 /** Full tuition table by cohort; data arrives as props from the server. */
@@ -143,8 +143,7 @@ export function TuitionExplorer({
                 </div>
               ))}
               <p className="text-[0.85rem] text-ink-soft">
-                Custom rates are prorated by hours between our half-day and full-day tuition; schedules up to 3½ hours are billed at the
-                half-day rate. Arriving at {clock(EARLY_BIRD)} includes Early Bird care. Custom schedules are arranged with us and subject to
+                Custom rates are prorated by hours of care, based on our half-day and full-day tuition. Arriving at {clock(EARLY_BIRD)} includes Early Bird care. Custom schedules are arranged with us and subject to
                 availability.
               </p>
             </div>
