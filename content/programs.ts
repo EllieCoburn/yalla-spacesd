@@ -119,7 +119,7 @@ export const programs: ProgramContent[] = [
     short: "Fixed weekly care",
     tagline: "Rethinking childcare for the work-from-anywhere generation.",
     summary:
-      "Club Yalla is our weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
+      "Club Yalla is our year-round weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
     body: [
       "Club Yalla is our recurring weekday membership. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in cohort spaces and outdoor environments made for them.",
       "Parents and caregivers work onsite in our coworking space. You get uninterrupted time for your own work, and you’re close by all day. That closeness is what Club Yalla is built around.",
