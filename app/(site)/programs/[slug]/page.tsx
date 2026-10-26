@@ -111,22 +111,33 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                     pending
                   ),
                 },
+                // On Yalla Flex, parents are covered by "What’s included" (coworking for you); first-timers get setup steps instead.
+                ...(p.kind === "drop_in"
+                  ? [
+                      {
+                        label: "Before your first day",
+                        value:
+                          "Set up your Family Portal, add your child’s profile and complete the required forms. Most of this happens just once, so later bookings are quick.",
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Parents",
+                        value:
+                          p.parentOnsite === true
+                            ? "Parents and caregivers work onsite in our coworking space"
+                            : p.parentOnsite === false
+                              ? "Parents head out after arrival and enjoy their time"
+                              : pending,
+                      },
+                    ]),
                 {
-                  label: "Parents",
+                  label: "How to book",
                   value:
-                    p.parentOnsite === true
-                      ? "Parents and caregivers work onsite in our coworking space"
-                      : p.parentOnsite === false
-                        ? "Parents head out after arrival and enjoy their time"
-                        : pending,
-                },
-                {
-                  label: "How to join",
-                  value:
-                    p.bookingMode === "enroll"
-                      ? "Recurring membership. Apply, and we’ll reach out when a space opens for your family."
-                      : p.bookingMode === "inquire"
-                        ? "Get in touch and we’ll take it from there"
+                    p.bookingMode === "inquire"
+                      ? "Get in touch and we’ll take it from there"
+                      : p.kind === "drop_in"
+                        ? "Choose full or half days in the booking calendar whenever there’s space, and reserve online with instant confirmation. Book a single day or several at once."
                         : "Book online. Live availability, instant confirmation.",
                 },
                     ]
