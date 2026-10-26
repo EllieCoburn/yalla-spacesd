@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import type { MarkName } from "@/components/brand/marks";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
-import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     "Every child. Every family. A place to belong. How inclusion shapes the way Yalla understands children, builds relationships and creates community.",
 };
 
-type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string };
+type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string; photo?: { src: string; alt: string } };
 
 const chapters: Chapter[] = [
   {
@@ -25,6 +25,7 @@ const chapters: Chapter[] = [
       "Our language, materials, and daily practices are designed to reflect the diversity of real families, rather than assuming that every family looks or functions the same way.",
     ],
     closing: "However your family came to be, you deserve to feel at home here.",
+    photo: { src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" },
   },
   {
     mark: "sprig",
@@ -45,6 +46,7 @@ const chapters: Chapter[] = [
       "At Yalla, toys, materials, activities, and opportunities are not assigned according to gender. Children are encouraged to explore their interests, express themselves, and engage in play that feels meaningful to them.",
       "Our approach is grounded in respect for each child’s developing identity, autonomy, and sense of self.",
     ],
+    photo: { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" },
   },
   {
     mark: "moon",
@@ -67,6 +69,7 @@ const chapters: Chapter[] = [
       "We recognize that creating an equitable community is an ongoing responsibility, not a destination or a statement of perfection.",
       "This means listening when families share concerns, reflecting on our own practices, and remaining open to change.",
     ],
+    photo: { src: "/photos/basket.jpg", alt: "A woven basket of wooden rings and spools on a low shelf" },
   },
 ];
 
@@ -102,14 +105,35 @@ export default function BelongingPage() {
         </div>
       </section>
 
+      <section className="pt-20 lg:pt-28">
+        <div className="shell grid grid-cols-6 gap-3 sm:gap-5">
+          {[
+            { src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+            { src: "/photos/collage-wall.jpg", alt: "A collaborative cardboard collage on the play garden fence", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
+            { src: "/photos/painting-wall-child.jpg", alt: "A child painting at the outdoor painting wall", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
+          ].map((img, i) => (
+            <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
+              <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 50vw" className="object-cover" />
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
       <section className="py-20 lg:py-32">
         <div className="shell space-y-20 lg:space-y-28">
           {chapters.map((c, i) => (
             <Reveal key={c.title} className="grid gap-8 border-t border-line pt-12 lg:grid-cols-12 lg:gap-10">
               <div className="lg:col-span-4">
-                <Index n={String(i + 1).padStart(2, "0")}>Belonging</Index>
-                <Mark name={c.mark} className="mt-8 h-12 w-auto text-blue" />
+                <div className="flex items-center gap-5">
+                  <span className="font-serif text-[1.05rem] text-blue italic">{String(i + 1).padStart(2, "0")}</span>
+                  <Mark name={c.mark} className="h-11 w-auto text-blue" />
+                </div>
                 <h2 className="display mt-6 text-[clamp(2rem,1.5rem+1.6vw,2.9rem)]">{c.title}</h2>
+                {c.photo ? (
+                  <div className="relative mt-10 aspect-[4/5] w-[78%] max-w-sm overflow-hidden rounded-t-[999px] bg-sand">
+                    <Image src={c.photo.src} alt={c.photo.alt} fill sizes="(min-width:1024px) 26vw, 78vw" className="object-cover" />
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-2">
                 {c.paragraphs.map((p, j) => (
@@ -130,7 +154,7 @@ export default function BelongingPage() {
         <div className="py-20 text-chalk lg:py-32">
           <div className="shell grid gap-12 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <p className="eyebrow text-chalk/60">06 · Together</p>
+              <p className="font-serif text-[1.05rem] text-mist italic">06</p>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Belonging Is Something <em className="text-mist!">We Build Together</em>
               </h2>
