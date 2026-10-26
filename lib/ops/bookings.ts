@@ -226,7 +226,7 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
     programIds: [...prep.programsById.keys()],
     sessionIds: [...prep.sessionsById.keys()],
   });
-  if (blocking.length && !(input.source === "admin" && input.acknowledgePaperwork))
+  if (blocking.length && !((input.source === "admin" || input.source === "waitlist") && input.acknowledgePaperwork))
     throw new OpsError("paperwork", `Required before booking: ${[...new Set(blocking.map((b) => b.title))].join(", ")}.`, { blocking });
 
   const holdMinutes = input.holdMinutes ?? (await getPolicy(db, "booking.holdMinutes"));
@@ -358,6 +358,19 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   if (!["held", "pending_payment"].includes(b.status)) throw new OpsError("invalid", `This booking is ${BOOKING_STATUS_LABEL[b.status]?.toLowerCase()}.`);
   if (!b.holdExpiresAt || b.holdExpiresAt <= new Date()) throw new OpsError("expired", "Your hold has expired. Please choose your sessions again.");
 
+  // Families must complete booking-blocking paperwork before paying (e.g. a waitlist offer made
+  // before the waiver was signed). Staff-created bookings were acknowledged at creation.
+  if (b.source !== "admin") {
+    const rows = await bookingLines(db, b.id);
+    const missing = await blockingPaperwork(db, {
+      familyId: b.familyId,
+      childIds: rows.map((r) => r.item.childId).filter(Boolean) as string[],
+      programIds: [...new Set(rows.map((r) => r.program.id))],
+      sessionIds: rows.map((r) => r.session.id),
+      bookingId: b.id,
+    });
+    if (missing.length) throw new OpsError("paperwork", `Please complete before paying: ${[...new Set(missing.map((m) => m.title))].join(", ")}.`, { blocking: missing });
+  }
   let [inv] = await db.select().from(invoices).where(and(eq(invoices.bookingId, b.id), ne(invoices.status, "void")));
   if (!inv) inv = await invoiceForBooking(db, actor, b.id);
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;

@@ -160,7 +160,7 @@ export async function waitlistRows(db: Executor, f: { programId?: string; sessio
       const items = await blockingPaperwork(db, { familyId: r.f.id, childIds: r.e.childIds, programIds: [r.p.id], sessionIds: [r.s.id], onDate: r.s.localDate });
       blocking = [...new Set(items.map((i) => i.title))];
     }
-    out.push({ ...r, blocking, canOffer: r.e.status === "waiting" && !!r.s && r.remaining != null && r.remaining >= r.e.partySize && r.ineligible.length === 0 && blocking.length === 0 });
+    out.push({ ...r, blocking, canOffer: r.e.status === "waiting" && !!r.s && r.remaining != null && r.remaining >= r.e.partySize && r.ineligible.length === 0 });
   }
   return out;
 }

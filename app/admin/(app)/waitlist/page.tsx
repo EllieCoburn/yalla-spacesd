@@ -165,7 +165,7 @@ export default async function WaitlistPage({ searchParams }: { searchParams: Pro
                               <ActionForm
                                 action={offerAction}
                                 submit={{ label: "Send offer" }}
-                                confirm={{ title: `Offer ${r.e.partySize} spot${r.e.partySize === 1 ? "" : "s"} to ${r.f.name}?`, body: "The spot is held for the window you set and released automatically if they don’t accept. They won’t be charged unless they complete checkout.", confirmLabel: "Send offer" }}
+                                confirm={{ title: `Offer ${r.e.partySize} spot${r.e.partySize === 1 ? "" : "s"} to ${r.f.name}?`, body: `The spot is held for the window you set and released automatically if they don’t accept. They won’t be charged unless they complete checkout.${r.blocking.length ? ` They’ll need to complete ${r.blocking.join(", ")} before they can pay.` : ""}`, confirmLabel: "Send offer" }}
                               >
                                 <input type="hidden" name="entryId" value={r.e.id} />
                                 <TextField name="windowHours" label="Acceptance window (hours)" type="number" defaultValue={r.p.offerWindowHours} />
