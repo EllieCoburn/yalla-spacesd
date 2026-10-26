@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 const steps = [
   { mark: "window" as const, title: "Apply", body: "Tell us about your family, your child and the days you’re hoping for." },
-  { mark: "arch" as const, title: "Visit", body: "When a space opens for your family, we’ll reach out and invite you to tour Yalla and meet the team." },
+  { mark: "arch" as const, title: "Visit", body: "When there’s a spot in your child’s cohort, or as you near the top of the waitlist, we’ll invite you to tour Yalla and meet the team." },
   { mark: "balcony" as const, title: "Welcome", body: "Set up your Family Portal, add your children’s profiles and complete the required forms." },
   { mark: "sun" as const, title: "First days", body: "We’ll plan a gentle start together, so your child (and you) feel at home." },
 ];
@@ -85,7 +85,7 @@ export default function ClubYallaPage() {
                 { label: "Ages", value: p.ages },
                 { label: "Days & hours", value: p.days },
                 { label: "Parents", value: "Parents and caregivers work onsite in our coworking space" },
-                { label: "How to join", value: "Recurring membership. Apply, and we’ll reach out when a space opens for your family." },
+                { label: "How to join", value: "Recurring membership. Applications are accepted year-round, first come, first served, depending on cohort availability." },
                 {
                   label: "Tuition",
                   value: (
@@ -118,6 +118,11 @@ export default function ClubYallaPage() {
                 Members choose a recurring weekly rhythm of one to five days, full or half days, and keep those same days each week.
                 Tuition is monthly. Your child joins one of four small cohorts, each with a low caregiver-to-child ratio, while you work
                 onsite in the coworking space. <ToConfirm>Cohort age ranges</ToConfirm>
+              </p>
+              <p>
+                The cohort year runs August through July, and children move up to their next cohort at the start of each new cohort year.
+                Onboarding for the coming year happens each May, so we recommend applying for the next cohort year. Families who join
+                mid-year are matched with the cohort that best fits their child’s age and developmental readiness.
               </p>
             </div>
           </div>
@@ -211,7 +216,7 @@ export default function ClubYallaPage() {
             Begin with <em>an application.</em>
           </>
         }
-        body="Spaces open rarely. Apply, and we’ll reach out when there’s a place for your family."
+        body="Applications are accepted year-round, first come, first served, depending on cohort availability."
         primary={{ href: "/apply", label: "Apply for membership" }}
         secondary={{ href: "/membership", label: "View membership rates" }}
       />

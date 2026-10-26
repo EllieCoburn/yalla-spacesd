@@ -93,7 +93,7 @@ export default function MembershipPage() {
             Begin with <em>an application.</em>
           </>
         }
-        body="Spaces open rarely. Apply, and we’ll reach out when there’s a place for your family."
+        body="Applications are accepted year-round, first come, first served, depending on cohort availability."
         primary={{ href: "/apply", label: "Apply for membership" }}
         secondary={{ href: "/club-yalla", label: "About Club Yalla" }}
       />

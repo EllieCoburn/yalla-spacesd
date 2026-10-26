@@ -73,7 +73,7 @@ const groups: { title: string; items: QA[] }[] = [
     items: [
       {
         q: "What happens on a first visit?",
-        a: "You’re welcome to request a tour from our Visit page. For Club Yalla, families begin with an application; spaces open rarely, so when one fits your family we’ll reach out and invite you to tour and ask us anything.",
+        a: "You’re welcome to request a tour from our Visit page. For Club Yalla, families begin with an application. Applications are accepted year-round, first come, first served, depending on cohort availability, and we’ll reach out to invite you to tour and ask us anything.",
       },
       {
         q: "What paperwork is needed before my child’s first day?",

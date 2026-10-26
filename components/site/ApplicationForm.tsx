@@ -10,14 +10,15 @@ const pill = (on: boolean) =>
 export function ApplicationForm() {
   const [sent, setSent] = useState(false);
   const [days, setDays] = useState<number | null>(null);
-  const [length, setLength] = useState<"full" | "half" | null>(null);
+  const [length, setLength] = useState<"full" | "half" | "custom" | null>(null);
+  const [when, setWhen] = useState<"next" | "soonest" | null>(null);
 
   if (sent) {
     return (
       <div className="flex min-h-[26rem] flex-col items-center justify-center text-center">
         <Mark name="balcony" className="h-14 w-auto text-blue" />
         <h3 className="display mt-8 text-[2.2rem]">Thank you for applying.</h3>
-        <p className="mt-4 max-w-sm text-ink-soft">We’ll reach out when a space opens for your family and invite you to visit.</p>
+        <p className="mt-4 max-w-sm text-ink-soft">We’ll be in touch about cohort availability and the next steps for your family.</p>
         <p className="mt-8 text-[0.75rem] text-oxblood">Preview: applications aren’t sent anywhere yet.</p>
       </div>
     );
@@ -61,6 +62,18 @@ export function ApplicationForm() {
       </fieldset>
 
       <fieldset>
+        <legend className="eyebrow text-ink-soft">When you’d like to begin</legend>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" aria-pressed={when === "next"} onClick={() => setWhen("next")} className={pill(when === "next")}>
+            Next cohort year (August) · recommended
+          </button>
+          <button type="button" aria-pressed={when === "soonest"} onClick={() => setWhen("soonest")} className={pill(when === "soonest")}>
+            Soonest available spot
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend className="eyebrow text-ink-soft">The rhythm you’re hoping for</legend>
         <p className="mt-4 text-[0.85rem] text-ink-soft">Days per week</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -77,6 +90,9 @@ export function ApplicationForm() {
           </button>
           <button type="button" aria-pressed={length === "half"} onClick={() => setLength("half")} className={pill(length === "half")}>
             Half day · 8:30 – 12:00
+          </button>
+          <button type="button" aria-pressed={length === "custom"} onClick={() => setLength("custom")} className={pill(length === "custom")}>
+            Custom hours
           </button>
         </div>
       </fieldset>
