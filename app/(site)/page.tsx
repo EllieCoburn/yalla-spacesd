@@ -71,8 +71,8 @@ export default function Home() {
                 There’s more than one <em>way to Yalla.</em>
               </h2>
               <p className="mt-6 text-ink-soft">
-                Families come to Yalla in different ways: booking care as they need it, joining a seasonal camp, a weekend session or a parents’
-                night out, gathering at pop-ups and private celebrations, or settling into a weekly rhythm with Club Yalla.
+                From flexible childcare and seasonal camps to family gatherings and a weekly rhythm with Club Yalla, there are plenty of
+                ways to make Yalla part of your family’s life.
               </p>
             </div>
             <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
