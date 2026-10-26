@@ -32,7 +32,6 @@ export const cohorts: Cohort[] = [
     name: "Seedlings",
     ratio: "1:4",
     maxSize: 8,
-    note: "Our 2026–2027 Seedlings cohort is full. Monthly tuition shown is for 2027–2028.",
     weekly: [
       [5, 2800, 1600],
       [4, 2600, 1300],
