@@ -49,6 +49,9 @@ export function SiteFooter() {
                   <Link href="/visit" className="link-underline">Book a tour</Link>
                 </li>
                 <li>
+                  <Link href="/belonging" className="link-underline">Belonging at Yalla</Link>
+                </li>
+                <li>
                   <Link href="/portal" className="link-underline">Family Portal</Link>
                 </li>
               </ul>
