@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string }> }) {
   const sp = await searchParams;
   const configured = isDbConfigured();
-  if (configured && (await getGuardian())) redirect(sp.next?.startsWith("/book") ? sp.next : "/portal/home");
+  if (configured && (await getGuardian())) redirect(sp.next && /^\/(book|portal\/)/.test(sp.next) ? sp.next : "/portal/home");
 
   return (
     <section className="grid min-h-[100svh] lg:grid-cols-2">

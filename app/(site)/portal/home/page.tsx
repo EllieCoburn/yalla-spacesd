@@ -32,6 +32,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "bookings", label: "Bookings" },
     { key: "forms", label: "Forms", count: outstanding.length },
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
+    { key: "parking", label: "Parking", href: "/portal/parking" },
   ];
 
   const bookingList = (items: typeof data.upcoming, cancellable: boolean) =>
@@ -87,7 +88,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
 
         <nav aria-label="Portal sections" className="no-scrollbar -mx-[clamp(1.25rem,4vw,3.5rem)] mt-10 flex gap-8 overflow-x-auto border-b border-line px-[clamp(1.25rem,4vw,3.5rem)] md:mx-0 md:px-0">
           {tabs.map((t) => (
-            <Link key={t.key} href={`/portal/home?tab=${t.key}`} aria-current={tab === t.key ? "page" : undefined} className={`relative shrink-0 pb-4 text-[0.92rem] ${tab === t.key ? "text-ink" : "text-ink-soft hover:text-ink"}`}>
+            <Link key={t.key} href={"href" in t && t.href ? t.href : `/portal/home?tab=${t.key}`} aria-current={tab === t.key ? "page" : undefined} className={`relative shrink-0 pb-4 text-[0.92rem] ${tab === t.key ? "text-ink" : "text-ink-soft hover:text-ink"}`}>
               {t.label}
               {"count" in t && t.count ? <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-oxblood px-1.5 text-[0.65rem] text-chalk">{t.count}</span> : null}
               {tab === t.key ? <span className="absolute inset-x-0 -bottom-px h-[2px] bg-blue" /> : null}
@@ -130,6 +131,12 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                     </Link>
                   ) : null}
                 </div>
+                <Link href="/portal/parking" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
+                  <p className="eyebrow text-[0.6rem] text-ink-soft">Getting here</p>
+                  <p className="display mt-3 text-[1.4rem]">Parking guide</p>
+                  <p className="mt-2 text-[0.88rem] text-ink-soft">Free park-and-walk lots, meters, discounted monthly spots and our driveway policy.</p>
+                  <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Read the guide</span>
+                </Link>
                 <div className="border border-line bg-paper p-7">
                   <p className="eyebrow text-[0.6rem] text-ink-soft">Your children</p>
                   <ul className="mt-4 space-y-3">
