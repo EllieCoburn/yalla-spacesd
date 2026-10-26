@@ -13,7 +13,7 @@ export function ApplicationForm() {
   const [days, setDays] = useState<number | null>(null);
   const [length, setLength] = useState<"full" | "half" | "custom" | null>(null);
   const [when, setWhen] = useState<"next" | "soonest" | null>(null);
-  const [onsite, setOnsite] = useState<"yes" | "no" | null>(null);
+  const [onsite, setOnsite] = useState<"me" | "partner" | "both" | "neither" | null>(null);
   const [weekdays, setWeekdays] = useState<string[]>([]);
   const [flex, setFlex] = useState<"set" | "some" | "any" | null>(null);
   const toggleDay = (d: string) => setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]));
@@ -37,38 +37,6 @@ export function ApplicationForm() {
       }}
       className="space-y-9"
     >
-      <fieldset>
-        <legend className="eyebrow text-ink-soft">Working onsite</legend>
-        <p className="mt-4 text-[0.95rem] text-ink-soft">
-          Club Yalla is childcare and coworking together: at least one parent or guardian works onsite in our coworking space on every
-          care day.
-        </p>
-        <p className="mt-5 text-[0.95rem]">Will at least one parent or guardian work onsite at Yalla on your child’s care days?</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(
-            [
-              ["yes", "Yes, one of us will work onsite"],
-              ["no", "No"],
-            ] as const
-          ).map(([v, label]) => (
-            <label key={v} className={`${pill(onsite === v)} cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue`}>
-              <input type="radio" name="onsite" value={v} required checked={onsite === v} onChange={() => setOnsite(v)} className="sr-only" />
-              {label}
-            </label>
-          ))}
-        </div>
-        {onsite === "no" ? (
-          <p role="status" className="mt-4 bg-mist/60 p-4 text-[0.9rem] text-ink">
-            Club Yalla may not be the right fit, since a parent or guardian working onsite is part of every membership. You may find a
-            better fit among our{" "}
-            <Link href="/programs" className="underline underline-offset-4">
-              other programs
-            </Link>
-            .
-          </p>
-        ) : null}
-      </fieldset>
-
       <fieldset className="space-y-7">
         <legend className="eyebrow mb-2 text-ink-soft">About you</legend>
         <div className="grid gap-7 sm:grid-cols-2">
@@ -96,6 +64,36 @@ export function ApplicationForm() {
           </Field>
           <Field name="start">Ideal start date</Field>
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="eyebrow text-ink-soft">Working onsite</legend>
+        <p className="mt-4 text-[0.95rem]">Which parent or guardian will be working onsite in our coworking space?</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              ["me", "Me"],
+              ["partner", "My partner or co-parent"],
+              ["both", "Both of us"],
+              ["neither", "Neither of us"],
+            ] as const
+          ).map(([v, label]) => (
+            <label key={v} className={`${pill(onsite === v)} cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue`}>
+              <input type="radio" name="onsite" value={v} required checked={onsite === v} onChange={() => setOnsite(v)} className="sr-only" />
+              {label}
+            </label>
+          ))}
+        </div>
+        {onsite === "neither" ? (
+          <p role="status" className="mt-4 bg-mist/60 p-4 text-[0.9rem] text-ink">
+            Club Yalla may not be the right fit, since a parent or guardian working onsite is part of every membership. You may find a
+            better fit among our{" "}
+            <Link href="/programs" className="underline underline-offset-4">
+              other programs
+            </Link>
+            .
+          </p>
+        ) : null}
       </fieldset>
 
       <fieldset>
@@ -158,13 +156,15 @@ export function ApplicationForm() {
 
       <Field name="message">Anything you’d like us to know</Field>
 
-      <button
-        type="submit"
-        disabled={onsite === "no"}
-        className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink sm:w-auto sm:px-10"
-      >
-        Submit application
-      </button>
+      <div className="flex justify-center pt-2">
+        <button
+          type="submit"
+          disabled={onsite === "neither"}
+          className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink sm:w-auto sm:px-12"
+        >
+          Join Club Yalla
+        </button>
+      </div>
     </form>
   );
 }
