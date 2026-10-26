@@ -56,9 +56,9 @@ export function SiteFooter() {
             <div className="col-span-2 sm:col-span-1">
               <p className="eyebrow mb-5 text-chalk/60">Find us</p>
               <p className="text-chalk/90">
-                {site.neighborhood}, {site.city}
+                {site.address.value}
                 <br />
-                Near Balboa Park’s west entrance
+                {site.neighborhood}, near Balboa Park’s west entrance
               </p>
               <p className="mt-4 text-chalk/90">
                 Weekday classrooms 8:30am – 4:30pm

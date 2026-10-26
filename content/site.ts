@@ -14,7 +14,7 @@ export const site = {
   extendedCare: "Early Bird care from 8:00am",
   yearRound: true,
   email: { value: "hello@yallaspacesd.com", confirm: false },
-  address: { value: null as string | null, confirm: true },
+  address: { value: "408 Nutmeg St, San Diego, CA 92103" as string | null, confirm: false },
   phone: { value: null as string | null, confirm: true },
   instagram: { value: "https://www.instagram.com/yallachildcare/", confirm: false },
   pinterest: { value: "https://www.pinterest.com/yallachildcare/", confirm: false },

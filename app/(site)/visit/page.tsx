@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { Mark } from "@/components/brand/Mark";
-import { WindowField } from "@/components/brand/WindowField";
 import { Facts, PageHero, Section } from "@/components/site/PageParts";
 import { TourForm } from "@/components/site/TourForm";
 import { Draft, ToConfirm } from "@/components/ui/Draft";
@@ -12,6 +10,10 @@ export const metadata: Metadata = {
   title: "Visit Yalla",
   description: "Schedule a tour of Yalla in Bankers Hill, San Diego. Location, parking and what to expect.",
 };
+
+const mapsQuery = encodeURIComponent(site.address.value ?? `${site.neighborhood}, ${site.city}`);
+const mapsEmbed = `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
+const mapsLink = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
 
 export default function VisitPage() {
   return (
@@ -43,17 +45,23 @@ export default function VisitPage() {
             </p>
             <p className="mt-3 text-ink-soft">{site.locationLine}</p>
             <p className="mt-2 text-ink-soft">
-              Street address <ToConfirm />
+              <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="link-underline">
+                {site.address.value}
+              </a>
             </p>
-            <div className="relative mt-10 aspect-square overflow-hidden">
-              <WindowField seed={21} width={600} height={600} horizon={false} className="absolute inset-0 h-full w-full" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-chalk shadow-[0_10px_40px_-10px_rgba(41,44,69,.35)]">
-                  <Mark name="mark" className="h-16 w-auto text-blue" />
-                </div>
-              </div>
-              <span className="eyebrow absolute bottom-3 left-3 bg-chalk px-2 py-1 text-[0.55rem] text-ink-soft">Map to come</span>
+            <div className="relative mt-10 aspect-square overflow-hidden bg-mist">
+              <iframe
+                title={`Map showing Yalla at ${site.address.value}`}
+                src={mapsEmbed}
+                className="absolute inset-0 h-full w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
+            <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-[0.85rem] text-ink-soft hover:text-blue">
+              <span className="link-underline">Open in Google Maps</span>
+            </a>
           </div>
         </div>
       </section>
