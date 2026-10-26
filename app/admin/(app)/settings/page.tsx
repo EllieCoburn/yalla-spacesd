@@ -356,7 +356,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <section>
           <h2 className="mb-1 text-[1rem] font-semibold text-ink">Roles & permissions</h2>
           <p className="mb-4 max-w-2xl text-[0.85rem] text-ink-soft">
-            Permissions are enforced on the server, not just hidden in the interface. For example, educators can see allergies and pickup contacts without seeing billing.
+            Permissions are enforced on the server, not just hidden in the interface. For example, educarers and guides can see allergies and departure contacts without seeing billing.
           </p>
           <div className="space-y-3">
             {roles.map((role) => (

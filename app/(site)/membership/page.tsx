@@ -7,7 +7,7 @@ import { cohorts, fees, hours, tuitionYear, workspace } from "@/content/tuition"
 
 export const metadata: Metadata = {
   title: "Membership Rates",
-  description: "Club Yalla membership tuition by cohort and schedule, fees and workspace upgrades.",
+  description: "Club Yalla membership tuition by cohort and number of days, fees and workspace upgrades.",
 };
 
 export default function MembershipPage() {

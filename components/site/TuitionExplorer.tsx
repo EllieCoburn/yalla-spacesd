@@ -56,7 +56,7 @@ export function TuitionExplorer({ cohorts, hours }: { cohorts: Cohort[]; hours: 
             </caption>
             <thead>
               <tr className="eyebrow text-[0.58rem] text-ink-soft">
-                <th className="py-3 font-medium">Schedule</th>
+                <th className="py-3 font-medium">Days per week</th>
                 <th className="py-3 text-right font-medium">Monthly tuition</th>
               </tr>
             </thead>

@@ -137,7 +137,7 @@ export const savePickupAction = adminAction(["families.manage", "children.care"]
     isRestricted: bool("isRestricted"),
     restrictionNote: str("restrictionNote"),
   });
-  return bool("isRestricted") ? "Pickup restriction saved. It will show on rosters and block check-out." : "Authorized pickup saved.";
+  return bool("isRestricted") ? "Departure restriction saved. It will show on cohort rosters and block check-out." : "Departure contact saved.";
 });
 
 export const removePickupAction = adminAction(["families.manage", "children.care"], async ({ db, actor, str }) => {

@@ -11,7 +11,7 @@ import { cohorts, formRequirements, formTemplates, programCohorts, programPrices
 export const PROGRAM_KINDS = [
   { value: "membership", label: "Recurring membership (Club Yalla)" },
   { value: "drop_in", label: "Drop-in care" },
-  { value: "nature", label: "Nature playschool" },
+  { value: "nature", label: "Nature program" },
   { value: "camp", label: "Seasonal camp" },
   { value: "weekend", label: "Weekend care" },
   { value: "parents_night", label: "Parents’ night out" },
@@ -21,7 +21,7 @@ export const PROGRAM_KINDS = [
 export const PARENT_PRESENCE = [
   { value: "required", label: "A parent or caregiver must remain onsite" },
   { value: "optional", label: "Parents may stay or leave" },
-  { value: "not_required", label: "Drop-off — parents leave" },
+  { value: "not_required", label: "Parents head out after arrival" },
 ];
 export const BOOKING_UNITS = [
   { value: "per_child", label: "Per child (each child uses a spot)" },

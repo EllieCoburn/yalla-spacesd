@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 const steps = [
-  { mark: "window" as const, title: "Apply", body: "Tell us about your family, your child and the schedule you’re hoping for." },
+  { mark: "window" as const, title: "Apply", body: "Tell us about your family, your child and the days you’re hoping for." },
   { mark: "arch" as const, title: "Visit", body: "When a space opens for your family, we’ll reach out and invite you to tour Yalla and meet the team." },
   { mark: "balcony" as const, title: "Welcome", body: "Set up your Family Portal, add your children’s profiles and complete the required forms." },
   { mark: "sun" as const, title: "First days", body: "We’ll plan a gentle start together, so your child (and you) feel at home." },
@@ -83,7 +83,7 @@ export default function ClubYallaPage() {
             <Facts
               items={[
                 { label: "Ages", value: p.ages },
-                { label: "Schedule", value: p.schedule },
+                { label: "Days & hours", value: p.days },
                 { label: "Parents", value: "Parents and caregivers work onsite in our coworking space" },
                 { label: "How to join", value: "Recurring membership. Apply, and we’ll reach out when a space opens for your family." },
                 {
@@ -115,7 +115,7 @@ export default function ClubYallaPage() {
             </div>
             <div className="space-y-5 text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
               <p>
-                Members choose a recurring weekly schedule of one to five days, full or half days, and keep those same days each week.
+                Members choose a recurring weekly rhythm of one to five days, full or half days, and keep those same days each week.
                 Tuition is monthly. Your child joins one of four small cohorts, each with a low caregiver-to-child ratio, while you work
                 onsite in the coworking space. <ToConfirm>Cohort age ranges</ToConfirm>
               </p>
@@ -174,7 +174,7 @@ export default function ClubYallaPage() {
             <div>
               <p className="eyebrow text-ink-soft">Membership rates</p>
               <p className="display mt-3 text-[clamp(1.7rem,1.3rem+1.2vw,2.4rem)]">
-                Tuition by cohort and schedule, <em>openly shared.</em>
+                Tuition by cohort and days, <em>openly shared.</em>
               </p>
               <p className="mt-3 text-ink-soft">Monthly tuition for every cohort, plus fees and workspace upgrades.</p>
             </div>

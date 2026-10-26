@@ -158,13 +158,13 @@ export async function setPickup(
     action: input.isRestricted ? "family.pickup_restriction" : "family.pickup",
     entityType: "family",
     entityId: familyId,
-    summary: `${input.id ? "Updated" : "Added"} ${input.isRestricted ? "pickup restriction" : "authorized pickup"}: ${values.name}`,
+    summary: `${input.id ? "Updated" : "Added"} ${input.isRestricted ? "departure restriction" : "departure contact"}: ${values.name}`,
   });
 }
 
 export async function removePickup(db: Executor, actor: Actor, familyId: string, pickupId: string) {
   const [p] = await db.delete(authorizedPickups).where(and(eq(authorizedPickups.id, pickupId), eq(authorizedPickups.familyId, familyId))).returning();
-  if (p) await audit(db, actor, { action: "family.pickup_remove", entityType: "family", entityId: familyId, summary: `Removed pickup contact ${p.name}` });
+  if (p) await audit(db, actor, { action: "family.pickup_remove", entityType: "family", entityId: familyId, summary: `Removed departure contact ${p.name}` });
 }
 
 export async function setEmergencyContact(db: Executor, actor: Actor, familyId: string, input: { id?: string; childId?: string | null; name: string; relationship?: string; phone: string; priority?: number }) {

@@ -315,7 +315,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
           </Card>
 
           {care ? (
-            <Card title="Care information & pickup">
+            <Card title="Care information & departure">
               {bookedKids.length === 0 ? <p className="text-[0.85rem] text-ink-soft">No children on this booking.</p> : null}
               <div className="space-y-5">
                 {bookedKids.map((c) => {

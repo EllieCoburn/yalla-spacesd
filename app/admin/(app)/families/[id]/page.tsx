@@ -292,7 +292,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
           </Card>
 
           {d.pickups ? (
-            <Card title="Authorized pickups & restrictions">
+            <Card title="Departure contacts & restrictions">
               <PickupList familyId={d.family.id} pickups={d.pickups} kids={kids} canEdit={manage} />
             </Card>
           ) : null}

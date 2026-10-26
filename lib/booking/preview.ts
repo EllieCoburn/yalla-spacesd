@@ -113,7 +113,7 @@ export const sampleFamily: Family = {
 
 export const sampleForms: RequiredForm[] = [
   { id: "f1", title: "Enrollment agreement", status: "approved" },
-  { id: "f2", title: "Emergency contacts & authorized pick-up", status: "submitted" },
+  { id: "f2", title: "Emergency & departure contacts", status: "submitted" },
   { id: "f3", title: "Health & immunization record", childId: "c1", status: "approved" },
   { id: "f4", title: "Health & immunization record", childId: "c2", status: "missing" },
   { id: "f5", title: "Photo & media preferences", status: "missing" },

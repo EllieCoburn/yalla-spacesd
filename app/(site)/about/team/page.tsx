@@ -44,14 +44,14 @@ export default function TeamPage() {
         <div className="shell">
           <div className="grid gap-8 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <Index n="02">In the classrooms</Index>
+              <Index n="02">In our cohorts</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Familiar faces, <em>every day.</em>
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
               Each cohort has its own small team, so children build lasting relationships with the adults who care for them. In the RIE tradition, our
-              infant and toddler teachers are called educarers: caring and educating are one and the same.
+              infant and young toddler caregivers are called educarers, because caring and educating are one and the same. Our older cohorts are led by guides.
             </p>
           </div>
 
@@ -84,7 +84,7 @@ export default function TeamPage() {
             Come meet <em>the team.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Schedule a tour" }}
+        primary={{ href: "/visit", label: "Book a tour" }}
         secondary={{ href: "/about", label: "About Yalla" }}
       />
     </>

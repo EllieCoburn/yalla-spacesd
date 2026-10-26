@@ -124,10 +124,10 @@ export function RosterCard({ c, sessionId, canManage, showBookings }: { c: Roste
       {c.notExpectedReason && status !== "checked_in" && status !== "checked_out" ? <p className="mt-2 text-[0.85rem] text-ink-soft">Not expected: {c.notExpectedReason}</p> : null}
       {c.attendance?.notes ? <p className="mt-2 text-[0.85rem] text-ink-soft">Note: {c.attendance.notes}</p> : null}
 
-      {/* Pickups & contacts */}
+      {/* Departure contacts */}
       {(allowed.length || c.contacts?.length) && mode !== "checkout" ? (
         <details className="mt-3 text-[0.85rem]">
-          <summary className="cursor-pointer text-ink-soft hover:text-ink">Pickup & contacts</summary>
+          <summary className="cursor-pointer text-ink-soft hover:text-ink">Departure & contacts</summary>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {allowed.length ? (
               <div>
@@ -193,7 +193,7 @@ export function RosterCard({ c, sessionId, canManage, showBookings }: { c: Roste
                       </option>
                     ))}
                   </select>
-                  {!c.pickups ? <p className="text-[0.8rem] text-ink-soft">You can’t see pickup details. Ask a colleague with care access to check this child out.</p> : null}
+                  {!c.pickups ? <p className="text-[0.8rem] text-ink-soft">You can’t see departure details. Ask a colleague with care access to check this child out.</p> : null}
                   <input name="note" placeholder="Note (optional)" className={`${inputCls} min-h-12`} />
                   <div className="flex gap-2">
                     <Big>Confirm check-out</Big>

@@ -19,7 +19,7 @@ const groups: { title: string; items: QA[] }[] = [
         a: (
           <>
             It depends on the program. Club Yalla and Yalla Flex are childcare and coworking together: parents and caregivers work onsite in our
-            coworking space while children are in care. Others, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
+            coworking space while children are in care. Others, like Yalla After Hours, are designed for parents to head out after arrival. Each program page notes how it works.{" "}
             <ToConfirm>Policy details</ToConfirm>
           </>
         ),
@@ -34,11 +34,11 @@ const groups: { title: string; items: QA[] }[] = [
       },
       {
         q: "What are your caregiver-to-child ratios?",
-        a: "Our weekday classrooms are deliberately small. Seedlings and Saplings have a maximum ratio of 1:4 and at most 8 children; Sprouts 1:6 with at most 12; and Wildflowers 1:8 with at most 12.",
+        a: "Our weekday cohorts are deliberately small. Seedlings and Saplings have a maximum ratio of 1:4 and at most 8 children; Sprouts 1:6 with at most 12; and Wildflowers 1:8 with at most 12.",
       },
       {
         q: "What are your hours?",
-        a: "Hours vary by program. Our weekday classrooms (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps, weekend sessions, After Hours evenings and Happenings have their own times, listed in the booking calendar.",
+        a: "Hours vary by program. Our weekday cohorts (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps, weekend sessions, After Hours evenings and Happenings have their own times, listed in the booking calendar.",
       },
     ],
   },
@@ -46,7 +46,7 @@ const groups: { title: string; items: QA[] }[] = [
     title: "The day",
     items: [
       { q: "Are meals and snacks provided?", a: <ToConfirm>Answer from Yalla</ToConfirm> },
-      { q: "How do naps and rest time work?", a: <ToConfirm>Answer from Yalla</ToConfirm> },
+      { q: "How does rest time work?", a: <ToConfirm>Answer from Yalla</ToConfirm> },
       { q: "What should my child bring?", a: <ToConfirm>Answer from Yalla</ToConfirm> },
     ],
   },
@@ -147,7 +147,7 @@ export default function FaqPage() {
             Still curious? <em>Come visit.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Schedule a tour" }}
+        primary={{ href: "/visit", label: "Book a tour" }}
         secondary={{ href: "/book", label: "Book care" }}
       />
     </>

@@ -28,7 +28,7 @@ export function PickupList({ familyId, pickups, kids, canEdit }: { familyId: str
   const sorted = [...pickups].sort((a, b) => Number(b.isRestricted) - Number(a.isRestricted));
   return (
     <div className="space-y-3">
-      {sorted.length === 0 ? <p className="text-[0.85rem] text-ink-soft">No additional pickup adults. Guardians can always collect their children.</p> : null}
+      {sorted.length === 0 ? <p className="text-[0.85rem] text-ink-soft">No additional departure contacts. Guardians can always collect their children.</p> : null}
       <ul className="divide-y divide-ink/6">
         {sorted.map((p) => (
           <li key={p.id} className="py-2.5">
@@ -54,7 +54,7 @@ export function PickupList({ familyId, pickups, kids, canEdit }: { familyId: str
                     <PickupFields p={p} kids={kids} />
                   </ActionForm>
                 </Disclosure>
-                <ActionForm action={removePickupAction} submit={{ label: "Remove", variant: "ghost" }} confirm={{ title: `Remove ${p.name}?`, body: p.isRestricted ? "This removes the pickup restriction." : "They will no longer be listed as an authorized pickup.", confirmLabel: "Remove", danger: true }}>
+                <ActionForm action={removePickupAction} submit={{ label: "Remove", variant: "ghost" }} confirm={{ title: `Remove ${p.name}?`, body: p.isRestricted ? "This removes the departure restriction." : "They will no longer be listed as an authorized pickup.", confirmLabel: "Remove", danger: true }}>
                   <input type="hidden" name="familyId" value={familyId} />
                   <input type="hidden" name="pickupId" value={p.id} />
                 </ActionForm>
@@ -64,7 +64,7 @@ export function PickupList({ familyId, pickups, kids, canEdit }: { familyId: str
         ))}
       </ul>
       {canEdit ? (
-        <Disclosure label="Add pickup adult or restriction">
+        <Disclosure label="Add departure contact or restriction">
           <ActionForm action={savePickupAction} submit={{ label: "Add" }} resetOnSuccess>
             <input type="hidden" name="familyId" value={familyId} />
             <PickupFields kids={kids} />

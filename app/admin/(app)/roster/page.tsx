@@ -122,7 +122,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
               </div>
               {!can(staff, "children.care") ? (
                 <div className="mb-4">
-                  <Notice tone="info">Allergy, care and pickup details are hidden for your role.</Notice>
+                  <Notice tone="info">Allergy, care and departure details are hidden for your role.</Notice>
                 </div>
               ) : null}
               {r.session.status !== "scheduled" ? (

@@ -49,7 +49,7 @@ export default async function PrintRoster({ params }: { params: Promise<{ sessio
             <th className="py-2 pr-3">Child</th>
             <th className="py-2 pr-3">Age · cohort</th>
             {care ? <th className="py-2 pr-3">Alerts</th> : null}
-            {care ? <th className="py-2 pr-3">Authorized pickup</th> : null}
+            {care ? <th className="py-2 pr-3">Authorized for departure</th> : null}
             <th className="py-2 pr-3">In</th>
             <th className="py-2 pr-3">Out</th>
             <th className="py-2">Collected by / notes</th>

@@ -7,7 +7,7 @@ const steps = [
   {
     mark: "arch" as const,
     title: "You arrive together",
-    body: "Mornings begin side by side. Your child is welcomed into the classroom by educators who know them well.",
+    body: "Mornings begin side by side. Your child is welcomed into their cohort space by educarers and guides who know them well.",
   },
   {
     mark: "window" as const,
@@ -31,7 +31,7 @@ const rhythm = [
   ["Morning", "Gathering & invitations", "A small-group gathering, then invitations to create, build and explore."],
   ["Midday", "Lunch & rest", "Shared meals and rest, shaped to each child’s age and needs."],
   ["Afternoon", "Outdoors", "Time in the yard and the neighborhood: digging, climbing, noticing."],
-  ["4:30", "Together again", "Pick-up, a few stories from the day, and home together."],
+  ["4:30", "Together again", "Departure, a few stories from the day, and home together."],
 ];
 
 /** How a Club Yalla weekday works: parents onsite, children in their cohort. Shown on the Club Yalla program page only. */

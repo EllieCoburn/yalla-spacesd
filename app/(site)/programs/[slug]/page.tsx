@@ -53,7 +53,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                   {p.cta.label}
                 </Button>
                 <Button href="/visit" variant="outline" size="lg">
-                  Schedule a tour
+                  Book a tour
                 </Button>
               </Reveal>
             </div>
@@ -90,7 +90,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                     ]
                   : [
                 { label: "Ages", value: p.ages ?? pending },
-                { label: "Schedule", value: p.schedule ?? pending },
+                { label: "Days & hours", value: p.days ?? pending },
                 { label: "Tuition & pricing", value: p.pricing ?? pending },
                 {
                   label: "What’s included",
@@ -110,7 +110,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                     p.parentOnsite === true
                       ? "Parents and caregivers work onsite in our coworking space"
                       : p.parentOnsite === false
-                        ? "Drop off and enjoy your time"
+                        ? "Parents head out after arrival and enjoy their time"
                         : pending,
                 },
                 {

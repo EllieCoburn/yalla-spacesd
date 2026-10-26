@@ -8,7 +8,7 @@ import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
   title: "Our Spaces",
-  description: "Classrooms, outdoor play spaces and a calm coworking room for parents, in Bankers Hill, San Diego.",
+  description: "Cohort spaces, a play garden and a calm coworking room for parents, in Bankers Hill, San Diego.",
 };
 
 function Gallery({ images }: { images: { src: string; alt: string; className: string }[] }) {
@@ -34,7 +34,7 @@ export default function SpacesPage() {
             A historic corner of Bankers Hill, <em>made for little lives.</em>
           </>
         }
-        lede="Classrooms made for play, a shaded yard for exploring and a calm coworking room, home to weekday care, camps, weekend sessions, evenings out, gatherings and celebrations."
+        lede="Cohort spaces made for play, a shaded yard for exploring and a calm coworking room, home to weekday care, camps, weekend sessions, evenings out, gatherings and celebrations."
       />
 
       <section className="pb-6">
@@ -52,11 +52,11 @@ export default function SpacesPage() {
         </div>
       </section>
 
-      {/* Classrooms */}
+      {/* Cohort spaces */}
       <Section>
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Index n="01">The classrooms</Index>
+            <Index n="01">Cohort spaces</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Rooms that <em>invite.</em>
             </h2>
@@ -70,7 +70,7 @@ export default function SpacesPage() {
               <Image src="/photos/painting.jpg" alt="Children painting" fill sizes="25vw" className="object-cover" />
             </div>
             <div className="relative mt-16 aspect-[3/4] overflow-hidden bg-sand">
-              <Image src="/photos/sunflowers.jpg" alt="Sunflowers on a classroom table" fill sizes="25vw" className="object-cover" />
+              <Image src="/photos/sunflowers.jpg" alt="Sunflowers on a table in a cohort space" fill sizes="25vw" className="object-cover" />
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function SpacesPage() {
             Photos are lovely. <em>Visiting is better.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Schedule a tour" }}
+        primary={{ href: "/visit", label: "Book a tour" }}
         secondary={{ href: "/programs", label: "Explore programs" }}
       />
     </>

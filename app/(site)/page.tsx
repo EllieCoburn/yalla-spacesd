@@ -44,7 +44,7 @@ export default function Home() {
             <Facade
               tower={{ src: "/photos/cowork-loft.jpg", alt: "The coworking room at Yalla, seen from the loft above" }}
               door={{ src: "/photos/dinosaurs.jpg", alt: "A child playing with toy dinosaurs outdoors" }}
-              porthole={{ src: "/photos/sunflowers.jpg", alt: "Sunflowers on a classroom table" }}
+              porthole={{ src: "/photos/sunflowers.jpg", alt: "Sunflowers on a table in a cohort space" }}
             />
           </Reveal>
         </div>
@@ -180,7 +180,7 @@ export default function Home() {
               Rooms for them. <em>Room for you.</em>
             </h2>
             <p className="mt-6 text-[1.05rem] text-ink-soft">
-              Classrooms and a leafy yard made for small explorers, and a quiet, beautifully made coworking room for the grown-ups. It all
+              Cohort spaces and a leafy play garden made for small explorers, and a quiet, beautifully made coworking room for the grown-ups. It all
               sits in historic Bankers Hill, a short walk from Balboa Park.
             </p>
             <Button href="/spaces" variant="outline" className="mt-10">

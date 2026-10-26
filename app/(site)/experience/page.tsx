@@ -108,7 +108,7 @@ export default function ExperiencePage() {
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
-              Each program has its own shape: some are drop-off, some keep you close by, some are for the whole family. Every program page
+              Each program has its own shape: some let you head out for a while, some keep you close by, some are for the whole family. Every program page
               explains how it works.
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function ExperiencePage() {
         }
         body="Browse every program, or come and see the space for yourself."
         primary={{ href: "/programs", label: "Explore programs" }}
-        secondary={{ href: "/visit", label: "Schedule a tour" }}
+        secondary={{ href: "/visit", label: "Book a tour" }}
       />
     </>
   );

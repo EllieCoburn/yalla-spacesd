@@ -8,7 +8,7 @@ import { site } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Visit Yalla",
-  description: "Schedule a tour of Yalla in Bankers Hill, San Diego. Location, parking and what to expect.",
+  description: "Book a tour of Yalla in Bankers Hill, San Diego. Location, parking and what to expect.",
 };
 
 const mapsQuery = encodeURIComponent(site.address.value ?? `${site.neighborhood}, ${site.city}`);
@@ -78,7 +78,7 @@ export default function VisitPage() {
             <Facts
               items={[
                 { label: "Neighborhood", value: "Bankers Hill, near Balboa Park’s west entrance" },
-                { label: "Hours", value: `Weekday classrooms: ${site.hours}, Early Bird from 8:00am. Weekend, evening and camp times vary.` },
+                { label: "Hours", value: `Weekday cohorts: ${site.hours}, Early Bird from 8:00am. Weekend, evening and camp times vary.` },
                 { label: "Parking", value: <ToConfirm /> },
                 { label: "Arriving", value: <>Entrance & check-in <ToConfirm /></> },
                 { label: "Tour length", value: <ToConfirm /> },
@@ -101,9 +101,9 @@ export default function VisitPage() {
               <ol className="space-y-10">
                 {[
                   ["A warm welcome", "We’ll meet you at the door and show you around."],
-                  ["The classrooms & yard", "See where children play, explore and rest, and how the day flows."],
+                  ["Cohort spaces & play garden", "See where children play, explore and rest, and how the daily rhythm flows."],
                   ["The coworking space", "Get a feel for where you’d work, and how close you’d be."],
-                  ["Your questions", "Schedules, programs, starting dates: we’ll talk through whatever is on your mind."],
+                  ["Your questions", "Days, programs, start dates: we’ll talk through whatever is on your mind."],
                 ].map(([t, b], i) => (
                   <li key={t} className="hairline grid gap-3 border-t pt-7 sm:grid-cols-[3rem_1fr]">
                     <span className="font-serif text-blue italic">0{i + 1}</span>

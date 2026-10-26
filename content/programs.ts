@@ -15,7 +15,7 @@ export interface ProgramContent {
   image: string;
   imageAlt: string;
   ages: string | null;
-  schedule: string | null;
+  days: string | null;
   pricing: string | null;
   included: string[] | null;
   parentOnsite: boolean | null;
@@ -31,15 +31,15 @@ export const programs: ProgramContent[] = [
     short: "Drop-in childcare & coworking",
     tagline: "Childcare and coworking by the day, Monday to Friday",
     summary:
-      "Book individual weekdays, Monday through Friday, when there’s space: a day of childcare for your child in their cohort and a day of coworking for you, just down the hall. Ideal for flexible schedules, visiting family, or getting to know Yalla.",
+      "Book individual weekdays, Monday through Friday, when there’s space: a day of childcare for your child in their cohort and a day of coworking for you, just down the hall. Ideal for flexible weeks, visiting family, or getting to know Yalla.",
     body: [
-      "A Flex day is childcare and coworking together. Your child joins a small group in our weekday classrooms, with the same attentive educators, while you settle into our coworking space a few steps away.",
+      "A Flex day is childcare and coworking together. Your child joins a small cohort in our weekday learning environment, with the same attentive educarers and guides, while you settle into our coworking space a few steps away.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
     ],
     image: "/photos/lemon-play.jpg",
     imageAlt: "A child's hand scooping lemon slices from a water table",
     ages: "3 months – 5 years. See each cohort’s ages with the day rates below.",
-    schedule: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
+    days: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
     pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s cohort. No registration fee. See day rates below.",
     included: ["Childcare in your child’s cohort, with attentive educators", "Communal coworking for you, for the same day"],
     parentOnsite: true,
@@ -61,7 +61,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/paint-closeup.jpg",
     imageAlt: "A child painting a wall in vivid blues and greens",
     ages: null,
-    schedule: null,
+    days: null,
     pricing: null,
     included: null,
     parentOnsite: null,
@@ -83,7 +83,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/garden.jpg",
     imageAlt: "Yalla’s leafy yard",
     ages: null,
-    schedule: null,
+    days: null,
     pricing: null,
     included: null,
     parentOnsite: null,
@@ -105,7 +105,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/sunflowers.jpg",
     imageAlt: "Sunflowers and scissors on a table set for a workshop",
     ages: null,
-    schedule: null,
+    days: null,
     pricing: null,
     included: null,
     parentOnsite: null,
@@ -121,14 +121,14 @@ export const programs: ProgramContent[] = [
     summary:
       "Club Yalla is our weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
     body: [
-      "Club Yalla is our recurring weekday membership. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in classrooms and outdoor spaces made for them.",
+      "Club Yalla is our recurring weekday membership. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in cohort spaces and outdoor environments made for them.",
       "Parents and caregivers work onsite in our coworking space. You get uninterrupted time for your own work, and you’re close by all day. That closeness is what Club Yalla is built around.",
     ],
     image: "/photos/dinosaurs.jpg",
     imageAlt: "A young child arranging toy dinosaurs on a small wooden table outdoors",
     ages: "4 months – 5 years",
-    schedule: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
-    pricing: "From $275 a month, depending on cohort and schedule. See membership rates for full tuition.",
+    days: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
+    pricing: "From $275 a month, depending on cohort and number of days. See membership rates for full tuition.",
     included: [
       "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
       "Credentialed early childhood educators",
@@ -154,7 +154,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/cowork-loft.jpg",
     imageAlt: "Warm pendant lights glowing over the Yalla interior",
     ages: null,
-    schedule: null,
+    days: null,
     pricing: null,
     included: null,
     parentOnsite: false,
@@ -176,7 +176,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/painting.jpg",
     imageAlt: "Bright paint and brushes on a party table",
     ages: null,
-    schedule: null,
+    days: null,
     pricing: null,
     included: null,
     parentOnsite: null,

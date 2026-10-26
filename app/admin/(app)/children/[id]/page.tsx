@@ -105,14 +105,14 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                       <input type="hidden" name="section" value="care" />
                       <TextArea name="allergies" label="Allergies" rows={2} defaultValue={c.allergies} />
                       <TextArea name="medicalNotes" label="Medical notes" rows={2} defaultValue={c.medicalNotes} />
-                      <TextArea name="careNotes" label="Care notes (routines, comfort, naps…)" rows={3} defaultValue={c.careNotes} />
+                      <TextArea name="careNotes" label="Care notes (routines, comfort, rest…)" rows={3} defaultValue={c.careNotes} />
                     </ActionForm>
                   </Disclosure>
                 </div>
               ) : null}
             </Card>
           ) : (
-            <Notice tone="muted" title="Care information is restricted">Your role doesn’t include allergies, care notes or pickup details.</Notice>
+            <Notice tone="muted" title="Care information is restricted">Your role doesn’t include allergies, care notes or departure details.</Notice>
           )}
 
           {d.canStaffNotes ? (
@@ -230,7 +230,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
           ) : null}
 
           {d.pickups ? (
-            <Card title="Authorized pickups & restrictions">
+            <Card title="Departure contacts & restrictions">
               <p className="mb-2 text-[0.78rem] text-ink-soft">Guardians ({d.guardians.map((g) => g.name).join(", ")}) can always collect {display}.</p>
               <PickupList familyId={d.family.id} pickups={d.pickups} kids={kids} canEdit={manage} />
             </Card>

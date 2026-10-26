@@ -260,7 +260,7 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   payment_link: "https://example.com/pay/sample",
   offer_expires: "Tue 3 Nov 2026, 9:00am",
   offer_link: "https://example.com/book/offer/YL-SAMPLE",
-  membership_summary: "Your Club Yalla schedule changes to Mon, Wed, Fri from 1 December.",
+  membership_summary: "Your Club Yalla days change to Mon, Wed, Fri from 1 December.",
   invited_by: "Olivia Owner",
   role: "Operations",
   link: "https://example.com/admin/reset?token=sample",

@@ -69,7 +69,7 @@ export function CareForm({ childId, care }: { childId: string; care: { allergies
         [
           ["allergies", "Allergies"],
           ["medicalNotes", "Medical notes"],
-          ["careNotes", "Care notes (naps, comfort, routines)"],
+          ["careNotes", "Care notes (rest, comfort, routines)"],
         ] as const
       ).map(([k, l]) => (
         <label key={k} className="block">

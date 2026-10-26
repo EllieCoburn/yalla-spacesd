@@ -46,7 +46,7 @@ export function SiteFooter() {
                   <Link href="/book" className="link-underline">Book care</Link>
                 </li>
                 <li>
-                  <Link href="/visit" className="link-underline">Schedule a tour</Link>
+                  <Link href="/visit" className="link-underline">Book a tour</Link>
                 </li>
                 <li>
                   <Link href="/portal" className="link-underline">Family Portal</Link>
@@ -59,7 +59,7 @@ export function SiteFooter() {
                 {site.address.value}
               </p>
               <p className="mt-4 text-chalk/90">
-                Weekday classrooms 8:30am – 4:30pm
+                Weekday cohorts 8:30am – 4:30pm
                 <br />
                 Weekend, evening & camp times vary
               </p>

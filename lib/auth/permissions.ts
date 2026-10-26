@@ -32,7 +32,7 @@ export const PERMISSION_GROUPS = [
     items: [
       { key: "families.view", label: "View families and contact details" },
       { key: "families.manage", label: "Edit family and child records" },
-      { key: "children.care", label: "See allergies, care information and authorized pickups" },
+      { key: "children.care", label: "See allergies, care information and departure contacts" },
       { key: "children.staffNotes", label: "See and write staff-only notes" },
     ],
   },
@@ -122,7 +122,7 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
   {
     key: "educator",
     name: "Educator",
-    description: "Rosters, attendance, care information and pickup contacts — no billing.",
+    description: "Rosters, attendance, care information and departure contacts — no billing.",
     permissions: ["dashboard.view", "programs.view", "bookings.view", "families.view", "children.care", "roster.view", "attendance.manage", "forms.view"],
   },
   {

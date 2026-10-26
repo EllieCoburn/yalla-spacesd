@@ -86,7 +86,7 @@ const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", ki
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "full_series", minAgeMonths: 24, maxAgeMonths: 66, priceCents: 14000 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
 await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required" });
-await P({ slug: "yalla-outside", name: "Yalla Outside", kind: "nature", tagline: "Nature playschool in Balboa Park", status: "draft", bookingMode: "request" });
+await P({ slug: "yalla-outside", name: "Yalla Outside", kind: "nature", tagline: "Nature exploration in Balboa Park", status: "draft", bookingMode: "request" });
 
 for (const [i, c] of cohortDefs.entries()) {
   await db.insert(s.programCohorts).values([{ programId: club.id, cohortId: cohorts[i].id }, { programId: flex.id, cohortId: cohorts[i].id }]);
@@ -123,7 +123,7 @@ await addBlackout(db, admin, { startsOn: thanksgiving, endsOn: addDaysISO(thanks
 const placeholder = "[Placeholder text — Yalla must supply reviewed language before this form is used with families.]";
 const forms = {
   enrollment: await createTemplate(db, admin, { title: "Enrollment agreement", kind: "policy", perChild: false, requiresSignature: true, frequency: "once", enforcement: "blocks_booking", body: placeholder }),
-  emergency: await createTemplate(db, admin, { title: "Emergency contacts & authorized pickup", kind: "form", perChild: false, requiresSignature: false, frequency: "periodic", validForMonths: 12, enforcement: "before_attendance", body: "Please confirm emergency contacts and authorized pickup adults." }),
+  emergency: await createTemplate(db, admin, { title: "Emergency & departure contacts", kind: "form", perChild: false, requiresSignature: false, frequency: "periodic", validForMonths: 12, enforcement: "before_attendance", body: "Please confirm emergency contacts and authorized pickup adults." }),
   health: await createTemplate(db, admin, { title: "Health & immunization record", kind: "upload", perChild: true, requiresSignature: false, frequency: "periodic", validForMonths: 12, enforcement: "before_attendance", body: "Upload a current health and immunization record." }),
   photo: await createTemplate(db, admin, { title: "Photo & media preferences", kind: "form", perChild: true, requiresSignature: false, frequency: "once", enforcement: "informational", body: "Tell us how we may share photos of your child." }),
   weekendWaiver: await createTemplate(db, admin, { title: "Weekend & evening care waiver", kind: "waiver", perChild: true, requiresSignature: true, frequency: "once", enforcement: "blocks_booking", body: placeholder }),
@@ -162,7 +162,7 @@ for (let i = 0; i < 28; i++) {
     b.setMonth(b.getMonth() - ageMonths);
     const birth = b.toISOString().slice(0, 10);
     const cohortIdx = ageMonths < 18 ? 0 : ageMonths < 30 ? 1 : ageMonths < 42 ? 2 : 3;
-    const { child } = await addChild(db, admin, family.id, { firstName: first[k++ % first.length], lastName: ln, birthDate: birth, allergies: allergies[(i + j) % allergies.length] ?? undefined, cohortId: cohorts[cohortIdx].id, careNotes: j === 0 && i % 6 === 0 ? "Naps best with a white-noise machine. (sample)" : undefined });
+    const { child } = await addChild(db, admin, family.id, { firstName: first[k++ % first.length], lastName: ln, birthDate: birth, allergies: allergies[(i + j) % allergies.length] ?? undefined, cohortId: cohorts[cohortIdx].id, careNotes: j === 0 && i % 6 === 0 ? "Rests best with a white-noise machine. (sample)" : undefined });
     kids.push(child);
   }
   await setPickup(db, admin, family.id, { name: `Grandparent ${ln}`, relationship: "Grandparent", phone: `(619) 555-02${String(i).padStart(2, "0")}` });
