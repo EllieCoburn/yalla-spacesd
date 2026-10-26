@@ -117,7 +117,7 @@ export const programs: ProgramContent[] = [
     kind: "membership",
     name: "Club Yalla",
     short: "Fixed weekly care",
-    tagline: "Your weekly childcare rhythm",
+    tagline: "Rethinking childcare for the work-from-anywhere generation.",
     summary:
       "Club Yalla is our weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
     body: [
