@@ -21,7 +21,7 @@ export default function MembershipPage() {
             Membership <em>rates.</em>
           </>
         }
-        lede="Monthly Club Yalla tuition for each cohort, for one to five days a week, full or half days, along with fees and workspace upgrades."
+        lede="Monthly Club Yalla tuition for each cohort, for one to five days a week: full days, half days or a custom day, along with fees and workspace upgrades."
       />
 
       <Section tone="paper">
