@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
 import { FlexRates } from "@/components/site/FlexRates";
-import { CtaBand, Facts } from "@/components/site/PageParts";
+import { CtaBand, FactsAccordion } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
@@ -78,7 +78,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
             <Eyebrow className="mb-6">The details</Eyebrow>
-            <Facts
+            <FactsAccordion
               items={
                 p.kind === "private_event"
                   ? [
@@ -89,9 +89,14 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                       { label: "How to book", value: "Send an enquiry below and we’ll plan it with you" },
                     ]
                   : [
-                { label: "Ages", value: p.ages ?? pending },
-                { label: "Days & hours", value: p.days ?? pending },
-                { label: "Tuition & pricing", value: p.pricing ?? pending },
+                // Yalla Flex shows ages, days, hours and pricing in the day-rates section below, so they aren't repeated here.
+                ...(p.kind === "drop_in"
+                  ? []
+                  : [
+                      { label: "Ages", value: p.ages ?? pending },
+                      { label: "Days & hours", value: p.days ?? pending },
+                      { label: "Pricing", value: p.pricing ?? pending },
+                    ]),
                 {
                   label: "What’s included",
                   value: p.included ? (

@@ -41,7 +41,7 @@ export const programs: ProgramContent[] = [
     ages: "3 months – 5 years. See each cohort’s ages with the day rates below.",
     days: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
     pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s cohort. No registration fee. See day rates below.",
-    included: ["Childcare in your child’s cohort, with attentive educators", "Communal coworking for you, for the same day"],
+    included: ["Childcare in your child’s cohort, with attentive educarers and guides", "Communal coworking for you, for the same day"],
     parentOnsite: true,
     bookingMode: "instant",
     cta: { label: "See available days", href: "/book?offering=drop_in" },

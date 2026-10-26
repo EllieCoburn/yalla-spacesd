@@ -78,6 +78,26 @@ export function Facts({ items }: { items: { label: string; value: ReactNode }[] 
   );
 }
 
+/** Facts as a list of expandable rows: the label is always visible, the detail opens on tap. */
+export function FactsAccordion({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <div className="hairline border-t">
+      {items.map((it) => (
+        <details key={it.label} className="group hairline border-b">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 [&::-webkit-details-marker]:hidden">
+            <span className="display text-[1.3rem] sm:text-[1.45rem]">{it.label}</span>
+            <span className="relative h-4 w-4 shrink-0" aria-hidden>
+              <span className="absolute top-1/2 left-0 h-px w-4 bg-ink" />
+              <span className="absolute top-0 left-1/2 h-4 w-px bg-ink transition-transform duration-500 group-open:rotate-90 group-open:opacity-0" />
+            </span>
+          </summary>
+          <div className="pb-6 font-serif text-[1.08rem] text-ink-soft">{it.value}</div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 export function CtaBand({
   title,
   body,
