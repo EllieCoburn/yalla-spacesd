@@ -7,7 +7,6 @@ import { WindowField } from "@/components/brand/WindowField";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
-import { site } from "@/content/site";
 
 export default function Home() {
   return (
@@ -47,22 +46,6 @@ export default function Home() {
               porthole={{ src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor" }}
             />
           </Reveal>
-        </div>
-
-        <div className="shell">
-          <div className="hairline grid grid-cols-2 gap-y-6 border-t py-7 text-[0.85rem] sm:grid-cols-4">
-            {[
-              ["For", `Children ${site.ages.replace(" – ", "–")} & their grown-ups`],
-              ["Where", "Bankers Hill, in the heart of San Diego"],
-              ["Programs", "Weekdays, weekends, evenings & camps"],
-              ["Ways in", "Drop-in, events & membership"],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <p className="eyebrow text-[0.6rem] text-ink-soft">{k}</p>
-                <p className="mt-1.5 font-serif text-[1.05rem]">{v}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
