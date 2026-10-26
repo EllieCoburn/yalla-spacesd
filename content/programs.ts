@@ -40,7 +40,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A child's hand scooping lemon slices from a water table",
     ages: null,
     schedule: "Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
-    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care.",
+    pricing: "$150–$180 a full day or $75–$90 a half day, depending on your child’s cohort. No registration fee for drop-in care. See day rates below.",
     included: null,
     parentOnsite: null,
     bookingMode: "instant",
