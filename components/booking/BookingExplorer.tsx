@@ -1,15 +1,16 @@
 "use client";
 
-import { addDays, format, isSameDay, startOfDay } from "date-fns";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Mark } from "@/components/brand/Mark";
-import { availabilityFor, previewSessions, type PreviewSession } from "@/lib/booking/preview";
-import type { ProgramKind } from "@/lib/booking/types";
-import { Checkout } from "./Checkout";
+import type { PublicSession } from "@/lib/ops/public-booking";
+import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
+import { Checkout, type SavedChild, type SignedInGuardian } from "./Checkout";
+import { WaitlistForm } from "./WaitlistForm";
+import { stateLabel, usd } from "./format";
 
-export const offerings: { kind: ProgramKind | "all"; label: string }[] = [
+export const offerings: { kind: string; label: string }[] = [
   { kind: "all", label: "Everything" },
   { kind: "drop_in", label: "Yalla Flex" },
   { kind: "weekend", label: "Yalla Weekends" },
@@ -28,24 +29,36 @@ export const ageBands = [
 ] as const;
 
 const DAYS = 42;
-
-export function BookingExplorer() {
+export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedInGuardian | null; savedChildren: SavedChild[] }) {
   const params = useSearchParams();
   const router = useRouter();
-  const [offering, setOffering] = useState<ProgramKind | "all">((params.get("offering") as ProgramKind) || "all");
+  const [offering, setOffering] = useState<string>(params.get("offering") || "all");
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));
   const [selected, setSelected] = useState<string[]>([]);
-  const [sessions, setSessions] = useState<PreviewSession[]>([]);
+  const [sessions, setSessions] = useState<PublicSession[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [dayLimit, setDayLimit] = useState(7);
+  const [waitlistFor, setWaitlistFor] = useState<PublicSession | null>(null);
+  const today = useMemo(() => todayLA(), []);
 
-  // Sessions are generated on the client so "today" is the visitor's today.
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/availability?from=${today}&to=${addDaysISO(today, DAYS - 1)}`, { cache: "no-store" });
+      const json = (await res.json()) as { sessions: PublicSession[]; error?: string };
+      setSessions(json.sessions);
+      setError(json.error ?? null);
+    } catch {
+      setError("We couldn’t load availability. Please refresh.");
+      setSessions([]);
+    }
+  }, [today]);
+
   useEffect(() => {
-    const from = addDays(startOfDay(new Date()), 1);
-    setSessions(previewSessions({ from: format(from, "yyyy-MM-dd"), to: format(addDays(from, DAYS - 1), "yyyy-MM-dd") }));
-  }, []);
+    load();
+  }, [load]);
 
   // Keep the URL shareable.
   useEffect(() => {
@@ -56,28 +69,28 @@ export function BookingExplorer() {
   }, [offering, day, router]);
 
   const childAge = ageBands[ageIdx].months;
-  const byKind = useMemo(() => sessions.filter((s) => offering === "all" || s.kind === offering), [sessions, offering]);
-  const days = useMemo(() => {
-    const from = addDays(startOfDay(new Date()), 1);
-    return Array.from({ length: DAYS }, (_, i) => addDays(from, i));
-  }, []);
-  const visible = useMemo(() => (day ? byKind.filter((s) => format(new Date(s.startsAt), "yyyy-MM-dd") === day) : byKind), [byKind, day]);
-
+  const all = useMemo(() => sessions ?? [], [sessions]);
+  const eligible = useCallback(
+    (s: PublicSession) => childAge == null || ((s.ages.min == null || childAge >= s.ages.min) && (s.ages.max == null || childAge <= s.ages.max)),
+    [childAge],
+  );
+  const byKind = useMemo(() => all.filter((s) => offering === "all" || s.kind === offering), [all, offering]);
+  const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addDaysISO(today, i)), [today]);
+  const visible = useMemo(() => (day ? byKind.filter((s) => s.localDate === day) : byKind), [byKind, day]);
   const grouped = useMemo(() => {
-    const m = new Map<string, PreviewSession[]>();
-    for (const s of visible) {
-      const k = format(new Date(s.startsAt), "yyyy-MM-dd");
-      m.set(k, [...(m.get(k) ?? []), s]);
-    }
+    const m = new Map<string, PublicSession[]>();
+    for (const s of visible) m.set(s.localDate, [...(m.get(s.localDate) ?? []), s]);
     return [...m.entries()];
   }, [visible]);
   const shown = day ? grouped : grouped.slice(0, dayLimit);
+  const selectedSessions = all.filter((s) => selected.includes(s.id));
 
-  const selectedSessions = sessions.filter((s) => selected.includes(s.id));
+  function seriesOf(s: PublicSession) {
+    return s.bookAsSeries && s.seriesId ? all.filter((x) => x.seriesId === s.seriesId && stateLabel(x).selectable) : [s];
+  }
 
-  function toggle(s: PreviewSession) {
-    // Camps book as a whole week.
-    const ids = s.groupId ? sessions.filter((x) => x.groupId === s.groupId).map((x) => x.id) : [s.id];
+  function toggle(s: PublicSession) {
+    const ids = seriesOf(s).map((x) => x.id);
     setSelected((cur) => (cur.includes(s.id) ? cur.filter((id) => !ids.includes(id)) : [...cur, ...ids.filter((id) => !cur.includes(id))]));
   }
 
@@ -128,9 +141,9 @@ export function BookingExplorer() {
               <span className="eyebrow mt-2 text-[0.55rem]">All</span>
               <span className="font-serif text-[0.85rem] italic">dates</span>
             </button>
-            {days.map((d) => {
-              const key = format(d, "yyyy-MM-dd");
-              const daySessions = byKind.filter((s) => isSameDay(new Date(s.startsAt), d));
+            {days.map((key) => {
+              const daySessions = byKind.filter((s) => s.localDate === key);
+              const bookable = daySessions.some((s) => stateLabel(s).selectable && eligible(s));
               const has = daySessions.length > 0;
               const active = day === key;
               const sel = daySessions.some((s) => selected.includes(s.id));
@@ -139,14 +152,17 @@ export function BookingExplorer() {
                   key={key}
                   disabled={!has}
                   onClick={() => setDay(active ? null : key)}
+                  aria-label={`${fmtDate(key, "EEEE d MMMM")}${has ? (bookable ? ", spaces available" : ", fully booked or closed") : ", nothing offered"}`}
                   className={`relative flex h-[4.25rem] w-12 shrink-0 flex-col items-center justify-center rounded-t-full border transition-all ${
                     active ? "border-ink bg-ink text-chalk" : has ? "border-ink/10 hover:border-ink/40" : "border-transparent text-ink/25"
                   }`}
                 >
-                  <span className="eyebrow mt-2 text-[0.5rem]">{format(d, "EEEEE")}</span>
-                  <span className="font-serif text-[1.05rem] leading-tight">{format(d, "d")}</span>
-                  {d.getDate() === 1 ? <span className="absolute -top-0.5 text-[0.5rem] tracking-widest uppercase">{format(d, "MMM")}</span> : null}
-                  <span className={`mt-0.5 h-1 w-1 rounded-full ${sel ? "bg-blue" : has ? (active ? "bg-chalk/60" : "bg-ink/30") : "bg-transparent"}`} />
+                  <span className="eyebrow mt-2 text-[0.5rem]">{fmtDate(key, "EEEEE")}</span>
+                  <span className="font-serif text-[1.05rem] leading-tight">{fmtDate(key, "d")}</span>
+                  {key.endsWith("-01") ? <span className="absolute -top-0.5 text-[0.5rem] tracking-widest uppercase">{fmtDate(key, "MMM")}</span> : null}
+                  <span
+                    className={`mt-0.5 h-1 w-1 rounded-full ${sel ? "bg-blue" : bookable ? (active ? "bg-chalk/70" : "bg-ink/40") : has ? "border border-current opacity-40" : "bg-transparent"}`}
+                  />
                 </button>
               );
             })}
@@ -155,10 +171,10 @@ export function BookingExplorer() {
       </div>
 
       <div className="shell mt-10 grid gap-12 lg:grid-cols-12">
-        {/* Sessions */}
         <div className="lg:col-span-8">
-          {sessions.length === 0 ? (
-            <div className="space-y-3">
+          {error ? <p className="mb-6 border-l-2 border-oxblood/40 pl-4 text-[0.9rem] text-oxblood">{error}</p> : null}
+          {sessions === null ? (
+            <div className="space-y-3" aria-busy="true" aria-label="Loading availability">
               {Array.from({ length: 4 }, (_, i) => (
                 <div key={i} className="h-24 animate-pulse bg-sand/50" />
               ))}
@@ -166,29 +182,26 @@ export function BookingExplorer() {
           ) : grouped.length === 0 ? (
             <div className="py-24 text-center">
               <Mark name="sun" className="mx-auto h-10 w-10 text-blue" />
-              <p className="display mt-6 text-[1.8rem]">Nothing scheduled here yet.</p>
-              <p className="mt-2 text-ink-soft">Try another date or offering.</p>
+              <p className="display mt-6 text-[1.8rem]">{all.length ? "Nothing on these dates." : "New dates are coming soon."}</p>
+              <p className="mt-2 text-ink-soft">{all.length ? "Try another date or offering." : "Check back shortly, or get in touch and we’ll let you know."}</p>
             </div>
           ) : (
             <div className="space-y-12">
               {shown.map(([key, list]) => (
                 <section key={key}>
                   <h2 className="flex items-baseline gap-4">
-                    <span className="display text-[1.9rem]">{format(new Date(key + "T00:00:00"), "EEEE")}</span>
-                    <span className="font-serif text-ink-soft italic">{format(new Date(key + "T00:00:00"), "d MMMM")}</span>
+                    <span className="display text-[1.9rem]">{fmtDate(key, "EEEE")}</span>
+                    <span className="font-serif text-ink-soft italic">{fmtDate(key, "d MMMM")}</span>
                   </h2>
                   <ul className="mt-4 space-y-3">
                     {list.map((s) => (
-                      <SessionRow key={s.id} s={s} childAge={childAge} selected={selected.includes(s.id)} onToggle={() => toggle(s)} />
+                      <SessionRow key={s.id} s={s} eligible={eligible(s)} selected={selected.includes(s.id)} onToggle={() => toggle(s)} onWaitlist={() => setWaitlistFor(s)} seriesCount={seriesOf(s).length} />
                     ))}
                   </ul>
                 </section>
               ))}
               {!day && grouped.length > shown.length ? (
-                <button
-                  onClick={() => setDayLimit((n) => n + 7)}
-                  className="h-12 w-full rounded-full border border-ink/20 text-[0.9rem] transition-colors hover:border-ink"
-                >
+                <button onClick={() => setDayLimit((n) => n + 7)} className="h-12 w-full rounded-full border border-ink/20 text-[0.9rem] transition-colors hover:border-ink">
                   Show more dates
                 </button>
               ) : null}
@@ -196,10 +209,9 @@ export function BookingExplorer() {
           )}
         </div>
 
-        {/* Basket (desktop) */}
         <aside className="hidden lg:col-span-4 lg:block">
           <div className="sticky top-[17rem]">
-            <Basket sessions={selectedSessions} onRemove={toggle} onContinue={() => setCheckoutOpen(true)} />
+            <Basket sessions={selectedSessions} onRemove={toggle} onContinue={() => setCheckoutOpen(true)} guardian={guardian} />
           </div>
         </aside>
       </div>
@@ -212,7 +224,7 @@ export function BookingExplorer() {
       >
         {sheetOpen ? (
           <div className="max-h-[60vh] overflow-y-auto px-5 pt-5">
-            <Basket sessions={selectedSessions} onRemove={toggle} onContinue={() => setCheckoutOpen(true)} compact />
+            <Basket sessions={selectedSessions} onRemove={toggle} onContinue={() => setCheckoutOpen(true)} compact guardian={guardian} />
           </div>
         ) : null}
         <div className="flex items-center gap-3 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -228,22 +240,13 @@ export function BookingExplorer() {
         </div>
       </div>
 
-      {checkoutOpen ? (
-        <Checkout
-          sessions={selectedSessions}
-          onClose={() => setCheckoutOpen(false)}
-          onDone={() => {
-            setSelected([]);
-            setSheetOpen(false);
-          }}
-        />
-      ) : null}
+      {checkoutOpen ? <Checkout sessions={selectedSessions} guardian={guardian} savedChildren={savedChildren} onClose={() => setCheckoutOpen(false)} onRefresh={load} /> : null}
+      {waitlistFor ? <WaitlistForm session={waitlistFor} guardian={guardian} savedChildren={savedChildren} onClose={() => setWaitlistFor(null)} /> : null}
     </div>
   );
 }
 
-const kindName: Record<ProgramKind, string> = {
-  membership: "Club Yalla",
+const kindName: Record<string, string> = {
   drop_in: "Yalla Flex · Drop-in",
   nature: "Yalla Outside",
   weekend: "Yalla Weekends",
@@ -253,78 +256,77 @@ const kindName: Record<ProgramKind, string> = {
   private_event: "Yalla Celebrations",
 };
 
-function SessionRow({ s, childAge, selected, onToggle }: { s: PreviewSession; childAge?: number; selected: boolean; onToggle: () => void }) {
-  const a = availabilityFor(s, childAge);
-  const start = new Date(s.startsAt);
-  const end = new Date(s.endsAt);
-  const disabled = a.state === "ineligible";
+function SessionRow({ s, eligible, selected, onToggle, onWaitlist, seriesCount }: { s: PublicSession; eligible: boolean; selected: boolean; onToggle: () => void; onWaitlist: () => void; seriesCount: number }) {
+  const st = stateLabel(s);
+  const disabled = !st.selectable || !eligible;
+  const ageNote = !eligible && s.ages.min != null && s.ages.max != null ? `For ages ${s.ages.min < 24 ? `${s.ages.min} mo` : `${Math.floor(s.ages.min / 12)} yr`} – ${Math.floor(s.ages.max / 12)} yr` : null;
+  const status = (
+    <>
+      {ageNote ? <span className="text-ink-soft">{ageNote}</span> : <span className={st.tone === "low" ? "text-oxblood" : st.tone === "muted" ? "text-ink-soft" : "text-ink-soft"}>{st.text}</span>}
+    </>
+  );
   return (
     <li>
-      <button
-        onClick={onToggle}
-        disabled={disabled}
-        aria-pressed={selected}
-        className={`group grid w-full grid-cols-[1fr_auto] items-center gap-4 border p-5 text-left transition-all duration-300 sm:grid-cols-[8rem_1fr_auto] sm:p-6 ${
-          selected ? "border-blue bg-blue/[0.06]" : "border-line bg-paper hover:border-ink/40"
-        } ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+      <div
+        className={`grid w-full grid-cols-[1fr_auto] items-center gap-4 border p-5 text-left transition-all duration-300 sm:grid-cols-[8rem_1fr_auto] sm:p-6 ${
+          selected ? "border-blue bg-blue/[0.06]" : "border-line bg-paper"
+        } ${disabled && s.state.state !== "full" ? "opacity-55" : ""}`}
       >
         <span className="hidden font-serif text-[1.05rem] sm:block">
-          {format(start, "h:mmaaa")}
-          <span className="block text-[0.85rem] text-ink-soft">to {format(end, "h:mmaaa")}</span>
+          {fmtTime(s.startsAt)}
+          <span className="block text-[0.85rem] text-ink-soft">to {fmtTime(s.endsAt)}</span>
         </span>
         <span>
-          <span className="eyebrow block text-[0.58rem] text-ink-soft">{kindName[s.kind]}</span>
+          <span className="eyebrow block text-[0.58rem] text-ink-soft">
+            {kindName[s.kind] ?? s.programName}
+            {s.cohort ? ` · ${s.cohort}` : ""}
+          </span>
           <span className="display mt-1 block text-[1.35rem]">{s.title}</span>
           <span className="mt-1 block text-[0.82rem] text-ink-soft sm:hidden">
-            {format(start, "h:mmaaa")} – {format(end, "h:mmaaa")}
+            {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
           </span>
-          {s.groupId ? <span className="mt-1 block text-[0.8rem] text-ink-soft">Books as a full week</span> : null}
+          <span className="mt-1 block text-[0.82rem] text-ink-soft">
+            {usd(s.priceCents)}
+            {s.priceCents != null ? (s.bookingUnit === "per_family" ? " per family" : s.bookingUnit === "per_child" ? " per child" : "") : ""}
+            {s.bookAsSeries ? ` · books as a full series (${seriesCount} days)` : ""}
+            {s.approvalRequired ? " · confirmed after approval" : ""}
+          </span>
+          <span className="mt-1 block text-[0.8rem] sm:hidden">{status}</span>
         </span>
         <span className="flex items-center gap-4">
-          <span className="hidden text-right text-[0.8rem] sm:block">
-            {a.state === "open" && <span className="text-ink-soft">{a.remaining} spaces</span>}
-            {a.state === "limited" && <span className="text-oxblood">Only {a.remaining} left</span>}
-            {a.state === "full" && <span className="text-ink-soft">Full · waitlist</span>}
-            {a.state === "ineligible" && <span className="text-ink-soft">{a.reason}</span>}
-          </span>
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${
-              selected ? "border-blue bg-blue text-chalk" : "border-ink/20 group-hover:border-ink"
-            }`}
-          >
-            {selected ? (
-              <svg viewBox="0 0 14 10" className="h-2.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <path d="M1 5l4 4 8-8" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.3">
-                <path d="M6 0v12M0 6h12" />
-              </svg>
-            )}
-          </span>
+          <span className="hidden text-right text-[0.8rem] sm:block">{status}</span>
+          {s.state.state === "full" && s.state.waitlist && eligible ? (
+            <button onClick={onWaitlist} className="h-9 rounded-full border border-ink/25 px-4 text-[0.78rem] whitespace-nowrap transition-colors hover:border-ink">
+              Join waitlist
+            </button>
+          ) : (
+            <button
+              onClick={onToggle}
+              disabled={disabled}
+              aria-pressed={selected}
+              aria-label={`${selected ? "Remove" : "Add"} ${s.title} on ${fmtDate(s.localDate)}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed ${
+                selected ? "border-blue bg-blue text-chalk" : "border-ink/20 hover:border-ink"
+              }`}
+            >
+              {selected ? (
+                <svg viewBox="0 0 14 10" className="h-2.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M1 5l4 4 8-8" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.3">
+                  <path d="M6 0v12M0 6h12" />
+                </svg>
+              )}
+            </button>
+          )}
         </span>
-        <span className="col-span-2 text-[0.78rem] sm:hidden">
-          {a.state === "open" && <span className="text-ink-soft">{a.remaining} spaces</span>}
-          {a.state === "limited" && <span className="text-oxblood">Only {a.remaining} left</span>}
-          {a.state === "full" && <span className="text-ink-soft">Full · join the waitlist</span>}
-          {a.state === "ineligible" && <span className="text-ink-soft">{a.reason}</span>}
-        </span>
-      </button>
+      </div>
     </li>
   );
 }
 
-function Basket({
-  sessions,
-  onRemove,
-  onContinue,
-  compact,
-}: {
-  sessions: PreviewSession[];
-  onRemove: (s: PreviewSession) => void;
-  onContinue: () => void;
-  compact?: boolean;
-}) {
+function Basket({ sessions, onRemove, onContinue, compact, guardian }: { sessions: PublicSession[]; onRemove: (s: PublicSession) => void; onContinue: () => void; compact?: boolean; guardian: SignedInGuardian | null }) {
   const sorted = [...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return (
     <div className={compact ? "" : "border border-line bg-paper p-7"}>
@@ -343,8 +345,7 @@ function Basket({
               <span>
                 <span className="block text-[0.92rem]">{s.title}</span>
                 <span className="text-[0.78rem] text-ink-soft">
-                  {format(new Date(s.startsAt), "EEE d MMM · h:mmaaa")}
-                  {availabilityFor(s).state === "full" ? " · waitlist" : ""}
+                  {fmtDate(s.localDate, "EEE d MMM")} · {fmtTime(s.startsAt)} · {usd(s.priceCents)}
                 </span>
               </span>
               <button onClick={() => onRemove(s)} className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
@@ -363,13 +364,17 @@ function Basket({
           >
             Continue
           </button>
-          <p className="mt-5 text-[0.78rem] text-ink-soft">
-            Already a Yalla family?{" "}
-            <Link href="/portal" className="underline underline-offset-4">
-              Sign in
-            </Link>{" "}
-            to book with saved details.
-          </p>
+          {guardian ? (
+            <p className="mt-5 text-[0.78rem] text-ink-soft">Booking as {guardian.firstName}. Saved children are ready in the next step.</p>
+          ) : (
+            <p className="mt-5 text-[0.78rem] text-ink-soft">
+              Already a Yalla family?{" "}
+              <Link href="/portal?next=/book" className="underline underline-offset-4">
+                Sign in
+              </Link>{" "}
+              to book with saved details.
+            </p>
+          )}
         </>
       ) : null}
     </div>
