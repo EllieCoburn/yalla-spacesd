@@ -381,8 +381,10 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)));
   const provider = activeProvider();
   const paymentId = crypto.randomUUID();
-  const idem = `checkout:${b.id}:${inv.id}:${t.balance}:${b.holdExpiresAt.getTime()}`;
+  let idem = `checkout:${b.id}:${inv.id}:${t.balance}:${b.holdExpiresAt.getTime()}`;
   const existing = await db.select().from(payments).where(eq(payments.idempotencyKey, idem));
+  // A declined or abandoned attempt gets a fresh key so the family can try again.
+  if (existing[0] && existing[0].status !== "pending") idem = `${idem}:retry-${randomToken(6)}`;
   if (existing[0]?.checkoutRef && existing[0].status === "pending") {
     return { url: provider.name === "test" ? `${urls.base}/pay/test/${existing[0].checkoutRef}` : existing[0].providerRef ?? `${urls.base}/book/confirmation/${b.reference}`, free: false };
   }

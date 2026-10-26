@@ -206,7 +206,6 @@ export default function Home() {
               <Button href="/book" variant="light" className="mt-10">
                 Open the calendar
               </Button>
-              <p className="mt-6 text-[0.75rem] text-chalk/40">Preview: sample availability until booking goes live.</p>
             </div>
             <div className="lg:col-span-6 lg:col-start-7">
               <AvailabilityGlance />
