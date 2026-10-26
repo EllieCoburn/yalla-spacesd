@@ -108,7 +108,7 @@ export default function ClubYallaPage() {
         <div className="shell">
           <div className="grid gap-8 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <Index n="03">How membership works</Index>
+              <Index n="02">How membership works</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Small cohorts, <em>consistent days.</em>
               </h2>
@@ -193,7 +193,7 @@ export default function ClubYallaPage() {
       {/* Joining */}
       <Section tone="paper">
         <div className="shell">
-          <Index n="04">Joining Club Yalla</Index>
+          <Index n="03">Joining Club Yalla</Index>
           <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
             Four steps <em>to your first day.</em>
           </h2>
