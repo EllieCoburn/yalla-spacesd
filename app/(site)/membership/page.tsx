@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 import { Arrow, Index } from "@/components/ui/primitives";
-import { cohorts, discounts, earlyBirdDaily, fees, hours, tuitionYear, workspace } from "@/content/tuition";
+import { cohorts, discounts, earlyBirdDaily, fees, hours, siblingDiscount, tuitionYear, workspace } from "@/content/tuition";
 
 export const metadata: Metadata = {
   title: "Membership Rates",
@@ -39,7 +39,7 @@ export default function MembershipPage() {
             </Link>
           </div>
           <div className="mt-12">
-            <TuitionExplorer cohorts={cohorts} hours={hours} earlyBirdDaily={earlyBirdDaily} />
+            <TuitionExplorer cohorts={cohorts} hours={hours} earlyBirdDaily={earlyBirdDaily} siblingDiscount={siblingDiscount} />
           </div>
         </div>
       </Section>

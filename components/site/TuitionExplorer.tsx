@@ -40,24 +40,32 @@ export function TuitionExplorer({
   cohorts,
   hours,
   earlyBirdDaily,
+  siblingDiscount,
 }: {
   cohorts: Cohort[];
   hours: { full: string; half: string };
   earlyBirdDaily: number;
+  /** Sibling discount on monthly tuition, as a fraction (0.1 = 10%). */
+  siblingDiscount: number;
 }) {
   const [cohortId, setCohortId] = useState(cohorts[0].id);
   const [day, setDay] = useState<"full" | "half" | "custom">("full");
   const [earlyBird, setEarlyBird] = useState(false);
+  const [sibling, setSibling] = useState(false);
   const [start, setStart] = useState(CARE_START);
   const [end, setEnd] = useState(14 * 60);
   const c = cohorts.find((x) => x.id === cohortId)!;
 
   const withEarlyBird = day === "custom" ? start < CARE_START : earlyBird;
-  const monthly = (days: number, full: number, half: number) => {
-    const base = day === "full" ? full : day === "half" ? half : customTuition(half, full, start, end);
-    const extra = withEarlyBird ? earlyBirdDaily * days * WEEKS_PER_MONTH : 0;
-    return day === "custom" || withEarlyBird ? round5(base + extra) : base;
+  /** Monthly total; the sibling discount comes off tuition only, not Early Bird care. */
+  const monthly = (days: number, full: number, half: number, discounted = sibling) => {
+    const raw = day === "full" ? full : day === "half" ? half : customTuition(half, full, start, end);
+    const base = day === "custom" ? round5(raw) : raw;
+    const tuition = discounted ? Math.round(base * (1 - siblingDiscount)) : base;
+    const extra = withEarlyBird ? round5(earlyBirdDaily * days * WEEKS_PER_MONTH) : 0;
+    return tuition + extra;
   };
+  const pct = Math.round(siblingDiscount * 100);
 
   const moveStart = (v: number) => {
     setStart(v);
@@ -157,6 +165,14 @@ export function TuitionExplorer({
             </label>
           )}
 
+          <label className="mt-4 flex cursor-pointer items-start gap-3 text-[0.92rem]">
+            <input type="checkbox" checked={sibling} onChange={(e) => setSibling(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
+            <span>
+              Apply the sibling discount
+              <span className="block text-[0.82rem] text-ink-soft">{pct}% off monthly tuition for each sibling’s membership</span>
+            </span>
+          </label>
+
           {c.note ? <p className="mt-4 text-[0.85rem] text-oxblood">{c.note}</p> : null}
           <table className="mt-6 w-full border-y border-line text-left">
             <caption className="sr-only">
@@ -165,7 +181,7 @@ export function TuitionExplorer({
             <thead>
               <tr className="eyebrow text-[0.58rem] text-ink-soft">
                 <th className="py-3 font-medium">Days per week</th>
-                <th className="py-3 text-right font-medium">Monthly tuition</th>
+                <th className="py-3 text-right font-medium">{sibling ? "Monthly tuition, per sibling" : "Monthly tuition"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line border-t border-line">
@@ -174,14 +190,20 @@ export function TuitionExplorer({
                   <td className="py-4 text-[1rem]">
                     {n} day{n > 1 ? "s" : ""} a week
                   </td>
-                  <td className="py-4 text-right font-serif text-[1.35rem]">{usd(monthly(n, full, half))}</td>
+                  <td className="py-4 text-right font-serif text-[1.35rem]">
+                    {sibling ? (
+                      <span className="mr-3 align-middle font-sans text-[0.85rem] text-ink-soft line-through">{usd(monthly(n, full, half, false))}</span>
+                    ) : null}
+                    {usd(monthly(n, full, half))}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {withEarlyBird ? (
+          {withEarlyBird || sibling ? (
             <p className="mt-3 text-[0.8rem] text-ink-soft">
-              Includes Early Bird at {usd(earlyBirdDaily)} a day, averaged over about 4.3 weeks a month.
+              {sibling ? `Shows each sibling’s monthly tuition with ${pct}% off. ` : ""}
+              {withEarlyBird ? `Includes Early Bird at ${usd(earlyBirdDaily)} a day, averaged over about 4.3 weeks a month${sibling ? " (not discounted)" : ""}.` : ""}
             </p>
           ) : null}
         </div>
