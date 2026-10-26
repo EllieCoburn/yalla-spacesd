@@ -78,6 +78,13 @@ export default function Home() {
             <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
               {[
                 {
+                  mark: "balcony" as const,
+                  title: "A weekly rhythm",
+                  body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
+                  href: "/club-yalla",
+                  link: "Club Yalla",
+                },
+                {
                   mark: "window" as const,
                   title: "Care as you need it",
                   body: "Yalla Flex drop-in days, Camp Yalla, Yalla Weekends and Yalla After Hours, all bookable in one calendar.",
@@ -90,13 +97,6 @@ export default function Home() {
                   body: "Yalla Happenings bring pop-ups, workshops and gatherings. Yalla Celebrations host your private occasions.",
                   href: "/programs/yalla-happenings",
                   link: "Happenings",
-                },
-                {
-                  mark: "balcony" as const,
-                  title: "A weekly rhythm",
-                  body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
-                  href: "/club-yalla",
-                  link: "Club Yalla",
                 },
               ].map((s, i) => (
                 <Reveal as="li" key={s.title} delay={i * 120} className="flex flex-col bg-chalk p-8 lg:p-10">
