@@ -170,7 +170,7 @@ export default function Home() {
             </h2>
             <p className="mt-6 text-[1.05rem] text-ink-soft">
               Places to play, places to focus, and plenty of space to come together. Yalla brings thoughtfully designed children’s spaces,
-              comfortable coworking, and welcoming common areas under one roof in historic Bankers Hill.
+              comfortable coworking, and welcoming common areas under one roof in San Diego’s historic Bankers Hill.
             </p>
             <Button href="/spaces" variant="outline" className="mt-10">
               Explore our spaces
