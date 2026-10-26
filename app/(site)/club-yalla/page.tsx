@@ -43,11 +43,11 @@ export default function ClubYallaPage() {
               <p className="mt-8 max-w-xl text-[1.08rem] text-ink-soft">{p.summary}</p>
             </Reveal>
             <Reveal delay={340} className="mt-10 flex flex-wrap gap-3">
-              <Button href={p.cta.href} size="lg">
-                {p.cta.label}
-              </Button>
-              <Button href="/membership" variant="outline" size="lg">
+              <Button href="/membership" size="lg">
                 View membership rates
+              </Button>
+              <Button href={p.cta.href} variant="outline" size="lg">
+                {p.cta.label}
               </Button>
             </Reveal>
           </div>
@@ -217,8 +217,8 @@ export default function ClubYallaPage() {
           </>
         }
         body="Applications are accepted year-round, first come, first served, depending on cohort availability."
-        primary={{ href: "/apply", label: "Apply for membership" }}
-        secondary={{ href: "/membership", label: "View membership rates" }}
+        primary={{ href: "/membership", label: "View membership rates" }}
+        secondary={{ href: "/apply", label: "Apply for membership" }}
       />
     </>
   );
