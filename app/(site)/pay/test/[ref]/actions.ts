@@ -34,5 +34,5 @@ export async function simulatePayment(form: FormData) {
   await send();
   // Development aid: deliver the identical event again to show duplicates are ignored.
   if (outcome === "duplicate" && process.env.NODE_ENV !== "production") await send();
-  redirect(b ? `/book/confirmation/${b.reference}` : "/book");
+  redirect(b ? `/book/confirmation/${b.reference}` : `/pay/complete?invoice=${encodeURIComponent(inv.number)}`);
 }

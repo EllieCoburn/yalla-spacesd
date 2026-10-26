@@ -20,6 +20,22 @@ export default function AdminRoot({ children }: { children: React.ReactNode }) {
             Set <code className="rounded bg-ink/5 px-1">DATABASE_URL</code> for this deployment (for example by adding Neon Postgres from the Vercel Marketplace), redeploy so
             migrations run, then create the first administrator. Step-by-step instructions are in <code className="rounded bg-ink/5 px-1">docs/ADMIN.md</code>.
           </p>
+          <div className="mt-6 rounded-lg bg-ink/5 p-4 text-[0.8rem] text-ink-soft">
+            <p className="font-medium text-ink">What this deployment can see</p>
+            <p className="mt-1">
+              Version: <code>{process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local"}</code> · Environment: <code>{process.env.VERCEL_ENV ?? "local"}</code>
+            </p>
+            <p className="mt-1">
+              Database-related settings found:{" "}
+              <code>
+                {Object.keys(process.env)
+                  .filter((k) => /DATABASE|POSTGRES|^PG/.test(k))
+                  .sort()
+                  .join(", ") || "none"}
+              </code>
+            </p>
+            <p className="mt-2">Settings only apply to deployments made after they were saved — open the newest deployment, or redeploy.</p>
+          </div>
         </div>
       </main>
     );

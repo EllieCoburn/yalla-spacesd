@@ -233,6 +233,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   membership_update: ["guardian_first_name", "child_name", "membership_summary"],
   staff_password_reset: ["name", "link"],
   staff_invite: ["name", "invited_by", "role", "link"],
+  family_sign_in: ["guardian_first_name", "link"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
