@@ -105,6 +105,13 @@ Alternative: `npm run admin:create` from a machine with `DATABASE_URL` set.
 - Early Bird (8:00–9:00am, $20) and a late stay (3:00–4:30pm, $30) are per-child extras chosen at checkout. They are invoiced as
   their own lines and shown on the roster. Extras and prices live in `lib/booking/addons.ts`.
 
+### Yalla Weekends
+
+- Migration `0007_yalla_weekends_schedule` adds monthly schedules for the first and second Saturday of every month (November
+  2026 – October 2027): an AM play session (9:00am–12:00pm) and a PM play session (1:00–4:00pm), each as three sessions by age
+  group (18 months – 4 years: 8; 4 – 7 years: 12; 7 – 10 years: 14) at $60 per child per play session.
+- Extend or adjust the schedules in Programs → Yalla Weekends → Schedule ("Repeating monthly", with the age group fields).
+
 ## 6. Background jobs
 
 `/api/cron/housekeeping` (with `Authorization: Bearer $CRON_SECRET`) expires lapsed holds and waitlist offers,

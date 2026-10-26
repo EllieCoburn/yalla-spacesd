@@ -27,6 +27,8 @@ export const ageBands = [
   { label: "2 years", months: 30 },
   { label: "3 years", months: 42 },
   { label: "4–5 years", months: 54 },
+  { label: "6 years", months: 78 },
+  { label: "7–10 years", months: 102 },
 ] as const;
 
 const DAYS = 42;

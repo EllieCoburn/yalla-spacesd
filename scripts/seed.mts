@@ -83,7 +83,7 @@ const P = async (v: Partial<typeof s.programs.$inferInsert> & { slug: string; na
   (await db.select().from(s.programs).where(eq(s.programs.slug, v.slug)))[0];
 const club = await P({ slug: "club-yalla", name: "Club Yalla", kind: "membership", tagline: "Your weekly childcare rhythm", parentPresence: "required", bookingMode: "enroll", minAgeMonths: 4, maxAgeMonths: 66, priceUnit: "month" });
 const flex = await P({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", tagline: "Drop-in childcare", parentPresence: "required", minAgeMonths: 4, maxAgeMonths: 66, minNoticeHours: 12, cancellationDeadlineHours: 24, advanceBookingDays: 60 });
-const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind: "weekend", tagline: "A little room in your weekend", parentPresence: "not_required", minAgeMonths: 12, maxAgeMonths: 66, priceCents: 9500, minNoticeHours: 24 });
+const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind: "weekend", tagline: "A little room in your weekend", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6000, defaultCapacity: 34, minNoticeHours: 24 });
 const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "individual", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 16000, defaultCapacity: 26 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
@@ -111,7 +111,18 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: club.id, title: `Club Yalla · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
-await createSeries(db, admin, { programId: weekends.id, title: "Weekend morning", weekdays: [6], startTime: "09:00", endTime: "12:30", startsOn: start, endsOn: end, capacity: 10, hardCapacity: 12, locationId: loc.id });
+// Yalla Weekends: first and second Saturday, AM and PM play sessions in three age groups (the 0007 migration does the same in production).
+const weekendGroups = [
+  { label: "18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
+  { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 12 },
+  { label: "7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 14 },
+];
+const [weekendMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, weekends.id), isNotNull(s.scheduleSeries.monthWeek)));
+if (!weekendMonthly)
+  for (const monthWeek of [1, 2])
+    for (const [name, startTime, endTime] of [["AM play session", "09:00", "12:00"], ["PM play session", "13:00", "16:00"]])
+      for (const g of weekendGroups)
+        await createSeries(db, admin, { programId: weekends.id, title: `Yalla Weekends · ${name} · ${g.label}`, weekdays: [6], monthWeek, startTime, endTime, startsOn: start, endsOn: addDaysISO(today, 365), capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, priceCents: 6000, locationId: loc.id });
 // After Hours: second Friday of each month, three age groups (the 0003 migration does the same in production).
 const afterHoursGroups = [
   { title: "Yalla After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
@@ -212,7 +223,9 @@ for (const f of famRows.slice(0, 18)) {
 
 /* Bookings */
 const flexSessions = await db.execute<{ id: string; local_date: string; cohort_id: string }>(sql`SELECT id, local_date, cohort_id FROM sessions WHERE program_id = ${flex.id} AND local_date >= ${today} ORDER BY local_date LIMIT 60`);
-const weekendSessions = await db.execute<{ id: string }>(sql`SELECT id FROM sessions WHERE program_id = ${weekends.id} AND local_date >= ${today} AND status = 'scheduled' ORDER BY local_date LIMIT 4`);
+const weekendSessions = await db.execute<{ id: string; local_date: string; min_age_months: number; max_age_months: number }>(
+  sql`SELECT id, local_date, min_age_months, max_age_months FROM sessions WHERE program_id = ${weekends.id} AND local_date >= ${today} AND status = 'scheduled' AND local_date = (SELECT min(local_date) FROM sessions WHERE program_id = ${weekends.id} AND local_date >= ${today}) AND title LIKE '%AM play%' ORDER BY min_age_months`,
+);
 // The next After Hours evening: one session per age group.
 const afterSessions = await db.execute<{ id: string; local_date: string; min_age_months: number; max_age_months: number }>(
   sql`SELECT id, local_date, min_age_months, max_age_months FROM sessions WHERE program_id = ${after.id} AND local_date = (SELECT min(local_date) FROM sessions WHERE program_id = ${after.id} AND local_date >= ${today} AND status = 'scheduled') ORDER BY min_age_months`,
@@ -239,10 +252,17 @@ for (const [i, f] of famRows.slice(18).entries()) {
   }
 }
 for (const [i, f] of famRows.filter((_, i) => i % 3 === 0).entries()) {
-  const sess = weekendSessions[i % weekendSessions.length];
-  if (!sess) continue;
+  // Each child joins the morning group for their age on the next weekend Saturday.
+  const items = f.children.flatMap((c) => {
+    const g = weekendSessions.find((w) => {
+      const m = ageInMonths(c.birthDate, w.local_date);
+      return m >= w.min_age_months && m <= w.max_age_months;
+    });
+    return g ? [{ sessionId: g.id, childId: c.id }] : [];
+  });
+  if (!items.length) continue;
   try {
-    const hold = await createHold(db, admin, { familyId: f.familyId, items: f.children.map((c) => ({ sessionId: sess.id, childId: c.id })), source: "admin", acknowledgePaperwork: true });
+    const hold = await createHold(db, admin, { familyId: f.familyId, items, source: "admin", acknowledgePaperwork: true });
     await confirmAdminBooking(db, admin, hold.booking.id, { createInvoice: true, notify: false });
     if (i === 1) await cancelBooking(db, admin, { bookingId: hold.booking.id, reason: "Family travelling (sample)", notify: false });
   } catch (e) {
