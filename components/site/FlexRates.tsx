@@ -3,7 +3,7 @@ import { Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { cohorts, flexAges, hours, tuitionYear, usd } from "@/content/tuition";
 
-/** Yalla Flex day rates by cohort, from the rate sheet. Shown on the Yalla Flex program page. */
+/** Yalla Flex day rates by age group, from the rate sheet. Shown on the Yalla Flex program page. */
 export function FlexRates() {
   return (
     <section id="rates" className="scroll-mt-24 py-20 lg:py-28">
@@ -11,10 +11,10 @@ export function FlexRates() {
         <div className="lg:col-span-4">
           <Eyebrow>{tuitionYear} rates</Eyebrow>
           <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-            Day rates, <em>by cohort.</em>
+            Day rates, <em>by age.</em>
           </h2>
           <p className="mt-6 text-ink-soft">
-            Every rate includes childcare for your child in their cohort and coworking for you in our coworking space.
+            Every rate includes childcare for your child in a play environment with similarly aged peers, and coworking for you in our coworking space.
           </p>
           <dl className="mt-8 space-y-3 border-t border-line pt-6 text-[0.95rem]">
             <div className="flex justify-between gap-4">
@@ -37,10 +37,10 @@ export function FlexRates() {
         </div>
         <div className="lg:col-span-7 lg:col-start-6">
           <table className="w-full border-y border-line text-left">
-            <caption className="sr-only">Yalla Flex day rates by cohort</caption>
+            <caption className="sr-only">Yalla Flex day rates by age group</caption>
             <thead>
               <tr className="eyebrow text-[0.58rem] text-ink-soft">
-                <th className="py-4 font-medium">Cohort</th>
+                <th className="py-4 font-medium">Age group</th>
                 <th className="py-4 text-right font-medium">Full day</th>
                 <th className="py-4 text-right font-medium">Half day</th>
               </tr>
