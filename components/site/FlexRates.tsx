@@ -14,8 +14,7 @@ export function FlexRates() {
             Day rates, <em>by cohort.</em>
           </h2>
           <p className="mt-6 text-ink-soft">
-            Each rate covers both halves of your day: childcare for your child in their cohort, and coworking for you in our coworking
-            space.
+            Every rate includes childcare for your child in their cohort and coworking for you in our coworking space.
           </p>
           <dl className="mt-8 space-y-3 border-t border-line pt-6 text-[0.95rem]">
             <div className="flex justify-between gap-4">
