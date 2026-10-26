@@ -61,6 +61,12 @@ For a shared preview database set `SEED_STAFF_PASSWORD` first.
 
 Alternative: `npm run admin:create` from a machine with `DATABASE_URL` set.
 
+### Troubleshooting setup
+
+- **"The admin portal needs a database"** or **"ADMIN_SETUP_TOKEN isn’t set"**: environment variables only reach deployments built *after* they were saved. Open the newest deployment (or push a change) rather than an older deployment link.
+- **Vercel "Redeploy" rebuilds the same commit** it's clicked on. Redeploying an old entry brings back old code. Use the newest deployment, and "Promote to Production" if it was built as a preview.
+- The setup page shows which deployment you're on and whether `ADMIN_SETUP_TOKEN` and `AUTH_SECRET` are visible to it.
+
 ## 4. Security model
 
 - Staff accounts are separate from family accounts; families can never reach `/admin`.
