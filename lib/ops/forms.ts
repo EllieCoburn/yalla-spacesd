@@ -291,3 +291,22 @@ export async function outstandingForChildren(db: Executor, childIds: string[], o
   }
   return out;
 }
+
+/** Requirements are deactivated, not deleted, so the history of what was required stays intact. */
+export async function deactivateRequirement(db: Executor, actor: Actor, requirementId: string) {
+  const [r] = await db.update(formRequirements).set({ active: false }).where(eq(formRequirements.id, requirementId)).returning();
+  if (r) await audit(db, actor, { action: "forms.requirement_remove", entityType: "form", entityId: r.templateId, summary: `Removed requirement (${r.scope})` });
+}
+
+export async function updateTemplateSettings(
+  db: Executor,
+  actor: Actor,
+  templateId: string,
+  patch: { title?: string; description?: string | null; enforcement?: string; frequency?: string; validForMonths?: number | null; status?: string },
+) {
+  const [t] = await db.select().from(formTemplates).where(eq(formTemplates.id, templateId));
+  if (!t) throw new OpsError("not_found", "Form not found.");
+  if (patch.title !== undefined && !patch.title.trim()) throw new OpsError("invalid", "The form needs a title.");
+  await db.update(formTemplates).set({ ...patch, updatedAt: new Date() }).where(eq(formTemplates.id, templateId));
+  await audit(db, actor, { action: "forms.settings", entityType: "form", entityId: templateId, summary: `Updated settings for “${t.title}”`, changes: patch as Record<string, unknown> });
+}
