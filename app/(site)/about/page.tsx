@@ -33,7 +33,7 @@ export default function AboutPage() {
             For childhood. For parenthood. <em>For connection.</em>
           </>
         }
-        lede="Yalla is a living community of parents, children and educators who share the daily rhythms of work, play and care in the heart of Bankers Hill."
+        lede="Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and ways to play, learn, and connect in San Diego."
       />
 
       <OurStory />
