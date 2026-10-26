@@ -62,7 +62,7 @@ export default function ExperiencePage() {
           </>
         }
         lede="A drop-in day, a camp week, a weekend morning, an evening out, a celebration or a weekly rhythm: every way of joining Yalla rests on the same things. Attentive people, thoughtful spaces, and room to play and connect."
-        image={{ src: "/photos/painting.jpg", alt: "Children painting together at a low table" }}
+        image={{ src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" }}
       />
 
       {/* What every experience shares */}
@@ -74,7 +74,7 @@ export default function ExperiencePage() {
               Childhood, given <em>room to unfold.</em>
             </h2>
             <div className="relative mt-12 aspect-[4/5] w-[80%] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/lemon-play.jpg" alt="A child exploring a water table with lemons" fill sizes="(min-width:1024px) 30vw, 80vw" className="object-cover" />
+              <Image src="/photos/instruments.jpg" alt="An infant exploring a drum, bells and a tambourine" fill sizes="(min-width:1024px) 30vw, 80vw" className="object-cover" />
             </div>
           </div>
           <div className="lg:col-span-6 lg:col-start-7">

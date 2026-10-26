@@ -41,14 +41,11 @@ export default function SpacesPage() {
         <div className="shell">
           <Gallery
             images={[
-              { src: "/photos/garden.jpg", alt: "The outdoor yard framed by trees", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:aspect-auto sm:row-span-2" },
-              { src: "/photos/dinosaurs.jpg", alt: "A child playing outdoors with toy dinosaurs", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
-              { src: "/photos/lemon-play.jpg", alt: "Sensory play at the water table", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full" },
+              { src: "/photos/painting-table.jpg", alt: "A toddler painting with brushes and bright colors outdoors", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:aspect-auto sm:row-span-2" },
+              { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/tulle.jpg", alt: "A child exploring embroidered tulle in the sunlight", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full" },
             ]}
           />
-          <p className="mt-6 text-[0.8rem] text-ink-soft">
-            Placeholder photography from our current site. <ToConfirm>New photography</ToConfirm>
-          </p>
         </div>
       </section>
 
@@ -67,7 +64,7 @@ export default function SpacesPage() {
           </div>
           <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:col-span-6 lg:col-start-7">
             <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/painting.jpg" alt="Children painting" fill sizes="25vw" className="object-cover" />
+              <Image src="/photos/instruments.jpg" alt="An infant exploring a drum, bells and a tambourine on a woven rug" fill sizes="25vw" className="object-cover" />
             </div>
             <div className="relative mt-16 aspect-[3/4] overflow-hidden bg-sand">
               <Image src="/photos/sunflowers.jpg" alt="Sunflowers on a table in a cohort space" fill sizes="25vw" className="object-cover" />
@@ -81,7 +78,7 @@ export default function SpacesPage() {
         <div className="shell grid items-center gap-14 lg:grid-cols-12">
           <div className="relative order-2 lg:order-1 lg:col-span-6">
             <div className="relative aspect-[5/4] overflow-hidden bg-sand">
-              <Image src="/photos/garden.jpg" alt="Trees and picnic tables in Yalla’s yard" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
+              <Image src="/photos/paint-wall.jpg" alt="An outdoor painting wall in the play garden, with paint pots on a wooden ledge" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
             </div>
             <Mark name="palm" className="absolute -right-4 -bottom-10 h-44 w-auto text-blue" />
           </div>
