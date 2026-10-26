@@ -133,22 +133,29 @@ export default function Home() {
             </Button>
           </div>
         </div>
-        <div className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-4 lg:mx-auto lg:grid lg:max-w-[1320px] lg:grid-cols-4 lg:gap-y-16 lg:overflow-visible">
-          {otherPrograms.map((p, i) => (
-            <Reveal key={p.slug} delay={i * 90} className="w-[72vw] shrink-0 snap-start sm:w-[42vw] lg:w-auto">
-              <Link href={`/programs/${p.slug}`} className="group block">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-                  <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:1024px) 25vw, 70vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
-                </div>
-                <p className="eyebrow mt-6 flex items-center gap-2 text-[0.6rem] text-ink-soft">
-                  {p.motif ? <Mark name={p.motif} className="h-3.5 w-auto text-blue" /> : null}
-                  {p.short}
-                </p>
-                <h3 className="display mt-2 text-[1.55rem] transition-colors group-hover:text-blue">{p.name}</h3>
-                <p className="mt-1.5 text-[0.9rem] text-ink-soft">{p.tagline}</p>
-              </Link>
-            </Reveal>
-          ))}
+        <div className="shell">
+          <ul className="mt-14 grid gap-x-6 gap-y-6 sm:grid-cols-2 sm:gap-y-12 lg:grid-cols-3">
+            {otherPrograms.map((p, i) => (
+              <Reveal as="li" key={p.slug} delay={(i % 3) * 90}>
+                <Link href={`/programs/${p.slug}`} className="group flex items-center gap-5 sm:block">
+                  <div className="relative aspect-square w-24 shrink-0 overflow-hidden bg-sand sm:aspect-[4/3] sm:w-auto">
+                    <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:1024px) 30vw, (min-width:640px) 45vw, 90vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.04]" />
+                  </div>
+                  <div className="flex min-w-0 flex-1 items-start justify-between gap-4 sm:mt-5">
+                    <div>
+                      <p className="eyebrow flex items-center gap-2 text-[0.6rem] text-ink-soft">
+                        {p.motif ? <Mark name={p.motif} className="h-3.5 w-auto text-blue" /> : null}
+                        {p.short}
+                      </p>
+                      <h3 className="display mt-1.5 text-[1.3rem] transition-colors group-hover:text-blue sm:mt-2 sm:text-[1.55rem]">{p.name}</h3>
+                      <p className="mt-1 text-[0.85rem] text-ink-soft sm:text-[0.9rem]">{p.tagline}</p>
+                    </div>
+                    <Arrow className="mt-8 hidden h-3 w-5 shrink-0 sm:block text-ink-soft transition-transform duration-500 group-hover:translate-x-1 group-hover:text-blue" />
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
+          </ul>
         </div>
       </section>
 
