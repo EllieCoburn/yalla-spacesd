@@ -9,11 +9,12 @@
  *   balance   = total − paid − credit + refunded
  * Corrections are new adjustment lines or refund rows. Settled history is never rewritten.
  */
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
-import type { Executor } from "@/lib/db";
-import { credits, invoiceLines, invoices, payments, refunds } from "@/lib/db/schema";
-import { providerFor } from "@/lib/payments/provider";
+import type { DB, Executor } from "@/lib/db";
+import { credits, discounts, guardians, invoiceLines, invoices, payments, refunds, scheduledCharges } from "@/lib/db/schema";
+import { notifyFamily } from "@/lib/notify";
+import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { randomToken } from "@/lib/auth/crypto";
 import { getPolicy } from "./settings";
 
@@ -285,4 +286,144 @@ export async function familyLedger(db: Executor, familyId: string) {
   );
   const outstanding = invs.filter((i) => i.status === "open").reduce((s, i) => s + Math.max(totals.get(i.id)!.balance, 0), 0);
   return { invoices: invs.map((i) => ({ ...i, totals: totals.get(i.id)! })), outstanding, credit: await creditBalance(db, familyId) };
+}
+
+/* ── Scheduled membership charges → invoices ── */
+
+/**
+ * Turns scheduled charges due on or before `through` into open invoices. Each charge row is locked
+ * and re-checked, so running this twice (or concurrently) never creates duplicate invoices.
+ */
+export async function invoiceDueCharges(db: DB, actor: Actor, through: string) {
+  const due = await db
+    .select({ id: scheduledCharges.id })
+    .from(scheduledCharges)
+    .where(and(eq(scheduledCharges.status, "scheduled"), lte(scheduledCharges.scheduledFor, through)));
+  let created = 0;
+  for (const { id } of due) {
+    const made = await db.transaction(async (tx) => {
+      const [c] = await tx.select().from(scheduledCharges).where(eq(scheduledCharges.id, id)).for("update");
+      if (!c || c.status !== "scheduled") return false;
+      const inv = await createInvoice(tx, actor, {
+        familyId: c.familyId,
+        membershipId: c.membershipId,
+        description: c.description,
+        dueOn: c.scheduledFor,
+        periodStart: c.scheduledFor,
+        lines: [{ kind: "charge", description: c.description, unitCents: c.amountCents }],
+      });
+      await tx.update(scheduledCharges).set({ status: "invoiced", invoiceId: inv.id }).where(eq(scheduledCharges.id, c.id));
+      return true;
+    });
+    if (made) created++;
+  }
+  if (created) await audit(db, actor, { action: "billing.invoice_scheduled", entityType: "billing", summary: `Created ${created} invoice(s) from scheduled membership charges due by ${through}` });
+  return { created, considered: due.length };
+}
+
+export async function skipScheduledCharge(db: Executor, actor: Actor, chargeId: string, reason: string) {
+  if (!reason.trim()) throw new OpsError("invalid", "Give a reason for skipping this charge.");
+  const [c] = await db
+    .update(scheduledCharges)
+    .set({ status: "skipped" })
+    .where(and(eq(scheduledCharges.id, chargeId), eq(scheduledCharges.status, "scheduled")))
+    .returning();
+  if (!c) throw new OpsError("invalid", "Only scheduled charges can be skipped.");
+  await audit(db, actor, { action: "billing.charge_skipped", entityType: "family", entityId: c.familyId, summary: `Skipped scheduled charge “${c.description}”: ${reason}` });
+}
+
+/* ── Payment links for open invoices ── */
+
+export async function sendInvoicePaymentLink(db: DB, actor: Actor, invoiceId: string, baseUrl: string) {
+  const [inv] = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+  if (!inv || inv.status !== "open") throw new OpsError("invalid", "Payment links can only be sent for unpaid invoices.");
+  const t = (await invoiceTotals(db, [invoiceId])).get(invoiceId)!;
+  if (t.balance <= 0) throw new OpsError("invalid", "This invoice has no balance due.");
+  const provider = activeProvider();
+  const idem = `invoice-link:${inv.id}:${t.balance}:${new Date().toISOString().slice(0, 10)}`;
+  const [existing] = await db.select().from(payments).where(eq(payments.idempotencyKey, idem));
+  let url: string;
+  if (existing && existing.status === "pending" && existing.checkoutRef) {
+    url = existing.provider === "test" ? `${baseUrl}/pay/test/${existing.checkoutRef}` : (existing.providerRef ?? "");
+  } else if (existing) {
+    throw new OpsError("invalid", "Today’s payment link for this amount was already used. Try again tomorrow or record the payment.");
+  } else {
+    const paymentId = crypto.randomUUID();
+    const [g] = await db.select().from(guardians).where(and(eq(guardians.familyId, inv.familyId), eq(guardians.isPrimary, true)));
+    const checkout = await provider.createCheckout({
+      paymentId,
+      amountCents: t.balance,
+      description: `Yalla invoice ${inv.number}`,
+      customerEmail: g?.email,
+      successUrl: `${baseUrl}/pay/complete?invoice=${inv.number}`,
+      cancelUrl: `${baseUrl}/pay/complete?invoice=${inv.number}&cancelled=1`,
+      expiresAt: new Date(Date.now() + 23 * 3600 * 1000),
+      idempotencyKey: idem,
+    });
+    await db.insert(payments).values({
+      id: paymentId,
+      invoiceId: inv.id,
+      familyId: inv.familyId,
+      amountCents: t.balance,
+      method: "card",
+      status: "pending",
+      provider: provider.name,
+      checkoutRef: checkout.checkoutRef,
+      providerRef: provider.name === "stripe" ? checkout.url : null,
+      idempotencyKey: idem,
+    });
+    url = provider.name === "test" ? `${baseUrl}${checkout.url}` : checkout.url;
+  }
+  await notifyFamily(db, {
+    key: "payment_request",
+    familyId: inv.familyId,
+    vars: { invoice_number: inv.number, amount: usd(t.balance), line_items: inv.description ?? "", payment_link: url },
+    related: { type: "invoice", id: inv.id },
+    createdBy: actor.name,
+  });
+  await audit(db, actor, { action: "billing.payment_link", entityType: "invoice", entityId: inv.id, summary: `Sent a payment link for ${usd(t.balance)} on ${inv.number}` });
+  return { url, provider: provider.name };
+}
+
+/* ── Discounts & promo codes ── */
+
+export async function saveDiscount(
+  db: Executor,
+  actor: Actor,
+  input: {
+    id?: string;
+    code?: string | null;
+    name: string;
+    kind: "percent" | "fixed";
+    value: number;
+    programId?: string | null;
+    active: boolean;
+    startsOn?: string | null;
+    endsOn?: string | null;
+    maxUses?: number | null;
+  },
+) {
+  if (!input.name.trim()) throw new OpsError("invalid", "Name the discount.");
+  if (input.kind === "percent" && (input.value <= 0 || input.value > 100)) throw new OpsError("invalid", "Percent discounts must be between 1 and 100.");
+  if (input.kind === "fixed" && input.value <= 0) throw new OpsError("invalid", "Enter a positive amount.");
+  const code = input.code?.trim().toUpperCase() || null;
+  if (code && !/^[A-Z0-9-]{3,30}$/.test(code)) throw new OpsError("invalid", "Codes use 3–30 letters, numbers or dashes.");
+  if (code) {
+    const clash = await db.select({ id: discounts.id }).from(discounts).where(eq(discounts.code, code));
+    if (clash.length && clash[0].id !== input.id) throw new OpsError("duplicate", "That code is already in use.");
+  }
+  const values = {
+    code,
+    name: input.name.trim(),
+    kind: input.kind,
+    value: input.value,
+    programId: input.programId || null,
+    active: input.active,
+    startsOn: input.startsOn || null,
+    endsOn: input.endsOn || null,
+    maxUses: input.maxUses ?? null,
+  };
+  if (input.id) await db.update(discounts).set(values).where(eq(discounts.id, input.id));
+  else await db.insert(discounts).values(values);
+  await audit(db, actor, { action: "billing.discount", entityType: "discount", entityId: input.id ?? null, summary: `${input.id ? "Updated" : "Created"} discount “${values.name}”${code ? ` (${code})` : ""}` });
 }

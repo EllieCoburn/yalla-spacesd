@@ -3,10 +3,10 @@
  * starts with a conservative default and is flagged "needs your decision" until someone at
  * Yalla saves it in Settings → Policies.
  */
-import { eq, inArray } from "drizzle-orm";
-import { audit, type Actor } from "@/lib/audit";
+import { eq, inArray, sql } from "drizzle-orm";
+import { audit, diff, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { settings } from "@/lib/db/schema";
+import { capacityPools, cohorts, locations, sessions, settings } from "@/lib/db/schema";
 
 type PolicyDef<T> = { label: string; help: string; default: T; decision: boolean; group: string; options?: { value: string; label: string }[] };
 
@@ -149,4 +149,106 @@ export async function setPolicy(db: Executor, actor: Actor, key: PolicyKey, valu
     summary: `Set “${POLICIES[key].label}”`,
     changes: { [key]: { from: before, to: value } },
   });
+}
+
+/* ── Operating hours ── */
+
+export type OperatingHours = { day: number; open: string | null; close: string | null }[];
+export const DEFAULT_HOURS: OperatingHours = [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, open: day >= 1 && day <= 5 ? "08:00" : null, close: day >= 1 && day <= 5 ? "16:30" : null }));
+
+export async function getOperatingHours(db: Executor): Promise<{ hours: OperatingHours; saved: boolean }> {
+  const [row] = await db.select().from(settings).where(eq(settings.key, "operations.hours"));
+  return { hours: (row?.value as OperatingHours) ?? DEFAULT_HOURS, saved: !!row };
+}
+
+export async function setOperatingHours(db: Executor, actor: Actor, hours: OperatingHours) {
+  for (const h of hours) {
+    if ((h.open && !h.close) || (!h.open && h.close)) throw new OpsError("invalid", "Give both opening and closing times, or leave both empty for closed days.");
+    if (h.open && h.close && h.close <= h.open) throw new OpsError("invalid", "Closing time must be after opening time.");
+  }
+  await db
+    .insert(settings)
+    .values({ key: "operations.hours", value: hours, updatedBy: actor.name })
+    .onConflictDoUpdate({ target: settings.key, set: { value: hours, updatedAt: new Date(), updatedBy: actor.name } });
+  await audit(db, actor, { action: "settings.hours", entityType: "setting", entityId: "operations.hours", summary: "Updated operating hours" });
+}
+
+/* ── Locations, cohorts & capacity pools ── */
+
+export async function saveLocation(db: Executor, actor: Actor, input: { id?: string; name: string; address?: string | null; arrivalInstructions?: string | null; active: boolean }) {
+  if (!input.name.trim()) throw new OpsError("invalid", "Name the location.");
+  const values = { name: input.name.trim(), address: input.address?.trim() || null, arrivalInstructions: input.arrivalInstructions?.trim() || null, active: input.active };
+  if (input.id) {
+    const [before] = await db.select().from(locations).where(eq(locations.id, input.id));
+    await db.update(locations).set(values).where(eq(locations.id, input.id));
+    await audit(db, actor, { action: "settings.location", entityType: "location", entityId: input.id, summary: `Updated location ${values.name}`, changes: diff(before ?? {}, values) });
+  } else {
+    const [l] = await db.insert(locations).values(values).returning();
+    await audit(db, actor, { action: "settings.location", entityType: "location", entityId: l.id, summary: `Added location ${values.name}` });
+  }
+}
+
+export async function saveCohort(
+  db: Executor,
+  actor: Actor,
+  input: { id?: string; name: string; minAgeMonths?: number | null; maxAgeMonths?: number | null; ratio?: string | null; maxSize?: number | null; locationId?: string | null; sortOrder?: number; active: boolean },
+) {
+  if (!input.name.trim()) throw new OpsError("invalid", "Name the cohort.");
+  if (input.minAgeMonths != null && input.maxAgeMonths != null && input.maxAgeMonths < input.minAgeMonths) throw new OpsError("invalid", "The maximum age must be at least the minimum age.");
+  if (input.ratio && !/^\d+:\d+$/.test(input.ratio)) throw new OpsError("invalid", "Write ratios like 1:4.");
+  const values = {
+    name: input.name.trim(),
+    minAgeMonths: input.minAgeMonths ?? null,
+    maxAgeMonths: input.maxAgeMonths ?? null,
+    ratio: input.ratio || null,
+    maxSize: input.maxSize ?? null,
+    locationId: input.locationId || null,
+    sortOrder: input.sortOrder ?? 0,
+    active: input.active,
+  };
+  if (input.id) {
+    const [before] = await db.select().from(cohorts).where(eq(cohorts.id, input.id));
+    await db.update(cohorts).set(values).where(eq(cohorts.id, input.id));
+    await audit(db, actor, { action: "settings.cohort", entityType: "cohort", entityId: input.id, summary: `Updated cohort ${values.name}`, changes: diff(before ?? {}, values) });
+  } else {
+    const [c] = await db.insert(cohorts).values(values).returning();
+    await audit(db, actor, { action: "settings.cohort", entityType: "cohort", entityId: c.id, summary: `Added cohort ${values.name}` });
+  }
+}
+
+/** Changing a pool's capacity affects live availability, so it's audited as a capacity change. */
+export async function savePool(db: Executor, actor: Actor, input: { id?: string; name: string; capacity: number; locationId?: string | null; description?: string | null }) {
+  if (!input.name.trim()) throw new OpsError("invalid", "Name the capacity pool.");
+  if (!Number.isInteger(input.capacity) || input.capacity < 1) throw new OpsError("invalid", "Capacity must be a whole number of at least 1.");
+  const values = { name: input.name.trim(), capacity: input.capacity, locationId: input.locationId || null, description: input.description?.trim() || null };
+  if (input.id) {
+    const [before] = await db.select().from(capacityPools).where(eq(capacityPools.id, input.id));
+    await db.update(capacityPools).set(values).where(eq(capacityPools.id, input.id));
+    await audit(db, actor, {
+      action: "capacity.pool",
+      entityType: "capacity_pool",
+      entityId: input.id,
+      summary: `Updated capacity pool ${values.name}${before && before.capacity !== values.capacity ? ` (capacity ${before.capacity} → ${values.capacity})` : ""}`,
+      changes: diff(before ?? {}, values),
+    });
+  } else {
+    const [p] = await db.insert(capacityPools).values(values).returning();
+    await audit(db, actor, { action: "capacity.pool", entityType: "capacity_pool", entityId: p.id, summary: `Added capacity pool ${values.name} (${values.capacity})` });
+  }
+}
+
+export async function poolUsage(db: Executor) {
+  const rows = await db
+    .select({ poolId: sessions.capacityPoolId, n: sql<number>`count(*)::int` })
+    .from(sessions)
+    .where(sql`${sessions.capacityPoolId} IS NOT NULL AND ${sessions.localDate} >= current_date`)
+    .groupBy(sessions.capacityPoolId);
+  return new Map(rows.map((r) => [r.poolId!, r.n]));
+}
+
+export async function setSettingValue(db: Executor, key: string, value: unknown, actor: Actor) {
+  await db
+    .insert(settings)
+    .values({ key, value, updatedBy: actor.name })
+    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date(), updatedBy: actor.name } });
 }
