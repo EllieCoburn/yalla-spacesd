@@ -230,9 +230,14 @@ export default function BelongingPage() {
           <div className="shell mt-16 lg:mt-24">
             <Reveal className="mx-auto max-w-3xl text-center">
               <Mark name="dotsun" className="mx-auto h-10 w-10 text-chalk" />
-              <p className="display mt-8 text-[clamp(1.9rem,1.3rem+2.2vw,3.2rem)] leading-[1.2]!">
-                You don’t have to be the same to belong. <em className="text-mist!">You simply have to be you.</em>
-              </p>
+              <blockquote>
+                <p className="display mt-8 text-[clamp(1.9rem,1.3rem+2.2vw,3.2rem)] leading-[1.2]!">
+                  “To be human is to live among differences. <em className="text-mist!">To build community is to learn what we can make of them.</em>”
+                </p>
+                <footer className="mt-8 text-[0.95rem] text-chalk/80">
+                  <span className="font-medium text-chalk">Ellie Coburn</span>, Owner &amp; Executive Director
+                </footer>
+              </blockquote>
             </Reveal>
           </div>
         </div>
