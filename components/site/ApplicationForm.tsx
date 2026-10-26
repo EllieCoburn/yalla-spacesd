@@ -11,6 +11,8 @@ export function ApplicationForm() {
   const [sent, setSent] = useState(false);
   const [days, setDays] = useState<number | null>(null);
   const [length, setLength] = useState<"full" | "half" | "custom" | null>(null);
+  const [kids, setKids] = useState([0]);
+  const [nextKid, setNextKid] = useState(1);
   const [when, setWhen] = useState<"next" | "soonest" | null>(null);
   const [onsite, setOnsite] = useState<"me" | "partner" | "both" | null>(null);
   const [weekdays, setWeekdays] = useState<string[]>([]);
@@ -53,14 +55,41 @@ export function ApplicationForm() {
       </fieldset>
 
       <fieldset className="space-y-7">
-        <legend className="eyebrow mb-2 text-ink-soft">About your child</legend>
+        <legend className="eyebrow mb-2 text-ink-soft">{kids.length > 1 ? "About your children" : "About your child"}</legend>
+        {kids.map((id, i) => (
+          <div key={id} className={i > 0 ? "border-t border-line pt-7" : ""}>
+            {kids.length > 1 ? (
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-[0.85rem] text-ink-soft">Child {i + 1}</p>
+                {i > 0 ? (
+                  <button type="button" onClick={() => setKids((k) => k.filter((x) => x !== id))} className="text-[0.8rem] text-ink-soft underline underline-offset-4 hover:text-ink">
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="grid gap-7 sm:grid-cols-2">
+              <Field name={`childName${i + 1}`} required>
+                Child’s first name
+              </Field>
+              <Field name={`childBirth${i + 1}`} required>
+                Date of birth or due date
+              </Field>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            setKids((k) => [...k, nextKid]);
+            setNextKid((n) => n + 1);
+          }}
+          className="inline-flex items-center gap-2 text-[0.9rem] text-ink hover:text-blue"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-ink/30 text-[1rem] leading-none">+</span>
+          <span className="link-underline">Add another child</span>
+        </button>
         <div className="grid gap-7 sm:grid-cols-2">
-          <Field name="childName" required>
-            Child’s first name
-          </Field>
-          <Field name="childBirth" required>
-            Date of birth or due date
-          </Field>
           <Field name="start">Ideal start date</Field>
         </div>
       </fieldset>
