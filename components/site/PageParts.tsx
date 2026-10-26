@@ -91,7 +91,7 @@ export function FactRows({ blocks }: { blocks: FactBlock[] }) {
             {b.rows.map((r) => (
               <div key={r.label} className="flex items-baseline justify-between gap-6 py-3">
                 <dt className="text-ink">{r.label}</dt>
-                <dd className="text-right font-sans text-[0.92rem] whitespace-nowrap text-ink-soft">{r.value}</dd>
+                {r.value ? <dd className="text-right font-sans text-[0.92rem] whitespace-nowrap text-ink-soft">{r.value}</dd> : null}
               </div>
             ))}
           </dl>
