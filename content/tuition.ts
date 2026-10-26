@@ -97,10 +97,13 @@ export const flexAges: Record<Cohort["id"], string> = {
   wildflowers: "3 – 5 years",
 };
 
+/** Early Bird care (8:00–8:30am), per day. */
+export const earlyBirdDaily = 16;
+
 export const fees = [
   { label: "One-time registration", amount: "$125", note: null },
   { label: "Annual materials", amount: "$175", note: "All members" },
-  { label: "Early Bird care", amount: "$16 / day", note: hours.earlyBird },
+  { label: "Early Bird care", amount: `$${earlyBirdDaily} / day`, note: hours.earlyBird },
 ];
 
 export const workspace = [
