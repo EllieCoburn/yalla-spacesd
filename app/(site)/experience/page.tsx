@@ -104,7 +104,7 @@ export default function ExperiencePage() {
             <div className="lg:col-span-5">
               <Index n="02">Ways to take part</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                Come as often, <em>or as rarely, as you like.</em>
+                We’re here <em>when you need us.</em>
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
