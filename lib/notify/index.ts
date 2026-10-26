@@ -21,6 +21,7 @@ export type TemplateKey =
   | "payment_failed"
   | "waitlist_offer"
   | "membership_update"
+  | "payment_request"
   | "staff_password_reset"
   | "staff_invite";
 
@@ -87,6 +88,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\n{{membership_summary}}\n\nQuestions? Just reply to this email.\n\nYalla",
     essential: true,
     audience: "family",
+  },
+  payment_request: {
+    name: "Payment request",
+    subject: "Payment for invoice {{invoice_number}}",
+    body: "Hi {{guardian_first_name}},\n\nInvoice {{invoice_number}} has a balance of {{amount}}.\n\n{{line_items}}\n\nYou can pay securely here:\n{{payment_link}}\n\nThank you,\nYalla",
+    essential: true,
+    audience: "billing",
   },
   staff_password_reset: {
     name: "Staff password reset",
@@ -201,4 +209,59 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
     await db.update(messages).set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null }).where(eq(messages.id, m.id));
   }
   return { id: m.id, mode, body };
+}
+
+/** Variables each template can use, with sample values for previews. */
+export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
+  booking_confirmation: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions"],
+  booking_reminder: ["guardian_first_name", "reference", "program", "date", "booking_details", "arrival_instructions"],
+  booking_change: ["guardian_first_name", "reference", "change_summary", "booking_details"],
+  booking_cancellation: ["guardian_first_name", "reference", "booking_details", "refund_note"],
+  forms_missing: ["guardian_first_name", "child_name", "missing_forms"],
+  payment_receipt: ["guardian_first_name", "invoice_number", "amount", "paid_at", "line_items", "balance"],
+  payment_failed: ["guardian_first_name", "invoice_number", "amount", "reason", "hold_until"],
+  payment_request: ["guardian_first_name", "invoice_number", "amount", "line_items", "payment_link"],
+  waitlist_offer: ["guardian_first_name", "program", "date", "child_names", "booking_details", "offer_expires", "offer_link"],
+  membership_update: ["guardian_first_name", "child_name", "membership_summary"],
+  staff_password_reset: ["name", "link"],
+  staff_invite: ["name", "invited_by", "role", "link"],
+};
+
+export const SAMPLE_VARIABLES: Record<string, string> = {
+  guardian_first_name: "Jordan",
+  name: "Sam Staff",
+  reference: "YL-SAMPLE",
+  program: "Yalla Flex",
+  date: "Mon 2 Nov 2026",
+  booking_details: "• Yalla Flex · Mon 2 Nov 8:30am–4:30pm · Ava",
+  location: "Yalla Bankers Hill",
+  arrival_instructions: "Please check in at the front desk.",
+  change_summary: "Moved to Tue 3 Nov.",
+  refund_note: "If a refund or credit applies, we’ll confirm it separately.",
+  child_name: "Ava",
+  child_names: "Ava",
+  missing_forms: "• Health & immunization record",
+  invoice_number: "INV-1001-AB",
+  amount: "$150.00",
+  paid_at: "Mon 2 Nov 2026, 9:00am",
+  line_items: "Yalla Flex · Mon 2 Nov",
+  balance: "$0.00",
+  reason: "Card declined",
+  hold_until: "Mon 2 Nov 2026, 9:30am",
+  payment_link: "https://example.com/pay/sample",
+  offer_expires: "Tue 3 Nov 2026, 9:00am",
+  offer_link: "https://example.com/book/offer/YL-SAMPLE",
+  membership_summary: "Your Club Yalla schedule changes to Mon, Wed, Fri from 1 December.",
+  invited_by: "Olivia Owner",
+  role: "Operations",
+  link: "https://example.com/admin/reset?token=sample",
+};
+
+export async function saveTemplate(db: Executor, actor: { name: string }, key: TemplateKey, subject: string, body: string) {
+  const def = DEFAULT_TEMPLATES[key];
+  if (!def) throw new Error("Unknown template");
+  await db
+    .insert(messageTemplates)
+    .values({ key, name: def.name, subject, body, essential: def.essential, updatedBy: actor.name })
+    .onConflictDoUpdate({ target: messageTemplates.key, set: { subject, body, updatedAt: new Date(), updatedBy: actor.name } });
 }
