@@ -19,7 +19,7 @@ export default function ProgramsPage() {
         mark="balcony"
         title={
           <>
-            However your week looks, <em>there’s a Yalla for it.</em>
+            A little Yalla <em>for every kind of day.</em>
           </>
         }
         lede="Drop-in days, camps, weekend care, evenings out, pop-ups and private celebrations. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
