@@ -191,24 +191,26 @@ export default function ClubYallaPage() {
       </Section>
 
       {/* Joining */}
-      <Section tone="paper">
-        <div className="shell">
-          <Index n="03">Joining Club Yalla</Index>
-          <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-            Four steps <em>to your first day.</em>
-          </h2>
-          <ol className="mt-16 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((s, i) => (
-              <Reveal as="li" key={s.title} delay={i * 100} className="bg-paper p-8 lg:p-10">
-                <Mark name={s.mark} className="h-12 w-auto text-blue" />
-                <p className="mt-10 font-serif text-ink-soft italic">0{i + 1}</p>
-                <h3 className="display mt-2 text-[1.8rem]">{s.title}</h3>
-                <p className="mt-3 text-ink-soft">{s.body}</p>
-              </Reveal>
-            ))}
-          </ol>
+      <section className="roofline-edge bg-blue text-blue">
+        <div className="py-20 text-chalk lg:py-32">
+          <div className="shell">
+            <p className="eyebrow text-chalk/60">03 · Joining Club Yalla</p>
+            <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+              Four steps <em className="text-mist!">to your first day.</em>
+            </h2>
+            <ol className="mt-16 grid gap-px overflow-hidden bg-chalk/20 sm:grid-cols-2 lg:grid-cols-4">
+              {steps.map((s, i) => (
+                <Reveal as="li" key={s.title} delay={i * 100} className="bg-blue p-8 lg:p-10">
+                  <Mark name={s.mark} className="h-12 w-auto text-chalk" />
+                  <p className="mt-10 font-serif text-mist italic">0{i + 1}</p>
+                  <h3 className="display mt-2 text-[1.8rem]">{s.title}</h3>
+                  <p className="mt-3 text-chalk/75">{s.body}</p>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
         </div>
-      </Section>
+      </section>
 
       <CtaBand
         title={
