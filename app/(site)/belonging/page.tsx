@@ -230,15 +230,15 @@ export default function BelongingPage() {
       </section>
 
       <section className="roofline-edge bg-blue text-blue">
-        <div className="py-24 text-chalk lg:py-36">
+        <div className="py-16 text-chalk lg:py-20">
           <div className="shell">
-            <Reveal className="mx-auto max-w-4xl text-center">
-              <Mark name="dotsun" className="mx-auto h-10 w-10 text-chalk" />
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <Mark name="dotsun" className="mx-auto h-7 w-7 text-chalk" />
               <blockquote>
-                <p className="display mt-10 text-[clamp(2rem,1.3rem+2.6vw,3.6rem)] leading-[1.18]!">
+                <p className="display mt-6 text-[clamp(1.3rem,1.1rem+0.8vw,1.7rem)] leading-[1.35]!">
                   “To be human is to live among differences. <em className="text-mist!">To build community is to learn what we can make of them.</em>”
                 </p>
-                <footer className="mt-10 flex items-center justify-center gap-4 text-[0.95rem] text-chalk/80">
+                <footer className="mt-6 flex items-center justify-center gap-4 text-[0.85rem] text-chalk/80">
                   <span className="h-px w-10 bg-chalk/40" aria-hidden="true" />
                   <span>
                     <span className="font-medium text-chalk">Ellie Coburn</span>, Owner &amp; Executive Director
