@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Mark } from "@/components/brand/Mark";
+import { OurStory } from "@/components/site/OurStory";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { Draft, ToConfirm } from "@/components/ui/Draft";
 import Link from "next/link";
@@ -35,29 +36,7 @@ export default function AboutPage() {
         lede="Yalla is a living community of parents, children and educators who share the daily rhythms of work, play and care in the heart of Bankers Hill."
       />
 
-      <Section tone="paper">
-        <div className="shell grid items-center gap-14 lg:grid-cols-12">
-          <div className="relative lg:col-span-5">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/garden.jpg" alt="The Yalla building and yard" fill sizes="(min-width:1024px) 38vw, 90vw" className="object-cover" />
-            </div>
-          </div>
-          <div className="lg:col-span-6 lg:col-start-7">
-            <Index n="01">Our story</Index>
-            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-              Why <em>Yalla.</em>
-            </h2>
-            <div className="mt-8">
-              <Draft note="Yalla to share the founding story">
-                <div className="space-y-5 text-[1.05rem] text-ink-soft">
-                  <p>How Yalla began, who started it and why. The moment the idea took shape, and what you hoped to build for families in San Diego.</p>
-                  <p>What the name means to you, and how this building in Bankers Hill became home.</p>
-                </div>
-              </Draft>
-            </div>
-          </div>
-        </div>
-      </Section>
+      <OurStory />
 
       <Section>
         <div className="shell">
