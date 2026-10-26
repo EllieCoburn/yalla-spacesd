@@ -22,7 +22,8 @@ export type TemplateKey =
   | "waitlist_offer"
   | "membership_update"
   | "staff_password_reset"
-  | "staff_invite";
+  | "staff_invite"
+  | "family_sign_in";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   booking_confirmation: {
@@ -94,6 +95,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{name}},\n\nUse this link within one hour to choose a new password:\n{{link}}\n\nIf you didn’t ask for this, you can ignore this email.",
     essential: true,
     audience: "staff",
+  },
+  family_sign_in: {
+    name: "Family Portal sign-in link",
+    subject: "Your Yalla Family Portal sign-in link",
+    body: "Hi {{guardian_first_name}},\n\nUse this link within 20 minutes to sign in to the Family Portal:\n{{link}}\n\nIf you didn’t ask for this, you can ignore this email.\n\nYalla",
+    essential: true,
+    audience: "family",
   },
   staff_invite: {
     name: "Staff invitation",

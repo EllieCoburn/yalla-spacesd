@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
+import { SignInForm } from "@/components/portal/PortalForms";
+import { isDbConfigured } from "@/lib/db";
+import { getGuardian } from "./session";
 
 export const metadata: Metadata = {
   title: "Family Portal",
   description: "Sign in to manage your children’s profiles, forms, bookings and payments at Yalla.",
 };
+export const dynamic = "force-dynamic";
 
-export default function PortalSignIn() {
+export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string }> }) {
+  const sp = await searchParams;
+  const configured = isDbConfigured();
+  if (configured && (await getGuardian())) redirect(sp.next?.startsWith("/book") ? sp.next : "/portal/home");
+
   return (
     <section className="grid min-h-[100svh] lg:grid-cols-2">
       <div className="relative hidden overflow-hidden lg:block">
@@ -30,36 +39,28 @@ export default function PortalSignIn() {
             Sign in to <em>your family.</em>
           </h1>
           <p className="mt-5 text-ink-soft">Children’s profiles, forms, upcoming bookings and payments, all in one place.</p>
+          {sp.expired ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">That link has expired or was already used. Request a new one below.</p> : null}
 
-          <form className="mt-10 space-y-6" action="/portal/home">
-            <label className="block">
-              <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Email</span>
-              <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                className="w-full border-0 border-b border-ink/20 bg-transparent px-0 py-3 text-[1.05rem] placeholder:text-ink/25 focus:border-blue focus:ring-0 focus:outline-none"
-              />
-            </label>
-            <button className="h-14 w-full rounded-full bg-ink text-[0.95rem] text-chalk transition-colors duration-500 hover:bg-blue">
-              Email me a sign-in link
-            </button>
-          </form>
-          <p className="mt-4 text-[0.8rem] text-ink-soft">No passwords to remember. We’ll send a secure link to your inbox.</p>
+          {configured ? (
+            <>
+              <SignInForm next={sp.next} />
+              <p className="mt-4 text-[0.8rem] text-ink-soft">No passwords to remember. Each guardian signs in with their own email.</p>
+            </>
+          ) : (
+            <div className="mt-12 border-t border-line pt-8">
+              <p className="text-[0.85rem] text-oxblood">Preview: sign-in isn’t connected on this deployment.</p>
+              <Link href="/portal/home" className="mt-3 inline-flex items-center gap-2 text-[0.95rem] text-blue underline-offset-4 hover:underline">
+                Explore the portal with a sample family →
+              </Link>
+            </div>
+          )}
 
-          <p className="mt-8 text-[0.9rem] text-ink-soft">
+          <p className="mt-10 text-[0.9rem] text-ink-soft">
             Considering Yalla?{" "}
             <Link href="/prospective" className="text-ink underline underline-offset-4">
               Prospective Family Portal
             </Link>
           </p>
-
-          <div className="mt-12 border-t border-line pt-8">
-            <p className="text-[0.85rem] text-oxblood">Preview: sign-in isn’t connected yet.</p>
-            <Link href="/portal/home" className="mt-3 inline-flex items-center gap-2 text-[0.95rem] text-blue underline-offset-4 hover:underline">
-              Explore the portal with a sample family →
-            </Link>
-          </div>
         </div>
       </div>
     </section>
