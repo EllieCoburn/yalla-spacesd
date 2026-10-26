@@ -4,6 +4,7 @@ import { Mark } from "@/components/brand/Mark";
 import type { MarkName } from "@/components/brand/marks";
 import { Button, Chevron, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
+import type { FactBlock } from "@/content/programs";
 
 export function PageHero({
   eyebrow,
@@ -79,6 +80,28 @@ export function Facts({ items }: { items: { label: string; value: ReactNode }[] 
 }
 
 /** Facts as a list of expandable rows: the label is always visible, the detail opens on tap. */
+/** Tidy label/value rows for a program's ages, schedule or pricing. */
+export function FactRows({ blocks }: { blocks: FactBlock[] }) {
+  return (
+    <div className="space-y-6">
+      {blocks.map((b, i) => (
+        <div key={b.lead ?? i}>
+          {b.lead ? <p className="eyebrow mb-1 text-[0.6rem] text-ink-soft">{b.lead}</p> : null}
+          <dl className="divide-y divide-line">
+            {b.rows.map((r) => (
+              <div key={r.label} className="flex items-baseline justify-between gap-6 py-3">
+                <dt className="text-ink">{r.label}</dt>
+                <dd className="text-right font-sans text-[0.92rem] whitespace-nowrap text-ink-soft">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {b.note ? <p className="mt-2 font-sans text-[0.85rem] text-ink-soft">{b.note}</p> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FactsAccordion({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
     <div className="hairline border-t">

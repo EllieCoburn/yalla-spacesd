@@ -5,6 +5,22 @@ import type { BookingMode, ProgramKind } from "@/lib/booking/types";
  * Program content. Fields set to null are not yet confirmed by Yalla and render
  * with a "to confirm" marker rather than invented detail.
  */
+export interface FactBlock {
+  lead?: string;
+  rows: { label: string; value: string }[];
+  note?: string;
+}
+
+const groups = (spots: [number, number, number], middle = "4 – 6 years"): FactBlock[] => [
+  {
+    rows: [
+      { label: "18 months – 4 years", value: `Up to ${spots[0]} children` },
+      { label: middle, value: `Up to ${spots[1]} children` },
+      { label: "7 – 10 years", value: `Up to ${spots[2]} children` },
+    ],
+  },
+];
+
 export interface ProgramContent {
   slug: string;
   kind: ProgramKind;
@@ -20,6 +36,8 @@ export interface ProgramContent {
   ages: string | null;
   days: string | null;
   pricing: string | null;
+  /** Optional at-a-glance versions of ages, days and pricing, shown as tidy rows on the program page. */
+  facts?: { ages?: FactBlock[]; days?: FactBlock[]; pricing?: FactBlock[] };
   included: string[] | null;
   parentOnsite: boolean | null;
   bookingMode: BookingMode;
@@ -68,6 +86,37 @@ export const programs: ProgramContent[] = [
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
     days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15",
     pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day.",
+    facts: {
+      ages: groups([8, 8, 10]),
+      days: [
+        {
+          rows: [
+            { label: "Camp day", value: "9:00am – 3:00pm" },
+            { label: "Early Bird", value: "8:00 – 9:00am" },
+            { label: "Late stay", value: "3:00 – 4:30pm" },
+          ],
+        },
+        {
+          lead: "2026–27 camp days",
+          rows: [
+            { label: "November", value: "11, 25, 27" },
+            { label: "December", value: "21, 22, 23, 28, 29, 30" },
+            { label: "January", value: "18" },
+            { label: "February", value: "15" },
+          ],
+        },
+      ],
+      pricing: [
+        {
+          lead: "Per child, per day",
+          rows: [
+            { label: "Camp day", value: "$160" },
+            { label: "Early Bird (optional)", value: "$20" },
+            { label: "Late stay (optional)", value: "$30" },
+          ],
+        },
+      ],
+    },
     included: null,
     parentOnsite: false,
     bookingMode: "instant",
@@ -91,6 +140,19 @@ export const programs: ProgramContent[] = [
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 7 years, and 7 – 10 years",
     days: "The first and second Saturday of every month. AM play session 9:00am – 12:00pm; PM play session 1:00 – 4:00pm",
     pricing: "$60 per child per play session",
+    facts: {
+      ages: groups([8, 12, 14], "4 – 7 years"),
+      days: [
+        {
+          lead: "The first and second Saturday of every month",
+          rows: [
+            { label: "AM play session", value: "9:00am – 12:00pm" },
+            { label: "PM play session", value: "1:00 – 4:00pm" },
+          ],
+        },
+      ],
+      pricing: [{ rows: [{ label: "Per child, per play session", value: "$60" }] }],
+    },
     included: null,
     parentOnsite: false,
     bookingMode: "instant",
@@ -163,6 +225,20 @@ export const programs: ProgramContent[] = [
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
     days: "The second Friday of every month, 5:00pm – 9:00pm",
     pricing: "$65 per child, or $85 per family for up to three children, plus $25 for each additional child. The family rate is applied automatically when you book siblings together.",
+    facts: {
+      ages: groups([8, 8, 10]),
+      days: [{ rows: [{ label: "The second Friday of every month", value: "5:00 – 9:00pm" }] }],
+      pricing: [
+        {
+          rows: [
+            { label: "One child", value: "$65" },
+            { label: "Family rate, up to three children", value: "$85" },
+            { label: "Each additional child", value: "+$25" },
+          ],
+          note: "The family rate is applied automatically when you book siblings together.",
+        },
+      ],
+    },
     included: null,
     parentOnsite: false,
     bookingMode: "instant",

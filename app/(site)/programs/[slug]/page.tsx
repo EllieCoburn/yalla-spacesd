@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
 import { FlexRates } from "@/components/site/FlexRates";
-import { CtaBand, FactsAccordion } from "@/components/site/PageParts";
+import { CtaBand, FactRows, FactsAccordion } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
@@ -104,9 +104,9 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 ...(p.kind === "drop_in"
                   ? []
                   : [
-                      { label: "Ages", value: p.ages ?? pending },
-                      { label: "Days & hours", value: p.days ?? pending },
-                      { label: "Pricing", value: p.pricing ?? pending },
+                      { label: "Ages", value: p.facts?.ages ? <FactRows blocks={p.facts.ages} /> : (p.ages ?? pending) },
+                      { label: "Days & hours", value: p.facts?.days ? <FactRows blocks={p.facts.days} /> : (p.days ?? pending) },
+                      { label: "Pricing", value: p.facts?.pricing ? <FactRows blocks={p.facts.pricing} /> : (p.pricing ?? pending) },
                     ]),
                 {
                   label: "What’s included",
