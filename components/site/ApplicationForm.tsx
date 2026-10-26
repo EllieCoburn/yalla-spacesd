@@ -88,7 +88,7 @@ export function ApplicationForm() {
         <legend className="eyebrow text-ink-soft">When you’d like to begin</legend>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" aria-pressed={when === "next"} onClick={() => setWhen("next")} className={pill(when === "next")}>
-            Next cohort year (August) · recommended
+            Next cohort year (August)
           </button>
           <button type="button" aria-pressed={when === "soonest"} onClick={() => setWhen("soonest")} className={pill(when === "soonest")}>
             Soonest available spot
