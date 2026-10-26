@@ -45,7 +45,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
   {
     mark: "balcony",
     title: "A weekly rhythm",
-    intro: "Recurring care and coworking, by application.",
+    intro: "A weekly home for a small community of families.",
     items: [{ slug: "club-yalla", how: "Consistent weekdays in a small cohort, with parents working onsite in our coworking space." }],
   },
 ];
