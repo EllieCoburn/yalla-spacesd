@@ -43,11 +43,7 @@ export function FlexRates() {
                 <th className="py-4 font-medium">Age group</th>
                 <th className="py-4 text-right font-medium">Full day</th>
                 <th className="py-4 text-right font-medium">Half day</th>
-              </tr>
-              <tr>
-                <th colSpan={3} className="pb-4 text-left text-[0.8rem] font-normal text-ink-soft">
-                  Childcare + coworking, per day
-                </th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-line border-t border-line">
