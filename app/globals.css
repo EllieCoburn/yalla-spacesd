@@ -43,10 +43,10 @@
   }
 }
 
-/* Paper grain: a fine speckle on the cream, paper and mist grounds so flat color reads as printed stock.
+/* Paper grain: soft mottling, fine fibers and the odd fleck on the cream, paper and mist grounds so flat color reads as printed stock.
    Photos, the blue and ink bands, and buttons stay clean. */
 :root {
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 .32 -.13'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='480'%20height='480'%3E%3Cfilter%20id='m'%20x='0'%20y='0'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.008'%20numOctaves='4'%20seed='3'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20values='0%200%200%200%20.42%200%200%200%200%20.35%200%200%200%200%20.25%200%200%200%20.16%20-.05'/%3E%3C/filter%3E%3Cfilter%20id='l'%20x='0'%20y='0'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.014'%20numOctaves='3'%20seed='21'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20values='0%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%20.22%20-.09'/%3E%3C/filter%3E%3Cfilter%20id='h'%20x='0'%20y='0'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.035%20.9'%20numOctaves='2'%20seed='7'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20values='0%200%200%200%20.4%200%200%200%200%20.34%200%200%200%200%20.26%200%200%200%20.8%20-.58'/%3E%3C/filter%3E%3Cfilter%20id='v'%20x='0'%20y='0'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.9%20.035'%20numOctaves='2'%20seed='13'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20values='0%200%200%200%20.4%200%200%200%200%20.34%200%200%200%200%20.26%200%200%200%20.8%20-.6'/%3E%3C/filter%3E%3Cfilter%20id='s'%20x='0'%20y='0'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='.55'%20numOctaves='1'%20seed='31'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20values='0%200%200%200%20.3%200%200%200%200%20.25%200%200%200%200%20.2%200%200%200%207%20-5.85'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23m%29'/%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23l%29'/%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23h%29'/%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23v%29'/%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23s%29'/%3E%3C/svg%3E");
 }
 body,
 .bg-chalk,
@@ -54,7 +54,7 @@ body,
 .bg-mist,
 .bg-mist\/60 {
   background-image: var(--grain);
-  background-size: 220px 220px;
+  background-size: 480px 480px;
 }
 
 @layer components {
