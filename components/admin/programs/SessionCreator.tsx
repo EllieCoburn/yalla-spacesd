@@ -45,6 +45,7 @@ export function TimeBlocks({ defaults = [{ start: "08:30", end: "16:30" }] }: { 
 
 const MODES = [
   { key: "weekly", label: "Repeating weekly" },
+  { key: "monthly", label: "Repeating monthly" },
   { key: "single", label: "Single date" },
   { key: "camp", label: "Multi-day camp" },
 ] as const;
@@ -96,6 +97,10 @@ export function SessionCreator({
         <SelectField name="cohortId" label="Cohort" options={[{ value: "", label: "None" }, ...cohorts.map((c) => ({ value: c.id, label: c.name }))]} />
         <SelectField name="capacityPoolId" label="Shared capacity" options={[{ value: "", label: "Not shared" }, ...pools.map((c) => ({ value: c.id, label: c.name }))]} hint="Limits combined bookings across programs sharing a room or staff." />
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField name="minAgeMonths" label="Age group: youngest, in months (optional)" type="number" hint="E.g. 18 for 18 months. Leave both blank to use the program’s ages." />
+        <TextField name="maxAgeMonths" label="Age group: oldest, in months (optional)" type="number" hint="E.g. 47 for up to the 4th birthday." />
+      </div>
       <MoneyField name="priceCents" label="Price override (optional)" hint="Leave blank to use the program’s pricing." />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField name="bookingOpensAt" label="Booking opens (optional)" type="datetime-local" />
@@ -128,12 +133,35 @@ export function SessionCreator({
         </ActionForm>
       ) : (
         <ActionForm action={createSeriesAction} submit={{ label: mode === "camp" ? "Add camp" : "Add schedule" }} key={mode}>
-          <WeekdayPicker name="weekdays" defaultValue={[1, 2, 3, 4, 5]} />
+          {mode === "monthly" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                name="monthWeek"
+                label="Every month on the"
+                defaultValue="2"
+                options={[
+                  { value: "1", label: "First" },
+                  { value: "2", label: "Second" },
+                  { value: "3", label: "Third" },
+                  { value: "4", label: "Fourth" },
+                  { value: "5", label: "Last" },
+                ]}
+              />
+              <SelectField
+                name="weekdays"
+                label="Weekday"
+                defaultValue="5"
+                options={["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((d, i) => ({ value: String(i), label: d }))}
+              />
+            </div>
+          ) : (
+            <WeekdayPicker name="weekdays" defaultValue={[1, 2, 3, 4, 5]} />
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField name="startsOn" label={mode === "camp" ? "First day" : "Starts on"} type="date" required defaultValue={today} />
             <TextField name="endsOn" label={mode === "camp" ? "Last day" : "Ends on"} type="date" required />
           </div>
-          <TimeBlocks defaults={mode === "camp" ? [{ start: "08:30", end: "15:00" }] : undefined} />
+          <TimeBlocks defaults={mode === "camp" ? [{ start: "08:30", end: "15:00" }] : mode === "monthly" ? [{ start: "17:00", end: "21:00" }] : undefined} />
           {mode === "camp" ? (
             <Checkbox name="bookAsSeries" label="Families book the whole camp as one series" defaultChecked hint="Turn off to let families choose individual days." />
           ) : (

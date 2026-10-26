@@ -231,6 +231,8 @@ export const scheduleSeries = pgTable("schedule_series", {
     .references(() => programs.id),
   title: text("title"),
   weekdays: integer("weekdays").array().notNull(), // 0 = Sunday
+  /** Monthly repeat: only the nth matching weekday of each month (1–4, or 5 = last). null = every week. */
+  monthWeek: integer("month_week"),
   startTime: text("start_time").notNull(), // HH:MM local
   endTime: text("end_time").notNull(),
   startsOn: date("starts_on").notNull(),
@@ -240,6 +242,9 @@ export const scheduleSeries = pgTable("schedule_series", {
   locationId: text("location_id").references(() => locations.id),
   cohortId: text("cohort_id").references(() => cohorts.id),
   capacityPoolId: text("capacity_pool_id").references(() => capacityPools.id),
+  /** Age group for these sessions, overriding the program's age range (e.g. After Hours groups). */
+  minAgeMonths: integer("min_age_months"),
+  maxAgeMonths: integer("max_age_months"),
   /** Whole series must be booked together (e.g. a camp week). */
   bookAsSeries: boolean("book_as_series").notNull().default(false),
   priceCents: integer("price_cents"),
@@ -268,6 +273,9 @@ export const sessions = pgTable(
     locationId: text("location_id").references(() => locations.id),
     cohortId: text("cohort_id").references(() => cohorts.id),
     capacityPoolId: text("capacity_pool_id").references(() => capacityPools.id),
+    /** Age group for this session, overriding the program's age range. */
+    minAgeMonths: integer("min_age_months"),
+    maxAgeMonths: integer("max_age_months"),
     status: text("status").notNull().default("scheduled"), // scheduled | closed | cancelled
     /** Detached from its series: later "all"/"future" edits skip it. */
     isException: boolean("is_exception").notNull().default(false),

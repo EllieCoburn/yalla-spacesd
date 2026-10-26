@@ -87,6 +87,16 @@ Alternative: `npm run admin:create` from a machine with `DATABASE_URL` set.
 - Card details are collected on the provider's hosted page; the app never sees card numbers.
 - Recurring membership charges are currently created as **scheduled charges** that staff turn into invoices. Automatic card-on-file billing (Stripe subscriptions) needs your billing policy decisions first.
 
+### Yalla After Hours
+
+- Runs the second Friday of every month, 5:00–9:00pm. Migration `0003_after_hours_schedule` creates the program (if missing) and
+  November 2026 – October 2027 evenings on deploy. Each evening is three sessions, one per age group: 18 months – 4 years
+  (8 children), 4 – 6 years (8) and 7 – 10 years (10).
+- To add later months: Programs → Yalla After Hours → Schedule → **Repeating monthly**, "Second" "Friday", 17:00–21:00, once per
+  age group with its capacity and age range in months (18–47, 48–83, 84–131). Or use "Copy this schedule to new dates".
+- Price is $65 per child. Siblings on the same evening are capped at the family rate ($85 for up to three children, +$25 each
+  additional child) as a discount line on the invoice. The rule lives in `lib/booking/family-rate.ts`.
+
 ## 6. Background jobs
 
 `/api/cron/housekeeping` (with `Authorization: Bearer $CRON_SECRET`) expires lapsed holds and waitlist offers,

@@ -39,6 +39,7 @@ import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
 import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
 import { joinWaitlist } from "./waitlist";
+import { ageFits, sessionAges } from "@/lib/booking/ages";
 
 const PUBLIC: Actor = { type: "system", name: "Public booking" };
 const BOOKABLE_MODES = ["instant", "request"];
@@ -101,7 +102,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
         gt(sessions.endsAt, now),
       ),
     )
-    .orderBy(asc(sessions.startsAt));
+    .orderBy(asc(sessions.startsAt), asc(sessions.minAgeMonths));
   if (!rows.length) return [];
   const avail = await availabilityFor(
     db,
@@ -114,8 +115,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
     .where(inArray(programPrices.programId, [...new Set(rows.map((r) => r.p.id))]));
   return rows.map(({ s, p, c, series }) => {
     const remaining = avail.get(s.id)?.remaining ?? 0;
-    const minAge = p.minAgeMonths;
-    const maxAge = p.maxAgeMonths;
+    const { min: minAge, max: maxAge } = sessionAges(s, p);
     const eligible = q.ageMonths == null || ((minAge == null || q.ageMonths >= minAge) && (maxAge == null || q.ageMonths <= maxAge));
     return {
       id: s.id,
@@ -371,8 +371,8 @@ async function precheck(db: Executor, input: PublicBookingInput): Promise<Public
         const c = input.children.find((x) => x.key === key);
         if (!c) continue;
         const age = ageInMonths(c.birthDate, s.localDate);
-        if ((p.minAgeMonths != null && age < p.minAgeMonths) || (p.maxAgeMonths != null && age > p.maxAgeMonths))
-          return { ok: false, code: "age", error: `${c.firstName} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${p.name}.` };
+        if (!ageFits(age, sessionAges(s, p)))
+          return { ok: false, code: "age", error: `${c.firstName} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${s.title ?? p.name}.` };
       }
     }
   }

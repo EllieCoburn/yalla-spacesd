@@ -22,6 +22,8 @@ export type SeriesInput = {
   programId: string;
   title?: string | null;
   weekdays: number[];
+  /** Repeat monthly on the nth matching weekday (1–4, or 5 = last) instead of every week. */
+  monthWeek?: number | null;
   startTime: string;
   endTime: string;
   startsOn: string;
@@ -31,11 +33,25 @@ export type SeriesInput = {
   locationId?: string | null;
   cohortId?: string | null;
   capacityPoolId?: string | null;
+  /** Age group in months, overriding the program's age range. */
+  minAgeMonths?: number | null;
+  maxAgeMonths?: number | null;
   bookAsSeries?: boolean;
   priceCents?: number | null;
   bookingOpensAt?: Date | null;
   bookingClosesAt?: Date | null;
 };
+
+/** Which week of the month a date falls in for its weekday: 1–4, or 5 when it is the last one. */
+export function monthWeekOf(date: string, wantLast: boolean): number {
+  const day = Number(date.slice(8, 10));
+  if (wantLast && day + 7 > new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0)).getUTCDate()) return 5;
+  return Math.ceil(day / 7);
+}
+
+function validateAges(min?: number | null, max?: number | null) {
+  if (min != null && max != null && max < min) throw new OpsError("invalid", "The oldest age must be at or above the youngest age.");
+}
 
 function validateTimes(start: string, end: string) {
   if (!HHMM.test(start) || !HHMM.test(end)) throw new OpsError("invalid", "Use times like 08:30.");
@@ -62,17 +78,21 @@ export async function createSeries(db: DB, actor: Actor, input: SeriesInput) {
   if (input.endsOn < input.startsOn) throw new OpsError("invalid", "The end date must be on or after the start date.");
   if (input.capacity < 1) throw new OpsError("invalid", "Capacity must be at least 1.");
   if (input.hardCapacity != null && input.hardCapacity < input.capacity) throw new OpsError("invalid", "Hard capacity can’t be lower than capacity.");
+  if (input.monthWeek != null && (input.monthWeek < 1 || input.monthWeek > 5)) throw new OpsError("invalid", "Choose which week of the month.");
+  validateAges(input.minAgeMonths, input.maxAgeMonths);
   const [program] = await db.select().from(programs).where(eq(programs.id, input.programId));
   if (!program) throw new OpsError("not_found", "Program not found.");
   const locationId = input.locationId ?? program.locationId;
   const closed = await blackoutSet(db, input.startsOn, input.endsOn, input.programId, locationId);
-  const dates = eachDate(input.startsOn, input.endsOn).filter((d) => input.weekdays.includes(weekdayOf(d)));
+  const dates = eachDate(input.startsOn, input.endsOn).filter(
+    (d) => input.weekdays.includes(weekdayOf(d)) && (input.monthWeek == null || monthWeekOf(d, input.monthWeek === 5) === input.monthWeek),
+  );
   if (dates.length > 400) throw new OpsError("invalid", "That creates more than 400 sessions. Use a shorter date range.");
 
   return db.transaction(async (tx) => {
     const [series] = await tx
       .insert(scheduleSeries)
-      .values({ ...input, locationId, title: input.title ?? null, bookAsSeries: input.bookAsSeries ?? false })
+      .values({ ...input, monthWeek: input.monthWeek ?? null, locationId, title: input.title ?? null, bookAsSeries: input.bookAsSeries ?? false })
       .returning();
     const rows = dates.map((d) => ({
       programId: input.programId,
@@ -86,6 +106,8 @@ export async function createSeries(db: DB, actor: Actor, input: SeriesInput) {
       locationId,
       cohortId: input.cohortId ?? null,
       capacityPoolId: input.capacityPoolId ?? null,
+      minAgeMonths: input.minAgeMonths ?? null,
+      maxAgeMonths: input.maxAgeMonths ?? null,
       priceCents: input.priceCents ?? null,
       bookingOpensAt: input.bookingOpensAt ?? null,
       bookingClosesAt: input.bookingClosesAt ?? null,
@@ -106,9 +128,10 @@ export async function createSeries(db: DB, actor: Actor, input: SeriesInput) {
 export async function createSession(
   db: DB,
   actor: Actor,
-  input: Omit<SeriesInput, "weekdays" | "startsOn" | "endsOn" | "bookAsSeries"> & { localDate: string },
+  input: Omit<SeriesInput, "weekdays" | "monthWeek" | "startsOn" | "endsOn" | "bookAsSeries"> & { localDate: string },
 ) {
   validateTimes(input.startTime, input.endTime);
+  validateAges(input.minAgeMonths, input.maxAgeMonths);
   const [program] = await db.select().from(programs).where(eq(programs.id, input.programId));
   if (!program) throw new OpsError("not_found", "Program not found.");
   const closed = await blackoutSet(db, input.localDate, input.localDate, input.programId, input.locationId ?? program.locationId);
@@ -125,6 +148,8 @@ export async function createSession(
       locationId: input.locationId ?? program.locationId,
       cohortId: input.cohortId ?? null,
       capacityPoolId: input.capacityPoolId ?? null,
+      minAgeMonths: input.minAgeMonths ?? null,
+      maxAgeMonths: input.maxAgeMonths ?? null,
       priceCents: input.priceCents ?? null,
       bookingOpensAt: input.bookingOpensAt ?? null,
       bookingClosesAt: input.bookingClosesAt ?? null,
@@ -150,6 +175,8 @@ export async function duplicateSession(db: DB, actor: Actor, sessionId: string, 
     locationId: s.locationId,
     cohortId: s.cohortId,
     capacityPoolId: s.capacityPoolId,
+    minAgeMonths: s.minAgeMonths,
+    maxAgeMonths: s.maxAgeMonths,
     priceCents: s.priceCents,
   });
 }
@@ -161,6 +188,7 @@ export async function copySeries(db: DB, actor: Actor, seriesId: string, startsO
     programId: src.programId,
     title: src.title,
     weekdays: src.weekdays,
+    monthWeek: src.monthWeek,
     startTime: src.startTime,
     endTime: src.endTime,
     startsOn,
@@ -170,6 +198,8 @@ export async function copySeries(db: DB, actor: Actor, seriesId: string, startsO
     locationId: src.locationId,
     cohortId: src.cohortId,
     capacityPoolId: src.capacityPoolId,
+    minAgeMonths: src.minAgeMonths,
+    maxAgeMonths: src.maxAgeMonths,
     bookAsSeries: src.bookAsSeries,
     priceCents: src.priceCents,
   });

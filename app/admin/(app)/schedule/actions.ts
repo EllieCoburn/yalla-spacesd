@@ -19,6 +19,8 @@ function common(ctx: Ctx) {
   const capacity = ctx.num("capacity");
   if (capacity == null || !Number.isInteger(capacity)) throw new OpsError("invalid", "Enter a whole-number capacity.");
   const hard = ctx.num("hardCapacity");
+  const minAge = ctx.num("minAgeMonths");
+  const maxAge = ctx.num("maxAgeMonths");
   return {
     programId: ctx.str("programId"),
     title: ctx.str("title") || null,
@@ -27,6 +29,8 @@ function common(ctx: Ctx) {
     locationId: ctx.str("locationId") || null,
     cohortId: ctx.str("cohortId") || null,
     capacityPoolId: ctx.str("capacityPoolId") || null,
+    minAgeMonths: minAge,
+    maxAgeMonths: maxAge,
     priceCents: ctx.cents("priceCents"),
     bookingOpensAt: laDateTime(ctx.str("bookingOpensAt")),
     bookingClosesAt: laDateTime(ctx.str("bookingClosesAt")),
@@ -52,6 +56,7 @@ export const createSeriesAction = adminAction("schedule.manage", async (ctx) => 
     const r = await createSeries(ctx.db, ctx.actor, {
       ...base,
       weekdays,
+      monthWeek: ctx.num("monthWeek"),
       startTime: b.start,
       endTime: b.end,
       startsOn: ctx.str("startsOn"),

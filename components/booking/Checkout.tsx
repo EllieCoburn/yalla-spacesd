@@ -7,6 +7,7 @@ import { Mark } from "@/components/brand/Mark";
 import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { usd } from "./format";
+import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 
 export type SavedChild = { id: string; firstName: string; lastName: string; preferredName: string | null; birthDate: string };
 export type SignedInGuardian = { firstName: string; lastName: string; email: string };
@@ -61,10 +62,18 @@ export function Checkout({
   };
   const isOn = (sid: string, key: string) => (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
   const lines = sorted.map((s) => ({ sessionId: s.id, childKeys: chosen.filter((c) => isOn(s.id, c.key) && eligible(s, c)).map((c) => c.key) })).filter((l) => l.childKeys.length);
+  // After Hours siblings on the same evening are capped at the family rate, matching the invoice.
+  const evenings = new Map<string, number[]>();
   const total = sorted.reduce((sum, s) => {
     const n = lines.find((l) => l.sessionId === s.id)?.childKeys.length ?? 0;
+    if (s.kind === FAMILY_RATE.kind && s.bookingUnit === "per_child" && n) {
+      const k = familyRateKey(s.programId, s.localDate);
+      evenings.set(k, [...(evenings.get(k) ?? []), ...Array<number>(n).fill(s.priceCents ?? 0)]);
+      return sum;
+    }
     return sum + (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : n ? 1 : 0);
-  }, 0);
+  }, 0) + [...evenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0);
+  const familySaving = [...evenings.values()].reduce((sum, prices) => sum + prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices), 0);
   const sigKey = (a: Agreement) => `${a.templateId}:${a.childKey ?? "family"}`;
 
   // Load the agreements that must be signed before booking.
@@ -280,6 +289,7 @@ export function Checkout({
                 <span className="text-ink-soft">Total</span>
                 <span className="display text-[1.6rem]">{usd(total)}</span>
               </div>
+              {familySaving > 0 ? <p className="mt-1 text-right text-[0.8rem] text-blue">Includes the After Hours family rate (you save {usd(familySaving)})</p> : null}
               <p className="mt-2 text-[0.78rem] text-ink-soft">Spots are held for you while you pay. Payment is confirmed securely by our payment provider.</p>
 
               <div className="mt-10">

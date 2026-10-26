@@ -35,6 +35,8 @@ import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
 import { availabilityFor, lockSessions, publicState } from "./capacity";
 import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
+import { ageFits, sessionAges } from "@/lib/booking/ages";
+import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number };
 
@@ -136,8 +138,8 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
       }
       const age = ageInMonths(c.birthDate, s.localDate);
       const name = c.preferredName || c.firstName;
-      if ((p.minAgeMonths != null && age < p.minAgeMonths) || (p.maxAgeMonths != null && age > p.maxAgeMonths))
-        problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${p.name}.` });
+      if (!ageFits(age, sessionAges(s, p)))
+        problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${s.title ?? p.name}.` });
       if (s.cohortId && c.cohortId && c.cohortId !== s.cohortId && p.kind !== "drop_in")
         problems.push({ sessionId: s.id, childId: c.id, code: "cohort", message: `${name} is assigned to a different cohort than this session.` });
     }
@@ -327,11 +329,29 @@ async function siblingDiscountLines(db: Executor, rows: Awaited<ReturnType<typeo
   if (!percent) return [];
   const out: LineInput[] = [];
   const bySession = new Map<string, typeof rows>();
-  for (const r of rows) if (r.item.childId && r.program.bookingUnit === "per_child") bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
+  for (const r of rows) if (r.item.childId && r.program.bookingUnit === "per_child" && r.program.kind !== FAMILY_RATE.kind) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
   for (const group of bySession.values()) {
     for (const r of group.slice(1)) {
       if (r.item.priceCents) out.push({ kind: "discount", description: `Sibling discount (${percent}%) · ${r.child?.firstName}`, unitCents: -Math.round((r.item.priceCents * percent) / 100), bookingItemId: r.item.id });
     }
+  }
+  return out;
+}
+
+/** After Hours: siblings on the same evening are capped at the family rate. */
+function familyRateLines(rows: Awaited<ReturnType<typeof bookingLines>>): LineInput[] {
+  const byEvening = new Map<string, typeof rows>();
+  for (const r of rows) {
+    if (!r.item.childId || r.program.kind !== FAMILY_RATE.kind || r.item.priceCents == null) continue;
+    const k = familyRateKey(r.program.id, r.session.localDate);
+    byEvening.set(k, [...(byEvening.get(k) ?? []), r]);
+  }
+  const out: LineInput[] = [];
+  for (const group of byEvening.values()) {
+    const prices = group.map((r) => r.item.priceCents ?? 0);
+    const saving = prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices);
+    if (saving > 0)
+      out.push({ kind: "discount", description: `Family rate · ${group[0].program.name} · ${fmtDate(group[0].session.localDate, "EEE d MMM")} · ${group.length} children`, unitCents: -saving });
   }
   return out;
 }
@@ -346,7 +366,7 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
   const unpriced = rows.filter((r) => r.item.priceCents == null);
   if (unpriced.length) throw new OpsError("unpriced", `No price is set for ${unpriced[0].program.name}. Set pricing on the program before taking payment.`);
   const lines: LineInput[] = rows.map((r) => ({ kind: "charge", description: describeLine(r), unitCents: r.item.priceCents ?? 0, bookingItemId: r.item.id }));
-  lines.push(...(await siblingDiscountLines(db, rows)));
+  lines.push(...(await siblingDiscountLines(db, rows)), ...familyRateLines(rows));
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }
 

@@ -8,7 +8,7 @@
  *
  * Staff password: SEED_STAFF_PASSWORD, or a local-only default when the database is on localhost.
  */
-import { sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/index";
 import * as s from "@/lib/db/schema";
 import { SYSTEM, type Actor } from "@/lib/audit";
@@ -22,7 +22,7 @@ import { createTemplate, addRequirement, submitForm } from "@/lib/ops/forms";
 import { joinWaitlist } from "@/lib/ops/waitlist";
 import { processEvent } from "@/lib/payments/webhooks";
 import { DEFAULT_TEMPLATES } from "@/lib/notify/index";
-import { addDaysISO, todayLA, weekdayOf } from "@/lib/time";
+import { addDaysISO, ageInMonths, todayLA, weekdayOf } from "@/lib/time";
 
 const url = process.env.DATABASE_URL ?? "";
 const local = /localhost|127\.0\.0\.1/.test(url);
@@ -77,12 +77,14 @@ for (const [i, c] of cohortDefs.entries()) {
 }
 
 /* Programs */
+// A program may already exist when a migration created it (e.g. Yalla After Hours); reuse it then.
 const P = async (v: Partial<typeof s.programs.$inferInsert> & { slug: string; name: string; kind: string }) =>
-  (await db.insert(s.programs).values({ locationId: loc.id, status: "published", ...v }).returning())[0];
+  (await db.insert(s.programs).values({ locationId: loc.id, status: "published", ...v }).onConflictDoNothing({ target: s.programs.slug }).returning())[0] ??
+  (await db.select().from(s.programs).where(eq(s.programs.slug, v.slug)))[0];
 const club = await P({ slug: "club-yalla", name: "Club Yalla", kind: "membership", tagline: "Your weekly childcare rhythm", parentPresence: "required", bookingMode: "enroll", minAgeMonths: 4, maxAgeMonths: 66, priceUnit: "month" });
 const flex = await P({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", tagline: "Drop-in childcare", parentPresence: "required", minAgeMonths: 4, maxAgeMonths: 66, minNoticeHours: 12, cancellationDeadlineHours: 24, advanceBookingDays: 60 });
 const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind: "weekend", tagline: "A little room in your weekend", parentPresence: "not_required", minAgeMonths: 12, maxAgeMonths: 66, priceCents: 9500, minNoticeHours: 24 });
-const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 12, maxAgeMonths: 66, priceCents: 8500, waitlistAutoOffer: false });
+const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "full_series", minAgeMonths: 24, maxAgeMonths: 66, priceCents: 14000 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
 await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required" });
@@ -110,7 +112,16 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
 await createSeries(db, admin, { programId: weekends.id, title: "Weekend morning", weekdays: [6], startTime: "09:00", endTime: "12:30", startsOn: start, endsOn: end, capacity: 10, hardCapacity: 12, locationId: loc.id });
-await createSeries(db, admin, { programId: after.id, title: "After Hours evening", weekdays: [5], startTime: "17:30", endTime: "21:00", startsOn: start, endsOn: end, capacity: 12, hardCapacity: 12, locationId: loc.id });
+// After Hours: second Friday of each month, three age groups (the 0003 migration does the same in production).
+const afterHoursGroups = [
+  { title: "Yalla After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
+  { title: "Yalla After Hours · 4 – 6 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 },
+  { title: "Yalla After Hours · 7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 10 },
+];
+const [afterHoursMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, after.id), isNotNull(s.scheduleSeries.monthWeek)));
+if (!afterHoursMonthly)
+  for (const g of afterHoursGroups)
+    await createSeries(db, admin, { programId: after.id, ...g, weekdays: [5], monthWeek: 2, startTime: "17:00", endTime: "21:00", startsOn: start, endsOn: addDaysISO(today, 365), hardCapacity: g.capacity, locationId: loc.id });
 await createSeries(db, admin, { programId: happenings.id, title: "Pop-up workshop", weekdays: [0], startTime: "10:00", endTime: "11:30", startsOn: addDaysISO(today, 3), endsOn: addDaysISO(today, 45), capacity: 14, locationId: loc.id });
 let campStart = addDaysISO(today, 21);
 while (weekdayOf(campStart) !== 1) campStart = addDaysISO(campStart, 1);
@@ -198,7 +209,10 @@ for (const f of famRows.slice(0, 18)) {
 /* Bookings */
 const flexSessions = await db.execute<{ id: string; local_date: string; cohort_id: string }>(sql`SELECT id, local_date, cohort_id FROM sessions WHERE program_id = ${flex.id} AND local_date >= ${today} ORDER BY local_date LIMIT 60`);
 const weekendSessions = await db.execute<{ id: string }>(sql`SELECT id FROM sessions WHERE program_id = ${weekends.id} AND local_date >= ${today} AND status = 'scheduled' ORDER BY local_date LIMIT 4`);
-const afterSessions = await db.execute<{ id: string }>(sql`SELECT id FROM sessions WHERE program_id = ${after.id} AND local_date >= ${today} AND status = 'scheduled' ORDER BY local_date LIMIT 3`);
+// The next After Hours evening: one session per age group.
+const afterSessions = await db.execute<{ id: string; local_date: string; min_age_months: number; max_age_months: number }>(
+  sql`SELECT id, local_date, min_age_months, max_age_months FROM sessions WHERE program_id = ${after.id} AND local_date = (SELECT min(local_date) FROM sessions WHERE program_id = ${after.id} AND local_date >= ${today} AND status = 'scheduled') ORDER BY min_age_months`,
+);
 let paid = 0;
 for (const [i, f] of famRows.slice(18).entries()) {
   for (const c of f.children) {
@@ -231,12 +245,21 @@ for (const [i, f] of famRows.filter((_, i) => i % 3 === 0).entries()) {
     console.log(`Skipped a weekend booking: ${(e as Error).message}`);
   }
 }
-// Fill an After Hours evening to show "nearly full" and a waitlist.
+// Fill an After Hours evening to show "nearly full" and a waitlist; each child joins the group for their age.
+const groupFor = (birthDate: string) => {
+  const months = ageInMonths(birthDate, afterSessions[0].local_date);
+  return afterSessions.find((g) => months >= g.min_age_months && months <= g.max_age_months);
+};
 const night = afterSessions[0];
 if (night) {
   for (const f of famRows.filter((_, i) => i % 3 === 0)) {
+    const items = f.children.flatMap((c) => {
+      const g = groupFor(c.birthDate);
+      return g ? [{ sessionId: g.id, childId: c.id }] : [];
+    });
+    if (!items.length) continue;
     try {
-      const hold = await createHold(db, admin, { familyId: f.familyId, items: f.children.map((c) => ({ sessionId: night.id, childId: c.id })), source: "admin", acknowledgePaperwork: true });
+      const hold = await createHold(db, admin, { familyId: f.familyId, items, source: "admin", acknowledgePaperwork: true });
       await confirmAdminBooking(db, admin, hold.booking.id, { createInvoice: true, notify: false });
     } catch {
       /* full */

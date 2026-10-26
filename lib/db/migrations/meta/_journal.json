@@ -15,6 +15,20 @@
       "when": 1792971433884,
       "tag": "0001_family_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793042672769,
+      "tag": "0002_session_age_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793042864926,
+      "tag": "0003_after_hours_schedule",
+      "breakpoints": true
     }
   ]
 }
