@@ -18,8 +18,8 @@ const groups: { title: string; items: QA[] }[] = [
         q: "Do I need to stay onsite while my child is in care?",
         a: (
           <>
-            It depends on the program. Club Yalla, our weekday membership, is designed around parents and caregivers working onsite in our
-            coworking space. Others, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
+            It depends on the program. Club Yalla and Yalla Flex are childcare and coworking together: parents and caregivers work onsite in our
+            coworking space while children are in care. Others, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
             <ToConfirm>Policy details</ToConfirm>
           </>
         ),

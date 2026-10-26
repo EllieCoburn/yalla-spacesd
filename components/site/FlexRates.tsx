@@ -14,8 +14,27 @@ export function FlexRates() {
             Day rates, <em>by cohort.</em>
           </h2>
           <p className="mt-6 text-ink-soft">
-            Full days run {hours.full} and half days {hours.half}. No registration fee for drop-in care.
+            Each rate covers both halves of your day: childcare for your child in their cohort, and coworking for you in our coworking
+            space.
           </p>
+          <dl className="mt-8 space-y-3 border-t border-line pt-6 text-[0.95rem]">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Days</dt>
+              <dd>Monday – Friday</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Full day</dt>
+              <dd>{hours.full}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Half day</dt>
+              <dd>{hours.half}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-soft">Registration fee</dt>
+              <dd>None</dd>
+            </div>
+          </dl>
         </div>
         <div className="lg:col-span-7 lg:col-start-6">
           <table className="w-full border-y border-line text-left">
@@ -25,6 +44,11 @@ export function FlexRates() {
                 <th className="py-4 font-medium">Cohort</th>
                 <th className="py-4 text-right font-medium">Full day</th>
                 <th className="py-4 text-right font-medium">Half day</th>
+              </tr>
+              <tr>
+                <th colSpan={3} className="pb-4 text-left text-[0.8rem] font-normal text-ink-soft">
+                  Childcare + coworking, per day
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line border-t border-line">
