@@ -12,6 +12,7 @@ import { ageLabel } from "@/lib/time";
 import { paperworkStatus, type PaperworkItem } from "./forms";
 import { membershipsForCohortDay } from "./memberships";
 import { getPolicy } from "./settings";
+import { addonsFor } from "@/lib/booking/addons";
 
 export type RosterChild = {
   childId: string;
@@ -25,6 +26,8 @@ export type RosterChild = {
   bookingReference: string | null;
   bookingItemId: string | null;
   membershipId: string | null;
+  /** Booked extras, e.g. "Early Bird (8:00 – 9:00am)". */
+  extras: string[];
   expected: boolean;
   /** Absent or cancelled children stay visible with a reason. */
   notExpectedReason: string | null;
@@ -84,6 +87,7 @@ export async function roster(db: Executor, sessionId: string, perms: readonly Pe
       bookingReference: b.reference,
       bookingItemId: i.id,
       membershipId: null,
+      extras: addonsFor(p?.kind ?? "").filter((a) => i.addons.includes(a.key)).map((a) => `${a.label} (${a.time})`),
       expected: i.status === "confirmed" && i.attendance !== "absent",
       notExpectedReason: i.status === "cancelled" ? "Booking cancelled" : i.attendance === "absent" ? "Absent" : null,
       attendance: attByChild.get(c.id) ?? null,
@@ -105,6 +109,7 @@ export async function roster(db: Executor, sessionId: string, perms: readonly Pe
       bookingReference: null,
       bookingItemId: null,
       membershipId: m.id,
+      extras: [],
       expected: !ex,
       notExpectedReason: ex ? ex.kind[0].toUpperCase() + ex.kind.slice(1) : null,
       attendance: attByChild.get(c.id) ?? null,

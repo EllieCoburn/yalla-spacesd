@@ -14,7 +14,7 @@ import * as s from "@/lib/db/schema";
 import { SYSTEM, type Actor } from "@/lib/audit";
 import { ensureDefaultRoles, createStaff } from "@/lib/auth/staff";
 import { ALL_PERMISSIONS } from "@/lib/auth/permissions";
-import { createSeries, addBlackout } from "@/lib/ops/schedule";
+import { createSeries, createSession, addBlackout } from "@/lib/ops/schedule";
 import { createFamily, addChild, addGuardian, setPickup, setEmergencyContact } from "@/lib/ops/families";
 import { createMembership } from "@/lib/ops/memberships";
 import { createHold, confirmAdminBooking, startCheckout, cancelBooking } from "@/lib/ops/bookings";
@@ -22,7 +22,7 @@ import { createTemplate, addRequirement, submitForm } from "@/lib/ops/forms";
 import { joinWaitlist } from "@/lib/ops/waitlist";
 import { processEvent } from "@/lib/payments/webhooks";
 import { DEFAULT_TEMPLATES } from "@/lib/notify/index";
-import { addDaysISO, ageInMonths, todayLA, weekdayOf } from "@/lib/time";
+import { addDaysISO, ageInMonths, todayLA } from "@/lib/time";
 
 const url = process.env.DATABASE_URL ?? "";
 const local = /localhost|127\.0\.0\.1/.test(url);
@@ -85,7 +85,7 @@ const club = await P({ slug: "club-yalla", name: "Club Yalla", kind: "membership
 const flex = await P({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", tagline: "Drop-in childcare", parentPresence: "required", minAgeMonths: 4, maxAgeMonths: 66, minNoticeHours: 12, cancellationDeadlineHours: 24, advanceBookingDays: 60 });
 const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind: "weekend", tagline: "A little room in your weekend", parentPresence: "not_required", minAgeMonths: 12, maxAgeMonths: 66, priceCents: 9500, minNoticeHours: 24 });
 const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
-const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "full_series", minAgeMonths: 24, maxAgeMonths: 66, priceCents: 14000 });
+const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "individual", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 16000, defaultCapacity: 26 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
 await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required" });
 await P({ slug: "yalla-outside", name: "Yalla Outside", kind: "nature", tagline: "Nature exploration in Balboa Park", status: "draft", bookingMode: "request" });
@@ -123,9 +123,13 @@ if (!afterHoursMonthly)
   for (const g of afterHoursGroups)
     await createSeries(db, admin, { programId: after.id, ...g, weekdays: [5], monthWeek: 2, startTime: "17:00", endTime: "21:00", startsOn: start, endsOn: addDaysISO(today, 365), hardCapacity: g.capacity, locationId: loc.id });
 await createSeries(db, admin, { programId: happenings.id, title: "Pop-up workshop", weekdays: [0], startTime: "10:00", endTime: "11:30", startsOn: addDaysISO(today, 3), endsOn: addDaysISO(today, 45), capacity: 14, locationId: loc.id });
-let campStart = addDaysISO(today, 21);
-while (weekdayOf(campStart) !== 1) campStart = addDaysISO(campStart, 1);
-await createSeries(db, admin, { programId: camp.id, title: "Little Builders week", weekdays: [1, 2, 3, 4, 5], startTime: "08:30", endTime: "15:00", startsOn: campStart, endsOn: addDaysISO(campStart, 4), capacity: 10, hardCapacity: 10, bookAsSeries: true, locationId: loc.id });
+// Camp Yalla: the confirmed camp days in three age groups (the 0005 migration does the same in production).
+const campDays = ["2026-11-11", "2026-11-25", "2026-11-27", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15"];
+const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).where(eq(s.sessions.programId, camp.id));
+if (!campExisting)
+  for (const day of campDays)
+    for (const g of afterHoursGroups)
+      await createSession(db, admin, { programId: camp.id, title: g.title.replace("Yalla After Hours", "Camp Yalla"), localDate: day, startTime: "09:00", endTime: "16:00", capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, locationId: loc.id });
 let thanksgiving = "2026-11-26";
 if (thanksgiving < today) thanksgiving = addDaysISO(today, 40);
 await addBlackout(db, admin, { startsOn: thanksgiving, endsOn: addDaysISO(thanksgiving, 1), reason: "Thanksgiving (sample closure)", confirmAffected: true });

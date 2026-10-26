@@ -8,6 +8,7 @@ import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { usd } from "./format";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
+import { addonsCents, addonsFor } from "@/lib/booking/addons";
 
 export type SavedChild = { id: string; firstName: string; lastName: string; preferredName: string | null; birthDate: string };
 export type SignedInGuardian = { firstName: string; lastName: string; email: string };
@@ -42,6 +43,8 @@ export function Checkout({
   const [signatures, setSignatures] = useState<Record<string, { text: string; consent: boolean }>>({});
   const [error, setError] = useState<{ text: string; devLink?: string } | null>(null);
   const [pending, start] = useTransition();
+  /** Optional extras chosen per session and child, e.g. Camp Yalla Early Bird. */
+  const [extras, setExtras] = useState<Record<string, Record<string, string[]>>>({});
 
   const sorted = useMemo(() => [...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [sessions]);
   const chosen = kids.filter((k) => k.include && k.firstName.trim() && /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate));
@@ -61,7 +64,21 @@ export function Checkout({
     return (s.ages.min == null || m >= s.ages.min) && (s.ages.max == null || m <= s.ages.max);
   };
   const isOn = (sid: string, key: string) => (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
-  const lines = sorted.map((s) => ({ sessionId: s.id, childKeys: chosen.filter((c) => isOn(s.id, c.key) && eligible(s, c)).map((c) => c.key) })).filter((l) => l.childKeys.length);
+  const lines = sorted
+    .map((s) => {
+      const childKeys = chosen.filter((c) => isOn(s.id, c.key) && eligible(s, c)).map((c) => c.key);
+      return { sessionId: s.id, childKeys, addons: Object.fromEntries(childKeys.map((k) => [k, extras[s.id]?.[k] ?? []])) };
+    })
+    .filter((l) => l.childKeys.length);
+  const addonTotal = sorted.reduce((sum, s) => {
+    const l = lines.find((x) => x.sessionId === s.id);
+    return sum + (l ? l.childKeys.reduce((t, k) => t + addonsCents(s.kind, l.addons[k] ?? []), 0) : 0);
+  }, 0);
+  const toggleExtra = (sid: string, key: string, addon: string) =>
+    setExtras((e) => {
+      const cur = e[sid]?.[key] ?? [];
+      return { ...e, [sid]: { ...e[sid], [key]: cur.includes(addon) ? cur.filter((x) => x !== addon) : [...cur, addon] } };
+    });
   // After Hours siblings on the same evening are capped at the family rate, matching the invoice.
   const evenings = new Map<string, number[]>();
   const total = sorted.reduce((sum, s) => {
@@ -72,7 +89,7 @@ export function Checkout({
       return sum;
     }
     return sum + (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : n ? 1 : 0);
-  }, 0) + [...evenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0);
+  }, 0) + [...evenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0) + addonTotal;
   const familySaving = [...evenings.values()].reduce((sum, prices) => sum + prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices), 0);
   const sigKey = (a: Agreement) => `${a.templateId}:${a.childKey ?? "family"}`;
 
@@ -281,6 +298,26 @@ export function Checkout({
                         );
                       })}
                     </div>
+                    {addonsFor(s.kind).length
+                      ? chosen
+                          .filter((c) => eligible(s, c) && isOn(s.id, c.key))
+                          .map((c) => (
+                            <div key={c.key} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem]">
+                              <span className="text-ink-soft">Extras for {c.firstName}:</span>
+                              {addonsFor(s.kind).map((a) => (
+                                <label key={a.key} className="inline-flex cursor-pointer items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={(extras[s.id]?.[c.key] ?? []).includes(a.key)}
+                                    onChange={() => toggleExtra(s.id, c.key, a.key)}
+                                    className="h-4 w-4 accent-[var(--color-blue)]"
+                                  />
+                                  {a.label} <span className="text-ink-soft">({a.time})</span> +{usd(a.priceCents)}
+                                </label>
+                              ))}
+                            </div>
+                          ))
+                      : null}
                   </li>
                 ))}
               </ul>

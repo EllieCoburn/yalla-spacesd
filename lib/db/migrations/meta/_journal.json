@@ -29,6 +29,20 @@
       "when": 1793042864926,
       "tag": "0003_after_hours_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793051180324,
+      "tag": "0004_booking_addons",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793051296606,
+      "tag": "0005_camp_yalla_dates",
+      "breakpoints": true
     }
   ]
 }

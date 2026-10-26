@@ -515,6 +515,8 @@ export const bookingItems = pgTable(
     status: text("status").notNull(), // held | confirmed | cancelled | moved
     attendance: text("attendance").notNull().default("expected"), // expected | present | absent | no_show | late_cancel
     priceCents: integer("price_cents"),
+    /** Optional extras for this child on this day, e.g. Camp Yalla Early Bird or late stay (see lib/booking/addons.ts). */
+    addons: text("addons").array().notNull().default(sql`'{}'::text[]`),
     createdAt: createdAt(),
     cancelledAt: ts("cancelled_at"),
   },

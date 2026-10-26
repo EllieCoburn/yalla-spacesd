@@ -97,6 +97,14 @@ Alternative: `npm run admin:create` from a machine with `DATABASE_URL` set.
 - Price is $65 per child. Siblings on the same evening are capped at the family rate ($85 for up to three children, +$25 each
   additional child) as a discount line on the invoice. The rule lives in `lib/booking/family-rate.ts`.
 
+### Camp Yalla
+
+- Migration `0005_camp_yalla_dates` adds the confirmed 2026–27 camp days (Nov 11, 25, 27; Dec 21–23, 28–30; Jan 18; Feb 15),
+  9:00am–4:00pm, each as three sessions by age group (18 months – 4 years: 8; 4 – 6 years: 8; 7 – 10 years: 10) at $160 per
+  child. Days are booked individually. Add more days in Programs → Camp Yalla → Schedule (single date, with the age group fields).
+- Early Bird (8:00–9:00am, $20) and a late stay (until 4:30pm, $30) are per-child extras chosen at checkout. They are invoiced as
+  their own lines and shown on the roster. Extras and prices live in `lib/booking/addons.ts`.
+
 ## 6. Background jobs
 
 `/api/cron/housekeeping` (with `Authorization: Bearer $CRON_SECRET`) expires lapsed holds and waitlist offers,

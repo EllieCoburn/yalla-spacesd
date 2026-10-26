@@ -86,6 +86,7 @@ export function RosterCard({ c, sessionId, canManage, showBookings }: { c: Roste
             {c.attendance?.checkedOutAt ? ` · Out ${time(c.attendance.checkedOutAt)}` : ""}
           </span>
           {c.attendance?.collectedByName ? <span className="text-[0.75rem] text-ink-soft">Collected by {c.attendance.collectedByName}</span> : null}
+          {c.extras.length ? <span className="rounded-full bg-blue/10 px-2 py-0.5 text-[0.72rem] text-blue">{c.extras.join(" · ")}</span> : null}
         </div>
       </div>
 

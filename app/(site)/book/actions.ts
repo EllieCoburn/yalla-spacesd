@@ -12,7 +12,7 @@ import { bookings } from "@/lib/db/schema";
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
   children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string }[];
-  lines: { sessionId: string; childKeys: string[] }[];
+  lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean }[];
 };
 
@@ -29,7 +29,12 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
       signedIn,
       guardian: { firstName: clip(payload.guardian.firstName, 80), lastName: clip(payload.guardian.lastName, 80), email: clip(payload.guardian.email, 200), phone: clip(payload.guardian.phone, 40) },
       children: payload.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), lastName: clip(c.lastName, 80), birthDate: clip(c.birthDate, 10), allergies: clip(c.allergies, 500) })),
-      lines: payload.lines.slice(0, 60).map((l) => ({ sessionId: clip(l.sessionId, 60), childKeys: l.childKeys.slice(0, 8).map((k) => clip(k, 60)) })),
+      lines: payload.lines.slice(0, 60).map((l) => ({
+        sessionId: clip(l.sessionId, 60),
+        childKeys: l.childKeys.slice(0, 8).map((k) => clip(k, 60)),
+        // Add-on keys are checked against the program's offer when the hold is created.
+        addons: Object.fromEntries(Object.entries(l.addons ?? {}).slice(0, 8).map(([k, v]) => [clip(k, 60), (Array.isArray(v) ? v : []).slice(0, 4).map((x) => clip(x, 20))])),
+      })),
       signatures: payload.signatures.slice(0, 40).map((s) => ({ templateId: clip(s.templateId, 60), childKey: s.childKey ? clip(s.childKey, 60) : null, signatureText: clip(s.signatureText, 120), consent: !!s.consent })),
       meta: { ip: ctx.ip, userAgent: ctx.userAgent },
       baseUrl: ctx.baseUrl,

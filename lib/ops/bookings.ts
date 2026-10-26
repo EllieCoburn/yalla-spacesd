@@ -37,8 +37,9 @@ import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
+import { addonsFor, validAddons } from "@/lib/booking/addons";
 
-export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number };
+export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
 
 export const BOOKING_STATUS_LABEL: Record<string, string> = {
   held: "Held",
@@ -296,7 +297,16 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
       const price = await priceFor(tx, s, p, child);
       const [row] = await tx
         .insert(bookingItems)
-        .values({ bookingId: b.id, sessionId: s.id, childId: it.childId ?? null, adults: it.adults ?? 0, spots, status: "held", priceCents: spots === 0 && p.bookingUnit !== "per_child" ? 0 : price.cents })
+        .values({
+          bookingId: b.id,
+          sessionId: s.id,
+          childId: it.childId ?? null,
+          adults: it.adults ?? 0,
+          spots,
+          status: "held",
+          priceCents: spots === 0 && p.bookingUnit !== "per_child" ? 0 : price.cents,
+          addons: it.childId ? validAddons(p.kind, it.addons) : [],
+        })
         .returning();
       created.push(row);
     }
@@ -366,6 +376,9 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
   const unpriced = rows.filter((r) => r.item.priceCents == null);
   if (unpriced.length) throw new OpsError("unpriced", `No price is set for ${unpriced[0].program.name}. Set pricing on the program before taking payment.`);
   const lines: LineInput[] = rows.map((r) => ({ kind: "charge", description: describeLine(r), unitCents: r.item.priceCents ?? 0, bookingItemId: r.item.id }));
+  for (const r of rows)
+    for (const a of addonsFor(r.program.kind).filter((x) => r.item.addons.includes(x.key)))
+      lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
   lines.push(...(await siblingDiscountLines(db, rows)), ...familyRateLines(rows));
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }

@@ -216,7 +216,7 @@ export type PublicBookingInput = {
   signedIn?: GuardianContext | null;
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
   children: (ChildRef & { lastName: string; birthDate: string; allergies?: string })[];
-  lines: { sessionId: string; childKeys: string[] }[];
+  lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean }[];
   meta: { ip?: string; userAgent?: string };
   baseUrl: string;
@@ -284,10 +284,13 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     }
 
     // 3. Series-booked programs (e.g. camps) take every day together.
-    const items: { sessionId: string; childId: string }[] = [];
+    const items: { sessionId: string; childId: string; addons?: string[] }[] = [];
     for (const l of lines) {
       const ids = await expandSeries(db, [l.sessionId]);
-      for (const sid of ids) for (const key of l.childKeys) if (childIdByKey.has(key) && !items.some((i) => i.sessionId === sid && i.childId === childIdByKey.get(key))) items.push({ sessionId: sid, childId: childIdByKey.get(key)! });
+      for (const sid of ids)
+        for (const key of l.childKeys)
+          if (childIdByKey.has(key) && !items.some((i) => i.sessionId === sid && i.childId === childIdByKey.get(key)))
+            items.push({ sessionId: sid, childId: childIdByKey.get(key)!, addons: l.addons?.[key] });
     }
 
     // 4. Blocking agreements: sign what was provided, report what's still needed.

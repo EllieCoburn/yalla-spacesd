@@ -74,3 +74,23 @@ describe("Monthly schedules", () => {
     expect(monthWeekOf("2026-11-13", false)).toBe(2);
   });
 });
+
+describe("Camp Yalla extras", () => {
+  it("charges Early Bird and late stay per child and ignores extras the program doesn't offer", async () => {
+    const p = await program({ kind: "camp", priceCents: 16000, minAgeMonths: 18, maxAgeMonths: 131 });
+    const day = await session(p.id, { minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 }, 12, "09:00", "16:00");
+    const { family: f, children } = await family("Camp", [{ first: "Dee", birth: addDaysISO(todayLA(), -365 * 5) }]);
+    const hold = await createHold(db(), owner, {
+      familyId: f.id,
+      items: [{ sessionId: day.id, childId: children[0].id, addons: ["early", "late", "pony"] }],
+      source: "admin",
+      acknowledgePaperwork: true,
+    });
+    expect(hold.items[0].addons).toEqual(["early", "late"]);
+    await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: true, notify: false });
+    const [inv] = await db().select().from(s.invoices).where(eq(s.invoices.bookingId, hold.booking.id));
+    const lines = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, inv.id));
+    expect(lines.reduce((sum, l) => sum + l.amountCents, 0)).toBe(16000 + 2000 + 3000);
+    expect(lines.map((l) => l.description).join(" ")).toMatch(/Early Bird.*Late stay|Late stay.*Early Bird/);
+  });
+});
