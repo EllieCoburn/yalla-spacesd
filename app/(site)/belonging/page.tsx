@@ -213,8 +213,7 @@ export default function BelongingPage() {
       <section className="bg-paper py-20 lg:py-32">
         <div className="shell grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Mark name="bunting" className="h-10 w-auto text-blue" />
-            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+            <h2 className="display text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Belonging Is Something <em>We Build Together</em>
             </h2>
           </div>
