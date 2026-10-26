@@ -9,7 +9,7 @@ import { Reveal } from "@/components/ui/Reveal";
 export const metadata: Metadata = {
   title: "Belonging at Yalla",
   description:
-    "Every child. Every family. A place to belong. How inclusion shapes the way Yalla understands children, builds relationships and creates community.",
+    "Different by nature. Together by choice. How belonging shapes the way Yalla understands one another, builds relationships and creates community.",
 };
 
 type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string; photo?: { src: string; alt: string } };
@@ -29,25 +29,26 @@ const chapters: Chapter[] = [
   },
   {
     mark: "sprig",
-    title: "Every Child Deserves to Participate",
+    title: "Participation Looks Different for Everyone",
     paragraphs: [
-      "Children develop, communicate, learn, and experience their environments in different ways. We recognize that development is neither linear nor uniform, and that every child brings their own strengths, needs, and emerging skills into a shared learning environment.",
-      "At Yalla, we are committed to thoughtfully supporting children with disabilities, developmental differences, neurodivergence, sensory needs, diverse learning profiles, and developing social-emotional and self-regulation skills.",
-      "We do not believe that a child’s belonging should be contingent upon their ability to consistently meet adult expectations, navigate group dynamics independently, or move through childhood without difficulty. Behaviors that challenge us are opportunities to better understand what a child is communicating, what skills are still developing, and what additional support may be needed.",
-      "Rather than expecting every child to fit a single model of participation, we look for ways to adapt our environments, expectations, and approaches to honor the individual child. Our responsibility is to respond with curiosity, compassion, and developmentally informed guidance, while maintaining a safe and supportive environment for the entire community.",
-      "Yalla voluntarily draws upon professional standards and guidance established by the National Association for the Education of Young Children (NAEYC) and the Division for Early Childhood (DEC), particularly their principles of developmentally appropriate practice, equitable access, meaningful participation, and individualized support.",
-      "We value collaboration with families, thoughtful accommodations, and ongoing communication about what meaningful participation can look like for each child.",
+      "We recognize that people of all ages communicate, learn, socialize, work, and experience their environments in different ways.",
+      "Our commitment to inclusion extends to children and adults with disabilities, developmental differences, neurodivergence, sensory needs, and diverse ways of engaging with the world.",
+      "We do not believe that belonging should depend on a person’s ability to conform to a single model of participation, communication, or behavior.",
+      "For children, this means approaching developing skills and challenging moments with curiosity, compassion, and individualized support. For adults, it means respecting different needs, perspectives, communication styles, and ways of participating in community life.",
+      "Yalla voluntarily draws upon professional guidance from the National Association for the Education of Young Children (NAEYC) and the Division for Early Childhood (DEC), including principles of equitable access, developmentally appropriate practice, and meaningful participation.",
+      "We value collaboration, thoughtful accommodations, open communication, and a shared responsibility to maintain a safe, supportive environment for everyone.",
     ],
     closing: "We recognize that true inclusion requires more than an invitation. It requires intention, flexibility, and a willingness to continually learn.",
   },
   {
     mark: "waves",
-    title: "Childhood Without Stereotypes",
+    title: "Beyond Labels and Expectations",
     paragraphs: [
-      "We believe children deserve the freedom to discover who they are without being confined by the assumptions, labels, or expectations of others.",
-      "At Yalla, we challenge the idea that a child’s interests, abilities, personality, or potential can be determined by their age, gender, cultural background, developmental differences, or perceived strengths and limitations. We resist labeling children as difficult, shy, gifted, behind, or otherwise defining them by a particular behavior, characteristic, or stage of development.",
-      "Instead, we create opportunities for children to explore freely, take meaningful risks, challenge expectations, and discover interests and capabilities that may surprise even the adults who know them best.",
-      "Our approach recognizes that childhood is a period of extraordinary growth and possibility, and that no child should be limited by someone else’s assumptions about who they are or who they might become.",
+      "We believe people deserve the freedom to be themselves without being confined by the assumptions, labels, or expectations of others.",
+      "At Yalla, we challenge the idea that a person’s interests, abilities, personality, or potential can be determined by their age, gender, cultural background, family structure, profession, or perceived strengths and limitations.",
+      "For children, this means resisting labels that reduce them to a particular behavior, temperament, or developmental stage. We create opportunities for exploration, discovery, and growth without unnecessary limitations imposed by adults.",
+      "For grown-ups, it means recognizing that parenthood, caregiving, and professional identity are not one-dimensional. People bring whole lives, individual ambitions, different experiences, and evolving identities into our community.",
+      "We believe our differences deserve room to exist without explanation, justification, or judgment.",
     ],
     photo: { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" },
   },
@@ -55,22 +56,23 @@ const chapters: Chapter[] = [
     mark: "moon",
     title: "A Community That Reflects the World",
     paragraphs: [
-      "Children begin developing an awareness of identity, difference, and fairness long before adulthood.",
-      "We believe early childhood environments have an important responsibility to help children develop empathy, recognize unfairness, and appreciate the experiences of people whose lives may differ from their own.",
-      "Our books, materials, conversations, and learning experiences intentionally reflect a variety of cultures, languages, abilities, identities, and family structures.",
+      "We believe that meaningful community is built through exposure to different experiences, perspectives, traditions, and ways of life.",
+      "Our books, materials, conversations, programming, and shared spaces intentionally reflect a variety of cultures, languages, abilities, identities, and family structures.",
+      "We recognize that children develop their understanding of identity, fairness, and difference through their everyday relationships and interactions. Just as importantly, we believe adults benefit from opportunities to build relationships across different backgrounds and experiences.",
+      "Rather than expecting everyone to share the same beliefs, customs, or perspectives, we encourage curiosity, thoughtful dialogue, and mutual respect.",
+      "Our goal is not to create a community in which everyone is the same, but one in which people can meaningfully participate while remaining themselves.",
     ],
-    closing:
-      "We do not believe that avoiding conversations about difference creates inclusion. We believe children deserve thoughtful, developmentally appropriate guidance in understanding the world and the people who share it.",
   },
   {
     mark: "arch",
     title: "Respect Is a Daily Practice",
     paragraphs: [
-      "Our commitment to inclusion extends to the way we communicate, resolve conflict, support behavior, and build relationships.",
-      "We approach children as capable, worthy individuals who deserve to be treated with dignity, even in difficult moments.",
-      "We strive to replace shame with understanding, exclusion with support, and assumptions with curiosity.",
-      "We recognize that creating an equitable community is an ongoing responsibility, not a destination or a statement of perfection.",
-      "This means listening when families share concerns, reflecting on our own practices, and remaining open to change.",
+      "Belonging is shaped by everyday interactions, not simply by what we say we value.",
+      "We approach children as capable, worthy individuals who deserve dignity, even in difficult moments. We extend that same respect to parents, caregivers, educators, colleagues, and every adult who contributes to life at Yalla.",
+      "We strive to replace assumptions with curiosity, judgment with understanding, and exclusion with thoughtful support.",
+      "We recognize that sharing a community means balancing individual needs with collective well-being. Inclusion requires consideration for others, honest communication, healthy boundaries, and a willingness to navigate differences constructively.",
+      "We understand that creating an equitable community is an ongoing responsibility, not a destination or a statement of perfection.",
+      "This means listening when concerns arise, reflecting on our practices, and remaining open to change.",
     ],
     photo: { src: "/photos/basket.jpg", alt: "A woven basket of wooden rings and spools on a low shelf" },
   },
@@ -84,24 +86,24 @@ export default function BelongingPage() {
         mark="dotsun"
         title={
           <>
-            Every child. Every family. <em>A place to belong.</em>
+            Different by nature. <em>Together by choice.</em>
           </>
         }
-        lede="At Yalla, inclusion isn’t a separate initiative. It’s foundational to how we understand children, build relationships, and create community."
+        lede="At Yalla, belonging isn’t a separate initiative. It’s foundational to how we understand one another, build relationships, and create community."
       />
 
       <section className="bg-paper py-20 lg:py-28">
         <div className="shell grid gap-10 lg:grid-cols-12">
           <div className="space-y-6 text-[1.1rem] leading-[1.8] text-ink-soft lg:col-span-6">
             <p>
-              We believe that every child arrives with a unique identity, family story, cultural background, set of abilities, and way of
+              We believe that every person brings a unique identity, family story, cultural background, set of abilities, and way of
               experiencing the world. These differences aren’t obstacles to overcome. They are an essential part of what makes a community
               rich, meaningful, and human.
             </p>
           </div>
           <Reveal className="lg:col-span-5 lg:col-start-8 lg:pt-1">
             <p className="display text-[clamp(1.5rem,1.2rem+1vw,2rem)] leading-[1.3]! text-ink">
-              Our commitment is to cultivate an environment where children and their grown-ups are not simply welcomed, but genuinely{" "}
+              Our commitment is to cultivate a shared environment where children and their grown-ups are not simply welcomed, but genuinely{" "}
               <em>seen, respected, and valued.</em>
             </p>
           </Reveal>
@@ -164,10 +166,11 @@ export default function BelongingPage() {
             </div>
             <div className="space-y-5 text-[1.05rem] leading-[1.8] text-chalk/80 lg:col-span-6 lg:col-start-7 lg:pt-3">
               <p>
-                Yalla is more than a place where children spend their days. It is a community shaped by the families, educators, and children
-                who share it.
+                Yalla is more than a place where children spend their days or grown-ups come to work. It is a shared community shaped by the
+                relationships, experiences, and contributions of the people who gather here.
               </p>
-              <p>We invite every member of our community to contribute to an environment rooted in kindness, mutual respect, curiosity, and care.</p>
+              <p>We believe children and adults alike deserve spaces where they can learn, grow, connect, and participate as their fullest selves.</p>
+              <p>Every family brings something different to Yalla, and those differences make our community stronger.</p>
             </div>
           </div>
           <div className="shell mt-16 lg:mt-24">
