@@ -30,7 +30,7 @@ export default function AboutPage() {
         mark="sun"
         title={
           <>
-            Built for the way <em>families live now.</em>
+            For childhood. For parenthood. <em>For connection.</em>
           </>
         }
         lede="Yalla is a living community of parents, children and educators who share the daily rhythms of work, play and care in the heart of Bankers Hill."
