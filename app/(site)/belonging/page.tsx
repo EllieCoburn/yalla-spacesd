@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import type { MarkName } from "@/components/brand/marks";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
+import { Chevron } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
@@ -188,10 +189,7 @@ export default function BelongingPage() {
                     aria-hidden="true"
                     className="mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/20 transition-colors duration-500 group-open:border-ink group-open:bg-ink group-open:text-chalk lg:col-span-1 lg:justify-self-end"
                   >
-                    <span className="relative block h-3.5 w-3.5">
-                      <span className="absolute top-1/2 left-0 h-px w-3.5 bg-current" />
-                      <span className="absolute top-0 left-1/2 h-3.5 w-px bg-current transition-transform duration-500 group-open:rotate-90 group-open:opacity-0" />
-                    </span>
+                    <Chevron className="mt-px h-2.5 w-4" />
                   </span>
                 </summary>
                 <div className="grid pb-12 lg:grid-cols-12 lg:gap-x-10">

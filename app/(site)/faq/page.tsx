@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
+import { Chevron } from "@/components/ui/primitives";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -126,10 +127,7 @@ export default function FaqPage() {
                     <details key={it.q} className="group hairline border-b">
                       <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-6 [&::-webkit-details-marker]:hidden">
                         <span className="display text-[1.3rem] leading-snug! sm:text-[1.5rem]">{it.q}</span>
-                        <span className="relative mt-2 h-4 w-4 shrink-0">
-                          <span className="absolute top-1/2 left-0 h-px w-4 bg-ink" />
-                          <span className="absolute top-0 left-1/2 h-4 w-px bg-ink transition-transform duration-500 group-open:rotate-90 group-open:opacity-0" />
-                        </span>
+                        <Chevron className="mt-3 h-2.5 w-4 shrink-0 text-ink" />
                       </summary>
                       <div className="max-w-2xl pb-8 text-[1.02rem] text-ink-soft">{it.a}</div>
                     </details>

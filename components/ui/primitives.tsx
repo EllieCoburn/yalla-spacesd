@@ -33,6 +33,15 @@ export function Arrow({ className = "" }: { className?: string }) {
   );
 }
 
+/** A V-shaped disclosure arrow; inside a `group` <details>, it flips when the row opens. */
+export function Chevron({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 10" className={`transition-transform duration-500 group-open:rotate-180 ${className}`} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M1.5 2l6.5 6 6.5-6" />
+    </svg>
+  );
+}
+
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <p className={`eyebrow text-ink-soft ${className}`}>{children}</p>;
 }

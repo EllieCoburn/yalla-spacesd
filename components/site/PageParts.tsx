@@ -2,7 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import type { MarkName } from "@/components/brand/marks";
-import { Button, Eyebrow } from "@/components/ui/primitives";
+import { Button, Chevron, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 
 export function PageHero({
@@ -86,10 +86,7 @@ export function FactsAccordion({ items }: { items: { label: string; value: React
         <details key={it.label} className="group hairline border-b">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 [&::-webkit-details-marker]:hidden">
             <span className="display text-[1.3rem] sm:text-[1.45rem]">{it.label}</span>
-            <span className="relative h-4 w-4 shrink-0" aria-hidden>
-              <span className="absolute top-1/2 left-0 h-px w-4 bg-ink" />
-              <span className="absolute top-0 left-1/2 h-4 w-px bg-ink transition-transform duration-500 group-open:rotate-90 group-open:opacity-0" />
-            </span>
+            <Chevron className="h-2.5 w-4 shrink-0 text-ink" />
           </summary>
           <div className="pb-6 font-serif text-[1.08rem] text-ink-soft">{it.value}</div>
         </details>
