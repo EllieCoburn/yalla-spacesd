@@ -38,16 +38,9 @@ export function ClubYallaDay({ start = 1 }: { start?: number }) {
         </div>
         <ol className="grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:col-span-7 lg:col-start-6">
           {steps.map((s, i) => (
-            <Reveal
-              as="li"
-              key={s.title}
-              delay={i * 100}
-              className="hairline border-t pt-8"
-            >
+            <Reveal as="li" key={s.title} delay={i * 100} className="hairline border-t pt-8">
               <div className="flex items-start justify-between">
-                <span className="font-serif text-ink-soft italic">
-                  0{i + 1}
-                </span>
+                <span className="font-serif text-ink-soft italic">0{i + 1}</span>
                 <Mark name={s.mark} className="h-10 w-auto text-blue" />
               </div>
               <h3 className="display mt-6 text-[1.65rem]">{s.title}</h3>
