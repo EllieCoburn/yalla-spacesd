@@ -210,32 +210,40 @@ export default function BelongingPage() {
         </div>
       </section>
 
-      <section className="roofline-edge bg-blue text-blue">
-        <div className="py-20 text-chalk lg:py-32">
-          <div className="shell grid gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-5">
-              <h2 className="display text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                Belonging Is Something <em className="text-mist!">We Build Together</em>
-              </h2>
-            </div>
-            <div className="space-y-5 text-[1.05rem] leading-[1.8] text-chalk/80 lg:col-span-6 lg:col-start-7 lg:pt-3">
-              <p>
-                Yalla is more than a place where children spend their days or grown-ups come to work. It is a shared community shaped by the
-                relationships, experiences, and contributions of the people who gather here.
-              </p>
-              <p>We believe children and adults alike deserve spaces where they can learn, grow, connect, and participate as their fullest selves.</p>
-              <p>Every family brings something different to Yalla, and those differences make our community stronger.</p>
-            </div>
+      <section className="bg-paper py-20 lg:py-32">
+        <div className="shell grid gap-12 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <Mark name="bunting" className="h-10 w-auto text-blue" />
+            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+              Belonging Is Something <em>We Build Together</em>
+            </h2>
           </div>
-          <div className="shell mt-16 lg:mt-24">
-            <Reveal className="mx-auto max-w-3xl text-center">
+          <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-3">
+            <p>
+              Yalla is more than a place where children spend their days or grown-ups come to work. It is a shared community shaped by the
+              relationships, experiences, and contributions of the people who gather here.
+            </p>
+            <p>We believe children and adults alike deserve spaces where they can learn, grow, connect, and participate as their fullest selves.</p>
+            <p>Every family brings something different to Yalla, and those differences make our community stronger.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="roofline-edge bg-blue text-blue">
+        <div className="py-24 text-chalk lg:py-36">
+          <div className="shell">
+            <Reveal className="mx-auto max-w-4xl text-center">
               <Mark name="dotsun" className="mx-auto h-10 w-10 text-chalk" />
               <blockquote>
-                <p className="display mt-8 text-[clamp(1.9rem,1.3rem+2.2vw,3.2rem)] leading-[1.2]!">
+                <p className="display mt-10 text-[clamp(2rem,1.3rem+2.6vw,3.6rem)] leading-[1.18]!">
                   “To be human is to live among differences. <em className="text-mist!">To build community is to learn what we can make of them.</em>”
                 </p>
-                <footer className="mt-8 text-[0.95rem] text-chalk/80">
-                  <span className="font-medium text-chalk">Ellie Coburn</span>, Owner &amp; Executive Director
+                <footer className="mt-10 flex items-center justify-center gap-4 text-[0.95rem] text-chalk/80">
+                  <span className="h-px w-10 bg-chalk/40" aria-hidden="true" />
+                  <span>
+                    <span className="font-medium text-chalk">Ellie Coburn</span>, Owner &amp; Executive Director
+                  </span>
+                  <span className="h-px w-10 bg-chalk/40" aria-hidden="true" />
                 </footer>
               </blockquote>
             </Reveal>
