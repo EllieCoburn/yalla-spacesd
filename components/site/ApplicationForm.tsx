@@ -178,7 +178,7 @@ export function ApplicationForm() {
           type="submit"
           className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-12"
         >
-          Join Club Yalla
+          Apply to join Club Yalla
         </button>
       </div>
     </form>
