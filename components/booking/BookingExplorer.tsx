@@ -196,11 +196,23 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
                     <span className="display text-[1.9rem]">{fmtDate(key, "EEEE")}</span>
                     <span className="font-serif text-ink-soft italic">{fmtDate(key, "d MMMM")}</span>
                   </h2>
-                  <ul className="mt-4 space-y-3">
-                    {list.map((s) => (
-                      <SessionRow key={s.id} s={s} eligible={eligible(s)} selected={selected.includes(s.id)} onToggle={() => toggle(s)} onWaitlist={() => setWaitlistFor(s)} seriesCount={seriesOf(s).length} />
-                    ))}
-                  </ul>
+                  {playSessionGroups(list).map((g) => (
+                    <div key={g.key} className={g.label ? "mt-6" : ""}>
+                      {g.label ? (
+                        <h3 className="flex flex-wrap items-baseline gap-x-3 border-b border-line pb-2">
+                          <span className="eyebrow text-[0.62rem]">{g.label}</span>
+                          <span className="font-serif text-[0.95rem] text-ink-soft italic">
+                            {fmtTime(g.list[0].startsAt)} – {fmtTime(g.list[0].endsAt)}
+                          </span>
+                        </h3>
+                      ) : null}
+                      <ul className="mt-4 space-y-3">
+                        {g.list.map((s) => (
+                          <SessionRow key={s.id} s={s} heading={g.label ? ageGroupTitle(s) : undefined} eligible={eligible(s)} selected={selected.includes(s.id)} onToggle={() => toggle(s)} onWaitlist={() => setWaitlistFor(s)} seriesCount={seriesOf(s).length} />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </section>
               ))}
               {!day && grouped.length > shown.length ? (
@@ -249,6 +261,23 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
   );
 }
 
+// Yalla Weekends: split each Saturday into its AM and PM play sessions.
+function playSessionGroups(list: PublicSession[]) {
+  const other = list.filter((s) => s.kind !== "weekend");
+  const weekend = list.filter((s) => s.kind === "weekend");
+  const isAM = (s: PublicSession) => fmtTime(s.startsAt).endsWith("am");
+  return [
+    { key: "other", label: null, list: other },
+    { key: "am", label: "AM play session", list: weekend.filter(isAM) },
+    { key: "pm", label: "PM play session", list: weekend.filter((s) => !isAM(s)) },
+  ].filter((g) => g.list.length);
+}
+
+// Within a play session, the age group is all a row needs to say.
+function ageGroupTitle(s: PublicSession) {
+  return s.title.split(" · ").at(-1) ?? s.title;
+}
+
 const kindName: Record<string, string> = {
   drop_in: "Yalla Flex · Drop-in",
   nature: "Yalla Outside",
@@ -259,7 +288,7 @@ const kindName: Record<string, string> = {
   private_event: "Yalla Celebrations",
 };
 
-function SessionRow({ s, eligible, selected, onToggle, onWaitlist, seriesCount }: { s: PublicSession; eligible: boolean; selected: boolean; onToggle: () => void; onWaitlist: () => void; seriesCount: number }) {
+function SessionRow({ s, heading, eligible, selected, onToggle, onWaitlist, seriesCount }: { s: PublicSession; heading?: string; eligible: boolean; selected: boolean; onToggle: () => void; onWaitlist: () => void; seriesCount: number }) {
   const st = stateLabel(s);
   const disabled = !st.selectable || !eligible;
   const ageNote = !eligible && s.ages.min != null && s.ages.max != null ? `For ages ${s.ages.min < 24 ? `${s.ages.min} mo` : `${Math.floor(s.ages.min / 12)} yr`} – ${Math.floor(s.ages.max / 12)} yr` : null;
@@ -284,7 +313,7 @@ function SessionRow({ s, eligible, selected, onToggle, onWaitlist, seriesCount }
             {kindName[s.kind] ?? s.programName}
             {s.cohort ? ` · ${s.cohort}` : ""}
           </span>
-          <span className="display mt-1 block text-[1.35rem]">{s.title}</span>
+          <span className="display mt-1 block text-[1.35rem]">{heading ?? s.title}</span>
           <span className="mt-1 block text-[0.82rem] text-ink-soft sm:hidden">
             {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
           </span>
