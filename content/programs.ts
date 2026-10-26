@@ -1,3 +1,4 @@
+import type { MarkName } from "@/components/brand/marks";
 import type { BookingMode, ProgramKind } from "@/lib/booking/types";
 
 /**
@@ -14,6 +15,8 @@ export interface ProgramContent {
   body: string[];
   image: string;
   imageAlt: string;
+  /** A hand-drawn motif that accompanies the program across the site. */
+  motif?: MarkName;
   ages: string | null;
   days: string | null;
   pricing: string | null;
@@ -38,6 +41,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/lemon-play.jpg",
     imageAlt: "A child's hand scooping lemon slices from a water table",
+    motif: "waves",
     ages: "3 months – 5 years. See each age group with the day rates below.",
     days: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
     pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s age. No registration fee. See day rates below.",
@@ -60,6 +64,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/painting-table.jpg",
     imageAlt: "A toddler painting with brushes and bright colors outdoors",
+    motif: "sprig",
     ages: null,
     days: null,
     pricing: null,
@@ -82,6 +87,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/rainbow-light.jpg",
     imageAlt: "A toddler standing in rainbow light on a wooden floor",
+    motif: "dotsun",
     ages: null,
     days: null,
     pricing: null,
@@ -153,6 +159,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/tulle.jpg",
     imageAlt: "A child playing with embroidered tulle in soft evening light",
+    motif: "moon",
     ages: null,
     days: null,
     pricing: null,

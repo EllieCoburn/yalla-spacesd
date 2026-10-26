@@ -92,7 +92,7 @@ export function PortalDashboard() {
               </div>
               <div className="flex flex-col gap-6">
                 <div className="bg-blue p-7 text-chalk">
-                  <Mark name="balcony" className="h-10 w-auto" />
+                  <Mark name="dotsun" className="h-10 w-auto" />
                   <p className="display mt-6 text-[1.5rem]">{outstanding.length} forms need attention</p>
                   <button onClick={() => setTab("Forms")} className="mt-5 text-[0.85rem] underline underline-offset-4">
                     Review forms

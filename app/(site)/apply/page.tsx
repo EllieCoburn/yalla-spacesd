@@ -12,12 +12,12 @@ export const metadata: Metadata = {
 
 const steps: { mark: MarkName; title: string; body: string }[] = [
   {
-    mark: "sun",
+    mark: "dotsun",
     title: "The cohort year",
     body: "Club Yalla runs year-round, August through July. Children move up to their next cohort at the beginning of each new cohort year.",
   },
   {
-    mark: "balcony",
+    mark: "waves",
     title: "Applying for next year",
     body: "We strongly recommend applying for the next cohort year. Onboarding for the coming year’s cohorts happens each May.",
   },
@@ -38,7 +38,7 @@ export default function ApplyPage() {
     <>
       <PageHero
         eyebrow="Apply · Club Yalla"
-        mark="balcony"
+        mark="sprig"
         title={
           <>
             We’d love to welcome you <em>to the Yalla family.</em>

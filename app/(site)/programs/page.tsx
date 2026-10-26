@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
+import { Mark } from "@/components/brand/Mark";
 import { Arrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
@@ -16,7 +17,7 @@ export default function ProgramsPage() {
     <>
       <PageHero
         eyebrow="Programs"
-        mark="balcony"
+        mark="dotsun"
         title={
           <>
             A little Yalla <em>for every kind of day.</em>
@@ -39,7 +40,10 @@ export default function ProgramsPage() {
                     <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:768px) 22vw, 90vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
                   </div>
                   <div className="md:col-span-5 md:col-start-6">
-                    <p className="eyebrow text-[0.62rem] text-ink-soft">{p.short}</p>
+                    <p className="eyebrow flex items-center gap-2.5 text-[0.62rem] text-ink-soft">
+                      {p.motif ? <Mark name={p.motif} className="h-4 w-auto text-blue" /> : null}
+                      {p.short}
+                    </p>
                     <h2 className="display mt-3 text-[clamp(2rem,1.5rem+1.8vw,3rem)] transition-colors group-hover:text-blue">{p.name}</h2>
                     <p className="mt-4 max-w-xl text-ink-soft">{p.summary}</p>
                   </div>

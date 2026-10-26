@@ -53,7 +53,7 @@ export default function Home() {
       <section className="py-24 lg:py-40">
         <div className="shell">
           <Reveal className="mx-auto max-w-5xl text-center">
-            <Mark name="sun" className="mx-auto mb-10 h-8 w-8 text-blue" />
+            <Mark name="dotsun" className="mx-auto mb-10 h-11 w-11 text-blue" />
             <p className="display text-[clamp(1.9rem,1.2rem+2.6vw,3.6rem)] leading-[1.15]!">
               A community in the heart of San Diego, <em>built by and for modern families</em> with young children.
             </p>
@@ -78,7 +78,7 @@ export default function Home() {
             <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
               {[
                 {
-                  mark: "balcony" as const,
+                  mark: "sprig" as const,
                   title: "A weekly rhythm",
                   body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
                   href: "/club-yalla",
@@ -137,7 +137,10 @@ export default function Home() {
                 <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
                   <Image src={p.image} alt={p.imageAlt} fill sizes="(min-width:1024px) 25vw, 70vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
                 </div>
-                <p className="eyebrow mt-6 text-[0.6rem] text-ink-soft">{p.short}</p>
+                <p className="eyebrow mt-6 flex items-center gap-2 text-[0.6rem] text-ink-soft">
+                  {p.motif ? <Mark name={p.motif} className="h-3.5 w-auto text-blue" /> : null}
+                  {p.short}
+                </p>
                 <h3 className="display mt-2 text-[1.55rem] transition-colors group-hover:text-blue">{p.name}</h3>
                 <p className="mt-1.5 text-[0.9rem] text-ink-soft">{p.tagline}</p>
               </Link>

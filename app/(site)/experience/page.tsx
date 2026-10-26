@@ -43,7 +43,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     ],
   },
   {
-    mark: "balcony",
+    mark: "sprig",
     title: "A weekly rhythm",
     intro: "A weekly home for a small community of families.",
     items: [{ slug: "club-yalla", how: "Consistent weekdays in a small cohort, with parents working onsite in our coworking space." }],
@@ -127,7 +127,10 @@ export default function ExperiencePage() {
                     return (
                       <Reveal as="li" key={it.slug} delay={i * 80} className={`bg-chalk ${w.items.length === 1 ? "sm:col-span-2" : ""}`}>
                         <Link href={programHref(p)} className="group flex h-full flex-col p-7 lg:p-8">
-                          <p className="eyebrow text-[0.58rem] text-ink-soft">{p.short}</p>
+                          <p className="eyebrow flex items-center gap-2 text-[0.58rem] text-ink-soft">
+                            {p.motif ? <Mark name={p.motif} className="h-3.5 w-auto text-blue" /> : null}
+                            {p.short}
+                          </p>
                           <p className="display mt-2 text-[1.55rem] transition-colors group-hover:text-blue">{p.name}</p>
                           <p className="mt-3 flex-1 text-[0.95rem] text-ink-soft">{it.how}</p>
                           <span className="mt-6 inline-flex items-center gap-3 text-[0.82rem]">

@@ -15,7 +15,7 @@ export default function MembershipPage() {
     <>
       <PageHero
         eyebrow="Club Yalla · Membership"
-        mark="balcony"
+        mark="sprig"
         title={
           <>
             Membership <em>rates.</em>

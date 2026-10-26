@@ -22,7 +22,7 @@ export function ApplicationForm() {
   if (sent) {
     return (
       <div className="flex min-h-[26rem] flex-col items-center justify-center text-center">
-        <Mark name="balcony" className="h-14 w-auto text-blue" />
+        <Mark name="sprig" className="h-14 w-auto text-blue" />
         <h3 className="display mt-8 text-[2.2rem]">Thank you for applying.</h3>
         <p className="mt-4 max-w-sm text-ink-soft">We’ll be in touch about cohort availability and the next steps for your family.</p>
         <p className="mt-8 text-[0.75rem] text-oxblood">Preview: applications aren’t sent anywhere yet.</p>

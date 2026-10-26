@@ -122,7 +122,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               </div>
               <div className="flex flex-col gap-6">
                 <div className={`p-7 ${outstanding.length ? "bg-blue text-chalk" : "border border-line bg-paper"}`}>
-                  <Mark name="balcony" className="h-10 w-auto" />
+                  <Mark name="dotsun" className="h-10 w-auto" />
                   <p className="display mt-6 text-[1.5rem]">{outstanding.length ? `${outstanding.length} form${outstanding.length === 1 ? "" : "s"} need attention` : "Paperwork is complete"}</p>
                   {outstanding.length ? (
                     <Link href="/portal/home?tab=forms" className="mt-5 inline-block text-[0.85rem] underline underline-offset-4">

@@ -18,7 +18,7 @@ export default function TeamPage() {
     <>
       <PageHero
         eyebrow="About · Our team"
-        mark="balcony"
+        mark="dotsun"
         title={
           <>
             Team <em>Yalla.</em>

@@ -37,7 +37,10 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           <div className="mt-10 grid items-end gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <Reveal>
-                <Eyebrow>{p.short}</Eyebrow>
+                <Eyebrow className="flex items-center gap-3">
+                  {p.motif ? <Mark name={p.motif} className="h-5 w-auto text-blue" /> : null}
+                  {p.short}
+                </Eyebrow>
               </Reveal>
               <Reveal delay={100}>
                 <h1 className="display mt-6 text-[clamp(3rem,1.6rem+5vw,6.2rem)]">{p.name}</h1>
@@ -57,10 +60,11 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 </Button>
               </Reveal>
             </div>
-            <Reveal delay={150} className="lg:col-span-4 lg:col-start-9">
+            <Reveal delay={150} className="relative lg:col-span-4 lg:col-start-9">
               <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
                 <Image src={p.image} alt={p.imageAlt} fill priority sizes="(min-width:1024px) 30vw, 90vw" className="object-cover" />
               </div>
+              {p.motif ? <Mark name={p.motif} className="absolute -bottom-8 -left-6 h-24 w-auto text-blue sm:-left-10 sm:h-28" /> : null}
             </Reveal>
           </div>
         </div>

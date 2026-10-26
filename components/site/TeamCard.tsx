@@ -4,7 +4,7 @@ import { Mark } from "@/components/brand/Mark";
 import type { MarkName } from "@/components/brand/marks";
 import type { TeamGroup, TeamMember } from "@/content/team";
 
-const LEADER_MARKS: MarkName[] = ["arch", "balcony", "window", "sun", "palm"];
+const LEADER_MARKS: MarkName[] = ["arch", "dotsun", "window", "sprig", "palm"];
 
 /** Arched portrait frame. Until a photo is added it shows a hand-drawn mark in Yalla blue. */
 export function TeamCard({ member, cohort, index }: { member: TeamMember; cohort?: TeamGroup["cohort"]; index: number }) {

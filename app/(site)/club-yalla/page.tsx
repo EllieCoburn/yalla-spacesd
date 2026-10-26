@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const steps = [
   { mark: "window" as const, title: "Apply", body: "Tell us about your family, your child and the days you’re hoping for." },
   { mark: "arch" as const, title: "Visit", body: "When there’s a spot in your child’s cohort, or as you near the top of the waitlist, we’ll invite you to tour Yalla and meet the team." },
-  { mark: "balcony" as const, title: "Welcome", body: "Set up your Family Portal, add your children’s profiles and complete the required forms." },
+  { mark: "dotsun" as const, title: "Welcome", body: "Set up your Family Portal, add your children’s profiles and complete the required forms." },
   { mark: "sun" as const, title: "First days", body: "We’ll plan a gentle start together, so your child (and you) feel at home." },
 ];
 
