@@ -182,6 +182,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/painting.jpg",
     imageAlt: "Bright paint and brushes on a party table",
+    motif: "bunting",
     ages: null,
     days: null,
     pricing: null,

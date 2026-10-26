@@ -53,6 +53,19 @@ export const motifs = {
       </g>
     ),
   },
+  /** A string of bunting flags. */
+  bunting: {
+    viewBox: "10 48 180 80",
+    node: (
+      <g stroke="currentColor" strokeLinejoin="round">
+        <path d="M 18 58 Q 100 104 182 58" fill="none" strokeWidth="6" strokeLinecap="round" />
+        <path d="M 33 68 L 61 76 L 41 110 Z" strokeWidth="7" />
+        <path d="M 72 80 L 100 82 L 86 120 Z" strokeWidth="7" />
+        <path d="M 100 82 L 128 80 L 114 120 Z" strokeWidth="7" />
+        <path d="M 139 76 L 167 68 L 159 110 Z" strokeWidth="7" />
+      </g>
+    ),
+  },
 } satisfies Record<string, { viewBox: string; node: ReactNode }>;
 
 export type MotifName = keyof typeof motifs;
