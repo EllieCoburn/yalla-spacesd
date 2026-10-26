@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 import { Arrow, Index } from "@/components/ui/primitives";
-import { cohorts, earlyBirdDaily, fees, hours, tuitionYear, workspace } from "@/content/tuition";
+import { cohorts, discounts, earlyBirdDaily, fees, hours, tuitionYear, workspace } from "@/content/tuition";
 
 export const metadata: Metadata = {
   title: "Membership Rates",
@@ -47,9 +47,9 @@ export default function MembershipPage() {
       <Section>
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Index n="02">Fees & upgrades</Index>
+            <Index n="02">Fees, discounts & upgrades</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-              Everything else, <em>up front.</em>
+              Fees, discounts <em>&amp; upgrades.</em>
             </h2>
           </div>
           <div className="lg:col-span-7 lg:col-start-6 lg:pt-4">
@@ -65,6 +65,19 @@ export default function MembershipPage() {
                 </div>
               ))}
             </dl>
+
+            <p className="eyebrow mt-16 text-ink-soft">Discounts</p>
+            <div className="mt-5 space-y-3">
+              {discounts.map((d) => (
+                <div key={d.label} className="flex items-start justify-between gap-6 bg-mist/60 p-6">
+                  <div>
+                    <p className="text-[1rem]">{d.label}</p>
+                    <p className="mt-1.5 max-w-md text-[0.88rem] leading-relaxed text-ink-soft">{d.note}</p>
+                  </div>
+                  <p className="font-serif text-[1.35rem] whitespace-nowrap text-blue">{d.amount}</p>
+                </div>
+              ))}
+            </div>
 
             <p className="eyebrow mt-16 text-ink-soft">Workspace upgrades</p>
             <p className="mt-3 text-[0.95rem] text-ink-soft">Communal coworking is part of every membership. For more privacy, add a desk or office of your own.</p>

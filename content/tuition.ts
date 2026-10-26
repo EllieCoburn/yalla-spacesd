@@ -105,6 +105,15 @@ export const fees = [
   { label: "Early Bird care", amount: `$${earlyBirdDaily} / day`, note: hours.earlyBird },
 ];
 
+/** Membership discounts, shown on the Membership rates page. */
+export const discounts = [
+  {
+    label: "Sibling discount",
+    amount: "10% off",
+    note: "When siblings hold Club Yalla memberships, both memberships receive 10% off monthly tuition. At least one sibling must be actively enrolled.",
+  },
+];
+
 export const workspace = [
   {
     name: "Private Desk",
