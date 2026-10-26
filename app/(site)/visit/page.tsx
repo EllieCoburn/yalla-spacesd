@@ -45,11 +45,6 @@ export default function VisitPage() {
               {site.neighborhood}, <em>{site.city}</em>
             </p>
             <p className="mt-3 text-ink-soft">{site.locationLine}</p>
-            <p className="mt-2 text-ink-soft">
-              <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="link-underline">
-                {site.address.value}
-              </a>
-            </p>
             <div className="relative mt-10 aspect-square overflow-hidden bg-mist">
               <iframe
                 title={`Map showing Yalla at ${site.address.value}`}
@@ -60,7 +55,8 @@ export default function VisitPage() {
                 allowFullScreen
               />
             </div>
-            <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-[0.85rem] text-ink-soft hover:text-blue">
+            <p className="mt-5 text-ink-soft">{site.address.value}</p>
+            <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[0.85rem] text-ink-soft hover:text-blue">
               <span className="link-underline">Open in Google Maps</span>
             </a>
           </div>
