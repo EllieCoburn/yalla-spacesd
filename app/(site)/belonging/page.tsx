@@ -44,9 +44,10 @@ const chapters: Chapter[] = [
     mark: "waves",
     title: "Childhood Without Stereotypes",
     paragraphs: [
-      "We believe children deserve the freedom to discover who they are without unnecessary limitations imposed by adults.",
-      "At Yalla, toys, materials, activities, and opportunities are not assigned according to gender. Children are encouraged to explore their interests, express themselves, and engage in play that feels meaningful to them.",
-      "Our approach is grounded in respect for each child’s developing identity, autonomy, and sense of self.",
+      "We believe children deserve the freedom to discover who they are without being confined by the assumptions, labels, or expectations of others.",
+      "At Yalla, we challenge the idea that a child’s interests, abilities, personality, or potential can be determined by their age, gender, cultural background, developmental differences, or perceived strengths and limitations. We resist labeling children as difficult, shy, gifted, behind, or otherwise defining them by a particular behavior, characteristic, or stage of development.",
+      "Instead, we create opportunities for children to explore freely, take meaningful risks, challenge expectations, and discover interests and capabilities that may surprise even the adults who know them best.",
+      "Our approach recognizes that childhood is a period of extraordinary growth and possibility, and that no child should be limited by someone else’s assumptions about who they are or who they might become.",
     ],
     photo: { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" },
   },
