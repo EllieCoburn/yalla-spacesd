@@ -9,7 +9,7 @@ if (!url) {
   console.log("[migrate] No database configured — skipping migrations.");
   process.exit(0);
 }
-const client = postgres(url, { max: 1, onnotice: () => {} });
+const client = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
 await migrate(drizzle(client), { migrationsFolder: "lib/db/migrations" });
 console.log("[migrate] Database is up to date.");
 await client.end();
