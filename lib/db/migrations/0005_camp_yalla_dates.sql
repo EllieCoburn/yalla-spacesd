@@ -1,5 +1,5 @@
--- Camp Yalla: confirmed camp days, 9:00am–4:00pm, in three age groups (18 months – 4 years,
--- 4 – 6 years, 7 – 10 years). $160 per child per day; Early Bird ($20) and late stay ($30)
+-- Camp Yalla: confirmed camp days, 9:00am–3:00pm, in three age groups (18 months – 4 years,
+-- 4 – 6 years, 7 – 10 years). $160 per child per day; Early Bird ($20) and late stay 3:00–4:30pm ($30)
 -- are optional per-child extras (lib/booking/addons.ts). Days are booked individually.
 -- Safe to run on any database: the program is created only if missing, and a day's group
 -- is added only if that program has no session for that date and age group yet.
@@ -28,7 +28,7 @@ WITH "p" AS (
 INSERT INTO "sessions" ("id", "program_id", "title", "local_date", "starts_at", "ends_at", "capacity", "hard_capacity", "location_id", "min_age_months", "max_age_months", "price_cents")
 SELECT gen_random_uuid()::text, "p"."id", "g"."title", "d"."day",
        ("d"."day" + TIME '09:00') AT TIME ZONE 'America/Los_Angeles',
-       ("d"."day" + TIME '16:00') AT TIME ZONE 'America/Los_Angeles',
+       ("d"."day" + TIME '15:00') AT TIME ZONE 'America/Los_Angeles',
        "g"."cap", "g"."cap", "p"."location_id", "g"."min_m", "g"."max_m", 16000
 FROM "p", "g", "d"
 WHERE NOT EXISTS (

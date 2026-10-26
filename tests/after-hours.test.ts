@@ -78,7 +78,7 @@ describe("Monthly schedules", () => {
 describe("Camp Yalla extras", () => {
   it("charges Early Bird and late stay per child and ignores extras the program doesn't offer", async () => {
     const p = await program({ kind: "camp", priceCents: 16000, minAgeMonths: 18, maxAgeMonths: 131 });
-    const day = await session(p.id, { minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 }, 12, "09:00", "16:00");
+    const day = await session(p.id, { minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 }, 12, "09:00", "15:00");
     const { family: f, children } = await family("Camp", [{ first: "Dee", birth: addDaysISO(todayLA(), -365 * 5) }]);
     const hold = await createHold(db(), owner, {
       familyId: f.id,

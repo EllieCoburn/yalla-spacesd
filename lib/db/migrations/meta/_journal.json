@@ -43,6 +43,13 @@
       "when": 1793051296606,
       "tag": "0005_camp_yalla_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793051569373,
+      "tag": "0006_camp_hours_9_to_3",
+      "breakpoints": true
     }
   ]
 }

@@ -129,7 +129,7 @@ const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).w
 if (!campExisting)
   for (const day of campDays)
     for (const g of afterHoursGroups)
-      await createSession(db, admin, { programId: camp.id, title: g.title.replace("Yalla After Hours", "Camp Yalla"), localDate: day, startTime: "09:00", endTime: "16:00", capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, locationId: loc.id });
+      await createSession(db, admin, { programId: camp.id, title: g.title.replace("Yalla After Hours", "Camp Yalla"), localDate: day, startTime: "09:00", endTime: "15:00", capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, locationId: loc.id });
 let thanksgiving = "2026-11-26";
 if (thanksgiving < today) thanksgiving = addDaysISO(today, 40);
 await addBlackout(db, admin, { startsOn: thanksgiving, endsOn: addDaysISO(thanksgiving, 1), reason: "Thanksgiving (sample closure)", confirmAffected: true });
