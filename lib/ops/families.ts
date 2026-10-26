@@ -181,6 +181,28 @@ export async function addFamilyNote(db: Executor, actor: Actor, input: { familyI
   await audit(db, actor, { action: "family.note", entityType: "family", entityId: input.familyId, summary: `Added a ${input.visibility === "care" ? "care" : "staff"} note` });
 }
 
+export async function updateFamily(db: Executor, actor: Actor, familyId: string, patch: { name?: string; marketingOptIn?: boolean; communicationPrefs?: { email: boolean; sms: boolean } }) {
+  const [f] = await db.select().from(families).where(eq(families.id, familyId));
+  if (!f) throw new OpsError("not_found", "Family not found.");
+  if (patch.name !== undefined && !clean(patch.name)) throw new OpsError("invalid", "The family needs a name.");
+  const set = { ...patch, ...(patch.name !== undefined ? { name: clean(patch.name) } : {}) };
+  await db
+    .update(families)
+    .set({ ...set, updatedAt: new Date() })
+    .where(eq(families.id, familyId));
+  await audit(db, actor, { action: "family.update", entityType: "family", entityId: familyId, summary: "Updated family details & preferences", changes: diff(f as Record<string, unknown>, set as Record<string, unknown>) });
+}
+
+export async function removeEmergencyContact(db: Executor, actor: Actor, familyId: string, contactId: string) {
+  const [c] = await db.delete(emergencyContacts).where(and(eq(emergencyContacts.id, contactId), eq(emergencyContacts.familyId, familyId))).returning();
+  if (c) await audit(db, actor, { action: "family.emergency_contact_remove", entityType: "family", entityId: familyId, summary: `Removed emergency contact ${c.name}` });
+}
+
+export async function restoreFamily(db: Executor, actor: Actor, familyId: string) {
+  await db.update(families).set({ status: "active", archivedAt: null }).where(eq(families.id, familyId));
+  await audit(db, actor, { action: "family.restore", entityType: "family", entityId: familyId, summary: "Restored archived family" });
+}
+
 export async function archiveFamily(db: Executor, actor: Actor, familyId: string) {
   await db.update(families).set({ status: "archived", archivedAt: new Date() }).where(eq(families.id, familyId));
   await audit(db, actor, { action: "family.archive", entityType: "family", entityId: familyId, summary: "Archived family (records retained)" });
