@@ -28,6 +28,11 @@ export function SiteFooter() {
                   </li>
                 ))}
                 <li>
+                  <Link href="/about/team" className="link-underline text-chalk/90 hover:text-chalk">
+                    Our team
+                  </Link>
+                </li>
+                <li>
                   <Link href="/faq" className="link-underline text-chalk/90 hover:text-chalk">
                     FAQ
                   </Link>

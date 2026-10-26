@@ -3,7 +3,10 @@ import Image from "next/image";
 import { Mark } from "@/components/brand/Mark";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { Draft, ToConfirm } from "@/components/ui/Draft";
-import { Index } from "@/components/ui/primitives";
+import Link from "next/link";
+import { TeamCard } from "@/components/site/TeamCard";
+import { Arrow, Button, Index } from "@/components/ui/primitives";
+import { leadership } from "@/content/team";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
@@ -80,18 +83,22 @@ export default function AboutPage() {
                 The hearts <em>behind the place.</em>
               </h2>
             </div>
-            <ToConfirm>Team names, roles, photos & bios</ToConfirm>
+            <Link href="/about/team" className="inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
+              <span className="link-underline">Meet the whole team</span>
+              <Arrow className="h-3 w-5" />
+            </Link>
           </div>
-          <div className="mt-14 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i}>
-                <div className="flex aspect-[3/4] items-end justify-center overflow-hidden rounded-t-[999px] bg-mist">
-                  <Mark name={(["arch", "palm", "window", "balcony"] as const)[i]} className="mb-10 h-24 w-auto text-blue/30" />
-                </div>
-                <p className="display mt-5 text-[1.35rem]">Team member</p>
-                <p className="eyebrow mt-1 text-[0.6rem] text-ink-soft">Role</p>
-              </div>
+          <div className="mt-14 grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-6 lg:grid-cols-5">
+            {leadership.map((m, i) => (
+              <Reveal key={m.name} delay={i * 70}>
+                <TeamCard member={m} index={i} />
+              </Reveal>
             ))}
+          </div>
+          <div className="mt-14">
+            <Button href="/about/team" variant="outline">
+              Our educarers & guides
+            </Button>
           </div>
         </div>
       </Section>
