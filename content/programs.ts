@@ -33,7 +33,7 @@ export const programs: ProgramContent[] = [
     summary:
       "Book individual weekdays, Monday through Friday, when there’s space: a day of childcare for your child in one of our thoughtfully designed play environments and a day of coworking for you, all under one roof. Ideal for flexible schedules, families visiting San Diego, or simply getting to know Yalla.",
     body: [
-      "A Flex day is childcare and coworking together. Your child joins a small cohort in our weekday learning environment, with the same attentive educarers and guides, while you settle into our coworking space a few steps away.",
+      "Yalla Flex is drop-in childcare and coworking for families who need care here and there rather than a regular membership. On the days you book, your child joins a small cohort in our weekday learning environment, with attentive educarers and guides, while you settle into our coworking space a few steps away.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
     ],
     image: "/photos/lemon-play.jpg",
