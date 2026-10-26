@@ -67,7 +67,7 @@ export default function SpacesPage() {
               <Image src="/photos/instruments.jpg" alt="An infant exploring a drum, bells and a tambourine on a woven rug" fill sizes="25vw" className="object-cover" />
             </div>
             <div className="relative mt-16 aspect-[3/4] overflow-hidden bg-sand">
-              <Image src="/photos/sunflowers.jpg" alt="Sunflowers on a table in a cohort space" fill sizes="25vw" className="object-cover" />
+              <Image src="/photos/basket.jpg" alt="A woven basket of wooden rings and spools on a low shelf" fill sizes="25vw" className="object-cover" />
             </div>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function SpacesPage() {
         <div className="shell grid items-center gap-14 lg:grid-cols-12">
           <div className="relative order-2 lg:order-1 lg:col-span-6">
             <div className="relative aspect-[5/4] overflow-hidden bg-sand">
-              <Image src="/photos/paint-wall.jpg" alt="An outdoor painting wall in the play garden, with paint pots on a wooden ledge" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
+              <Image src="/photos/garden-doorway.jpg" alt="Toddlers at an open door looking out to the sunny play garden" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
             </div>
             <Mark name="palm" className="absolute -right-4 -bottom-10 h-44 w-auto text-blue" />
           </div>

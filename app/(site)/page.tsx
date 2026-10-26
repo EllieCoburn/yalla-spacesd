@@ -42,9 +42,9 @@ export default function Home() {
 
           <Reveal delay={200} className="lg:col-span-6 xl:col-span-5 xl:col-start-8">
             <Facade
-              tower={{ src: "/photos/cowork-loft.jpg", alt: "The coworking room at Yalla, seen from the loft above" }}
-              door={{ src: "/photos/dinosaurs.jpg", alt: "A child playing with toy dinosaurs outdoors" }}
-              porthole={{ src: "/photos/sunflowers.jpg", alt: "Sunflowers on a table in a cohort space" }}
+              tower={{ src: "/photos/cowork-atrium.webp", alt: "The coworking atrium at Yalla, seen from the balcony above" }}
+              door={{ src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" }}
+              porthole={{ src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor" }}
             />
           </Reveal>
         </div>
@@ -168,7 +168,7 @@ export default function Home() {
         <div className="shell grid items-center gap-14 lg:grid-cols-12">
           <Reveal className="relative lg:col-span-6">
             <div className="relative aspect-[4/5] w-[78%] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/garden.jpg" alt="Yalla's shaded outdoor yard" fill sizes="(min-width:1024px) 36vw, 78vw" className="object-cover" />
+              <Image src="/photos/painting-wall-child.jpg" alt="A child painting at the outdoor painting wall" fill sizes="(min-width:1024px) 36vw, 78vw" className="object-cover" />
             </div>
             <div className="absolute right-0 bottom-[-6%] aspect-square w-[44%] overflow-hidden rounded-full bg-sand ring-8 ring-chalk">
               <Image src="/photos/cowork-atrium.webp" alt="The Yalla coworking atrium from above" fill sizes="20vw" className="object-cover" />

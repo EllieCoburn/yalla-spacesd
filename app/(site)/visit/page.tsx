@@ -27,6 +27,7 @@ export default function VisitPage() {
           </>
         }
         lede="Explore our indoor play spaces, wander through the play garden, and take a look around our coworking spaces. We’d love to hear about your family, answer your questions, and help you picture your days at Yalla."
+        image={{ src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" }}
       />
 
       <section className="pb-20 lg:pb-32">

@@ -165,7 +165,7 @@ export default function ExperiencePage() {
           </SectionTitle>
           <div className="relative lg:col-span-6 lg:col-start-7">
             <div className="relative aspect-[5/4] overflow-hidden bg-sand">
-              <Image src="/photos/sunflowers.jpg" alt="Sunflowers arranged on a shared table" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
+              <Image src="/photos/collage-wall.jpg" alt="A collaborative cardboard collage on the play garden fence" fill sizes="(min-width:1024px) 45vw, 90vw" className="object-cover" />
             </div>
             <Mark name="palm" className="absolute -top-14 -right-2 h-40 w-auto text-blue sm:-right-8" />
           </div>
