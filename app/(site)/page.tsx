@@ -13,7 +13,7 @@ export default function Home() {
     <>
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden pt-28 lg:pt-36">
-        <div className="shell grid items-center gap-12 pb-16 lg:grid-cols-12 lg:gap-8 lg:pb-24">
+        <div className="shell grid items-center gap-12 pb-8 lg:grid-cols-12 lg:gap-8 lg:pb-10">
           <div className="lg:col-span-6 xl:col-span-6">
             <Reveal>
               <Eyebrow>Coworking. Childcare. Community.</Eyebrow>
@@ -50,7 +50,7 @@ export default function Home() {
       </section>
 
       {/* ───────── Statement ───────── */}
-      <section className="py-24 lg:py-40">
+      <section className="pt-12 pb-24 lg:pt-16 lg:pb-36">
         <div className="shell">
           <Reveal className="mx-auto max-w-5xl text-center">
             <Mark name="dotsun" className="mx-auto mb-10 h-11 w-11 text-blue" />
