@@ -34,7 +34,7 @@ export default function SpacesPage() {
             A historic corner of Bankers Hill, <em>made for little lives.</em>
           </>
         }
-        lede="Classrooms made for play, a shaded yard for exploring, and a calm coworking room for you, all within a few steps of each other."
+        lede="Classrooms made for play, a shaded yard for exploring and a calm coworking room, home to weekday care, camps, weekend sessions, evenings out, gatherings and celebrations."
       />
 
       <section className="pb-6">
@@ -116,7 +116,7 @@ export default function SpacesPage() {
               </div>
             </div>
             <div className="lg:col-span-6 lg:col-start-7 lg:pt-24">
-              <p className="eyebrow mb-6 text-chalk/60">Working onsite</p>
+              <p className="eyebrow mb-6 text-chalk/60">Working onsite · Club Yalla members</p>
               <div className="[&_dd]:text-chalk [&_dl]:border-chalk/20 [&_dl>div]:border-chalk/20 [&_dt]:text-chalk/60">
                   <Facts
                     items={[
@@ -142,7 +142,7 @@ export default function SpacesPage() {
           </>
         }
         primary={{ href: "/visit", label: "Schedule a tour" }}
-        secondary={{ href: "/membership", label: "Membership & tuition" }}
+        secondary={{ href: "/programs", label: "Explore programs" }}
       />
     </>
   );

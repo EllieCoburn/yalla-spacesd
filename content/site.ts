@@ -9,6 +9,7 @@ export const site = {
   city: "San Diego",
   locationLine: "Historic Bankers Hill, near Balboa Park’s west entrance",
   ages: "4 months – 5 years",
+  /** Weekday classroom hours (Club Yalla and Yalla Flex). Other programs list their own times. */
   hours: "Weekdays, 8:30am – 4:30pm",
   extendedCare: "Early Bird care from 8:00am",
   yearRound: true,
@@ -21,9 +22,9 @@ export const site = {
 
 export const nav = [
   { href: "/experience", label: "The Yalla Experience", short: "Experience" },
-  { href: "/spaces", label: "Our Spaces", short: "Spaces" },
   { href: "/programs", label: "Programs", short: "Programs" },
-  { href: "/membership", label: "Membership & Tuition", short: "Membership" },
+  { href: "/spaces", label: "Our Spaces", short: "Spaces" },
+  { href: "/membership", label: "Tuition & Rates", short: "Rates" },
   { href: "/about", label: "About Yalla", short: "About" },
   { href: "/visit", label: "Visit Yalla", short: "Visit" },
 ] as const;

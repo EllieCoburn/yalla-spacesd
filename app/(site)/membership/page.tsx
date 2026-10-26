@@ -10,8 +10,8 @@ import { cohorts, fees, hours, tuitionYear, workspace } from "@/content/tuition"
 import { TuitionExplorer } from "@/components/site/TuitionExplorer";
 
 export const metadata: Metadata = {
-  title: "Membership & Tuition",
-  description: "Club Yalla tuition by cohort and schedule, what every membership includes, and how families get started.",
+  title: "Tuition & Rates",
+  description: "Club Yalla tuition and Yalla Flex day rates by cohort, fees, workspace options, and how to join Club Yalla.",
 };
 
 const steps = [
@@ -25,14 +25,14 @@ export default function MembershipPage() {
   return (
     <>
       <PageHero
-        eyebrow="Membership & Tuition"
+        eyebrow="Tuition & Rates"
         mark="balcony"
         title={
           <>
-            Belong here, <em>week after week.</em>
+            Clear rates, <em>openly shared.</em>
           </>
         }
-        lede="Club Yalla is our membership for daily and weekly families: a steady place for your child in their cohort, and for you in the coworking space."
+        lede="Club Yalla membership tuition and Yalla Flex day rates by cohort, plus fees and workspace options. Camps, weekends, After Hours and Happenings are priced per session in the booking calendar."
         image={{ src: "/photos/dinosaurs.jpg", alt: "A child absorbed in play outdoors" }}
       />
 
@@ -47,8 +47,8 @@ export default function MembershipPage() {
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-6 lg:col-start-7 lg:pt-14">
-              Children are cared for in one of our four cohorts, each with a low caregiver-to-child ratio and a small maximum size. Families
-              join our core community through a recurring membership, creating a familiar weekly rhythm with consistent days of care. <ToConfirm>Cohort age ranges</ToConfirm>
+              Our weekday classrooms are organized into four cohorts, each with a low caregiver-to-child ratio and a small maximum size. Club
+              Yalla members keep consistent days in their cohort each week; Yalla Flex families book individual days when there’s space. <ToConfirm>Cohort age ranges</ToConfirm>
             </p>
           </div>
 
@@ -100,7 +100,7 @@ export default function MembershipPage() {
       <Section>
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Index n="02">Every membership includes</Index>
+            <Index n="02">Club Yalla membership includes</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Everything, <em>considered.</em>
             </h2>
@@ -153,7 +153,7 @@ export default function MembershipPage() {
       <section className="roofline-edge bg-blue text-blue">
         <div className="py-20 text-chalk lg:py-32">
           <div className="shell">
-            <p className="eyebrow text-chalk/60">03 · Getting started</p>
+            <p className="eyebrow text-chalk/60">03 · Joining Club Yalla</p>
             <h2 className="display mt-6 max-w-2xl text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Four steps <em className="text-mist!">to your first day.</em>
             </h2>
@@ -174,12 +174,12 @@ export default function MembershipPage() {
       <CtaBand
         title={
           <>
-            Begin with <em>an application.</em>
+            Ready to <em>join us?</em>
           </>
         }
-        body="Spaces open rarely. Apply, and we’ll reach out when there’s a place for your family."
-        primary={{ href: "/apply", label: "Apply now" }}
-        secondary={{ href: "/faq", label: "Read the FAQ" }}
+        body="Book a Flex day, camp or weekend session online, or apply for Club Yalla and we’ll reach out when there’s a place for your family."
+        primary={{ href: "/book", label: "Book care" }}
+        secondary={{ href: "/apply", label: "Apply for Club Yalla" }}
       />
     </>
   );

@@ -22,7 +22,7 @@ export default function ProgramsPage() {
             However your week looks, <em>there’s a Yalla for it.</em>
           </>
         }
-        lede="Join Club Yalla, our community of daily and weekly members, or book care as you need it. Every offering shares the same warmth, intention and attention to detail."
+        lede="Drop-in days, camps, weekend care, evenings out, pop-ups, private celebrations and a weekly membership. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
       />
 
       <section className="pb-10">
@@ -31,7 +31,7 @@ export default function ProgramsPage() {
             {programs.map((p, i) => (
               <Reveal as="li" key={p.slug} className="hairline border-b">
                 <Link
-                  href={p.kind === "membership" ? "/membership" : `/programs/${p.slug}`}
+                  href={`/programs/${p.slug}`}
                   className="group grid items-center gap-6 py-10 md:grid-cols-12 md:gap-8 lg:py-14"
                 >
                   <span className="font-serif text-ink-soft italic md:col-span-1">0{i + 1}</span>
@@ -44,7 +44,7 @@ export default function ProgramsPage() {
                     <p className="mt-4 max-w-xl text-ink-soft">{p.summary}</p>
                   </div>
                   <span className="flex items-center gap-3 text-[0.85rem] whitespace-nowrap md:col-span-2 md:justify-end">
-                    {p.bookingMode === "enroll" ? "Explore membership" : p.bookingMode === "inquire" ? "Enquire" : "Book online"}
+                    {p.bookingMode === "enroll" ? "Apply" : p.bookingMode === "inquire" ? "Enquire" : "Book online"}
                     <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/20 transition-all duration-500 group-hover:border-ink group-hover:bg-ink group-hover:text-chalk">
                       <Arrow className="h-3 w-4" />
                     </span>

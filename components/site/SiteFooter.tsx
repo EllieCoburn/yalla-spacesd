@@ -61,9 +61,9 @@ export function SiteFooter() {
                 Near Balboa Park’s west entrance
               </p>
               <p className="mt-4 text-chalk/90">
-                {site.hours}
+                Weekday classrooms 8:30am – 4:30pm
                 <br />
-                {site.extendedCare}
+                Weekend, evening & camp times vary
               </p>
               <p className="mt-4">
                 <a href={`mailto:${site.email.value}`} className="link-underline">

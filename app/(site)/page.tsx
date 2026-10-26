@@ -31,8 +31,8 @@ export default function Home() {
               </p>
             </Reveal>
             <Reveal delay={360} className="mt-10 flex flex-wrap items-center gap-3">
-              <Button href="/membership" size="lg">
-                Discover Club Yalla
+              <Button href="/programs" size="lg">
+                Explore programs
               </Button>
               <Button href="/book" variant="outline" size="lg">
                 Book care
@@ -54,8 +54,8 @@ export default function Home() {
             {[
               ["For", `Children ${site.ages.replace(" – ", "–")} & their grown-ups`],
               ["Where", "Bankers Hill, in the heart of San Diego"],
-              ["Club Yalla", "Weekdays, year-round"],
-              ["Hours", "8:30am – 4:30pm · Early Bird from 8:00"],
+              ["Programs", "Weekdays, weekends, evenings & camps"],
+              ["Ways in", "Drop-in, events & membership"],
             ].map(([k, v]) => (
               <div key={k}>
                 <p className="eyebrow text-[0.6rem] text-ink-soft">{k}</p>
@@ -88,19 +88,12 @@ export default function Home() {
                 However you join, <em>you’re part of it.</em>
               </h2>
               <p className="mt-6 text-ink-soft">
-                Families join us for recurring childcare and coworking through Club Yalla, book care as they need it, or explore seasonal camps,
-                weekend care, and parents’ nights out. Pop-up gatherings and private events create even more ways to come together.
+                Families come to Yalla in different ways: booking care as they need it, joining a seasonal camp, a weekend session or a parents’
+                night out, gathering at pop-ups and private celebrations, or settling into a weekly rhythm with Club Yalla.
               </p>
             </div>
             <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
               {[
-                {
-                  mark: "balcony" as const,
-                  title: "Club Yalla",
-                  body: "Recurring childcare and coworking for our daily and weekly members, with a familiar rhythm and consistent days.",
-                  href: "/programs/club-yalla",
-                  link: "Membership",
-                },
                 {
                   mark: "window" as const,
                   title: "Care as you need it",
@@ -114,6 +107,13 @@ export default function Home() {
                   body: "Yalla Happenings bring pop-ups, workshops and gatherings. Yalla Celebrations host your private occasions.",
                   href: "/programs/yalla-happenings",
                   link: "Happenings",
+                },
+                {
+                  mark: "balcony" as const,
+                  title: "A weekly rhythm",
+                  body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
+                  href: "/programs/club-yalla",
+                  link: "Club Yalla",
                 },
               ].map((s, i) => (
                 <Reveal as="li" key={s.title} delay={i * 120} className="flex flex-col bg-chalk p-8 lg:p-10">

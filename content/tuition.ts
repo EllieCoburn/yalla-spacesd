@@ -2,7 +2,7 @@ import "server-only";
 
 /**
  * 2026–2027 Membership & Care Rates, from Yalla's rate sheet.
- * Shown in full on the Membership & Tuition page.
+ * Shown in full on the Tuition & Rates page.
  * Cohort tuition is listed per month; daily rates are Yalla Flex (drop-in) rates.
  */
 

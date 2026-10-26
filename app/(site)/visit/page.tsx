@@ -24,7 +24,7 @@ export default function VisitPage() {
             Come on in. <em>Stay a while.</em>
           </>
         }
-        lede="Walk the classrooms, sit in the coworking space and see how a Yalla day unfolds. Tell us a little about your family and we’ll find a time."
+        lede="Walk the classrooms and the yard, see the coworking space and get a feel for Yalla. Tell us a little about your family and we’ll find a time."
       />
 
       <section className="pb-20 lg:pb-32">
@@ -70,7 +70,7 @@ export default function VisitPage() {
             <Facts
               items={[
                 { label: "Neighborhood", value: "Bankers Hill, near Balboa Park’s west entrance" },
-                { label: "Hours", value: `${site.hours} · Early Bird care from 8:00am` },
+                { label: "Hours", value: `Weekday classrooms: ${site.hours}, Early Bird from 8:00am. Weekend, evening and camp times vary.` },
                 { label: "Parking", value: <ToConfirm /> },
                 { label: "Arriving", value: <>Entrance & check-in <ToConfirm /></> },
                 { label: "Tour length", value: <ToConfirm /> },

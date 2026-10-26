@@ -25,33 +25,6 @@ export interface ProgramContent {
 
 export const programs: ProgramContent[] = [
   {
-    slug: "club-yalla",
-    kind: "membership",
-    name: "Club Yalla",
-    short: "Fixed weekly care",
-    tagline: "Your weekly childcare rhythm",
-    summary:
-      "Club Yalla is our weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
-    body: [
-      "Club Yalla is the heart of what we do. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in classrooms and outdoor spaces made for them.",
-      "Parents and caregivers work onsite in our coworking space. You get uninterrupted time for your own work, and you’re close by all day. That closeness is the reason Yalla exists.",
-    ],
-    image: "/photos/dinosaurs.jpg",
-    imageAlt: "A young child arranging toy dinosaurs on a small wooden table outdoors",
-    ages: "4 months – 5 years",
-    schedule: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
-    pricing: "From $275 a month, depending on cohort and schedule. See Membership & Tuition for current rates.",
-    included: [
-      "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
-      "Credentialed early childhood educators",
-      "Communal coworking, high-speed internet, coffee, tea and light snacks",
-      "Coworking kitchen and unlimited color printing",
-    ],
-    parentOnsite: true,
-    bookingMode: "enroll",
-    cta: { label: "Apply for membership", href: "/apply" },
-  },
-  {
     slug: "yalla-flex",
     kind: "drop_in",
     name: "Yalla Flex",
@@ -60,14 +33,14 @@ export const programs: ProgramContent[] = [
     summary:
       "Reserve individual days in our classrooms when there’s space. Ideal for flexible schedules, visiting family, or getting to know Yalla.",
     body: [
-      "Flex days follow the same thoughtful rhythm as Club Yalla, so your child joins a classroom already in full swing.",
+      "Flex days take place in our weekday classrooms, so your child joins a small group already in full swing, with the same attentive educators.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
     ],
     image: "/photos/lemon-play.jpg",
     imageAlt: "A child's hand scooping lemon slices from a water table",
     ages: null,
     schedule: "Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
-    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care. See Membership & Tuition for current rates.",
+    pricing: "From $75 for a half day, depending on your child’s cohort. No registration fee for drop-in care. See Tuition & Rates for current rates.",
     included: null,
     parentOnsite: null,
     bookingMode: "instant",
@@ -104,7 +77,7 @@ export const programs: ProgramContent[] = [
     summary:
       "Weekend sessions for when you need a few hours for work, errands or simply yourself, while your child has a weekend of their own.",
     body: [
-      "Yalla Weekends bring the calm and creativity of a Yalla weekday to your weekend.",
+      "Yalla Weekends bring Yalla’s calm and creativity to your weekend.",
       "Book single sessions, or set up a repeat booking that comes back every week.",
     ],
     image: "/photos/garden.jpg",
@@ -138,6 +111,33 @@ export const programs: ProgramContent[] = [
     parentOnsite: null,
     bookingMode: "instant",
     cta: { label: "See upcoming Happenings", href: "/book?offering=happening" },
+  },
+  {
+    slug: "club-yalla",
+    kind: "membership",
+    name: "Club Yalla",
+    short: "Fixed weekly care",
+    tagline: "Your weekly childcare rhythm",
+    summary:
+      "Club Yalla is our weekday membership for parents who work remotely, offering dedicated coworking spaces with high-quality childcare onsite. Settle into your work alongside other parents while your child spends their days playing, creating, and exploring in a small cohort with familiar, attentive caregivers. With consistent days each week, you both have the opportunity to build friendships and feel at home—all under one roof.",
+    body: [
+      "Club Yalla is our recurring weekday membership. Children spend their days playing, exploring, creating and building relationships with the educators who know them well, in classrooms and outdoor spaces made for them.",
+      "Parents and caregivers work onsite in our coworking space. You get uninterrupted time for your own work, and you’re close by all day. That closeness is what Club Yalla is built around.",
+    ],
+    image: "/photos/dinosaurs.jpg",
+    imageAlt: "A young child arranging toy dinosaurs on a small wooden table outdoors",
+    ages: "4 months – 5 years",
+    schedule: "Weekdays, year-round. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, one to five days a week. Early Bird care from 8:00am.",
+    pricing: "From $275 a month, depending on cohort and schedule. See Tuition & Rates for current rates.",
+    included: [
+      "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
+      "Credentialed early childhood educators",
+      "Communal coworking, high-speed internet, coffee, tea and light snacks",
+      "Coworking kitchen and unlimited color printing",
+    ],
+    parentOnsite: true,
+    bookingMode: "enroll",
+    cta: { label: "Apply for membership", href: "/apply" },
   },
   {
     slug: "yalla-after-hours",

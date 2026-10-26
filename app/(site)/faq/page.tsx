@@ -5,7 +5,7 @@ import { ToConfirm } from "@/components/ui/Draft";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Answers about parent presence, ages, meals, naps, booking, cancellations and first visits at Yalla.",
+  description: "Answers about programs, ages, hours, booking, cancellations and first visits at Yalla.",
 };
 
 type QA = { q: string; a: ReactNode };
@@ -18,11 +18,15 @@ const groups: { title: string; items: QA[] }[] = [
         q: "Do I need to stay onsite while my child is in care?",
         a: (
           <>
-            Club Yalla, our membership for daily and weekly families, is designed around parents and caregivers working onsite in our coworking space, close to
-            their children all day. Some offerings, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
+            It depends on the program. Club Yalla, our weekday membership, is designed around parents and caregivers working onsite in our
+            coworking space. Others, like Yalla After Hours, are drop-off by design. Each program page notes how it works.{" "}
             <ToConfirm>Policy details</ToConfirm>
           </>
         ),
+      },
+      {
+        q: "Do I need a membership to come to Yalla?",
+        a: "No. Yalla Flex, Camp Yalla, Yalla Weekends, Yalla After Hours and Yalla Happenings are booked online, one session at a time, and Yalla Celebrations begin with an enquiry. Club Yalla is our recurring weekday membership and begins with an application.",
       },
       {
         q: "What ages do you care for?",
@@ -30,11 +34,11 @@ const groups: { title: string; items: QA[] }[] = [
       },
       {
         q: "What are your caregiver-to-child ratios?",
-        a: "Our cohorts are deliberately small. Seedlings and Saplings have a maximum ratio of 1:4 and at most 8 children; Sprouts 1:6 with at most 12; and Wildflowers 1:8 with at most 12.",
+        a: "Our weekday classrooms are deliberately small. Seedlings and Saplings have a maximum ratio of 1:4 and at most 8 children; Sprouts 1:6 with at most 12; and Wildflowers 1:8 with at most 12.",
       },
       {
         q: "What are your hours?",
-        a: "Club Yalla runs year-round on weekdays. Full days are 8:30am to 4:30pm and half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Weekend sessions and other offerings have their own times, listed in the booking calendar.",
+        a: "Hours vary by program. Our weekday classrooms (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps, weekend sessions, After Hours evenings and Happenings have their own times, listed in the booking calendar.",
       },
     ],
   },
@@ -50,7 +54,7 @@ const groups: { title: string; items: QA[] }[] = [
     title: "Booking & changes",
     items: [
       {
-        q: "How do I book Yalla Flex, Camp Yalla, Weekends or After Hours?",
+        q: "How do I book Yalla Flex, Camp Yalla, Weekends, After Hours or Happenings?",
         a: "Head to Book Care, filter by offering, your child’s age and date, then choose your sessions and reserve. Your bookings live in the Family Portal, where you can view or change them.",
       },
       {
@@ -69,7 +73,7 @@ const groups: { title: string; items: QA[] }[] = [
     items: [
       {
         q: "What happens on a first visit?",
-        a: "For Club Yalla, families begin with an application. Spaces open rarely, so when one fits your family we’ll reach out and invite you to tour the classrooms, the yard and the coworking space, and to ask us anything.",
+        a: "You’re welcome to request a tour from our Visit page. For Club Yalla, families begin with an application; spaces open rarely, so when one fits your family we’ll reach out and invite you to tour and ask us anything.",
       },
       {
         q: "What paperwork is needed before my child’s first day?",

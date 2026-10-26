@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
+import { ClubYallaDay } from "@/components/site/ClubYallaDay";
 import { CtaBand, Facts } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
@@ -53,7 +54,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 </Button>
                 {p.kind === "membership" ? (
                   <Button href="/membership" variant="outline" size="lg">
-                    Membership details
+                    Tuition & rates
                   </Button>
                 ) : (
                   <Button href="/visit" variant="outline" size="lg">
@@ -136,6 +137,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </section>
+
+      {p.kind === "membership" ? <ClubYallaDay /> : null}
 
       {p.kind === "private_event" ? (
         <section id="enquire" className="scroll-mt-24 py-20 lg:py-28">
