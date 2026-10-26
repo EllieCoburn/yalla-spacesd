@@ -253,7 +253,7 @@ export function Checkout({
                   <li key={s.id} className="py-5">
                     <div className="flex items-baseline justify-between gap-4">
                       <p className="display text-[1.25rem]">{s.title}</p>
-                      <span className="font-serif text-[0.95rem]">{usd(s.priceCents)}</span>
+                      <span className="font-serif text-[0.95rem]">{s.kind === FAMILY_RATE.kind ? `${usd(s.priceCents)} per child · family rate applies` : usd(s.priceCents)}</span>
                     </div>
                     <p className="text-[0.82rem] text-ink-soft">
                       {fmtDate(s.localDate, "EEEE d MMMM")} · {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
@@ -289,7 +289,11 @@ export function Checkout({
                 <span className="text-ink-soft">Total</span>
                 <span className="display text-[1.6rem]">{usd(total)}</span>
               </div>
-              {familySaving > 0 ? <p className="mt-1 text-right text-[0.8rem] text-blue">Includes the After Hours family rate (you save {usd(familySaving)})</p> : null}
+              {familySaving > 0 ? (
+                <p className="mt-1 text-right text-[0.8rem] text-blue">
+                  After Hours family rate: {usd(FAMILY_RATE.familyCents)} for up to {FAMILY_RATE.childrenIncluded} children, +{usd(FAMILY_RATE.extraChildCents)} each additional child
+                </p>
+              ) : null}
               <p className="mt-2 text-[0.78rem] text-ink-soft">Spots are held for you while you pay. Payment is confirmed securely by our payment provider.</p>
 
               <div className="mt-10">

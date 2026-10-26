@@ -8,6 +8,7 @@ import type { PublicSession } from "@/lib/ops/public-booking";
 import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { Checkout, type SavedChild, type SignedInGuardian } from "./Checkout";
 import { WaitlistForm } from "./WaitlistForm";
+import { FAMILY_RATE, familyRateKey } from "@/lib/booking/family-rate";
 import { stateLabel, usd } from "./format";
 
 export const offerings: { kind: string; label: string }[] = [
@@ -288,6 +289,7 @@ function SessionRow({ s, eligible, selected, onToggle, onWaitlist, seriesCount }
           <span className="mt-1 block text-[0.82rem] text-ink-soft">
             {usd(s.priceCents)}
             {s.priceCents != null ? (s.bookingUnit === "per_family" ? " per family" : s.bookingUnit === "per_child" ? " per child" : "") : ""}
+            {s.kind === FAMILY_RATE.kind ? ` · ${usd(FAMILY_RATE.familyCents)} for siblings` : ""}
             {s.bookAsSeries ? ` · books as a full series (${seriesCount} days)` : ""}
             {s.approvalRequired ? " · confirmed after approval" : ""}
           </span>
@@ -326,6 +328,22 @@ function SessionRow({ s, eligible, selected, onToggle, onWaitlist, seriesCount }
   );
 }
 
+/** Basket rows: After Hours age groups on the same evening are shown together under the family rate. */
+function basketRows(sorted: PublicSession[]) {
+  const rows: ({ type: "single"; session: PublicSession } | { type: "evening"; key: string; sessions: PublicSession[] })[] = [];
+  for (const s of sorted) {
+    if (s.kind !== FAMILY_RATE.kind) {
+      rows.push({ type: "single", session: s });
+      continue;
+    }
+    const key = familyRateKey(s.programId, s.localDate);
+    const existing = rows.find((r) => r.type === "evening" && r.key === key);
+    if (existing && existing.type === "evening") existing.sessions.push(s);
+    else rows.push({ type: "evening", key, sessions: [s] });
+  }
+  return rows;
+}
+
 function Basket({ sessions, onRemove, onContinue, compact, guardian }: { sessions: PublicSession[]; onRemove: (s: PublicSession) => void; onContinue: () => void; compact?: boolean; guardian: SignedInGuardian | null }) {
   const sorted = [...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return (
@@ -340,19 +358,46 @@ function Basket({ sessions, onRemove, onContinue, compact, guardian }: { session
         <p className="mt-3 text-[0.92rem] text-ink-soft">Choose sessions from the calendar. They’ll gather here.</p>
       ) : (
         <ul className="mt-4 divide-y divide-line">
-          {sorted.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-              <span>
-                <span className="block text-[0.92rem]">{s.title}</span>
-                <span className="text-[0.78rem] text-ink-soft">
-                  {fmtDate(s.localDate, "EEE d MMM")} · {fmtTime(s.startsAt)} · {usd(s.priceCents)}
+          {basketRows(sorted).map((row) =>
+            row.type === "single" ? (
+              <li key={row.session.id} className="flex items-center justify-between gap-3 py-3">
+                <span>
+                  <span className="block text-[0.92rem]">{row.session.title}</span>
+                  <span className="text-[0.78rem] text-ink-soft">
+                    {fmtDate(row.session.localDate, "EEE d MMM")} · {fmtTime(row.session.startsAt)} · {usd(row.session.priceCents)}
+                  </span>
                 </span>
-              </span>
-              <button onClick={() => onRemove(s)} className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
-                Remove
-              </button>
-            </li>
-          ))}
+                <button onClick={() => onRemove(row.session)} className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                  Remove
+                </button>
+              </li>
+            ) : (
+              <li key={row.key} className="py-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[0.92rem]">{row.sessions[0].programName}</span>
+                  <span className="font-serif text-[0.95rem] whitespace-nowrap">
+                    {row.sessions.length > 1 ? `${usd(FAMILY_RATE.familyCents)} family rate` : `${usd(row.sessions[0].priceCents)} per child`}
+                  </span>
+                </div>
+                <span className="text-[0.78rem] text-ink-soft">
+                  {fmtDate(row.sessions[0].localDate, "EEE d MMM")} · {fmtTime(row.sessions[0].startsAt)} – {fmtTime(row.sessions[0].endsAt)}
+                </span>
+                <ul className="mt-2 space-y-1">
+                  {row.sessions.map((g) => (
+                    <li key={g.id} className="flex items-center justify-between gap-3 text-[0.82rem]">
+                      <span className="text-ink-soft">{g.title.replace(`${g.programName} · `, "")}</span>
+                      <button onClick={() => onRemove(g)} className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[0.75rem] text-ink-soft">
+                  {usd(FAMILY_RATE.familyCents)} covers up to {FAMILY_RATE.childrenIncluded} children; each additional child is {usd(FAMILY_RATE.extraChildCents)}. You’ll add your children next.
+                </p>
+              </li>
+            ),
+          )}
         </ul>
       )}
       {!compact ? (
