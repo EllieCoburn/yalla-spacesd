@@ -31,7 +31,7 @@ export default function ClubYallaPage() {
         <div className="shell grid items-end gap-12 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <Reveal>
-              <Eyebrow>Weekday membership</Eyebrow>
+              <Eyebrow>Year-round weekday membership</Eyebrow>
             </Reveal>
             <Reveal delay={100}>
               <h1 className="display mt-6 text-[clamp(3rem,1.6rem+5vw,6.2rem)]">{p.name}</h1>
