@@ -9,7 +9,7 @@ import { CtaBand, FactsAccordion } from "@/components/site/PageParts";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { getProgram, otherPrograms } from "@/content/programs";
+import { clubYalla, getProgram, otherPrograms, programHref } from "@/content/programs";
 
 export function generateStaticParams() {
   return otherPrograms.map((p) => ({ slug: p.slug }));
@@ -25,7 +25,8 @@ const pending = <span className="text-ink-soft">Details coming soon <ToConfirm /
 export default async function ProgramPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = getProgram((await params).slug);
   if (!p || p.kind === "membership") notFound();
-  const others = otherPrograms.filter((o) => o.slug !== p.slug);
+  // Every other way into Yalla, Club Yalla included, so the set reads as a whole.
+  const others = [...otherPrograms.filter((o) => o.slug !== p.slug), clubYalla];
 
   return (
     <>
@@ -181,18 +182,38 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
 
       <section className="py-20 lg:py-28">
         <div className="shell">
-          <Eyebrow>Also at Yalla</Eyebrow>
-          <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">
-            {others.map((o) => (
-              <Link key={o.slug} href={`/programs/${o.slug}`} className="group">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-                  <Image src={o.image} alt={o.imageAlt} fill sizes="(min-width:1024px) 22vw, 45vw" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.05]" />
-                </div>
-                <h3 className="display mt-5 text-[1.4rem] group-hover:text-blue">{o.name}</h3>
-                <p className="mt-1 text-[0.88rem] text-ink-soft">{o.tagline}</p>
-              </Link>
-            ))}
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <Eyebrow>Also at Yalla</Eyebrow>
+              <h2 className="display mt-4 text-[clamp(1.9rem,1.4rem+1.6vw,2.6rem)]">
+                More ways <em>to Yalla.</em>
+              </h2>
+            </div>
+            <Link href="/programs" className="inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
+              <span className="link-underline">All programs</span>
+              <Arrow className="h-3 w-5" />
+            </Link>
           </div>
+          <ul className="mt-10 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+            {others.map((o) => (
+              <li key={o.slug} className="bg-chalk">
+                <Link href={programHref(o)} className="group flex h-full items-center gap-5 p-5 transition-colors duration-500 hover:bg-paper">
+                  <div className="relative aspect-square w-24 shrink-0 overflow-hidden bg-sand sm:w-28">
+                    <Image src={o.image} alt={o.imageAlt} fill sizes="112px" className="object-cover transition-transform duration-[1.6s] ease-[var(--ease-soft)] group-hover:scale-[1.06]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="eyebrow flex items-center gap-2 text-[0.58rem] text-ink-soft">
+                      {o.motif ? <Mark name={o.motif} className="h-3.5 w-auto text-blue" /> : null}
+                      {o.short}
+                    </p>
+                    <h3 className="display mt-1.5 text-[1.35rem] transition-colors group-hover:text-blue">{o.name}</h3>
+                    <p className="mt-1 text-[0.85rem] leading-snug text-ink-soft">{o.tagline}</p>
+                  </div>
+                  <Arrow className="h-3 w-5 shrink-0 text-ink-soft transition-transform duration-500 group-hover:translate-x-1 group-hover:text-blue" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
