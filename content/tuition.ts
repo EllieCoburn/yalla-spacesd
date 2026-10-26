@@ -86,6 +86,17 @@ export const cohorts: Cohort[] = [
   },
 ];
 
+/**
+ * Yalla Flex (drop-in) age ranges by cohort. These apply to Flex only:
+ * Club Yalla cohort ages differ and must not reuse these.
+ */
+export const flexAges: Record<Cohort["id"], string> = {
+  seedlings: "3 – 12 months",
+  saplings: "12 – 24 months",
+  sprouts: "2 – 3 years",
+  wildflowers: "3 – 5 years",
+};
+
 export const fees = [
   { label: "One-time registration", amount: "$125", note: null },
   { label: "Annual materials", amount: "$175", note: "All members" },

@@ -38,7 +38,7 @@ export const programs: ProgramContent[] = [
     ],
     image: "/photos/lemon-play.jpg",
     imageAlt: "A child's hand scooping lemon slices from a water table",
-    ages: null,
+    ages: "3 months – 5 years. See each cohort’s ages with the day rates below.",
     schedule: "Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
     pricing: "$150–$180 a full day or $75–$90 a half day, depending on your child’s cohort. No registration fee for drop-in care. See day rates below.",
     included: null,

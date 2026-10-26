@@ -1,7 +1,7 @@
 import { cohortMarks } from "@/components/brand/CohortMarks";
 import { Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { cohorts, hours, tuitionYear, usd } from "@/content/tuition";
+import { cohorts, flexAges, hours, tuitionYear, usd } from "@/content/tuition";
 
 /** Yalla Flex day rates by cohort, from the rate sheet. Shown on the Yalla Flex program page. */
 export function FlexRates() {
@@ -39,7 +39,9 @@ export function FlexRates() {
                         </span>
                         <span>
                           <span className="display block text-[1.35rem]">{c.name}</span>
-                          <span className="text-[0.8rem] text-ink-soft">Ratio {c.ratio}</span>
+                          <span className="text-[0.8rem] text-ink-soft">
+                            {flexAges[c.id]} · Ratio {c.ratio}
+                          </span>
                         </span>
                       </span>
                     </td>
