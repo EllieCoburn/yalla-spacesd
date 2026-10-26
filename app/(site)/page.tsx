@@ -16,7 +16,7 @@ export default function Home() {
         <div className="shell grid items-center gap-12 pb-16 lg:grid-cols-12 lg:gap-8 lg:pb-24">
           <div className="lg:col-span-6 xl:col-span-6">
             <Reveal>
-              <Eyebrow>Childcare · Coworking · Community — San Diego</Eyebrow>
+              <Eyebrow>Coworking. Childcare. Community.</Eyebrow>
             </Reveal>
             <Reveal delay={120}>
               <h1 className="display mt-7 text-[clamp(3.1rem,1.6rem+5.4vw,6.6rem)]">
