@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     "Different by nature. Together by choice. How belonging shapes the way Yalla understands one another, builds relationships and creates community.",
 };
 
-type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string; photo?: { src: string; alt: string } };
+type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string };
 
 const chapters: Chapter[] = [
   {
@@ -25,7 +25,6 @@ const chapters: Chapter[] = [
       "Our language, materials, and daily practices are designed to reflect the diversity of real families, rather than assuming that every family looks or functions the same way.",
     ],
     closing: "However your family came to be, you deserve to feel at home here.",
-    photo: { src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" },
   },
   {
     mark: "sprig",
@@ -50,7 +49,6 @@ const chapters: Chapter[] = [
       "For grown-ups, it means recognizing that parenthood, caregiving, and professional identity are not one-dimensional. People bring whole lives, individual ambitions, different experiences, and evolving identities into our community.",
       "We believe our differences deserve room to exist without explanation, justification, or judgment.",
     ],
-    photo: { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" },
   },
   {
     mark: "moon",
@@ -74,7 +72,6 @@ const chapters: Chapter[] = [
       "We understand that creating an equitable community is an ongoing responsibility, not a destination or a statement of perfection.",
       "This means listening when concerns arise, reflecting on our practices, and remaining open to change.",
     ],
-    photo: { src: "/photos/basket.jpg", alt: "A woven basket of wooden rings and spools on a low shelf" },
   },
 ];
 
@@ -92,66 +89,124 @@ export default function BelongingPage() {
         lede="At Yalla, belonging isn’t a separate initiative. It’s foundational to how we understand one another, build relationships, and create community."
       />
 
-      <section className="bg-paper py-20 lg:py-28">
-        <div className="shell grid gap-10 lg:grid-cols-12">
-          <div className="space-y-6 text-[1.1rem] leading-[1.8] text-ink-soft lg:col-span-6">
-            <p>
-              We believe that every person brings a unique identity, family story, cultural background, set of abilities, and way of
-              experiencing the world. These differences aren’t obstacles to overcome. They are an essential part of what makes a community
-              rich, meaningful, and human.
-            </p>
+      {/* The core: an experiment in community */}
+      <section className="bg-paper py-20 lg:py-32">
+        <div className="shell">
+          <div className="grid gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <Mark name="sprig" className="h-12 w-auto text-blue" />
+              <h2 className="display mt-6 text-[clamp(2.3rem,1.6rem+2.4vw,3.8rem)]">
+                An experiment <em>in community.</em>
+              </h2>
+            </div>
+            <div className="space-y-6 text-[1.1rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-3">
+              <p className="lede text-ink">
+                In many ways, Yalla is a grand experiment in what becomes possible when we create space for children and adults to genuinely
+                share in community life.
+              </p>
+              <p>
+                We are exploring a simple but ambitious idea: that the places where we work, care for our children, build relationships, and
+                experience everyday life need not exist entirely apart from one another. That a more connected way of living is possible when
+                we intentionally create the conditions for it.
+              </p>
+              <p>
+                But meaningful community doesn’t happen simply because people occupy the same space. It asks something of all of us. It
+                requires us to navigate differences, reconsider assumptions, extend grace, and recognize that our individual experiences are
+                part of something larger.
+              </p>
+              <p>
+                Through the process of building Yalla, we’ve come to understand that there are certain foundational principles that cannot be
+                incidental to this experiment. They must be woven into the way we design our spaces, approach relationships, make decisions,
+                and care for one another.
+              </p>
+            </div>
           </div>
-          <Reveal className="lg:col-span-5 lg:col-start-8 lg:pt-1">
-            <p className="display text-[clamp(1.5rem,1.2rem+1vw,2rem)] leading-[1.3]! text-ink">
-              Our commitment is to cultivate a shared environment where children and their grown-ups are not simply welcomed, but genuinely{" "}
-              <em>seen, respected, and valued.</em>
+
+          <div className="mt-16 grid grid-cols-6 gap-3 sm:gap-5 lg:mt-24">
+            {[
+              { src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/collage-wall.jpg", alt: "A collaborative cardboard collage on the play garden fence", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
+              { src: "/photos/painting-wall-child.jpg", alt: "A child painting at the outdoor painting wall", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
+            ].map((img, i) => (
+              <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 50vw" className="object-cover" />
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal className="mx-auto mt-20 max-w-4xl text-center lg:mt-28">
+            <Mark name="dotsun" className="mx-auto h-10 w-10 text-blue" />
+            <p className="display mt-8 text-[clamp(1.7rem,1.2rem+1.8vw,2.7rem)] leading-[1.25]!">
+              Inclusion, dignity, mutual respect, curiosity, and a shared commitment to belonging are not simply values we aspire to.{" "}
+              <em>They are the conditions that make a community like Yalla possible.</em>
             </p>
           </Reveal>
         </div>
       </section>
 
-      <section className="pt-20 lg:pt-28">
-        <div className="shell grid grid-cols-6 gap-3 sm:gap-5">
-          {[
-            { src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
-            { src: "/photos/collage-wall.jpg", alt: "A collaborative cardboard collage on the play garden fence", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
-            { src: "/photos/painting-wall-child.jpg", alt: "A child painting at the outdoor painting wall", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
-          ].map((img, i) => (
-            <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
-              <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 50vw" className="object-cover" />
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
+      {/* Our commitments */}
       <section className="py-20 lg:py-32">
-        <div className="shell space-y-20 lg:space-y-28">
-          {chapters.map((c, i) => (
-            <Reveal key={c.title} className="grid gap-8 border-t border-line pt-12 lg:grid-cols-12 lg:gap-10">
-              <div className="lg:col-span-4">
-                <div className="flex items-center gap-5">
-                  <span className="font-serif text-[1.05rem] text-blue italic">{String(i + 1).padStart(2, "0")}</span>
-                  <Mark name={c.mark} className="h-11 w-auto text-blue" />
-                </div>
-                <h2 className="display mt-6 text-[clamp(2rem,1.5rem+1.6vw,2.9rem)]">{c.title}</h2>
-                {c.photo ? (
-                  <div className="relative mt-10 aspect-[4/5] w-[78%] max-w-sm overflow-hidden rounded-t-[999px] bg-sand">
-                    <Image src={c.photo.src} alt={c.photo.alt} fill sizes="(min-width:1024px) 26vw, 78vw" className="object-cover" />
+        <div className="shell">
+          <div className="grid gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <p className="eyebrow text-ink-soft">Our commitments</p>
+              <h2 className="display mt-5 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                What belonging <em>asks of us.</em>
+              </h2>
+            </div>
+            <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-3">
+              <p>
+                The commitments that follow reflect our understanding of what it takes to build a place where people of different ages,
+                abilities, backgrounds, identities, and experiences can genuinely belong. They are both the foundation we stand on and
+                principles we will continue to examine, strengthen, and put into practice as our community grows.
+              </p>
+              <p>
+                We believe that every person brings a unique identity, family story, cultural background, set of abilities, and way of
+                experiencing the world. These differences aren’t obstacles to overcome. They are an essential part of what makes a community
+                rich, meaningful, and human.
+              </p>
+              <p className="font-serif text-[1.2rem] leading-[1.55] text-ink italic">
+                Our commitment is to cultivate a shared environment where children and their grown-ups are not simply welcomed, but genuinely
+                seen, respected, and valued.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-14 border-t border-line lg:mt-20">
+            {chapters.map((c, i) => (
+              <details key={c.title} className="group border-b border-line">
+                <summary className="grid cursor-pointer list-none grid-cols-[auto_1fr_auto] items-start gap-x-5 gap-y-2 py-8 sm:gap-x-8 lg:grid-cols-12 lg:gap-x-10 lg:py-10 [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-4 pt-1 lg:col-span-2">
+                    <span className="font-serif text-[1.05rem] text-blue italic">{String(i + 1).padStart(2, "0")}</span>
+                    <Mark name={c.mark} className="hidden h-9 w-auto text-blue sm:block" />
+                  </span>
+                  <span className="lg:col-span-9">
+                    <span className="display block text-[clamp(1.6rem,1.3rem+1vw,2.2rem)] transition-colors group-hover:text-blue">{c.title}</span>
+                    <span className="mt-2 block max-w-2xl text-[1rem] text-ink-soft">{c.paragraphs[0]}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/20 transition-colors duration-500 group-open:border-ink group-open:bg-ink group-open:text-chalk lg:col-span-1 lg:justify-self-end"
+                  >
+                    <span className="relative block h-3.5 w-3.5">
+                      <span className="absolute top-1/2 left-0 h-px w-3.5 bg-current" />
+                      <span className="absolute top-0 left-1/2 h-3.5 w-px bg-current transition-transform duration-500 group-open:rotate-90 group-open:opacity-0" />
+                    </span>
+                  </span>
+                </summary>
+                <div className="grid pb-12 lg:grid-cols-12 lg:gap-x-10">
+                  <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-8 lg:col-start-3">
+                    {c.paragraphs.slice(1).map((p, j) => (
+                      <p key={j}>{p}</p>
+                    ))}
+                    {c.closing ? (
+                      <p className="border-l-2 border-blue/40 pl-6 font-serif text-[1.2rem] leading-[1.55] text-ink italic">{c.closing}</p>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-              <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-2">
-                {c.paragraphs.map((p, j) => (
-                  <p key={j} className={j === 0 ? "text-[1.15rem] text-ink" : undefined}>
-                    {p}
-                  </p>
-                ))}
-                {c.closing ? (
-                  <p className="border-l-2 border-blue/40 pl-6 font-serif text-[1.25rem] leading-[1.55] text-ink italic">{c.closing}</p>
-                ) : null}
-              </div>
-            </Reveal>
-          ))}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -159,8 +214,7 @@ export default function BelongingPage() {
         <div className="py-20 text-chalk lg:py-32">
           <div className="shell grid gap-12 lg:grid-cols-12">
             <div className="lg:col-span-5">
-              <p className="font-serif text-[1.05rem] text-mist italic">06</p>
-              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+              <h2 className="display text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 Belonging Is Something <em className="text-mist!">We Build Together</em>
               </h2>
             </div>
