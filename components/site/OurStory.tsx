@@ -64,11 +64,21 @@ export function OurStory() {
 
           <Chapter marker="Spring 2025">
             <p>
-              In the spring of 2025, Natalie and Allyson turned their attention toward their growing marketing agency. As they considered Yalla’s next
-              chapter, they found Ellie Coburn, an early childhood educator, postpartum doula, and mother whose background in biocultural anthropology brought
-              another dimension to the project. Ellie partnered with the sisters through the transition and became Yalla’s owner and executive director.
+              In the spring of 2025, Natalie and Allyson began shifting their professional focus toward their growing advertising agency. As they considered
+              Yalla’s next chapter, they found Ellie Coburn, an early childhood educator, postpartum doula, and mother whose background in biocultural
+              anthropology brought another dimension to the project.
             </p>
-            <p>Her approach begins with a question that is both practical and deeply human:</p>
+            <p>
+              What followed was an extended conversation about what Yalla had become, what it could grow into, and what should remain at its heart. Through
+              extensive conversations and close collaboration, the three developed a shared vision for its future. Committed to carrying that vision forward
+              and stewarding Yalla’s core mission, Ellie became its sole owner and executive director.
+            </p>
+            <p>
+              The sisters, meanwhile, did not go far. They continued scaling their agency from Yalla, with their youngest children still attending nearby. The
+              place they had imagined for working families remained part of their own daily lives—a place to build a business and raise young children, with
+              room for both.
+            </p>
+            <p>For Ellie, that possibility raises a question that is both practical and deeply human:</p>
             <blockquote className="relative border-l-2 border-blue/40 py-2 pl-6 sm:pl-8">
               <Mark name="sun" className="absolute -top-1 -left-[0.7rem] h-5 w-5 bg-paper text-blue" />
               <p className="display text-[clamp(1.7rem,1.2rem+1.6vw,2.5rem)] leading-[1.22]! text-ink italic">
