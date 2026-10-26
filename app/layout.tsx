@@ -7,7 +7,7 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display
 
 export const metadata: Metadata = {
   title: {
-    default: "Yalla — Early childhood, reimagined · San Diego",
+    default: "Yalla",
     template: "%s · Yalla",
   },
   description:

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { AvailabilityGlance } from "@/components/booking/AvailabilityGlance";
@@ -7,6 +8,8 @@ import { WindowField } from "@/components/brand/WindowField";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
+
+export const metadata: Metadata = { title: "Home" };
 
 export default function Home() {
   return (
