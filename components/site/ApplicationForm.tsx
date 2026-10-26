@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { Field } from "./TourForm";
@@ -13,7 +12,7 @@ export function ApplicationForm() {
   const [days, setDays] = useState<number | null>(null);
   const [length, setLength] = useState<"full" | "half" | "custom" | null>(null);
   const [when, setWhen] = useState<"next" | "soonest" | null>(null);
-  const [onsite, setOnsite] = useState<"me" | "partner" | "both" | "neither" | null>(null);
+  const [onsite, setOnsite] = useState<"me" | "partner" | "both" | null>(null);
   const [weekdays, setWeekdays] = useState<string[]>([]);
   const [flex, setFlex] = useState<"set" | "some" | "any" | null>(null);
   const toggleDay = (d: string) => setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]));
@@ -75,7 +74,6 @@ export function ApplicationForm() {
               ["me", "Me"],
               ["partner", "My partner or co-parent"],
               ["both", "Both of us"],
-              ["neither", "Neither of us"],
             ] as const
           ).map(([v, label]) => (
             <label key={v} className={`${pill(onsite === v)} cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue`}>
@@ -84,16 +82,6 @@ export function ApplicationForm() {
             </label>
           ))}
         </div>
-        {onsite === "neither" ? (
-          <p role="status" className="mt-4 bg-mist/60 p-4 text-[0.9rem] text-ink">
-            Club Yalla may not be the right fit, since a parent or guardian working onsite is part of every membership. You may find a
-            better fit among our{" "}
-            <Link href="/programs" className="underline underline-offset-4">
-              other programs
-            </Link>
-            .
-          </p>
-        ) : null}
       </fieldset>
 
       <fieldset>
@@ -159,8 +147,7 @@ export function ApplicationForm() {
       <div className="flex justify-center pt-2">
         <button
           type="submit"
-          disabled={onsite === "neither"}
-          className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink sm:w-auto sm:px-12"
+          className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-12"
         >
           Join Club Yalla
         </button>
