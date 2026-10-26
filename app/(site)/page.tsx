@@ -171,7 +171,7 @@ export default function Home() {
               <Image src="/photos/garden.jpg" alt="Yalla's shaded outdoor yard" fill sizes="(min-width:1024px) 36vw, 78vw" className="object-cover" />
             </div>
             <div className="absolute right-0 bottom-[-6%] aspect-square w-[44%] overflow-hidden rounded-full bg-sand ring-8 ring-chalk">
-              <Image src="/photos/cowork-loft.jpg" alt="Desks in the Yalla coworking room" fill sizes="20vw" className="object-cover" />
+              <Image src="/photos/cowork-atrium.webp" alt="The Yalla coworking atrium from above" fill sizes="20vw" className="object-cover" />
             </div>
           </Reveal>
           <div className="lg:col-span-5 lg:col-start-8">

@@ -112,7 +112,7 @@ export default function SpacesPage() {
                 children.
               </p>
               <div className="relative mt-12 aspect-[4/5] w-[85%] overflow-hidden rounded-t-[999px] bg-chalk/10">
-                <Image src="/photos/cowork-loft.jpg" alt="The coworking room seen from above" fill sizes="(min-width:1024px) 35vw, 85vw" className="object-cover" />
+                <Image src="/photos/cowork-entry.webp" alt="Blue-grey French doors opening onto the coworking space" fill sizes="(min-width:1024px) 35vw, 85vw" className="object-cover" />
               </div>
             </div>
             <div className="lg:col-span-6 lg:col-start-7 lg:pt-24">
@@ -131,6 +131,17 @@ export default function SpacesPage() {
                   />
               </div>
             </div>
+          </div>
+          <div className="shell mt-16 grid grid-cols-6 gap-3 sm:gap-5 lg:mt-24">
+            {[
+              { src: "/photos/cowork-atrium.webp", alt: "The coworking atrium seen from the balcony, with long shared desks and hanging textile art", className: "col-span-6 aspect-[4/3] lg:col-span-4" },
+              { src: "/photos/cowork-desk.webp", alt: "A quiet desk for two by the balcony", className: "col-span-3 aspect-[3/4] rounded-t-[999px] lg:col-span-2 lg:aspect-auto" },
+              { src: "/photos/cowork-kitchen.webp", alt: "The bright coworking kitchen with a long counter by the windows", className: "col-span-3 aspect-[3/4] lg:col-span-6 lg:aspect-[21/9]" },
+            ].map((img, k) => (
+              <Reveal key={img.src} delay={k * 90} className={`relative overflow-hidden bg-chalk/10 ${img.className}`}>
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 66vw, 100vw" className="object-cover" />
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>

@@ -69,6 +69,14 @@ export default function ClubYallaPage() {
                 <p key={para}>{para}</p>
               ))}
             </div>
+            <div className="mt-12 grid grid-cols-2 gap-4">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
+                <Image src="/photos/cowork-atrium.webp" alt="The coworking atrium, with long shared desks" fill sizes="(min-width:1024px) 20vw, 45vw" className="object-cover" />
+              </div>
+              <div className="relative mt-12 aspect-[3/4] overflow-hidden bg-sand">
+                <Image src="/photos/cowork-desk.webp" alt="A quiet desk in the coworking space" fill sizes="(min-width:1024px) 20vw, 45vw" className="object-cover" />
+              </div>
+            </div>
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
             <Eyebrow className="mb-6">The details</Eyebrow>
