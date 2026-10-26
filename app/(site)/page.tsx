@@ -68,7 +68,7 @@ export default function Home() {
             <div className="lg:col-span-4">
               <Index n="01">Ways to belong</Index>
               <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-                However you join, <em>you’re part of it.</em>
+                There’s more than one <em>way to Yalla.</em>
               </h2>
               <p className="mt-6 text-ink-soft">
                 Families come to Yalla in different ways: booking care as they need it, joining a seasonal camp, a weekend session or a parents’
