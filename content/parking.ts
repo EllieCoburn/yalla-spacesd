@@ -11,7 +11,7 @@ export const parkingIntro =
 
 export const parkingOptions = [
   { id: "park-and-walk", title: "Park and walk", price: "Free with tuition" },
-  { id: "metered", title: "Paid metered parking", price: "$10 half day · $20 full day" },
+  { id: "metered", title: "Paid metered parking", price: "$5 for 2 hours" },
   { id: "monthly", title: "Discounted monthly lots", price: "$90 a month" },
   { id: "apps", title: "App-based parking", price: "Cost varies" },
   { id: "driveway", title: "Yalla driveway policy", price: "Reserved" },
@@ -28,8 +28,8 @@ export const balboaPassesHref = "https://www.sandiego.gov/parking/balboapark";
 export const parkSmarterHref = "https://www.sandiego.gov/blog/pay-using-your-phone-any-meter-displaying-blue-park-smarter-sticker-download-park-smarter-app";
 
 export const monthlyLots = [
-  { name: "Olive Avenue", walk: "2 minute walk", address: "525 Olive Ave, San Diego, CA 92103", billed: "Via Brightwheel on the last day of each month" },
-  { name: "Park West Lot", walk: "5 minute walk", address: "2550 Fifth Ave, San Diego, CA 92103", billed: "Last day of each month" },
+  { name: "Olive Avenue", walk: "2 minute walk", address: "525 Olive Ave, San Diego, CA 92103", billed: "Through the Family Portal on the last day of each month" },
+  { name: "Park West Lot", walk: "5 minute walk", address: "2550 Fifth Ave, San Diego, CA 92103", billed: "Through the Family Portal on the last day of each month" },
 ];
 
 export const parkingApps = ["Parkopedia", "SpotHero", "ParkMobile"];

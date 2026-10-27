@@ -119,7 +119,7 @@ export default async function ParkingGuide() {
             <Note>Ideal for families who enjoy a walk through the park to start and end their day, and families looking for a cost-effective parking option.</Note>
           </Option>
 
-          <Option id="metered" n={2} title="Paid metered parking" price="$10 half day · $20 full day">
+          <Option id="metered" n={2} title="Paid metered parking" price="$5 for 2 hours">
             <Rows
               rows={[
                 { label: "Where", value: "Nutmeg St and all surrounding blocks" },
