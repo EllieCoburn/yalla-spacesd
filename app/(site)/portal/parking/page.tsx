@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { isDbConfigured } from "@/lib/db";
 import { balboaLots, balboaPassesHref, monthlyLots, parkingAddress, parkingApps, parkingIntro, parkingOptions, parkSmarterHref } from "@/content/parking";
+import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Parking guide", robots: { index: false } };
@@ -43,8 +44,8 @@ function Note({ children }: { children: ReactNode }) {
 }
 
 export default async function ParkingGuide() {
-  // Families only: the guide is part of the Family Portal.
-  if (!isDbConfigured() || !(await getGuardian())) redirect("/portal?next=/portal/parking");
+  // Families only: the guide is part of the Family Portal (open to all while the portal preview is on).
+  if (!PORTAL_OPEN_PREVIEW && (!isDbConfigured() || !(await getGuardian()))) redirect("/portal?next=/portal/parking");
 
   return (
     <div className="pt-28 pb-24 lg:pt-36">

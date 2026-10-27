@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
 import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
 import { SignInForm } from "@/components/portal/PortalForms";
@@ -13,10 +14,12 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string }> }) {
+export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string; signin?: string }> }) {
   const sp = await searchParams;
   const configured = isDbConfigured();
   if (configured && (await getGuardian())) redirect(sp.next && /^\/(book|portal\/)/.test(sp.next) ? sp.next : "/portal/home");
+  // While the open preview is on, skip sign-in unless someone asks for it (?signin=1 or an expired link).
+  if (PORTAL_OPEN_PREVIEW && !sp.signin && !sp.expired) redirect(sp.next && /^\/portal\//.test(sp.next) ? sp.next : "/portal/home");
 
   return (
     <section className="grid min-h-[100svh] lg:grid-cols-2">

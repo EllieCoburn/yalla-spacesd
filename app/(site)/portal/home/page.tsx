@@ -6,6 +6,7 @@ import { PortalDashboard } from "@/components/portal/PortalDashboard";
 import { CancelForm, CareForm, SignForm } from "@/components/portal/PortalForms";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
+import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/portal-preview";
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
 import { getGuardian } from "../session";
@@ -18,12 +19,17 @@ const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const STATE_LABEL: Record<string, string> = { complete: "Complete", missing: "Needed", unsigned: "Needs signature", expired: "Expired — please renew", needs_resign: "Updated — please sign again" };
 
 export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  // Without a database this deployment can only show the illustrative preview.
-  if (!isDbConfigured()) return <PortalDashboard />;
-  const g = await getGuardian();
-  if (!g) redirect("/portal");
+  const g = isDbConfigured() ? await getGuardian() : null;
+  if (!g && !PORTAL_OPEN_PREVIEW) {
+    // Without a database this deployment can only show the illustrative preview.
+    if (!isDbConfigured()) return <PortalDashboard />;
+    redirect("/portal");
+  }
+  // Open preview: no one is signed in, so show a made-up sample family instead of real records.
+  const preview = !g;
+  const who = g ?? previewGuardian;
   const { tab = "overview" } = await searchParams;
-  const data = await familyPortalData(getDb(), g);
+  const data = g ? await familyPortalData(getDb(), g) : samplePortalData();
   const outstanding = data.forms.filter((f) => f.state !== "complete");
   const today = todayLA();
   const tabs = [
@@ -71,20 +77,32 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
       <div className="shell">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <p className="eyebrow text-ink-soft">Family Portal · {data.children.length ? g.familyName : ""}</p>
+            <p className="eyebrow text-ink-soft">Family Portal · {data.children.length ? who.familyName : ""}</p>
             <h1 className="display mt-5 text-[clamp(2.4rem,1.8rem+2.4vw,4rem)]">
-              Good to see you, <em>{g.firstName}.</em>
+              Good to see you, <em>{who.firstName}.</em>
             </h1>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/book" className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
               Book care
             </Link>
-            <form action={signOutAction}>
-              <button className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">Sign out</button>
-            </form>
+            {preview ? (
+              <Link href="/portal?signin=1" className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                Sign in
+              </Link>
+            ) : (
+              <form action={signOutAction}>
+                <button className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">Sign out</button>
+              </form>
+            )}
           </div>
         </div>
+
+        {preview ? (
+          <p className="mt-8 max-w-2xl border-l-2 border-oxblood/40 pl-4 text-[0.82rem] text-oxblood">
+            Preview with a made-up sample family, open to anyone while the portal is being built. Buttons here don’t change anything. Families who sign in see only their own details.
+          </p>
+        ) : null}
 
         <nav aria-label="Portal sections" className="no-scrollbar -mx-[clamp(1.25rem,4vw,3.5rem)] mt-10 flex gap-8 overflow-x-auto border-b border-line px-[clamp(1.25rem,4vw,3.5rem)] md:mx-0 md:px-0">
           {tabs.map((t) => (
