@@ -4,7 +4,8 @@ import { CtaBand, PageHero } from "@/components/site/PageParts";
 import { TeamCard } from "@/components/site/TeamCard";
 import { Arrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { team } from "@/content/team";
+import { notFound } from "next/navigation";
+import { team, TEAM_PUBLIC } from "@/content/team";
 
 export const metadata: Metadata = {
   title: "Our Team",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default function TeamPage() {
+  if (!TEAM_PUBLIC) notFound();
   const leadership = team[0];
   const cohorts = team.slice(1);
   return (

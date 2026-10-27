@@ -2,6 +2,9 @@
  * Team Yalla. Add a photo path (in /public/team/) and a short bio to any person and it will
  * appear automatically on the Team page.
  */
+/** The team section on About, the Team page and its footer link stay hidden until this is true. */
+export const TEAM_PUBLIC = false;
+
 export type TeamMember = {
   name: string;
   role: string;

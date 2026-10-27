@@ -3,6 +3,7 @@ import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
 import { ToConfirm } from "@/components/ui/Draft";
 import { nav, site } from "@/content/site";
+import { TEAM_PUBLIC } from "@/content/team";
 
 export function SiteFooter() {
   return (
@@ -27,11 +28,13 @@ export function SiteFooter() {
                     </Link>
                   </li>
                 ))}
-                <li>
-                  <Link href="/about/team" className="link-underline text-chalk/90 hover:text-chalk">
-                    Our team
-                  </Link>
-                </li>
+                {TEAM_PUBLIC ? (
+                  <li>
+                    <Link href="/about/team" className="link-underline text-chalk/90 hover:text-chalk">
+                      Our team
+                    </Link>
+                  </li>
+                ) : null}
                 <li>
                   <Link href="/faq" className="link-underline text-chalk/90 hover:text-chalk">
                     FAQ

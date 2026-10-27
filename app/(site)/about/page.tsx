@@ -7,7 +7,7 @@ import { Draft, ToConfirm } from "@/components/ui/Draft";
 import Link from "next/link";
 import { TeamCard } from "@/components/site/TeamCard";
 import { Arrow, Button, Index } from "@/components/ui/primitives";
-import { leadership } from "@/content/team";
+import { leadership, TEAM_PUBLIC } from "@/content/team";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
@@ -53,34 +53,37 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      <Section tone="paper">
-        <div className="shell">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <Index n="03">The people</Index>
-              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                The hearts <em>behind the place.</em>
-              </h2>
+      {/* Hidden until the team section is ready (TEAM_PUBLIC in content/team.ts). */}
+      {TEAM_PUBLIC ? (
+        <Section tone="paper">
+          <div className="shell">
+            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+              <div>
+                <Index n="03">The people</Index>
+                <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
+                  The hearts <em>behind the place.</em>
+                </h2>
+              </div>
+              <Link href="/about/team" className="inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
+                <span className="link-underline">Meet the whole team</span>
+                <Arrow className="h-3 w-5" />
+              </Link>
             </div>
-            <Link href="/about/team" className="inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
-              <span className="link-underline">Meet the whole team</span>
-              <Arrow className="h-3 w-5" />
-            </Link>
+            <div className="mt-14 grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-6 lg:grid-cols-5">
+              {leadership.map((m, i) => (
+                <Reveal key={m.name} delay={i * 70}>
+                  <TeamCard member={m} index={i} />
+                </Reveal>
+              ))}
+            </div>
+            <div className="mt-14">
+              <Button href="/about/team" variant="outline">
+                Our educarers & guides
+              </Button>
+            </div>
           </div>
-          <div className="mt-14 grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-6 lg:grid-cols-5">
-            {leadership.map((m, i) => (
-              <Reveal key={m.name} delay={i * 70}>
-                <TeamCard member={m} index={i} />
-              </Reveal>
-            ))}
-          </div>
-          <div className="mt-14">
-            <Button href="/about/team" variant="outline">
-              Our educarers & guides
-            </Button>
-          </div>
-        </div>
-      </Section>
+        </Section>
+      ) : null}
 
       <CtaBand
         title={
