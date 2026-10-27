@@ -32,7 +32,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
   const banner =
     mode === "test" ? (
       <Notice tone="info" title="Test mode — nothing is sent">
-        Every message is recorded here with the status “Captured”, but no email leaves Yalla. To deliver for real, set NOTIFICATIONS_MODE=live, RESEND_API_KEY and NOTIFICATIONS_FROM (a verified sender address) on the deployment.
+        Every message is recorded here with the status “Captured”, but no email leaves Yalla. To deliver for real, set NOTIFICATIONS_MODE=live, POSTMARK_SERVER_TOKEN and NOTIFICATIONS_FROM (a sender address verified in Postmark) on the deployment.
       </Notice>
     ) : (
       <Notice tone="warning" title="Live mode">

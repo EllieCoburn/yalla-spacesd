@@ -9,7 +9,7 @@ Public site (/book, /portal) ─┐
                               ├─ lib/ops/*  (capacity, bookings, billing, forms, schedule, …) ── Postgres
 Admin portal (/admin) ────────┘          │
                                          ├─ lib/payments  (test sandbox · Stripe) ← signed webhooks
-                                         └─ lib/notify    (outbox · test capture · Resend)
+                                         └─ lib/notify    (outbox · test capture · Postmark)
 ```
 
 ## 1. Environment variables
@@ -22,7 +22,7 @@ Admin portal (/admin) ────────┘          │
 | `PUBLIC_BASE_URL` | Recommended | e.g. `https://yallaspacesd.com`. Used in emails and payment links. |
 | `CRON_SECRET` | For jobs | Protects `/api/cron/housekeeping` (expires holds/offers, applies membership changes, reminders). |
 | `NOTIFICATIONS_MODE` | Optional | `test` (default — nothing is sent, messages are captured in Admin → Messages) or `live`. |
-| `RESEND_API_KEY`, `NOTIFICATIONS_FROM` | For live email | Email delivery via Resend. Both required, plus `NOTIFICATIONS_MODE=live`. |
+| `POSTMARK_SERVER_TOKEN`, `NOTIFICATIONS_FROM` | For live email | Email delivery via Postmark (the server's API token and a verified sender). Both required, plus `NOTIFICATIONS_MODE=live`. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | For Stripe | Without these the built-in **test payment sandbox** is used. Start with Stripe *test* keys (`sk_test_…`). |
 | `PAYMENTS_LIVE_ENABLED` | For real charges | Must be `true` before a live key (`sk_live_…`) is used. Prevents accidental real charges. |
 | `DATABASE_POOL_SIZE` | Optional | Connections per server instance (default 5). |
@@ -133,7 +133,7 @@ Also needed:
 
 - **Waiver and policy language.** The seeded forms contain placeholder text. Yalla must supply reviewed language. The built-in typed e-signature records signer, relationship, timestamp, IP, user agent and the exact version signed. It is a documented workflow, not a guarantee of legal compliance. A dedicated signature provider (e.g. Dropbox Sign or DocuSign) can be connected later.
 - **Cohort age ranges, programme ages, schedules and prices** for programmes other than Club Yalla and Yalla Flex.
-- **Stripe account** (for real payments) and a **Resend account + verified sending domain** (for real email).
+- **Stripe account** (for real payments) and a **Postmark account + verified sending domain** (for real email).
 - Street address, parking and arrival instructions.
 
 ## 8. Tests

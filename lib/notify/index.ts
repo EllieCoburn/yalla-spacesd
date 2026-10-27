@@ -121,7 +121,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
 };
 
 export function notificationsMode(): "test" | "live" {
-  return process.env.NOTIFICATIONS_MODE === "live" && process.env.RESEND_API_KEY && process.env.NOTIFICATIONS_FROM ? "live" : "test";
+  return process.env.NOTIFICATIONS_MODE === "live" && process.env.POSTMARK_SERVER_TOKEN && process.env.NOTIFICATIONS_FROM ? "live" : "test";
 }
 
 export function render(text: string, vars: Record<string, string | number | null | undefined>) {
@@ -137,15 +137,16 @@ export async function templateFor(db: Executor, key: TemplateKey) {
   return { key, name: def.name, subject: row?.subject ?? def.subject, body: row?.body ?? def.body, essential: def.essential, audience: def.audience, customized: !!row };
 }
 
-async function deliver(to: string, subject: string, body: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
+/** Sends one email through Postmark's transactional ("outbound") message stream. */
+export async function deliver(to: string, subject: string, body: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.NOTIFICATIONS_FROM, to, subject, text: body }),
+      headers: { "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN ?? "", Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ From: process.env.NOTIFICATIONS_FROM, To: to, Subject: subject, TextBody: body, MessageStream: "outbound" }),
     });
-    const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-    return res.ok ? { ok: true, ref: json.id } : { ok: false, error: json.message ?? `HTTP ${res.status}` };
+    const json = (await res.json().catch(() => ({}))) as { MessageID?: string; ErrorCode?: number; Message?: string };
+    return res.ok && !json.ErrorCode ? { ok: true, ref: json.MessageID } : { ok: false, error: json.Message ?? `HTTP ${res.status}` };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }

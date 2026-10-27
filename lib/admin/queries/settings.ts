@@ -37,7 +37,7 @@ export function systemStatus() {
       { key: "STRIPE_SECRET_KEY", label: "Stripe secret key", ok: set("STRIPE_SECRET_KEY"), required: false },
       { key: "STRIPE_WEBHOOK_SECRET", label: "Stripe webhook signing secret", ok: set("STRIPE_WEBHOOK_SECRET"), required: false },
       { key: "PAYMENTS_LIVE_ENABLED", label: "Live payments switch", ok: process.env.PAYMENTS_LIVE_ENABLED === "true", required: false },
-      { key: "RESEND_API_KEY", label: "Email delivery (Resend) API key", ok: set("RESEND_API_KEY"), required: false },
+      { key: "POSTMARK_SERVER_TOKEN", label: "Email delivery (Postmark) server token", ok: set("POSTMARK_SERVER_TOKEN"), required: false },
       { key: "NOTIFICATIONS_FROM", label: "Email sender address", ok: set("NOTIFICATIONS_FROM"), required: false },
       { key: "NOTIFICATIONS_MODE", label: "Email mode set to live", ok: process.env.NOTIFICATIONS_MODE === "live", required: false },
       { key: "CRON_SECRET", label: "Scheduled jobs secret", ok: set("CRON_SECRET"), required: false },
