@@ -87,11 +87,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             <Link href="/book" className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
               Book care
             </Link>
-            {preview ? (
-              <Link href="/portal?signin=1" className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
-                Sign in
-              </Link>
-            ) : (
+            {preview ? null : (
               <form action={signOutAction}>
                 <button className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">Sign out</button>
               </form>

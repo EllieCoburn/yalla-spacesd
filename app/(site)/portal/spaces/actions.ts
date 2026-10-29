@@ -7,7 +7,9 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { spaceReservationGroups } from "@/lib/db/schema";
 import { dayView, myDay, type DayView } from "@/lib/spaces/availability";
 import { cancelSpaceGroup, createReservation, moveSpaceGroup, quoteSpace, startSpaceCheckout, type Quote, type ReserveInput } from "@/lib/spaces/engine";
-import { getGuardian, requestContext } from "../session";
+import { getPortalGuardian, requestContext } from "../session";
+
+const getGuardian = async () => (await getPortalGuardian()).guardian;
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string; code?: string };
 

@@ -21,7 +21,7 @@ export function SpacesHeader({ current, preview }: { current: "book" | "reservat
       </nav>
       {preview ? (
         <p className="mt-6 max-w-2xl border-l-2 border-oxblood/40 pl-4 text-[0.82rem] text-oxblood">
-          Preview: availability is real, but you’re not signed in, so reservations can’t be made from here. Families who sign in book under their own account.
+          Preview while the portal is being built: no sign-in needed. You’re browsing as a made-up sample family, and reservations made here are test reservations under that family.
         </p>
       ) : null}
     </div>

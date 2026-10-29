@@ -1,7 +1,7 @@
 import { getDb, isDbConfigured } from "@/lib/db";
 import { myReservation } from "@/lib/spaces/availability";
 import { CATEGORY_LABEL } from "@/lib/spaces/config";
-import { getGuardian } from "../../../session";
+import { getPortalGuardian } from "../../../session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ const esc = (s: string) => s.replace(/[\;,]/g, (c) => `\\${c}`).replace(/\n/g, "
 /** A calendar file for one of the signed-in family's own reservations (times in UTC, so every calendar shows local time correctly). */
 export async function GET(_req: Request, { params }: { params: Promise<{ ref: string }> }) {
   if (!isDbConfigured()) return new Response("Not found", { status: 404 });
-  const g = await getGuardian();
+  const { guardian: g } = await getPortalGuardian();
   if (!g) return new Response("Sign in to the Family Portal first.", { status: 401 });
   const { ref } = await params;
   const r = await myReservation(getDb(), g.familyId, ref);

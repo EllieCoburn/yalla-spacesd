@@ -7,7 +7,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { myReservation } from "@/lib/spaces/availability";
 import { BOOKING_TYPE_LABEL, CATEGORY_LABEL } from "@/lib/spaces/config";
 import { describeWhen } from "@/lib/spaces/engine";
-import { getGuardian } from "../../../session";
+import { getPortalGuardian } from "../../../session";
 
 export const metadata: Metadata = { title: "Your reservation", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function SpaceConfirmation({ params, searchParams }: { para
   const { ref } = await params;
   const { cancelled } = await searchParams;
   if (!isDbConfigured()) notFound();
-  const g = await getGuardian();
+  const { guardian: g } = await getPortalGuardian();
   if (!g) redirect(`/portal?signin=1&next=/portal/spaces/confirmation/${encodeURIComponent(ref)}`);
   const r = await myReservation(getDb(), g.familyId, ref);
   if (!r) notFound();

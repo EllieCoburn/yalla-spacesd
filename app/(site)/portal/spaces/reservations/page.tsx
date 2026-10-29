@@ -9,7 +9,7 @@ import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
 import { myReservations, type MyReservation } from "@/lib/spaces/availability";
 import { BOOKING_TYPE_LABEL, CATEGORY_LABEL } from "@/lib/spaces/config";
 import { fmtDate, fmtTime } from "@/lib/time";
-import { getGuardian } from "../../session";
+import { getPortalGuardian } from "../../session";
 
 export const metadata: Metadata = { title: "My Reservations", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ function duration(r: MyReservation) {
 
 export default async function MyReservationsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   if (!isDbConfigured()) redirect("/portal");
-  const g = await getGuardian();
+  const { guardian: g, preview } = await getPortalGuardian();
   if (!g && !PORTAL_OPEN_PREVIEW) redirect("/portal?signin=1&next=/portal/spaces/reservations");
   const { tab: raw } = await searchParams;
   const tab = TABS.find((t) => t.key === raw)?.key ?? "upcoming";
@@ -47,7 +47,7 @@ export default async function MyReservationsPage({ searchParams }: { searchParam
 
   return (
     <div className="pt-28 pb-28 lg:pt-36">
-      <SpacesHeader current="reservations" preview={!g} />
+      <SpacesHeader current="reservations" preview={preview} />
       <section className="shell mt-12">
         <h1 className="display text-[clamp(2.4rem,1.8rem+2vw,3.6rem)]">
           My <em>reservations.</em>

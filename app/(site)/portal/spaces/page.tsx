@@ -6,7 +6,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
 import { dayView, myDay, myReservation, type DayView } from "@/lib/spaces/availability";
 import { addDaysISO, todayLA } from "@/lib/time";
-import { getGuardian } from "../session";
+import { getPortalGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Book a Space", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ async function firstOpenDay(db: ReturnType<typeof getDb>, from: string): Promise
 
 export default async function BookASpacePage({ searchParams }: { searchParams: Promise<{ date?: string; move?: string }> }) {
   if (!isDbConfigured()) redirect("/portal");
-  const g = await getGuardian();
+  const { guardian: g, preview } = await getPortalGuardian();
   if (!g && !PORTAL_OPEN_PREVIEW) redirect("/portal?signin=1&next=/portal/spaces");
   const sp = await searchParams;
   const db = getDb();
@@ -39,7 +39,7 @@ export default async function BookASpacePage({ searchParams }: { searchParams: P
 
   return (
     <div className="pt-28 lg:pt-36">
-      <SpacesHeader current="book" preview={!g} />
+      <SpacesHeader current="book" preview={preview} />
       <section className="shell mt-12 mb-14 grid gap-8 lg:grid-cols-12 lg:items-end">
         <div className="lg:col-span-8">
           <p className="eyebrow text-ink-soft">Family Portal · Book a Space</p>
