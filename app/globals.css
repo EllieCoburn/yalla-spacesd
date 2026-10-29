@@ -154,3 +154,35 @@ body,
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* Book a Space: closed time and sheet motion */
+.hatch {
+  background-image: repeating-linear-gradient(135deg, rgb(41 44 69 / 0.05) 0 1px, transparent 1px 7px);
+}
+.hatch-dark {
+  background-color: rgb(41 44 69 / 0.06);
+  background-image: repeating-linear-gradient(135deg, rgb(41 44 69 / 0.12) 0 1px, transparent 1px 6px);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}

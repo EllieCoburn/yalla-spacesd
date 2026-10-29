@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth/crypto";
 import { getDb } from "@/lib/db";
-import { bookings, invoices, payments } from "@/lib/db/schema";
+import { bookings, invoices, payments, spaceReservationGroups } from "@/lib/db/schema";
 import { paymentsStatus, signTestPayload } from "@/lib/payments/provider";
 import { testPaymentsAllowed } from "@/lib/payments/test-mode";
 import { requestContext } from "../../../portal/session";
@@ -34,5 +34,12 @@ export async function simulatePayment(form: FormData) {
   await send();
   // Development aid: deliver the identical event again to show duplicates are ignored.
   if (outcome === "duplicate" && process.env.NODE_ENV !== "production") await send();
-  redirect(b ? `/book/confirmation/${b.reference}` : `/pay/complete?invoice=${encodeURIComponent(inv.number)}`);
+  const [space] = inv.spaceGroupId ? await db.select().from(spaceReservationGroups).where(eq(spaceReservationGroups.id, inv.spaceGroupId)) : [];
+  redirect(
+    b
+      ? `/book/confirmation/${b.reference}`
+      : space
+        ? `/portal/spaces/confirmation/${space.reference}${outcome === "decline" ? "?cancelled=1" : ""}`
+        : `/pay/complete?invoice=${encodeURIComponent(inv.number)}`,
+  );
 }

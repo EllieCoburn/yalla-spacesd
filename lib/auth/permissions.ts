@@ -37,6 +37,14 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: "Workspaces",
+    items: [
+      { key: "spaces.view", label: "View workspace reservations, including who booked" },
+      { key: "spaces.manage", label: "Create, change and cancel workspace reservations and closures" },
+      { key: "spaces.configure", label: "Edit workspaces, rates and reservation policies" },
+    ],
+  },
+  {
     group: "Rosters & attendance",
     items: [
       { key: "roster.view", label: "View daily rosters" },
@@ -103,6 +111,8 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
       "waitlist.manage",
       "memberships.view",
       "memberships.manage",
+      "spaces.view",
+      "spaces.manage",
       "families.view",
       "families.manage",
       "children.care",

@@ -4,7 +4,7 @@
  * Every message is written to the `messages` table (the communication history). Delivery:
  * - NOTIFICATIONS_MODE=test (default): nothing leaves the app. Messages are "captured" and
  *   visible in Admin → Communications.
- * - NOTIFICATIONS_MODE=live with RESEND_API_KEY + NOTIFICATIONS_FROM: emails are delivered.
+ * - NOTIFICATIONS_MODE=live with POSTMARK_SERVER_TOKEN + NOTIFICATIONS_FROM: emails are delivered.
  * Marketing preferences never block essential service messages, and marketing is never sent here.
  */
 import { and, eq, inArray } from "drizzle-orm";
@@ -24,9 +24,17 @@ export type TemplateKey =
   | "payment_request"
   | "staff_password_reset"
   | "staff_invite"
-  | "family_sign_in";
+  | "family_sign_in"
+  | "space_confirmation";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
+  space_confirmation: {
+    name: "Workspace reservation confirmation",
+    subject: "Your space is all yours: {{workspace}}",
+    body: "Hi {{guardian_first_name}},\n\nYour workspace reservation {{reference}} is confirmed.\n\n{{workspace}}\n{{when}}\n{{amount}}\n\nYou can view or change it under Book a Space in the Family Portal.\n\nYalla",
+    essential: true,
+    audience: "family",
+  },
   booking_confirmation: {
     name: "Booking confirmation",
     subject: "You’re booked: {{program}} on {{date}}",
@@ -235,6 +243,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_password_reset: ["name", "link"],
   staff_invite: ["name", "invited_by", "role", "link"],
   family_sign_in: ["guardian_first_name", "link"],
+  space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {

@@ -57,6 +57,20 @@
       "when": 1793052108054,
       "tag": "0007_yalla_weekends_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793302166575,
+      "tag": "0008_book_a_space",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793302185194,
+      "tag": "0009_seed_workspaces",
+      "breakpoints": true
     }
   ]
 }

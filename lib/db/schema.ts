@@ -21,6 +21,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
@@ -729,6 +730,8 @@ export const invoices = pgTable(
       .references(() => families.id),
     bookingId: text("booking_id").references(() => bookings.id),
     membershipId: text("membership_id").references(() => memberships.id),
+    /** A paid workspace reservation (Book a Space). */
+    spaceGroupId: text("space_group_id").references((): AnyPgColumn => spaceReservationGroups.id),
     status: text("status").notNull().default("open"), // draft | open | paid | void | uncollectible
     description: text("description"),
     issuedAt: ts("issued_at").defaultNow().notNull(),
@@ -906,4 +909,155 @@ export const familySessions = pgTable(
     revokedAt: ts("revoked_at"),
   },
   (t) => [index("family_sessions_guardian_idx").on(t.guardianId)],
+);
+
+/* ───────────────────────── Workspaces (Book a Space) ───────────────────────── */
+
+/** Individually reservable workspaces. What families see comes from here, not from code. */
+export const workspaces = pgTable("workspaces", {
+  id: id(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // private_office | phone_booth | private_desk
+  summary: text("summary").notNull().default(""),
+  description: text("description"),
+  amenities: text("amenities").array().notNull().default(sql`'{}'::text[]`),
+  photos: text("photos").array().notNull().default(sql`'{}'::text[]`),
+  capacity: integer("capacity").notNull().default(1),
+  active: boolean("active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  /** Which ways it can be booked: complimentary | half_day | full_day | week | hourly. */
+  bookingTypes: text("booking_types").array().notNull().default(sql`'{}'::text[]`),
+  complimentaryEligible: boolean("complimentary_eligible").notNull().default(false),
+  /** Per-weekday opening hours that override the house hours, e.g. {"1":["08:30","16:30"]}. Null = house hours. */
+  hours: jsonb("hours"),
+  minNoticeMinutes: integer("min_notice_minutes").notNull().default(0),
+  maxAdvanceDays: integer("max_advance_days").notNull().default(60),
+  timezone: text("timezone").notNull().default("America/Los_Angeles"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/**
+ * Prices by booking type, for one workspace or a whole category. New prices are new rows with an
+ * effective date; reservations keep a snapshot of the price they were booked at.
+ */
+export const workspaceRates = pgTable(
+  "workspace_rates",
+  {
+    id: id(),
+    workspaceId: text("workspace_id").references(() => workspaces.id),
+    category: text("category"),
+    bookingType: text("booking_type").notNull(), // half_day | full_day | week | hourly (price per hour)
+    priceCents: integer("price_cents").notNull(),
+    currency: text("currency").notNull().default("usd"),
+    effectiveFrom: date("effective_from").notNull(),
+    effectiveUntil: date("effective_until"),
+    active: boolean("active").notNull().default(true),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("workspace_rates_lookup_idx").on(t.bookingType, t.effectiveFrom)],
+);
+
+/** Closures and holds that make a workspace (or every workspace, when workspaceId is null) unavailable. */
+export const workspaceBlocks = pgTable(
+  "workspace_blocks",
+  {
+    id: id(),
+    workspaceId: text("workspace_id").references(() => workspaces.id),
+    startsAt: ts("starts_at").notNull(),
+    endsAt: ts("ends_at").notNull(),
+    kind: text("kind").notNull(), // maintenance | private_event | internal | unavailable | other
+    reason: text("reason"),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+    removedAt: ts("removed_at"),
+    removedBy: text("removed_by"),
+  },
+  (t) => [index("workspace_blocks_time_idx").on(t.startsAt, t.endsAt)],
+);
+
+/** One reservation as the family sees it: a single interval, or every day of a weekly booking. */
+export const spaceReservationGroups = pgTable(
+  "space_reservation_groups",
+  {
+    id: id(),
+    reference: text("reference").notNull().unique(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    bookingType: text("booking_type").notNull(), // complimentary | half_day | full_day | week | hourly
+    status: text("status").notNull(), // held | pending_payment | confirmed | cancelled | expired | needs_attention
+    totalCents: integer("total_cents").notNull().default(0),
+    currency: text("currency").notNull().default("usd"),
+    complimentaryMinutes: integer("complimentary_minutes").notNull().default(0),
+    /** The rate and policy in force when booked, so receipts stay accurate after changes. */
+    priceSnapshot: jsonb("price_snapshot"),
+    policySnapshot: jsonb("policy_snapshot"),
+    holdExpiresAt: ts("hold_expires_at"),
+    source: text("source").notNull().default("portal"), // portal | admin
+    createdByGuardianId: text("created_by_guardian_id").references(() => guardians.id),
+    createdByStaff: text("created_by_staff"),
+    staffNote: text("staff_note"),
+    cancelledAt: ts("cancelled_at"),
+    cancelledBy: text("cancelled_by"),
+    cancellationReason: text("cancellation_reason"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("space_groups_family_idx").on(t.familyId), index("space_groups_status_idx").on(t.status)],
+);
+
+/** The actual time a workspace is occupied. Weekly bookings have one row per operating day. */
+export const spaceReservations = pgTable(
+  "space_reservations",
+  {
+    id: id(),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => spaceReservationGroups.id),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    localDate: date("local_date").notNull(),
+    startsAt: ts("starts_at").notNull(),
+    endsAt: ts("ends_at").notNull(),
+    status: text("status").notNull(), // held | confirmed | cancelled | expired
+    holdExpiresAt: ts("hold_expires_at"),
+    complimentaryMinutes: integer("complimentary_minutes").notNull().default(0),
+    priceCents: integer("price_cents").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("space_res_workspace_time_idx").on(t.workspaceId, t.startsAt),
+    index("space_res_family_date_idx").on(t.familyId, t.localDate),
+    index("space_res_group_idx").on(t.groupId),
+  ],
+);
+
+/** Staff exceptions to complimentary workspace time: grant it, take it away, or change the daily minutes. */
+export const spaceEntitlements = pgTable(
+  "space_entitlements",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    mode: text("mode").notNull(), // grant | revoke
+    dailyMinutes: integer("daily_minutes"),
+    effectiveFrom: date("effective_from"),
+    effectiveUntil: date("effective_until"),
+    note: text("note"),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+    archivedAt: ts("archived_at"),
+  },
+  (t) => [index("space_entitlements_family_idx").on(t.familyId)],
 );

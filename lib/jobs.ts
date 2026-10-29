@@ -11,13 +11,14 @@ import { bookingLines, describeLine, expireHolds } from "@/lib/ops/bookings";
 import { availabilityFor } from "@/lib/ops/capacity";
 import { applyDueChanges } from "@/lib/ops/memberships";
 import { autoOffer, expireOffers } from "@/lib/ops/waitlist";
+import { expireSpaceHolds } from "@/lib/spaces/engine";
 import { fmtDate } from "@/lib/time";
 
 export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; membershipChanges: number; offers: number; reminders: number };
 
 export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Date; reminders?: boolean }): Promise<HousekeepingResult> {
   const now = opts.now ?? new Date();
-  const expiredHolds = await expireHolds(db, now);
+  const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
   const expiredOffers = (await expireOffers(db, now)).length;
   const membershipChanges = await applyDueChanges(db, SYSTEM);
 

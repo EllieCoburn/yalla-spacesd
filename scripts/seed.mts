@@ -298,6 +298,48 @@ if (night) {
   }
 }
 
+// Book a Space: the six workspaces and rates (same as migration 0009), plus a few sample reservations.
+if (!(await db.select({ id: s.workspaces.id }).from(s.workspaces).limit(1)).length) {
+  await db.insert(s.workspaces).values([
+    { slug: "jane", name: "Jane", category: "private_office", summary: "A fully private office.", displayOrder: 1, bookingTypes: ["complimentary", "half_day", "full_day", "week"], complimentaryEligible: true },
+    { slug: "frida", name: "Frida", category: "private_office", summary: "A fully private office.", displayOrder: 2, bookingTypes: ["half_day", "full_day", "week"] },
+    { slug: "maya", name: "Maya", category: "phone_booth", summary: "A phone booth for calls, virtual meetings and quiet conversations.", displayOrder: 3, bookingTypes: ["complimentary"], complimentaryEligible: true },
+    { slug: "zora", name: "Zora", category: "private_desk", summary: "A private desk.", displayOrder: 4, bookingTypes: ["full_day", "week"] },
+    { slug: "rosa", name: "Rosa", category: "private_desk", summary: "A private desk.", displayOrder: 5, bookingTypes: ["full_day", "week"] },
+    { slug: "maria", name: "Maria", category: "private_desk", summary: "A private desk.", displayOrder: 6, bookingTypes: ["full_day", "week"] },
+  ]);
+  await db.insert(s.workspaceRates).values([
+    { category: "private_office", bookingType: "half_day", priceCents: 3000, effectiveFrom: "2026-10-01" },
+    { category: "private_office", bookingType: "full_day", priceCents: 5500, effectiveFrom: "2026-10-01" },
+    { category: "private_office", bookingType: "week", priceCents: 27000, effectiveFrom: "2026-10-01" },
+    { category: "private_desk", bookingType: "full_day", priceCents: 3500, effectiveFrom: "2026-10-01" },
+    { category: "private_desk", bookingType: "week", priceCents: 15000, effectiveFrom: "2026-10-01" },
+  ]);
+}
+{
+  const { createReservation } = await import("@/lib/spaces/engine");
+  const ws = Object.fromEntries((await db.select().from(s.workspaces)).map((w) => [w.slug, w]));
+  const weekdays: string[] = [];
+  for (let d = addDaysISO(todayLA(), 1); weekdays.length < 4; d = addDaysISO(d, 1)) if (![0, 6].includes(new Date(`${d}T12:00:00Z`).getUTCDay())) weekdays.push(d);
+  const samples: [number, string, Parameters<typeof createReservation>[2]["bookingType"], string | undefined, number | undefined, "none" | "invoice"][] = [
+    [0, "jane", "complimentary", "09:30", 60, "none"],
+    [1, "maya", "complimentary", "11:00", 30, "none"],
+    [2, "frida", "full_day", undefined, undefined, "invoice"],
+    [3, "zora", "full_day", undefined, undefined, "invoice"],
+    [4, "jane", "complimentary", "14:00", 45, "none"],
+    [5, "maya", "complimentary", "09:00", 15, "none"],
+  ];
+  for (const [i, slug, bookingType, start, minutes, charge] of samples) {
+    const fam = famRows[i % famRows.length];
+    const date = weekdays[i % 2];
+    try {
+      await createReservation(db, admin, { workspaceId: ws[slug].id, bookingType, date, start, minutes }, { familyId: fam.familyId, source: "admin", override: true, charge });
+    } catch {
+      /* already taken */
+    }
+  }
+}
+
 console.log(`Seeded synthetic data: ${famRows.length} families, ${staff.length} staff.`);
 console.log(`Staff sign-in: ${staff.map((s) => s.email).join(", ")}${local ? ` · password: ${password}` : " · password from SEED_STAFF_PASSWORD"}`);
 process.exit(0);

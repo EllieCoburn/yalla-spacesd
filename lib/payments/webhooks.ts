@@ -10,10 +10,11 @@
 import { eq, sql } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import type { DB } from "@/lib/db";
-import { bookings, invoices, payments, refunds, webhookEvents } from "@/lib/db/schema";
+import { bookings, invoices, payments, refunds, spaceReservationGroups, webhookEvents } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { refreshInvoiceStatus, invoiceTotals, usd } from "@/lib/ops/billing";
 import { confirmBooking } from "@/lib/ops/bookings";
+import { confirmSpaceGroup } from "@/lib/spaces/engine";
 import { fmtDateTime } from "@/lib/time";
 import type { NormalizedEvent, PaymentProvider } from "./provider";
 
@@ -75,6 +76,7 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
       const [pay] = changed ? [changed] : await db.select().from(payments).where(eq(payments.checkoutRef, evt.checkoutRef));
       const [inv] = await db.select().from(invoices).where(eq(invoices.id, pay.invoiceId));
       if (inv.bookingId) await confirmBooking(db, WEBHOOK, inv.bookingId, { reason: "Payment verified by provider" });
+      if (inv.spaceGroupId) await confirmSpaceGroup(db, WEBHOOK, inv.spaceGroupId, { reason: "Payment verified by provider" });
       if (!changed) return "already processed";
       const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
       await notifyFamily(db, {
@@ -99,6 +101,11 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
       const [b] = inv.bookingId ? await db.select().from(bookings).where(eq(bookings.id, inv.bookingId)) : [];
       // The hold keeps running; the family can retry until it expires.
       if (b && b.status === "pending_payment") await db.update(bookings).set({ status: "held" }).where(eq(bookings.id, b.id));
+      if (inv.spaceGroupId)
+        await db
+          .update(spaceReservationGroups)
+          .set({ status: "held" })
+          .where(sql`${spaceReservationGroups.id} = ${inv.spaceGroupId} AND ${spaceReservationGroups.status} = 'pending_payment'`);
       await notifyFamily(db, {
         key: "payment_failed",
         familyId: inv.familyId,

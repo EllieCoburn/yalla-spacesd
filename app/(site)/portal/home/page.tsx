@@ -38,6 +38,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "bookings", label: "Bookings" },
     { key: "forms", label: "Forms", count: outstanding.length },
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
+    { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
     { key: "parking", label: "Parking", href: "/portal/parking" },
   ];
 
@@ -149,6 +150,12 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                     </Link>
                   ) : null}
                 </div>
+                <Link href="/portal/spaces" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
+                  <p className="eyebrow text-[0.6rem] text-ink-soft">Book a Space</p>
+                  <p className="display mt-3 text-[1.4rem]">Your workspace, when you need it.</p>
+                  <p className="mt-2 text-[0.88rem] text-ink-soft">Find a quiet corner, take a call, or settle in for a productive day.</p>
+                  <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Find a space</span>
+                </Link>
                 <Link href="/portal/parking" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
                   <p className="eyebrow text-[0.6rem] text-ink-soft">Getting here</p>
                   <p className="display mt-3 text-[1.4rem]">Parking guide</p>

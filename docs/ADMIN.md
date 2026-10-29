@@ -112,6 +112,27 @@ Alternative: `npm run admin:create` from a machine with `DATABASE_URL` set.
   group (18 months – 4 years: 8; 4 – 7 years: 12; 7 – 10 years: 14) at $60 per child per play session.
 - Extend or adjust the schedules in Programs → Yalla Weekends → Schedule ("Repeating monthly", with the age group fields).
 
+### Book a Space (workspace reservations)
+
+Families reserve Jane, Frida, Maya, Zora, Rosa and Maria in the Family Portal (`/portal/spaces`); staff manage them in
+Admin → Space reservations (`spaces.view` / `spaces.manage` / `spaces.configure`).
+
+- **Data.** `workspaces`, `workspace_rates` (effective-dated; a workspace price beats its category's), `workspace_blocks`
+  (closures), `space_reservation_groups` (what the family booked, with price and policy snapshots) and `space_reservations`
+  (the occupied intervals, one per day for a week). Migration `0009_seed_workspaces` adds the six spaces and the supplied rates.
+- **No double booking.** Every write locks the workspace row (and the family row when complimentary minutes are spent) in a
+  transaction and re-checks overlaps with half-open intervals, so simultaneous requests can't both succeed. Staff overrides skip
+  hours, notice, closures and the allowance, but never another reservation.
+- **Complimentary time.** 60 minutes per family per Los Angeles calendar day, shared across complimentary spaces (Jane and Maya),
+  for families with an active Club Yalla membership that day. Staff can give or remove it per family (Setup → exceptions).
+- **Paid reservations** hold the time for the checkout hold (Settings → Policies), create an invoice linked to the reservation and
+  confirm only from the verified payment webhook. A payment that lands after the hold lapsed and the time was taken is flagged
+  "Needs attention" for a refund or rebooking. Nothing is refunded automatically.
+- **Privacy.** Family-facing availability returns only times and "reserved"/"unavailable". Names appear only in the admin.
+- **Settings to confirm** (Setup shows "Needs your decision" until saved): afternoon half-day times (none yet; morning uses
+  8:30–12:00), what a "week" covers, who gets complimentary time, cancellation rules for paid reservations, and a phone-booth
+  price if Maya should be bookable beyond the free time. Workspace photos and amenities are blank until supplied.
+
 ## 6. Background jobs
 
 `/api/cron/housekeeping` (with `Authorization: Bearer $CRON_SECRET`) expires lapsed holds and waitlist offers,
