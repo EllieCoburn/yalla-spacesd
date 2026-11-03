@@ -108,6 +108,16 @@ export function SiteFooter() {
                   </svg>
                 </a>
               </li>
+              <li>
+                <a href={site.amazon.value} target="_blank" rel="noopener noreferrer" aria-label="Yalla’s Amazon storefront" className={social}>
+                  <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M5.5 8h13l-1 12.5h-11z" />
+                    <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+                    <path d="M8.3 14c2.3 1.5 5.1 1.5 7.4 0" />
+                    <path d="M14.6 13.2l1.3.7-.4 1.4" />
+                  </svg>
+                </a>
+              </li>
             </ul>
           </div>
         </div>

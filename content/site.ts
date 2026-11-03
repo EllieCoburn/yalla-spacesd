@@ -18,6 +18,7 @@ export const site = {
   phone: { value: null as string | null, confirm: true },
   instagram: { value: "https://www.instagram.com/yallachildcare/", confirm: false },
   pinterest: { value: "https://www.pinterest.com/yallachildcare/", confirm: false },
+  amazon: { value: "https://www.amazon.com/shop/yallachildcare", confirm: false },
 };
 
 export const nav = [
