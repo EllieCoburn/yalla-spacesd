@@ -82,6 +82,10 @@ export default function ExperiencePage() {
               Our approach to care is rooted in the Reggio Emilia and RIE traditions: play-based, relationship-led and unhurried. Children are
               given beautiful materials, time and full attention, and curiosity sets the pace.
             </p>
+            <Link href="/approach" className="mt-6 inline-flex items-center gap-3 text-[0.9rem] hover:text-blue">
+              <span className="link-underline">Read about our approach</span>
+              <Arrow className="h-3 w-5" />
+            </Link>
             <div className="mt-14 space-y-12">
               {principles.map((a, i) => (
                 <Reveal key={a.title} delay={i * 80} className="hairline grid gap-4 border-t pt-8 sm:grid-cols-[3rem_1fr]">
