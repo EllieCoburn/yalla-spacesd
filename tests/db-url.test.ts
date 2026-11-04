@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { databaseUrl } from "@/lib/db/url";
+import { databaseUrl, migrationUrl } from "@/lib/db/url";
 
 describe("database URL discovery", () => {
   it("strips Neon's channel_binding option and keeps sslmode", () => {
@@ -11,5 +11,12 @@ describe("database URL discovery", () => {
     expect(databaseUrl({ STORAGE_DATABASE_URL_UNPOOLED: "postgres://a/unpooled", STORAGE_DATABASE_URL: "postgres://a/pooled" })).toBe("postgres://a/pooled");
     expect(databaseUrl({ STORAGE_URL: "postgres://a/x", NEON_AUTH_BASE_URL: "https://auth" })).toBe("postgres://a/x");
     expect(databaseUrl({})).toBeUndefined();
+  });
+  it("uses Neon's direct (unpooled) connection for migrations when available", () => {
+    expect(
+      migrationUrl({ DATABASE_URL: "postgresql://u:p@ep-x-pooler.neon.tech/db?sslmode=require", DATABASE_URL_UNPOOLED: "postgresql://u:p@ep-x.neon.tech/db?sslmode=require&channel_binding=require" }),
+    ).toBe("postgresql://u:p@ep-x.neon.tech/db?sslmode=require");
+    expect(migrationUrl({ STORAGE_POSTGRES_URL_NON_POOLING: "postgres://a/direct", STORAGE_DATABASE_URL: "postgres://a/pooled" })).toBe("postgres://a/direct");
+    expect(migrationUrl({ DATABASE_URL: "postgres://a/only" })).toBe("postgres://a/only");
   });
 });

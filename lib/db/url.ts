@@ -21,6 +21,19 @@ export function normalize(url: string): string {
   }
 }
 
+/**
+ * The connection string for schema migrations. Neon's pooled connection (PgBouncer, transaction
+ * mode) doesn't support session state, so migrations use the direct/unpooled string when one is
+ * provided (`neon env pull` writes DATABASE_URL_UNPOOLED; Vercel's integration POSTGRES_URL_NON_POOLING).
+ */
+export function migrationUrl(env: Record<string, string | undefined> = process.env): string | undefined {
+  const direct =
+    env.DATABASE_URL_UNPOOLED ??
+    env.POSTGRES_URL_NON_POOLING ??
+    env[Object.keys(env).find((k) => /(_DATABASE_URL_UNPOOLED|_POSTGRES_URL_NON_POOLING)$/.test(k) && !/TEST_/.test(k) && env[k]) ?? ""];
+  return direct ? normalize(direct) : databaseUrl(env);
+}
+
 function findUrl(env: Record<string, string | undefined>): string | undefined {
   if (env.DATABASE_URL) return env.DATABASE_URL;
   if (env.POSTGRES_URL) return env.POSTGRES_URL;

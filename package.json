@@ -4,18 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx scripts/migrate.mts && next build",
+    "build": "tsx --env-file-if-exists=.env.local scripts/migrate.mts && next build",
     "start": "next start",
     "lint": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "test": "vitest run",
-    "db:migrate": "tsx scripts/migrate.mts",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "db:seed": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/seed.mts",
     "admin:create": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/create-admin.mts",
     "jobs:run": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/jobs.mts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@neon/config": "^1.11.0",
+    "@neon/env": "^1.6.12",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.3",
