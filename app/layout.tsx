@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description:
     "Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and experiences for family life in San Diego.",
   icons: { icon: "/brand/mark.svg" },
+  // Pinterest "Claim your website" verification for Yalla's Pinterest business account.
+  other: { "p:domain_verify": "99c4f6b64b0bb2e7ad58425f39d126a1" },
 };
 
 export const viewport: Viewport = {
