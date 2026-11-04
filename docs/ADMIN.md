@@ -16,7 +16,8 @@ Admin portal (/admin) ────────┘          │
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | Postgres connection string. On Vercel, add **Neon** from the Marketplace and it's set for you. |
+| `DATABASE_URL` | Yes | Pooled Neon Postgres connection string, used by the app. On Vercel, add **Neon** from the Marketplace and it's set for you. |
+| `DATABASE_URL_UNPOOLED` | Recommended | Direct (unpooled) Neon connection string, used for migrations (Vercel's integration calls it `POSTGRES_URL_NON_POOLING`, which also works). Falls back to `DATABASE_URL`. |
 | `AUTH_SECRET` | Yes | 32+ random characters. Encrypts two-step secrets and signs test webhooks. Generate with `openssl rand -base64 48`. |
 | `ADMIN_SETUP_TOKEN` | First run | A one-time secret you type on `/admin/setup` to create the first owner. Remove after setup. |
 | `PUBLIC_BASE_URL` | Recommended | e.g. `https://yallaspacesd.com`. Used in emails and payment links. |
@@ -31,9 +32,23 @@ Never commit secrets. `.env.local` is git-ignored; see `.env.example`.
 
 ## 2. Database & migrations
 
+The database is Neon Postgres: project `still-dream-56352643`, default branch `production`.
+`neon.ts` declares the project's Neon services (none beyond Postgres today) and gives new
+non-default branches a 7-day expiry.
+
+Local setup with the [Neon CLI](https://neon.com/docs/cli/install):
+
+```bash
+neon link --project-id still-dream-56352643 -y   # writes .neon and pulls DATABASE_URL(_UNPOOLED) into .env.local
+npm run db:migrate
+```
+
+For risky schema work, take a throwaway branch first: `neon checkout my-change --create`
+(pulls that branch's URLs into `.env.local`), run migrations there, then `neon checkout production`.
+
 - Schema: `lib/db/schema.ts`. Migrations: `lib/db/migrations` (generated with `npm run db:generate`).
 - `npm run build` runs `scripts/migrate.mts` first when `DATABASE_URL` is set, so every Vercel deploy applies pending migrations before the new code goes live.
-- Manually: `npm run db:migrate`.
+- Manually: `npm run db:migrate` (reads `.env.local`; uses the direct connection when `DATABASE_URL_UNPOOLED` is set, since Neon's pooler can't hold the session state migrations need).
 
 ### Synthetic data (development & previews only)
 
