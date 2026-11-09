@@ -12,6 +12,8 @@ type Page = {
   title: ReactNode;
   lede: string;
   facts: { label: string; value: string }[];
+  /** Everything else about price, shown right under the facts so all pricing is in one place. */
+  priceNote?: ReactNode;
   datesTitle: ReactNode;
   unit: "day" | "evening";
   groups: DateGroup[];
@@ -59,6 +61,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
       { label: "Ages", value: "18 months – 10 years" },
       { label: "Price", value: "$160 a day" },
     ],
+    priceNote: "Optional extras per child: Early Bird, 8:00 – 9:00am, +$20 · Late stay, 3:00 – 4:30pm, +$30",
     datesTitle: (
       <>
         Choose your <em>camp days.</em>
@@ -70,7 +73,6 @@ export const BOOKING_PAGES: Record<string, Page> = {
     horizonDays: 0,
     goodToKnow: [
       { label: "Age groups", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years"] },
-      { label: "Add to your day", lines: ["Early Bird, 8:00 – 9:00am · $20", "Late stay, 3:00 – 4:30pm · $30"] },
       questions,
     ],
   },
@@ -86,6 +88,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
       { label: "Ages", value: "18 months – 10 years" },
       { label: "Price", value: "$65 per child" },
     ],
+    priceNote: "Siblings: $85 for up to three children, +$25 for each additional child. Applied automatically when you book them together.",
     datesTitle: (
       <>
         Choose your <em>evenings.</em>
@@ -97,7 +100,6 @@ export const BOOKING_PAGES: Record<string, Page> = {
     familyRate: true,
     goodToKnow: [
       { label: "Separate age groups", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years", "Each with its own evening, planned for its age"] },
-      { label: "Family rate", lines: ["$85 for up to three children", "$25 for each additional child", "Applied automatically for siblings"] },
       questions,
     ],
   },
@@ -113,6 +115,14 @@ export const BOOKING_PAGES: Record<string, Page> = {
       { label: "Ages", value: "3 months – 5 years" },
       { label: "Price", value: `From $${Math.min(...cohorts.map((c) => c.daily.full))} a day` },
     ],
+    priceNote: (
+      <>
+        Full day: {cohorts.map((c) => `${c.name} $${c.daily.full}`).join(" · ")}.{" "}
+        <a href="#rates" className="underline underline-offset-4 hover:text-blue">
+          All rates
+        </a>
+      </>
+    ),
     datesTitle: (
       <>
         Choose your <em>Flex days.</em>
@@ -124,7 +134,6 @@ export const BOOKING_PAGES: Record<string, Page> = {
     horizonDays: 56,
     goodToKnow: [
       { label: "Every Flex day", lines: ["Childcare for your child", "Coworking for you, steps away"] },
-      { label: "Day rates", lines: [<Link key="r" href="#rates" className="underline underline-offset-4 hover:text-blue">See rates by age</Link>] },
       questions,
     ],
     after: <FlexRates />,
@@ -157,6 +166,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
                   </div>
                 ))}
               </dl>
+              {page.priceNote ? <p className="mt-4 max-w-xl border-l-2 border-blue/40 pl-3 text-[0.92rem] leading-relaxed text-ink">{page.priceNote}</p> : null}
               <div className="mt-10">
                 <Button href="#dates" size="lg">
                   Choose your {page.unit}s
@@ -184,7 +194,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
 
       {/* Good to know */}
       <section className="py-16 lg:py-20">
-        <div className="shell grid gap-10 sm:grid-cols-3">
+        <div className="shell grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {page.goodToKnow.map((g) => (
             <div key={g.label}>
               <p className="eyebrow text-[0.62rem] text-ink-soft">{g.label}</p>
