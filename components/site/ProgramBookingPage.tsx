@@ -77,10 +77,10 @@ export const BOOKING_PAGES: Record<string, Page> = {
   parents_night: {
     title: (
       <>
-        Evenings out, <em>once a month.</em>
+        Evenings out, <em>on select dates.</em>
       </>
     ),
-    lede: "An evening of play for them, a night out for you. The second Friday of every month.",
+    lede: "An evening of play for them, a night out for you, on select evenings every month.",
     facts: [
       { label: "Hours", value: "5:00 – 9:00pm" },
       { label: "Ages", value: "18 months – 10 years" },

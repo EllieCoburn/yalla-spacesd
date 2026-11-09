@@ -221,11 +221,11 @@ export const programs: ProgramContent[] = [
     imageAlt: "A child playing with embroidered tulle in soft evening light",
     motif: "moon",
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
-    days: "The second Friday of every month, 5:00pm – 9:00pm",
+    days: "Select evenings every month, 5:00pm – 9:00pm",
     pricing: "$65 per child, or $85 per family for up to three children, plus $25 for each additional child. The family rate is applied automatically when you book siblings together.",
     facts: {
       ages: groups(),
-      days: [{ rows: [{ label: "The second Friday of every month", value: "5:00 – 9:00pm" }] }],
+      days: [{ rows: [{ label: "Select evenings every month", value: "5:00 – 9:00pm" }] }],
       pricing: [
         {
           rows: [
