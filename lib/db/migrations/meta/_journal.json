@@ -78,6 +78,13 @@
       "when": 1794255250309,
       "tag": "0010_camp_dates_2026_27",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794255692087,
+      "tag": "0011_camp_july_2027",
+      "breakpoints": true
     }
   ]
 }
