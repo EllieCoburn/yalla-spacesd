@@ -215,12 +215,12 @@ export const programs: ProgramContent[] = [
       "Evenings when the children have their own night at Yalla, with familiar faces and a cozy evening rhythm, while you have yours.",
     body: [
       "Yalla After Hours turns Yalla into an evening of slow play with the educators your children already know.",
-      "Children spend the evening with others close to their age, in three groups: 18 months to 4 years, 4 to 6 years, and 7 to 10 years. Spaces are limited each evening and open in the booking calendar ahead of time.",
+      "Children spend the evening in one of three small pods, each with its own plans and pace for its age: 18 months to 4 years, 4 to 6 years, and 7 to 10 years. Spaces are limited each evening and open in the booking calendar ahead of time.",
     ],
     image: "/photos/tulle.jpg",
     imageAlt: "A child playing with embroidered tulle in soft evening light",
     motif: "moon",
-    ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
+    ages: "Three pods by age, each with its own plans: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
     days: "Select evenings every month, 5:00pm – 9:00pm",
     pricing: "$65 per child, or $85 per family for up to three children, plus $25 for each additional child. The family rate is applied automatically when you book siblings together.",
     facts: {
