@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Mark } from "@/components/brand/Mark";
 import type { PublicSession } from "@/lib/ops/public-booking";
 import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
@@ -54,17 +54,44 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);
 
+  // Days chosen elsewhere (e.g. several camp days on the camp page) arrive as ?select=…&until=…
+  // and go straight into the basket.
+  const preselect = useMemo(() => (params.get("select") ?? "").split(",").filter(Boolean).slice(0, 60), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const until = useMemo(() => {
+    const u = params.get("until");
+    return u && /^\d{4}-\d{2}-\d{2}$/.test(u) ? u : null;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const preselected = useRef(false);
+
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/availability?from=${start}&to=${addDaysISO(start, DAYS - 1)}`, { cache: "no-store" });
-      const json = (await res.json()) as { sessions: PublicSession[]; error?: string };
-      setSessions(json.sessions);
-      setError(json.error ?? null);
+      const end = until && until > addDaysISO(start, DAYS - 1) ? until : addDaysISO(start, DAYS - 1);
+      const found: PublicSession[] = [];
+      let err: string | null = null;
+      // The availability endpoint returns up to 120 days at a time.
+      for (let from = start; from <= end; from = addDaysISO(from, 120)) {
+        const to = addDaysISO(from, 119) < end ? addDaysISO(from, 119) : end;
+        const res = await fetch(`/api/availability?from=${from}&to=${to}`, { cache: "no-store" });
+        const json = (await res.json()) as { sessions: PublicSession[]; error?: string };
+        found.push(...json.sessions);
+        err = err ?? json.error ?? null;
+      }
+      setSessions(found);
+      setError(err);
+      if (preselect.length && !preselected.current) {
+        preselected.current = true;
+        const ok = found.filter((s) => preselect.includes(s.id) && stateLabel(s).selectable).map((s) => s.id);
+        if (ok.length) {
+          setSelected(ok);
+          setCheckoutOpen(true);
+        }
+        if (ok.length < preselect.length) setError("Some of the days you chose were just booked by someone else. The rest are in your basket.");
+      }
     } catch {
       setError("We couldn’t load availability. Please refresh.");
       setSessions([]);
     }
-  }, [start]);
+  }, [start, until, preselect]);
 
   useEffect(() => {
     load();

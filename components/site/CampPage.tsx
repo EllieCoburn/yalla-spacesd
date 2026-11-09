@@ -57,13 +57,10 @@ export function CampPage({ p }: { p: ProgramContent }) {
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
         <div className="shell">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="display text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
-              Pick <em>a day.</em>
-            </h2>
-            <p className="text-[0.9rem] text-ink-soft">Book one day or as many as you like.</p>
-          </div>
-          <div className="mt-10">
+          <h2 className="display text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
+            Choose your <em>camp days.</em>
+          </h2>
+          <div className="mt-8 max-w-4xl">
             <CampDates days={CAMP_DAYS} />
           </div>
         </div>
