@@ -46,10 +46,17 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
   const [dayLimit, setDayLimit] = useState(7);
   const [waitlistFor, setWaitlistFor] = useState<PublicSession | null>(null);
   const today = useMemo(() => todayLA(), []);
+  // The calendar shows six weeks. A link to a later date (e.g. a camp day in February) starts the
+  // window a few days before that date instead, so it loads and shows straight away.
+  const start = useMemo(() => {
+    const linked = params.get("date");
+    return linked && /^\d{4}-\d{2}-\d{2}$/.test(linked) && linked > addDaysISO(today, DAYS - 1) ? addDaysISO(linked, -3) : today;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today]);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/availability?from=${today}&to=${addDaysISO(today, DAYS - 1)}`, { cache: "no-store" });
+      const res = await fetch(`/api/availability?from=${start}&to=${addDaysISO(start, DAYS - 1)}`, { cache: "no-store" });
       const json = (await res.json()) as { sessions: PublicSession[]; error?: string };
       setSessions(json.sessions);
       setError(json.error ?? null);
@@ -57,7 +64,7 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
       setError("We couldn’t load availability. Please refresh.");
       setSessions([]);
     }
-  }, [today]);
+  }, [start]);
 
   useEffect(() => {
     load();
@@ -78,7 +85,7 @@ export function BookingExplorer({ guardian, savedChildren }: { guardian: SignedI
     [childAge],
   );
   const byKind = useMemo(() => all.filter((s) => offering === "all" || s.kind === offering), [all, offering]);
-  const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addDaysISO(today, i)), [today]);
+  const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addDaysISO(start, i)), [start]);
   const visible = useMemo(() => (day ? byKind.filter((s) => s.localDate === day) : byKind), [byKind, day]);
   const grouped = useMemo(() => {
     const m = new Map<string, PublicSession[]>();

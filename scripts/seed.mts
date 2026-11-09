@@ -135,7 +135,7 @@ if (!afterHoursMonthly)
     await createSeries(db, admin, { programId: after.id, ...g, weekdays: [5], monthWeek: 2, startTime: "17:00", endTime: "21:00", startsOn: start, endsOn: addDaysISO(today, 365), hardCapacity: g.capacity, locationId: loc.id });
 await createSeries(db, admin, { programId: happenings.id, title: "Pop-up workshop", weekdays: [0], startTime: "10:00", endTime: "11:30", startsOn: addDaysISO(today, 3), endsOn: addDaysISO(today, 45), capacity: 14, locationId: loc.id });
 // Camp Yalla: the confirmed camp days in three age groups (the 0005 migration does the same in production).
-const campDays = ["2026-11-11", "2026-11-25", "2026-11-27", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15"];
+const campDays = ["2026-11-11", "2026-11-25", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15"];
 const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).where(eq(s.sessions.programId, camp.id));
 if (!campExisting)
   for (const day of campDays)
