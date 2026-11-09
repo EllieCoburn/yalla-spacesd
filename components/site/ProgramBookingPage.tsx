@@ -80,10 +80,10 @@ export const BOOKING_PAGES: Record<string, Page> = {
         Evenings out, <em>on select dates.</em>
       </>
     ),
-    lede: "An evening of play for them, a night out for you. Children spend the evening in small pods with others their age, each with its own plans and pace.",
+    lede: "An evening of play for them, a night out for you. For children 18 months to 10 years, each spending the evening in a separate group with others their own age.",
     facts: [
       { label: "Hours", value: "5:00 – 9:00pm" },
-      { label: "Pods", value: "Three, by age" },
+      { label: "Ages", value: "18 months – 10 years" },
       { label: "Price", value: "$65 per child" },
     ],
     datesTitle: (
@@ -93,11 +93,10 @@ export const BOOKING_PAGES: Record<string, Page> = {
     ),
     unit: "evening",
     groups: AGE_GROUPS(6500),
-    groupNoun: "pod",
     horizonDays: 365,
     familyRate: true,
     goodToKnow: [
-      { label: "Three pods", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years", "Each planned for its age"] },
+      { label: "Separate age groups", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years", "Each with its own evening, planned for its age"] },
       { label: "Family rate", lines: ["$85 for up to three children", "$25 for each additional child", "Applied automatically for siblings"] },
       questions,
     ],
