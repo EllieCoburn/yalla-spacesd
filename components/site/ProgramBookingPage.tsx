@@ -26,20 +26,34 @@ type Page = {
 };
 
 const AGE_GROUPS = (priceCents: number): DateGroup[] => [
-  { key: "a", label: "18 mo – 4 yrs", minAge: 18, priceCents },
-  { key: "b", label: "4 – 6 yrs", minAge: 48, priceCents },
-  { key: "c", label: "7 – 10 yrs", minAge: 84, priceCents },
+  { key: "a", label: "18 mo – 4 yrs", minAge: 18, maxAge: 47, priceCents },
+  { key: "b", label: "4 – 6 yrs", minAge: 48, maxAge: 83, priceCents },
+  { key: "c", label: "7 – 10 yrs", minAge: 84, maxAge: 131, priceCents },
 ];
+
+/** Each Flex cohort's ages in months, to place a family's own children (see flexAges). */
+const FLEX_BANDS: Record<string, { minAge: number; maxAge: number }> = {
+  seedlings: { minAge: 3, maxAge: 11 },
+  saplings: { minAge: 12, maxAge: 23 },
+  sprouts: { minAge: 24, maxAge: 35 },
+  wildflowers: { minAge: 36, maxAge: 71 },
+};
 
 const questions = {
   label: "Questions?",
   lines: [
     <>
-      <Link href="/faq" className="underline underline-offset-4 hover:text-blue">
+      <Link
+        href="/faq"
+        className="underline underline-offset-4 hover:text-blue"
+      >
         Read the FAQ
       </Link>{" "}
       or{" "}
-      <Link href="/visit" className="underline underline-offset-4 hover:text-blue">
+      <Link
+        href="/visit"
+        className="underline underline-offset-4 hover:text-blue"
+      >
         book a tour
       </Link>
       .
@@ -61,7 +75,8 @@ export const BOOKING_PAGES: Record<string, Page> = {
       { label: "Ages", value: "18 months – 10 years" },
       { label: "Price", value: "$160 a day" },
     ],
-    priceNote: "Optional extras per child: Early Bird, 8:00 – 9:00am, +$20 · Late stay, 3:00 – 4:30pm, +$30",
+    priceNote:
+      "Optional extras per child: Early Bird, 8:00 – 9:00am, +$20 · Late stay, 3:00 – 4:30pm, +$30",
     datesTitle: (
       <>
         Choose your <em>camp days.</em>
@@ -72,7 +87,10 @@ export const BOOKING_PAGES: Record<string, Page> = {
     days: CAMP_DAYS,
     horizonDays: 0,
     goodToKnow: [
-      { label: "Age groups", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years"] },
+      {
+        label: "Age groups",
+        lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years"],
+      },
       questions,
     ],
   },
@@ -88,7 +106,8 @@ export const BOOKING_PAGES: Record<string, Page> = {
       { label: "Ages", value: "18 months – 10 years" },
       { label: "Price", value: "$65 per child" },
     ],
-    priceNote: "Siblings: $85 for up to three children, +$25 for each additional child. Applied automatically when you book them together.",
+    priceNote:
+      "Siblings: $85 for up to three children, +$25 for each additional child. Applied automatically when you book them together.",
     datesTitle: (
       <>
         Choose your <em>evenings.</em>
@@ -99,7 +118,15 @@ export const BOOKING_PAGES: Record<string, Page> = {
     horizonDays: 365,
     familyRate: true,
     goodToKnow: [
-      { label: "Separate age groups", lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years", "Each with its own evening, planned for its age"] },
+      {
+        label: "Separate age groups",
+        lines: [
+          "18 months – 4 years",
+          "4 – 6 years",
+          "7 – 10 years",
+          "Each with its own evening, planned for its age",
+        ],
+      },
       questions,
     ],
   },
@@ -113,12 +140,19 @@ export const BOOKING_PAGES: Record<string, Page> = {
     facts: [
       { label: "Hours", value: "8:30am – 4:30pm" },
       { label: "Ages", value: "3 months – 5 years" },
-      { label: "Price", value: `From $${Math.min(...cohorts.map((c) => c.daily.full))} a day` },
+      {
+        label: "Price",
+        value: `From $${Math.min(...cohorts.map((c) => c.daily.full))} a day`,
+      },
     ],
     priceNote: (
       <>
-        Full day: {cohorts.map((c) => `${c.name} $${c.daily.full}`).join(" · ")}.{" "}
-        <a href="#rates" className="underline underline-offset-4 hover:text-blue">
+        Full day: {cohorts.map((c) => `${c.name} $${c.daily.full}`).join(" · ")}
+        .{" "}
+        <a
+          href="#rates"
+          className="underline underline-offset-4 hover:text-blue"
+        >
           All rates
         </a>
       </>
@@ -129,11 +163,21 @@ export const BOOKING_PAGES: Record<string, Page> = {
       </>
     ),
     unit: "day",
-    groups: cohorts.map((c) => ({ key: c.id, label: c.name, sub: `${flexAges[c.id]} · $${c.daily.full}`, cohort: c.name, priceCents: c.daily.full * 100 })),
+    groups: cohorts.map((c) => ({
+      key: c.id,
+      label: c.name,
+      sub: `${flexAges[c.id]} · $${c.daily.full}`,
+      cohort: c.name,
+      ...FLEX_BANDS[c.id],
+      priceCents: c.daily.full * 100,
+    })),
     groupNoun: "age group",
     horizonDays: 56,
     goodToKnow: [
-      { label: "Every Flex day", lines: ["Childcare for your child", "Coworking for you, steps away"] },
+      {
+        label: "Every Flex day",
+        lines: ["Childcare for your child", "Coworking for you, steps away"],
+      },
       questions,
     ],
     after: <FlexRates />,
@@ -147,26 +191,43 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
       {/* Header */}
       <section className="pt-32 pb-14 lg:pt-40 lg:pb-16">
         <div className="shell">
-          <Link href="/programs" className="eyebrow inline-flex items-center gap-3 text-ink-soft hover:text-ink">
+          <Link
+            href="/programs"
+            className="eyebrow inline-flex items-center gap-3 text-ink-soft hover:text-ink"
+          >
             <Arrow className="h-3 w-4 rotate-180" /> All programs
           </Link>
           <div className="mt-10 grid items-end gap-10 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <Eyebrow className="flex items-center gap-3">
-                {p.motif ? <Mark name={p.motif} className="h-5 w-auto text-blue" /> : null}
+                {p.motif ? (
+                  <Mark name={p.motif} className="h-5 w-auto text-blue" />
+                ) : null}
                 {p.name}
               </Eyebrow>
-              <h1 className="display mt-6 text-[clamp(2.8rem,1.6rem+4.4vw,5.6rem)]">{page.title}</h1>
-              <p className="mt-6 max-w-lg text-[1.1rem] text-ink-soft">{page.lede}</p>
+              <h1 className="display mt-6 text-[clamp(2.8rem,1.6rem+4.4vw,5.6rem)]">
+                {page.title}
+              </h1>
+              <p className="mt-6 max-w-lg text-[1.1rem] text-ink-soft">
+                {page.lede}
+              </p>
               <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
                 {page.facts.map((f) => (
                   <div key={f.label}>
-                    <dt className="eyebrow text-[0.6rem] text-ink-soft">{f.label}</dt>
-                    <dd className="mt-1 font-serif text-[1.35rem]">{f.value}</dd>
+                    <dt className="eyebrow text-[0.6rem] text-ink-soft">
+                      {f.label}
+                    </dt>
+                    <dd className="mt-1 font-serif text-[1.35rem]">
+                      {f.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
-              {page.priceNote ? <p className="mt-4 max-w-xl border-l-2 border-blue/40 pl-3 text-[0.92rem] leading-relaxed text-ink">{page.priceNote}</p> : null}
+              {page.priceNote ? (
+                <p className="mt-4 max-w-xl border-l-2 border-blue/40 pl-3 text-[0.92rem] leading-relaxed text-ink">
+                  {page.priceNote}
+                </p>
+              ) : null}
               <div className="mt-10">
                 <Button href="#dates" size="lg">
                   Choose your {page.unit}s
@@ -175,7 +236,14 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
             </div>
             <div className="hidden lg:col-span-4 lg:col-start-9 lg:block">
               <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] bg-sand">
-                <Image src={p.image} alt={p.imageAlt} fill priority sizes="30vw" className="object-cover" />
+                <Image
+                  src={p.image}
+                  alt={p.imageAlt}
+                  fill
+                  priority
+                  sizes="30vw"
+                  className="object-cover"
+                />
               </div>
             </div>
           </div>
@@ -185,9 +253,19 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
         <div className="shell">
-          <h2 className="display text-[clamp(2rem,1.5rem+1.6vw,3rem)]">{page.datesTitle}</h2>
+          <h2 className="display text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
+            {page.datesTitle}
+          </h2>
           <div className="mt-8 max-w-4xl">
-            <ProgramDates kind={p.kind} groups={page.groups} unit={page.unit} days={page.days} horizonDays={page.horizonDays} familyRate={page.familyRate} groupNoun={page.groupNoun} />
+            <ProgramDates
+              kind={p.kind}
+              groups={page.groups}
+              unit={page.unit}
+              days={page.days}
+              horizonDays={page.horizonDays}
+              familyRate={page.familyRate}
+              groupNoun={page.groupNoun}
+            />
           </div>
         </div>
       </section>
