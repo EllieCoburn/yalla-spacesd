@@ -2,8 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mark } from "@/components/brand/Mark";
 import { HappeningsCalendar } from "@/components/site/HappeningsCalendar";
-import { Arrow, Chevron, Eyebrow } from "@/components/ui/primitives";
-import { HAPPENING_TYPES, IMMERSIVE_FAQ } from "@/content/happenings";
+import { Arrow, Eyebrow } from "@/components/ui/primitives";
+import { HAPPENING_TYPES } from "@/content/happenings";
+import { ContextualFaq } from "@/components/faq/ContextualFaq";
 import type { ProgramContent } from "@/content/programs";
 
 /**
@@ -108,39 +109,18 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
                     ))}
                   </ul>
                   {t.key === "immersive" ? (
-                    <div className="mt-8 border-t border-line">
-                      {IMMERSIVE_FAQ.map((it) => (
-                        <details key={it.q} className="group border-b border-line">
-                          <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-4 [&::-webkit-details-marker]:hidden">
-                            <span className="text-[1.05rem]">{it.q}</span>
-                            <Chevron className="mt-2 h-2.5 w-4 shrink-0 text-ink" />
-                          </summary>
-                          <div className="max-w-2xl space-y-4 pb-6 text-[0.98rem] text-ink-soft">
-                            {it.a.map((para) => (
-                              <p key={para.slice(0, 40)}>{para}</p>
-                            ))}
-                          </div>
-                        </details>
-                      ))}
+                    <div className="mt-8">
+                      <ContextualFaq page="immersive" bare />
                     </div>
                   ) : null}
                 </div>
               </article>
             ))}
           </div>
-          <p className="mt-10 text-ink-soft">
-            Questions?{" "}
-            <Link href="/faq" className="underline underline-offset-4 hover:text-blue">
-              Read the FAQ
-            </Link>{" "}
-            or{" "}
-            <Link href="/book-a-tour" className="underline underline-offset-4 hover:text-blue">
-              book a tour
-            </Link>
-            .
-          </p>
         </div>
       </section>
+
+      <ContextualFaq page="happenings" limit={5} className="border-t border-line py-20 lg:py-28" />
     </>
   );
 }

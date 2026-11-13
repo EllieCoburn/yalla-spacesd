@@ -18,6 +18,7 @@ const ICONS: Record<string, ReactNode> = {
   memberships: <path d="M5 20V8l7-4 7 4v12 M9 20v-6h6v6" />,
   playpass: <path d="M4 8h16v9H4z M4 11.5h16 M15 15h2 M8 5.5h8" />,
   waitlist: <path d="M5 7h14 M5 12h10 M5 17h6" />,
+  faq: <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M9.8 9.6a2.3 2.3 0 1 1 3 2.2c-.5.2-.8.6-.8 1.1v.6 M12 16.4v.1" />,
   spaces: <path d="M4 20h16 M6 20V9h12v11 M9 13h6 M12 9V5" />,
   forms: <path d="M7 3.5h7l4 4V20H7z M14 3.5V8h4 M10 13h5 M10 16.5h5" />,
   billing: <path d="M4 7h16v11H4z M4 10.5h16 M8 15h3" />,

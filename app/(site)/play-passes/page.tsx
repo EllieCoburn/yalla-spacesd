@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { Mark } from "@/components/brand/Mark";
-import { Arrow, Chevron, Eyebrow } from "@/components/ui/primitives";
+import { Arrow, Eyebrow } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { PLAN_DEFAULTS, PLAN_LOOK, PLAY_PASS_FAQ, WALLET_EXPLAINER } from "@/content/playpass";
+import { PLAN_DEFAULTS, PLAN_LOOK, WALLET_EXPLAINER } from "@/content/playpass";
+import { ContextualFaq } from "@/components/faq/ContextualFaq";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { programs } from "@/lib/db/schema";
 import { offeredPlans } from "@/lib/playpass/membership";
@@ -125,32 +126,7 @@ export default async function PlayPassesPage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-20 lg:py-28">
-        <div className="shell grid gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <Eyebrow>Questions</Eyebrow>
-            <h2 className="display mt-5 text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
-              About <em>Play Passes.</em>
-            </h2>
-          </div>
-          <div className="hairline border-t lg:col-span-8">
-            {PLAY_PASS_FAQ.map((it) => (
-              <details key={it.q} className="group hairline border-b">
-                <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-6 [&::-webkit-details-marker]:hidden">
-                  <span className="display text-[1.3rem] leading-snug! sm:text-[1.5rem]">{it.q}</span>
-                  <Chevron className="mt-3 h-2.5 w-4 shrink-0 text-ink" />
-                </summary>
-                <div className="max-w-2xl space-y-4 pb-8 text-[1.02rem] text-ink-soft">
-                  {it.a.map((para) => (
-                    <p key={para.slice(0, 40)}>{para}</p>
-                  ))}
-                </div>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ContextualFaq page="play-pass" />
     </>
   );
 }

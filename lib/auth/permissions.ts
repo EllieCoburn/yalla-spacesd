@@ -85,6 +85,10 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: "Website",
+    items: [{ key: "content.manage", label: "Edit website FAQs" }],
+  },
+  {
     group: "Administration",
     items: [
       { key: "settings.manage", label: "Settings, locations and policies" },

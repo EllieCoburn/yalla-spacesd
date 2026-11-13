@@ -5,6 +5,7 @@ import { cohortMarks } from "@/components/brand/CohortMarks";
 import { Mark } from "@/components/brand/Mark";
 import { ClubYallaDay } from "@/components/site/ClubYallaDay";
 import { CtaBand, Facts, Section } from "@/components/site/PageParts";
+import { ContextualFaq } from "@/components/faq/ContextualFaq";
 import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
@@ -214,6 +215,8 @@ export default function ClubYallaPage() {
           </ol>
         </div>
       </Section>
+
+      <ContextualFaq page="club-yalla" />
 
       <CtaBand
         title={

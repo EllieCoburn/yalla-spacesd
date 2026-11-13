@@ -44,6 +44,11 @@ export function SiteFooter() {
                     FAQ
                   </Link>
                 </li>
+                <li>
+                  <Link href="/policies" className="link-underline text-chalk/90 hover:text-chalk">
+                    Policies &amp; Terms
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>

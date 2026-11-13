@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ContextualFaq } from "@/components/faq/ContextualFaq";
 import { Mark } from "@/components/brand/Mark";
 import { FlexRates } from "@/components/site/FlexRates";
 import { ProgramDates, type DateGroup } from "@/components/site/ProgramDates";
@@ -249,6 +250,8 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
           ))}
         </div>
       </section>
+
+      {p.kind === "drop_in" ? <ContextualFaq page="flex" limit={5} className="border-t border-line py-20 lg:py-28" /> : p.kind === "camp" ? <ContextualFaq page="camp" limit={5} className="border-t border-line py-20 lg:py-28" /> : null}
 
       {page.after}
     </>

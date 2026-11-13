@@ -125,6 +125,25 @@ export const settings = pgTable("settings", {
   updatedBy: text("updated_by"),
 });
 
+/**
+ * FAQ entries saved by staff (Admin → FAQs). Each row replaces the starting entry with the same id
+ * in content/faq.ts, or adds a new one, so a question is only ever written once.
+ */
+export const faqEntries = pgTable("faq_entries", {
+  id: text("id").primaryKey(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull().default(""),
+  policy: text("policy"),
+  category: text("category").notNull(),
+  alsoIn: text("also_in").array().notNull().default(sql`'{}'::text[]`),
+  pages: jsonb("pages").$type<Record<string, number>>().notNull().default({}),
+  sortOrder: integer("sort_order").notNull().default(0),
+  status: text("status").notNull().default("draft"), // published | draft | archived
+  needs: text("needs"),
+  updatedAt: updatedAt(),
+  updatedBy: text("updated_by"),
+});
+
 export const locations = pgTable("locations", {
   id: id(),
   name: text("name").notNull(),

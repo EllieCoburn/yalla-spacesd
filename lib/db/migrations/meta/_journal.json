@@ -127,6 +127,13 @@
       "when": 1794604647908,
       "tag": "0017_desks_half_day_open_daily",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794609601696,
+      "tag": "0018_faq_entries",
+      "breakpoints": true
     }
   ]
 }
