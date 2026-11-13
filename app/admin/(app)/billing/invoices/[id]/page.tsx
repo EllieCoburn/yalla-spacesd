@@ -186,9 +186,17 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <div className="flex justify-between">
                 <dt className="text-ink-soft">Credit applied</dt>
                 <dd>
-                  <Money cents={t.creditApplied} />
+                  <Money cents={t.creditApplied - t.walletApplied} />
                 </dd>
               </div>
+              {t.walletApplied ? (
+                <div className="flex justify-between">
+                  <dt className="text-ink-soft">Play Pass applied</dt>
+                  <dd>
+                    <Money cents={t.walletApplied} />
+                  </dd>
+                </div>
+              ) : null}
               <div className="flex justify-between">
                 <dt className="text-ink-soft">Amount refunded</dt>
                 <dd>

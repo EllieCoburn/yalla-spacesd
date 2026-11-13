@@ -140,7 +140,8 @@ export async function resolveSession(db: Executor, token: string | undefined | n
     name: row.u.name,
     roleKey: row.r.key,
     roleName: row.r.name,
-    permissions: row.r.permissions as Permission[],
+    // The owner role always holds every permission, including ones added after setup.
+    permissions: row.r.key === "owner" ? ALL_PERMISSIONS : (row.r.permissions as Permission[]),
     mfaEnabled: row.u.mfaEnabled,
     sessionId: row.s.id,
     mfaVerified: row.s.mfaVerified,

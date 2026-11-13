@@ -68,6 +68,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: "Play Passes",
+    items: [
+      { key: "playpass.view", label: "View Play Pass members, wallets and reports" },
+      { key: "playpass.manage", label: "Adjust wallet balances, edit Play Pass offerings and eligibility" },
+    ],
+  },
+  {
     group: "Communications & reports",
     items: [
       { key: "communications.view", label: "View communication history" },
@@ -147,6 +154,8 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
       "billing.view",
       "billing.manage",
       "billing.refund",
+      "playpass.view",
+      "playpass.manage",
       "communications.view",
       "reports.view",
       "reports.financial",

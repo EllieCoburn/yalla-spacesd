@@ -15,6 +15,7 @@ const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin/spaces", label: "Space reservations", icon: "spaces", group: "Daily", perm: "spaces.view" },
   { href: "/admin/families", label: "Families", icon: "families", group: "People", perm: "families.view", mobile: true },
   { href: "/admin/memberships", label: "Club Yalla", icon: "memberships", group: "People", perm: "memberships.view" },
+  { href: "/admin/play-passes", label: "Play Passes", icon: "playpass", group: "People", perm: "playpass.view" },
   { href: "/admin/forms", label: "Forms & waivers", icon: "forms", group: "People", perm: "forms.view" },
   { href: "/admin/schedule", label: "Schedule", icon: "schedule", group: "Programs", perm: "programs.view" },
   { href: "/admin/programs", label: "Programs", icon: "programs", group: "Programs", perm: "programs.view" },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SessionEditor } from "@/components/admin/bookings/SessionEditor";
-import { ActionForm, Disclosure, TextField } from "@/components/admin/forms";
+import { ActionForm, Disclosure, SelectField, TextField } from "@/components/admin/forms";
 import { Capacity, Card, DL, Empty, LinkButton, Money, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
 import { sessionDetail } from "@/lib/admin/queries/bookings";
 import { requirePermission } from "@/lib/auth/session";
@@ -11,6 +11,7 @@ import { publicState } from "@/lib/ops/capacity";
 import { WEEKDAY } from "@/lib/ops/memberships";
 import { ageLabel, addDaysISO, fmtDate, fmtDateTime, fmtTime } from "@/lib/time";
 import { applyChangeAction, duplicateAction, previewChangeAction } from "./actions";
+import { sessionPlayPassAction } from "../../play-passes/session-action";
 
 export const metadata = { title: "Session" };
 
@@ -230,6 +231,23 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
                 <Disclosure label="Edit time, capacity, reserved spots or price" defaultOpen={false}>
                   <SessionEditor sessionId={s.id} inSeries={!!s.seriesId} current={current} preview={previewChangeAction} apply={applyChangeAction} mode="edit" />
                 </Disclosure>
+                {can(staff, "playpass.manage") ? (
+                  <Disclosure label={`Play Pass: ${s.playPassEligible == null ? "follows the program" : s.playPassEligible ? "accepted for this session" : "not accepted for this session"}`}>
+                    <ActionForm action={sessionPlayPassAction} submit={{ label: "Save", variant: "secondary" }}>
+                      <input type="hidden" name="sessionId" value={s.id} />
+                      <SelectField
+                        name="mode"
+                        label="Play Pass funds for this session"
+                        defaultValue={s.playPassEligible == null ? "inherit" : s.playPassEligible ? "yes" : "no"}
+                        options={[
+                          { value: "inherit", label: `Follow ${p.name} (${p.playPassEligible && p.walletRedemptionAllowed ? "accepted" : "not accepted"})` },
+                          { value: "yes", label: "Accept for this session" },
+                          { value: "no", label: "Don’t accept for this session" },
+                        ]}
+                      />
+                    </ActionForm>
+                  </Disclosure>
+                ) : null}
                 <Disclosure label="Duplicate to another date">
                   <ActionForm action={duplicateAction} submit={{ label: "Duplicate session", variant: "secondary" }}>
                     <input type="hidden" name="sessionId" value={s.id} />
