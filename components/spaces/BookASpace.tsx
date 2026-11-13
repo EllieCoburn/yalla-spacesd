@@ -304,6 +304,11 @@ function Legend() {
   );
 }
 
+/**
+ * The day as a calendar: times down the side, one column per space. Every open half-hour is a
+ * button; reservations show as labeled blocks ("Reserved", or "Yours") so everyone can see what's
+ * taken. Phones show one space at a time.
+ */
 function Timeline({
   view,
   workspaces,
@@ -319,138 +324,152 @@ function Timeline({
   skip: { start: string; end: string }[];
   onPick: (workspaceId: string, start: number) => void;
 }) {
+  const ROW = 30; // minutes per row
   const opens = workspaces.filter((w) => w.hours).map((w) => toMin(w.hours![0]));
   const closes = workspaces.filter((w) => w.hours).map((w) => toMin(w.hours![1]));
-  const from = Math.floor((opens.length ? Math.min(...opens) : 510) / 30) * 30;
-  const to = Math.ceil((closes.length ? Math.max(...closes) : 990) / 30) * 30;
-  const span = to - from;
-  const pct = (m: number) => `${((Math.min(Math.max(m, from), to) - from) / span) * 100}%`;
-  const ticks: number[] = [];
-  for (let m = Math.ceil(from / 60) * 60; m <= to; m += 60) ticks.push(m);
-  const [hover, setHover] = useState<{ id: string; m: number } | null>(null);
-  const trackRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const from = Math.floor((opens.length ? Math.min(...opens) : 510) / ROW) * ROW;
+  const to = Math.ceil((closes.length ? Math.max(...closes) : 990) / ROW) * ROW;
+  const rows: number[] = [];
+  for (let m = from; m < to; m += ROW) rows.push(m);
+  const top = (m: number) => `${((Math.min(Math.max(m, from), to) - from) / (to - from)) * 100}%`;
+  const height = (a: number, b: number) => `${((Math.min(b, to) - Math.max(a, from)) / (to - from)) * 100}%`;
+  const [phonePick, setPhonePick] = useState<string | null>(null);
+  const phoneSpace = workspaces.find((w) => w.id === phonePick) ?? workspaces[0];
+
+  const column = (w: PublicWorkspace) => {
+    const mine = (me?.mine ?? []).filter((m) => m.workspaceId === w.id && !skip.some((s) => s.start === m.start && s.end === m.end));
+    // The family's own reservations are drawn as "Yours", not as someone else's "Reserved".
+    const busy = localBusy(view.busy, w.id, [...skip, ...mine]);
+    const allBusy = localBusy(view.busy, w.id, skip);
+    const open = w.hours ? toMin(w.hours[0]) : null;
+    const close = w.hours ? toMin(w.hours[1]) : null;
+    const pickable = w.bookingTypes.some((b) => b === "complimentary" || b === "hourly");
+    const free = (m: number) => open != null && m >= open && m < close! && (nowMin == null || m >= nowMin) && !allBusy.some((b) => m >= b.start && m < b.end);
+    return (
+      <div className="relative" style={{ height: `${rows.length * 2.75}rem` }}>
+        {/* One button per open half-hour */}
+        {rows.map((m, i) => {
+          const ok = free(m);
+          return (
+            <button
+              key={m}
+              type="button"
+              disabled={!ok}
+              onClick={() => onPick(w.id, pickable ? m : -1)}
+              aria-label={`${w.name}, ${fmtMin(m)}${ok ? ", available" : ""}`}
+              className={`group absolute inset-x-0 flex items-center border-t border-line/70 px-2 text-left text-[0.72rem] transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-blue/50 focus-visible:outline-none ${
+                ok ? "bg-paper hover:bg-blue/10" : "cursor-default"
+              }`}
+              style={{ top: `${i * 2.75}rem`, height: "2.75rem" }}
+            >
+              {ok ? <span className="text-blue opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">+ {fmtMin(m)}</span> : null}
+            </button>
+          );
+        })}
+        {/* Closed: before opening and after closing */}
+        {open == null ? (
+          <div className="hatch pointer-events-none absolute inset-0 flex items-center justify-center text-[0.72rem] text-ink-soft">Closed</div>
+        ) : (
+          <>
+            {open > from ? <div className="hatch pointer-events-none absolute inset-x-0" style={{ top: 0, height: height(from, open) }} /> : null}
+            {close! < to ? <div className="hatch pointer-events-none absolute inset-x-0" style={{ top: top(close!), height: height(close!, to) }} /> : null}
+          </>
+        )}
+        {/* Time that has passed */}
+        {nowMin != null && nowMin > from ? <div className="pointer-events-none absolute inset-x-0 bg-chalk/70" style={{ top: 0, height: height(from, nowMin) }} /> : null}
+        {busy.map((b, i) => (
+          <div
+            key={i}
+            className={`absolute inset-x-1 overflow-hidden rounded-md px-2 py-1 text-[0.7rem] leading-tight ${b.status === "reserved" ? "bg-ink/[0.12] text-ink/70" : "hatch-dark text-ink/60"}`}
+            style={{ top: top(b.start), height: height(b.start, b.end) }}
+          >
+            <span className="block font-medium tracking-[0.06em] uppercase">{b.status === "reserved" ? "Reserved" : "Unavailable"}</span>
+            {b.end - b.start >= 45 ? <span className="block">{fmtRange(b.start, b.end)}</span> : null}
+          </div>
+        ))}
+        {mine.map((m) => (
+          <div
+            key={m.reference + m.start}
+            className="absolute inset-x-1 overflow-hidden rounded-md bg-blue/20 px-2 py-1 text-[0.7rem] leading-tight text-blue ring-1 ring-blue/50 ring-inset"
+            style={{ top: top(laMinutes(m.start)), height: height(laMinutes(m.start), laMinutes(m.end)) }}
+          >
+            <span className="block font-medium tracking-[0.06em] uppercase">Yours</span>
+            {laMinutes(m.end) - laMinutes(m.start) >= 45 ? <span className="block">{fmtRange(laMinutes(m.start), laMinutes(m.end))}</span> : null}
+          </div>
+        ))}
+        {nowMin != null && nowMin > from && nowMin < to ? (
+          <span className="pointer-events-none absolute inset-x-0 h-px bg-oxblood/70" style={{ top: top(nowMin) }}>
+            <span className="absolute -top-[3px] -left-[3px] h-[7px] w-[7px] rounded-full bg-oxblood" />
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
+  const times = (
+    <div className="relative" style={{ height: `${rows.length * 2.75}rem` }} aria-hidden>
+      {rows.map((m, i) =>
+        m % 60 === 0 ? (
+          <span key={m} className="absolute right-3 -translate-y-1/2 text-[0.7rem] text-ink-soft tabular-nums" style={{ top: `${i * 2.75}rem` }}>
+            {fmtMin(m, { compact: true })}
+          </span>
+        ) : null,
+      )}
+    </div>
+  );
+
+  const header = (w: PublicWorkspace) => (
+    <button type="button" onClick={() => onPick(w.id, -1)} className="block w-full px-2 pb-3 text-left hover:text-blue focus-visible:text-blue focus-visible:outline-none">
+      <span className="block font-serif text-[1.15rem] leading-tight">{w.name}</span>
+      <span className="text-[0.62rem] tracking-[0.08em] text-ink-soft uppercase">{CATEGORY_LABEL[w.category]}</span>
+    </button>
+  );
 
   return (
-    <div className="no-scrollbar -mx-[clamp(1.25rem,4vw,3.5rem)] overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)]">
-      <div className="min-w-[44rem]">
-        {/* Time markers */}
-        <div className="grid grid-cols-[7.5rem_1fr] sm:grid-cols-[10rem_1fr]">
-          <div className="sticky left-0 z-10 bg-chalk" />
-          <div className="relative h-7" aria-hidden>
-            {ticks.map((t) => (
-              <span key={t} className="absolute -translate-x-1/2 text-[0.7rem] text-ink-soft tabular-nums" style={{ left: pct(t) }}>
-                {fmtMin(t, { compact: true })}
-              </span>
-            ))}
-          </div>
+    <div>
+      {/* Tablet and up: every space side by side */}
+      <div className="hidden overflow-x-auto sm:block">
+        <div className="grid min-w-[40rem] pt-2" style={{ gridTemplateColumns: `4rem repeat(${workspaces.length}, minmax(7.5rem, 1fr))` }}>
+          <div />
+          {workspaces.map((w) => (
+            <div key={w.id} className="border-l border-line">
+              {header(w)}
+            </div>
+          ))}
+          <div className="border-t border-line pt-0">{times}</div>
+          {workspaces.map((w) => (
+            <div key={w.id} className="overflow-hidden border-t border-l border-line">
+              {column(w)}
+            </div>
+          ))}
         </div>
-        <ul className="divide-y divide-line border-y border-line">
-          {workspaces.map((w) => {
-            const mine = (me?.mine ?? []).filter((m) => m.workspaceId === w.id && !skip.some((s) => s.start === m.start && s.end === m.end));
-            // The family's own reservations are drawn as "Yours", not as someone else's "Reserved".
-            const busy = localBusy(view.busy, w.id, [...skip, ...mine]);
-            const allBusy = localBusy(view.busy, w.id, skip);
-            const open = w.hours ? toMin(w.hours[0]) : null;
-            const close = w.hours ? toMin(w.hours[1]) : null;
-            const pickable = w.bookingTypes.some((b) => b === "complimentary" || b === "hourly");
-            const freeText = !w.hours
-              ? "Closed"
-              : (() => {
-                  const parts: string[] = [];
-                  let cursor = Math.max(open!, nowMin ?? 0);
-                  for (const b of [...allBusy].sort((a, c) => a.start - c.start)) {
-                    if (b.start > cursor) parts.push(fmtRange(cursor, Math.min(b.start, close!)));
-                    cursor = Math.max(cursor, b.end);
-                  }
-                  if (cursor < close!) parts.push(fmtRange(cursor, close!));
-                  return parts.length ? `Available ${parts.join(", ")}` : "Fully reserved";
-                })();
-            return (
-              <li key={w.id} className="grid grid-cols-[7.5rem_1fr] items-stretch sm:grid-cols-[10rem_1fr]">
-                <div className="sticky left-0 z-10 flex flex-col justify-center bg-chalk py-3 pr-4">
-                  <button
-                    onClick={() => onPick(w.id, -1)}
-                    className="text-left font-serif text-[1.15rem] leading-tight hover:text-blue focus-visible:text-blue focus-visible:outline-none"
-                    aria-label={`Reserve ${w.name}, ${CATEGORY_LABEL[w.category]}. ${freeText}.`}
-                  >
-                    {w.name}
-                  </button>
-                  <span className="text-[0.68rem] tracking-[0.08em] text-ink-soft uppercase">{CATEGORY_LABEL[w.category]}</span>
-                </div>
-                <div
-                  ref={(el) => {
-                    trackRef.current[w.id] = el;
-                  }}
-                  className={`relative my-2.5 h-12 rounded-md ${w.hours ? "cursor-pointer" : ""}`}
-                  aria-hidden
-                  onMouseMove={(e) => {
-                    if (!w.hours || !pickable) return;
-                    const r = e.currentTarget.getBoundingClientRect();
-                    const m = from + ((e.clientX - r.left) / r.width) * span;
-                    const slot = Math.floor(m / view.config.slotMinutes) * view.config.slotMinutes;
-                    setHover({ id: w.id, m: slot });
-                  }}
-                  onMouseLeave={() => setHover(null)}
-                  onClick={(e) => {
-                    if (!w.hours) return;
-                    const r = e.currentTarget.getBoundingClientRect();
-                    const m = from + ((e.clientX - r.left) / r.width) * span;
-                    const slot = Math.floor(m / view.config.slotMinutes) * view.config.slotMinutes;
-                    onPick(w.id, pickable ? slot : -1);
-                  }}
-                >
-                  {/* Closed outside opening hours */}
-                  <div className="hatch absolute inset-0 rounded-md" />
-                  {w.hours ? <div className="absolute inset-y-0 rounded-md border border-blue/20 bg-paper" style={{ left: pct(open!), width: `calc(${pct(close!)} - ${pct(open!)})` }} /> : null}
-                  {ticks.map((t) => (
-                    <span key={t} className="absolute inset-y-1 w-px bg-ink/[0.06]" style={{ left: pct(t) }} />
-                  ))}
-                  {nowMin != null && w.hours && nowMin > open! ? (
-                    <div className="absolute inset-y-0 rounded-l-md bg-chalk/70" style={{ left: pct(open!), width: `calc(${pct(Math.min(nowMin, close!))} - ${pct(open!)})` }} />
-                  ) : null}
-                  {busy.map((b, i) => (
-                    <div
-                      key={i}
-                      title={`${b.status === "reserved" ? "Reserved" : "Unavailable"} · ${fmtRange(b.start, b.end)}`}
-                      className={`absolute inset-y-1 flex items-center overflow-hidden rounded-[5px] px-2 text-[0.68rem] tracking-[0.06em] text-ink/55 uppercase ${b.status === "reserved" ? "bg-ink/[0.12]" : "hatch-dark"}`}
-                      style={{ left: pct(b.start), width: `calc(${pct(b.end)} - ${pct(b.start)})` }}
-                    >
-                      {b.end - b.start >= 60 ? <span className="truncate">{b.status === "reserved" ? "Reserved" : "Unavailable"}</span> : null}
-                    </div>
-                  ))}
-                  {mine.map((m) => (
-                    <div
-                      key={m.reference + m.start}
-                      title={`Yours · ${fmtRange(laMinutes(m.start), laMinutes(m.end))}`}
-                      className="absolute inset-y-1 flex items-center overflow-hidden rounded-[5px] bg-blue/25 px-2 text-[0.68rem] tracking-[0.06em] text-blue uppercase ring-1 ring-blue/50 ring-inset"
-                      style={{ left: pct(laMinutes(m.start)), width: `calc(${pct(laMinutes(m.end))} - ${pct(laMinutes(m.start))})` }}
-                    >
-                      {laMinutes(m.end) - laMinutes(m.start) >= 45 ? <span className="truncate">Yours</span> : null}
-                    </div>
-                  ))}
-                  {hover && hover.id === w.id && w.hours && hover.m >= open! && hover.m < close! ? (
-                    <div
-                      className="pointer-events-none absolute inset-y-0.5 rounded-[5px] border border-blue bg-blue/10 transition-[left] duration-100"
-                      style={{ left: pct(hover.m), width: `calc(${pct(hover.m + view.config.slotMinutes)} - ${pct(hover.m)})` }}
-                    >
-                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 rounded-full bg-ink px-2 py-0.5 text-[0.65rem] whitespace-nowrap text-chalk">{fmtMin(hover.m)}</span>
-                    </div>
-                  ) : null}
-                  {nowMin != null && nowMin >= from && nowMin <= to ? (
-                    <span className="absolute -inset-y-1 w-px bg-oxblood/70" style={{ left: pct(nowMin) }}>
-                      <span className="absolute -top-1 -left-[3px] h-[7px] w-[7px] rounded-full bg-oxblood" />
-                    </span>
-                  ) : null}
-                </div>
-                <p className="sr-only">
-                  {w.name}: {freeText}.
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="mt-3 text-[0.78rem] text-ink-soft">Tap an open time to start a reservation. Availability refreshes automatically.</p>
       </div>
+
+      {/* Phones: one space at a time */}
+      <div className="sm:hidden">
+        <div className="no-scrollbar -mx-[clamp(1.25rem,4vw,3.5rem)] flex gap-2 overflow-x-auto px-[clamp(1.25rem,4vw,3.5rem)] pb-3" role="group" aria-label="Choose a space">
+          {workspaces.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              aria-pressed={phoneSpace?.id === w.id}
+              onClick={() => setPhonePick(w.id)}
+              className={`shrink-0 rounded-full border px-4 py-2 text-left text-[0.85rem] ${phoneSpace?.id === w.id ? "border-ink bg-ink text-chalk" : "border-ink/15"}`}
+            >
+              {w.name}
+              <span className="ml-1.5 text-[0.7rem] opacity-60">{CATEGORY_LABEL[w.category]}</span>
+            </button>
+          ))}
+        </div>
+        {phoneSpace ? (
+          <div className="grid grid-cols-[3.5rem_1fr] border-t border-line">
+            {times}
+            <div className="overflow-hidden border-l border-line">{column(phoneSpace)}</div>
+          </div>
+        ) : null}
+      </div>
+
+      <p className="mt-4 text-[0.78rem] text-ink-soft">Tap an open time to reserve it. Reserved times are shown for everyone, and availability refreshes automatically.</p>
     </div>
   );
 }
