@@ -19,6 +19,7 @@
     "@neon/config": "^1.11.0",
     "@neon/env": "^1.6.12",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.1.0",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.3",

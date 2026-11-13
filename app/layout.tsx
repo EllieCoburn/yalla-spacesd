@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { DM_Sans, Lora } from "next/font/google";
 import "./globals.css";
 
@@ -32,6 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         {/* Vercel Web Analytics: cookieless page-view counts. */}
         <Analytics />
+        {/* Vercel Speed Insights: real-visitor page performance. */}
+        <SpeedInsights />
       </body>
     </html>
   );
