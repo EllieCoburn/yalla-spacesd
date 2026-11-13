@@ -310,14 +310,15 @@ if (!(await db.select({ id: s.workspaces.id }).from(s.workspaces).limit(1)).leng
     { slug: "jane", name: "Jane", category: "private_office", summary: "A fully private office.", displayOrder: 1, bookingTypes: ["complimentary", "half_day", "full_day", "week"], complimentaryEligible: true },
     { slug: "frida", name: "Frida", category: "private_office", summary: "A fully private office.", displayOrder: 2, bookingTypes: ["half_day", "full_day", "week"] },
     { slug: "maya", name: "Maya", category: "phone_booth", summary: "A phone booth for calls, virtual meetings and quiet conversations.", displayOrder: 3, bookingTypes: ["complimentary"], complimentaryEligible: true },
-    { slug: "zora", name: "Zora", category: "private_desk", summary: "A private desk.", displayOrder: 4, bookingTypes: ["full_day", "week"] },
-    { slug: "rosa", name: "Rosa", category: "private_desk", summary: "A private desk.", displayOrder: 5, bookingTypes: ["full_day", "week"] },
-    { slug: "maria", name: "Maria", category: "private_desk", summary: "A private desk.", displayOrder: 6, bookingTypes: ["full_day", "week"] },
+    { slug: "zora", name: "Zora", category: "private_desk", summary: "A private desk.", displayOrder: 4, bookingTypes: ["half_day", "full_day", "week"] },
+    { slug: "rosa", name: "Rosa", category: "private_desk", summary: "A private desk.", displayOrder: 5, bookingTypes: ["half_day", "full_day", "week"] },
+    { slug: "maria", name: "Maria", category: "private_desk", summary: "A private desk.", displayOrder: 6, bookingTypes: ["half_day", "full_day", "week"] },
   ]);
   await db.insert(s.workspaceRates).values([
     { category: "private_office", bookingType: "half_day", priceCents: 3000, effectiveFrom: "2026-10-01" },
     { category: "private_office", bookingType: "full_day", priceCents: 5500, effectiveFrom: "2026-10-01" },
     { category: "private_office", bookingType: "week", priceCents: 27000, effectiveFrom: "2026-10-01" },
+    { category: "private_desk", bookingType: "half_day", priceCents: 1800, effectiveFrom: "2026-10-01" },
     { category: "private_desk", bookingType: "full_day", priceCents: 3500, effectiveFrom: "2026-10-01" },
     { category: "private_desk", bookingType: "week", priceCents: 15000, effectiveFrom: "2026-10-01" },
   ]);

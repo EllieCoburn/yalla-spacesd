@@ -288,6 +288,32 @@ type Ctx = { familyId: string | null; override?: boolean; excludeGroupId?: strin
  * Validates a request and prices it without writing anything. The same checks run again under
  * lock when the reservation is actually created.
  */
+export const COMMUNITY_MESSAGE =
+  "Coworking spaces are reserved for families in the Yalla community. Once your child has attended a session at Yalla, you can reserve a space here.";
+
+/**
+ * In the Yalla community: a child in the family has attended at least one session (checked in, or
+ * a past confirmed booking not marked absent), or the family has a Club Yalla membership underway.
+ */
+export async function inCommunity(db: Executor, familyId: string, now = new Date()) {
+  const today = todayLA(now);
+  const [r] = await db.execute<{ ok: boolean }>(sql`
+    select exists (
+      select 1 from attendance_records a join children c on c.id = a.child_id
+      where c.family_id = ${familyId} and a.status in ('checked_in', 'checked_out')
+    ) or exists (
+      select 1 from booking_items i
+      join bookings b on b.id = i.booking_id
+      join sessions s on s.id = i.session_id
+      where b.family_id = ${familyId} and i.child_id is not null and i.status = 'confirmed'
+        and s.ends_at < ${now.toISOString()}::timestamptz and i.attendance not in ('absent', 'no_show', 'late_cancel')
+    ) or exists (
+      select 1 from memberships m
+      where m.family_id = ${familyId} and m.status in ('active', 'paused') and m.starts_on <= ${today}
+    ) as ok`);
+  return !!r?.ok;
+}
+
 export async function quoteSpace(db: Executor, input: ReserveInput, ctx: Ctx): Promise<Quote> {
   const now = ctx.now ?? new Date();
   const cfg = await getSpaceConfig(db);
@@ -333,8 +359,12 @@ export async function quoteSpace(db: Executor, input: ReserveInput, ctx: Ctx): P
     if (!rate) problem = `${BOOKING_TYPE_LABEL[input.bookingType]} reservations for ${ws.name} don’t have a price yet, so they can’t be booked online.`;
     else priceCents = priceFor(rate, input.bookingType, minutes);
   }
+  // Coworking is for families already in the Yalla community (staff can still book for anyone).
+  if (!ctx.override && ctx.familyId && !(await inCommunity(db, ctx.familyId, now))) problem = COMMUNITY_MESSAGE;
   const c = await conflictsFor(db, ws.id, intervals, now, { excludeGroupId: ctx.excludeGroupId, ignoreBlocks: ctx.override });
-  if (c.reserved) problem = "Looks like this space is spoken for. Try another time or explore a different workspace.";
+  if (problem === COMMUNITY_MESSAGE) {
+    /* keep the community message */
+  } else if (c.reserved) problem = "Looks like this space is spoken for. Try another time or explore a different workspace.";
   else if (c.blocked) problem = `${ws.name} is unavailable then. Try another time or explore a different workspace.`;
   return {
     workspace: { id: ws.id, name: ws.name, category: ws.category as Category },

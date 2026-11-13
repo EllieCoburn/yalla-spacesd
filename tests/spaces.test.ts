@@ -11,6 +11,7 @@ import {
   confirmSpaceGroup,
   createReservation,
   expireSpaceHolds,
+  inCommunity,
   moveSpaceGroup,
   planIntervals,
   quoteSpace,
@@ -18,7 +19,7 @@ import {
   type ReserveInput,
 } from "@/lib/spaces/engine";
 import { addDaysISO, todayLA, weekdayOf } from "@/lib/time";
-import { db, family, owner, reset } from "./helpers";
+import { db, family as newFamily, owner, reset } from "./helpers";
 
 beforeEach(reset);
 
@@ -38,7 +39,7 @@ async function seedSpaces() {
       { slug: "jane", name: "Jane", category: "private_office", displayOrder: 1, bookingTypes: ["complimentary", "half_day", "full_day", "week"], complimentaryEligible: true },
       { slug: "frida", name: "Frida", category: "private_office", displayOrder: 2, bookingTypes: ["half_day", "full_day", "week"] },
       { slug: "maya", name: "Maya", category: "phone_booth", displayOrder: 3, bookingTypes: ["complimentary"], complimentaryEligible: true },
-      { slug: "zora", name: "Zora", category: "private_desk", displayOrder: 4, bookingTypes: ["full_day", "week"] },
+      { slug: "zora", name: "Zora", category: "private_desk", displayOrder: 4, bookingTypes: ["half_day", "full_day", "week"] },
       { slug: "rosa", name: "Rosa", category: "private_desk", displayOrder: 5, bookingTypes: ["full_day", "week"] },
     ])
     .returning();
@@ -48,11 +49,30 @@ async function seedSpaces() {
       { category: "private_office", bookingType: "half_day", priceCents: 3000, effectiveFrom: "2026-01-01" },
       { category: "private_office", bookingType: "full_day", priceCents: 5500, effectiveFrom: "2026-01-01" },
       { category: "private_office", bookingType: "week", priceCents: 27000, effectiveFrom: "2026-01-01" },
+      { category: "private_desk", bookingType: "half_day", priceCents: 1800, effectiveFrom: "2026-01-01" },
       { category: "private_desk", bookingType: "full_day", priceCents: 3500, effectiveFrom: "2026-01-01" },
       { category: "private_desk", bookingType: "week", priceCents: 15000, effectiveFrom: "2026-01-01" },
     ]);
   const by = Object.fromEntries(ws.map((w) => [w.slug, w])) as Record<string, typeof s.workspaces.$inferSelect>;
   return by;
+}
+
+/** A family whose child has attended a Yalla session, so they're part of the community and may cowork. */
+async function family(name = "Family") {
+  const f = await newFamily(name);
+  await attended(f);
+  return f;
+}
+
+async function attended(f: Awaited<ReturnType<typeof newFamily>>) {
+  const [loc] = await db().insert(s.locations).values({ name: `Yalla ${f.family.id}` }).returning();
+  const [p] = await db().insert(s.programs).values({ slug: `past-${f.family.id}`, name: "Past session", kind: "happening", status: "published", locationId: loc.id }).returning();
+  const day = addDaysISO(todayLA(), -7);
+  const [sess] = await db()
+    .insert(s.sessions)
+    .values({ programId: p.id, localDate: day, startsAt: new Date(`${day}T17:00:00Z`), endsAt: new Date(`${day}T20:00:00Z`), capacity: 10 })
+    .returning();
+  await db().insert(s.attendanceRecords).values({ sessionId: sess.id, childId: f.children[0].id, status: "checked_out" });
 }
 
 /** A family with complimentary time (granted by staff, so tests don't depend on memberships). */
@@ -86,7 +106,8 @@ describe("Availability", () => {
     const day = nextMonday();
     await expect(quoteSpace(db(), comp(ws.jane.id, day, "16:15", 30), { familyId: a.family.id })).rejects.toThrow(/open/);
     await expect(quoteSpace(db(), comp(ws.jane.id, day, "08:00", 15), { familyId: a.family.id })).rejects.toThrow(/open/);
-    await expect(quoteSpace(db(), comp(ws.jane.id, addDaysISO(day, 5), "10:00", 15), { familyId: a.family.id })).rejects.toThrow(/isn’t open/);
+    await db().insert(s.blackoutDates).values({ startsOn: addDaysISO(day, 5), endsOn: addDaysISO(day, 5), reason: "Closed" });
+    await expect(quoteSpace(db(), comp(ws.jane.id, addDaysISO(day, 5), "10:00", 15), { familyId: a.family.id })).rejects.toThrow(/closed|isn’t open/);
     const q = await quoteSpace(db(), comp(ws.jane.id, day, "10:00", 15), { familyId: a.family.id });
     await db()
       .insert(s.workspaceBlocks)
@@ -199,14 +220,14 @@ describe("Paid reservations", () => {
     expect(lines.reduce((sum, l) => sum + l.amountCents, 0)).toBe(3500);
   });
 
-  it("books a week as five operating days and refuses a week with any taken day", async () => {
+  it("books a week as five days in a row from the chosen day and refuses a week with any taken day", async () => {
     const ws = await seedSpaces();
     const f = await family("Week");
     const other = await family("Other");
     const monday = nextMonday();
     const g = await createReservation(db(), owner, { workspaceId: ws.frida.id, bookingType: "week", date: addDaysISO(monday, 2) }, { familyId: f.family.id, source: "admin", charge: "invoice" });
     const rows = await db().select().from(s.spaceReservations).where(eq(s.spaceReservations.groupId, g.id));
-    expect(rows.map((r) => r.localDate).sort()).toEqual([0, 1, 2, 3, 4].map((i) => addDaysISO(monday, i)));
+    expect(rows.map((r) => r.localDate).sort()).toEqual([2, 3, 4, 5, 6].map((i) => addDaysISO(monday, i)));
     expect(g.totalCents).toBe(27000);
     // Another family books Thursday of the following week; that whole week is then unavailable.
     const nextWeek = addDaysISO(monday, 7);
@@ -303,6 +324,30 @@ describe("Permissions", () => {
   });
 });
 
+describe("Community", () => {
+  it("only lets families whose child has attended a session reserve coworking", async () => {
+    const ws = await seedSpaces();
+    const f = await newFamily("New");
+    const day = nextMonday();
+    expect(await inCommunity(db(), f.family.id)).toBe(false);
+    await expect(createReservation(db(), familyActor(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, source: "portal" })).rejects.toThrow(/Yalla community/);
+    await attended(f);
+    expect(await inCommunity(db(), f.family.id)).toBe(true);
+    const g = await createReservation(db(), familyActor(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, source: "portal" });
+    expect(g.totalCents).toBe(3500);
+  });
+
+  it("prices a desk half day at $18, 8:30am to 12pm, on a Saturday too", async () => {
+    const ws = await seedSpaces();
+    const f = await family("Desk");
+    const saturday = addDaysISO(nextMonday(), 5);
+    const q = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "half_day", date: saturday, half: "morning" } as ReserveInput, { familyId: f.family.id });
+    expect(q.priceCents).toBe(1800);
+    expect(q.problem).toBeNull();
+    expect(q.minutes).toBe(210);
+  });
+});
+
 describe("Time handling", () => {
   it("keeps 8:30am local across the daylight saving change", async () => {
     const ws = { id: "w", name: "Jane", hours: null } as unknown as typeof s.workspaces.$inferSelect;
@@ -312,9 +357,9 @@ describe("Time handling", () => {
     expect(after[0].startsAt.toISOString()).toBe("2026-11-02T16:30:00.000Z");
   });
 
-  it("covers Monday to Friday for a week and never the weekend", () => {
+  it("books a week as five days in a row from any start day, weekends included", () => {
     const ws = { id: "w", name: "Zora", hours: null } as unknown as typeof s.workspaces.$inferSelect;
-    const rows = planIntervals(DEFAULT_SPACE_CONFIG, ws, { workspaceId: "w", bookingType: "week", date: "2026-11-11" }, new Set());
-    expect(rows.map((r) => r.localDate)).toEqual(["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13"]);
+    const rows = planIntervals(DEFAULT_SPACE_CONFIG, ws, { workspaceId: "w", bookingType: "week", date: "2026-11-14" }, new Set());
+    expect(rows.map((r) => r.localDate)).toEqual(["2026-11-14", "2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18"]);
   });
 });

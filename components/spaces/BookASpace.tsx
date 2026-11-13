@@ -10,7 +10,7 @@ import { addDays, fmtDay, fmtDuration, fmtMin, fmtRange, laMinutes, toHHMM, toMi
 
 
 type Category = PublicWorkspace["category"];
-type Me = { allowance: Allowance; mine: { workspaceId: string; start: string; end: string; reference: string }[] } | null;
+type Me = { allowance: Allowance; community: boolean; mine: { workspaceId: string; start: string; end: string; reference: string }[] } | null;
 type Kind = ReserveInput["bookingType"];
 
 const CATEGORIES: { key: "all" | Category; label: string }[] = [
@@ -114,6 +114,19 @@ export function BookASpace({ initialView, initialMe, signedIn, moving }: { initi
             </span>
             <Link href="/portal/spaces/reservations" className="text-[0.85rem] text-ink-soft underline underline-offset-4 hover:text-ink">
               Keep it as it is
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {signedIn && me && !me.community ? (
+        <div className="shell mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 border border-blue/30 bg-blue/[0.05] px-5 py-4 text-[0.92rem]">
+            <span className="max-w-2xl">
+              Coworking spaces are reserved for families in the Yalla community. Once your child has attended a session at Yalla, you can reserve a space here. Care is booked separately.
+            </span>
+            <Link href="/book" className="text-[0.85rem] text-ink underline underline-offset-4 hover:text-blue">
+              Explore and book care
             </Link>
           </div>
         </div>
@@ -564,9 +577,14 @@ function BookingSheet({
     });
   if (!moving) {
     if (priced.hourly != null) kinds.push({ kind: "hourly", title: "By the hour", detail: `${usd(priced.hourly)} / hour` });
-    if (priced.half_day != null && (view.config.halfDay.morning || view.config.halfDay.afternoon)) kinds.push({ kind: "half_day", title: "Half day", detail: `${usd(priced.half_day)}` });
+    if (priced.half_day != null && (view.config.halfDay.morning || view.config.halfDay.afternoon)) {
+      const h = view.config.halfDay;
+      const only = h.morning && !h.afternoon ? h.morning : !h.morning && h.afternoon ? h.afternoon : null;
+      kinds.push({ kind: "half_day", title: "Half day", detail: only ? `${usd(priced.half_day)} · ${fmtRange(toMin(only.start), toMin(only.end))}` : usd(priced.half_day) });
+    }
     if (priced.full_day != null) kinds.push({ kind: "full_day", title: "Full day", detail: `${usd(priced.full_day)} · ${fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))}` });
-    if (priced.week != null) kinds.push({ kind: "week", title: "Week", detail: `${usd(priced.week)} · ${view.config.week.mode === "calendar" ? "Monday – Friday" : `${view.config.week.days} days`}` });
+    if (priced.week != null)
+      kinds.push({ kind: "week", title: "Week", detail: `${usd(priced.week)} · ${view.config.week.mode === "calendar" ? "Monday – Friday" : `${view.config.week.days} days in a row, starting any day`}` });
   }
   const firstEnabled = kinds.find((k) => !k.disabled)?.kind ?? null;
   const startGiven = initialStart != null && initialStart >= 0 ? initialStart : null;
@@ -577,6 +595,16 @@ function BookingSheet({
     return { kind: k, minutes, start: startGiven, half: view.config.halfDay.morning ? "morning" : view.config.halfDay.afternoon ? "afternoon" : null };
   });
   const [step, setStep] = useState<"choose" | "review" | "done">("choose");
+  // A week starts on any open day the family picks and runs for the configured number of open days.
+  const [weekStart, setWeekStart] = useState(view.date);
+  const openOn = (d: string) => view.config.openWeekdays.includes(weekday(d));
+  const weekStarts = Array.from({ length: 28 }, (_, i) => addDays(view.today, i)).filter((d) => openOn(d) && d >= view.today);
+  const weekSpan = (() => {
+    if (view.config.week.mode === "calendar") return view.weekDates;
+    const out: string[] = [];
+    for (let d = weekStart; out.length < view.config.week.days; d = addDays(d, 1)) if (openOn(d)) out.push(d);
+    return out;
+  })();
   const [q, setQ] = useState<Quote | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [pending, startPending] = useTransition();
@@ -614,7 +642,7 @@ function BookingSheet({
         ? halfWindow
           ? { workspaceId: ws.id, bookingType: "half_day", date: view.date, half: c.half! }
           : null
-        : { workspaceId: ws.id, bookingType: c.kind, date: view.date };
+        : { workspaceId: ws.id, bookingType: c.kind, date: c.kind === "week" && view.config.week.mode !== "calendar" ? weekStart : view.date };
 
   const review = () => {
     if (!input) return;
@@ -852,8 +880,30 @@ function BookingSheet({
 
               {c.kind === "week" ? (
                 <div className="text-[0.95rem]">
+                  {view.config.week.mode !== "calendar" ? (
+                    <fieldset className="mb-5">
+                      <legend className="eyebrow mb-3 text-[0.6rem] text-ink-soft">Choose your first day</legend>
+                      <div className="no-scrollbar -mx-6 flex gap-1.5 overflow-x-auto px-6 pb-1 sm:-mx-8 sm:px-8">
+                        {weekStarts.map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            aria-pressed={weekStart === d}
+                            onClick={() => setWeekStart(d)}
+                            aria-label={`Start on ${fmtDay(d)}`}
+                            className={`flex h-[4rem] w-12 shrink-0 flex-col items-center justify-center rounded-t-full border transition-colors ${
+                              weekStart === d ? "border-ink bg-ink text-chalk" : weekSpan.includes(d) ? "border-ink/40 bg-mist/60" : "border-ink/10 hover:border-ink/40"
+                            }`}
+                          >
+                            <span className="eyebrow mt-2 text-[0.5rem]">{fmtDay(d, "weekday").slice(0, 2)}</span>
+                            <span className="font-serif text-[1.05rem] leading-tight">{fmtDay(d, "num")}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ) : null}
                   <p>
-                    {fmtDay(view.weekDates[0], "short")} – {fmtDay(view.weekDates[view.weekDates.length - 1], "short")}, {fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))} each day
+                    {fmtDay(weekSpan[0], "short")} – {fmtDay(weekSpan[weekSpan.length - 1], "short")}, {fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))} each day
                   </p>
                   <p className="mt-2 text-[0.85rem] text-ink-soft">We’ll check every day of the week before you pay. A week is booked whole or not at all.</p>
                 </div>

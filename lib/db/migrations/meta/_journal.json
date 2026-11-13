@@ -120,6 +120,13 @@
       "when": 1794604587908,
       "tag": "0016_family_passwords",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794604647908,
+      "tag": "0017_desks_half_day_open_daily",
+      "breakpoints": true
     }
   ]
 }

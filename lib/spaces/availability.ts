@@ -9,7 +9,7 @@ import { invoices, spaceReservationGroups, spaceReservations, workspaceBlocks, w
 import { invoiceTotals } from "@/lib/ops/billing";
 import { addDaysISO, todayLA, zonedDateTime } from "@/lib/time";
 import { getSpaceConfig, type BookingType, type Category, type PaidBookingType, type SpaceConfig } from "./config";
-import { allowanceFor, closedDates, hoursOn, paymentStatusOf, rateFor, weekDates, type Allowance } from "./engine";
+import { allowanceFor, closedDates, inCommunity, hoursOn, paymentStatusOf, rateFor, weekDates, type Allowance } from "./engine";
 
 export type PublicWorkspace = {
   id: string;
@@ -217,8 +217,14 @@ export async function myReservations(db: Executor, familyId: string, now = new D
 }
 
 /** The signed-in family's allowance and their own reservations on a date (their own, so ids are fine). */
-export async function myDay(db: Executor, familyId: string, date: string, now = new Date()): Promise<{ allowance: Allowance; mine: { workspaceId: string; start: string; end: string; reference: string }[] }> {
+export async function myDay(
+  db: Executor,
+  familyId: string,
+  date: string,
+  now = new Date(),
+): Promise<{ allowance: Allowance; community: boolean; mine: { workspaceId: string; start: string; end: string; reference: string }[] }> {
   const allowance = await allowanceFor(db, familyId, date, { now });
+  const community = await inCommunity(db, familyId, now);
   const mine = await db
     .select({ workspaceId: spaceReservations.workspaceId, startsAt: spaceReservations.startsAt, endsAt: spaceReservations.endsAt, reference: spaceReservationGroups.reference })
     .from(spaceReservations)
@@ -230,7 +236,7 @@ export async function myDay(db: Executor, familyId: string, date: string, now = 
         or(eq(spaceReservations.status, "confirmed"), and(eq(spaceReservations.status, "held"), gt(spaceReservations.holdExpiresAt, now))),
       ),
     );
-  return { allowance, mine: mine.map((m) => ({ workspaceId: m.workspaceId, start: m.startsAt.toISOString(), end: m.endsAt.toISOString(), reference: m.reference })) };
+  return { allowance, community, mine: mine.map((m) => ({ workspaceId: m.workspaceId, start: m.startsAt.toISOString(), end: m.endsAt.toISOString(), reference: m.reference })) };
 }
 
 /** A family's reservation by reference, or null if it isn't theirs. */

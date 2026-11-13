@@ -52,12 +52,14 @@ export type SpaceConfig = {
 };
 
 export const DEFAULT_SPACE_CONFIG: SpaceConfig = {
-  hours: { "1": ["08:30", "16:30"], "2": ["08:30", "16:30"], "3": ["08:30", "16:30"], "4": ["08:30", "16:30"], "5": ["08:30", "16:30"] },
+  // Coworking is open every day, 8:30am – 4:30pm.
+  hours: { "0": ["08:30", "16:30"], "1": ["08:30", "16:30"], "2": ["08:30", "16:30"], "3": ["08:30", "16:30"], "4": ["08:30", "16:30"], "5": ["08:30", "16:30"], "6": ["08:30", "16:30"] },
   slotMinutes: 15,
   // Matches Yalla's existing half-day definition (8:30am – 12:00pm). No afternoon half day until Yalla sets one.
   halfDay: { morning: { start: "08:30", end: "12:00" }, afternoon: null },
   fullDay: { start: "08:30", end: "16:30" },
-  week: { mode: "calendar", days: 5 },
+  // A week is five days in a row, starting on whichever day the family chooses (weekends included).
+  week: { mode: "rolling", days: 5 },
   complimentary: { dailyMinutes: 60, shared: true, eligibility: "active_membership", durations: [15, 30, 45, 60] },
   hourly: { durations: [30, 60, 90, 120] },
   cancellation: { complimentaryCutoffMinutes: 0, paidFamilyCancel: "contact", paidCutoffHours: 24, paidRefund: "staff_decides" },
@@ -66,7 +68,7 @@ export const DEFAULT_SPACE_CONFIG: SpaceConfig = {
 /** Defaults that are placeholders until Yalla confirms them (shown as "needs your decision"). */
 export const PROVISIONAL: { key: string; label: string }[] = [
   { key: "halfDay", label: "Half-day times: morning is 8:30am – 12:00pm (Yalla’s existing half day); no afternoon half day is offered until you set one." },
-  { key: "week", label: "A week is Monday to Friday of the chosen week. Weeks that include a closure can’t be booked online." },
+  { key: "week", label: "A week is five days in a row, starting on any day the family chooses (weekends included). Weeks that include a closure can’t be booked online." },
   { key: "eligibility", label: "Complimentary time goes to families with an active Club Yalla membership on that day." },
   { key: "cancellation", label: "Complimentary reservations can be cancelled or moved until they start. Paid reservations are changed or cancelled by contacting Yalla; staff decide any refund or credit." },
 ];
