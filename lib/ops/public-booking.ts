@@ -70,6 +70,8 @@ export type PublicSession = {
   bookAsSeries: boolean;
   bookingUnit: string;
   approvalRequired: boolean;
+  /** Play Pass funds can be spent on it (program setting, or the session's own override). */
+  playPassEligible: boolean;
 };
 
 /** What families see: whether there's room, never how many places are booked or remain. */
@@ -148,6 +150,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       bookAsSeries: !!series?.bookAsSeries || p.seriesMode === "full_series",
       bookingUnit: p.bookingUnit,
       approvalRequired: p.bookingMode === "request",
+      playPassEligible: p.walletRedemptionAllowed && (s.playPassEligible ?? p.playPassEligible),
     };
   });
 }
@@ -486,6 +489,8 @@ export async function bookingStatusView(db: Executor, reference: string) {
     lines: rows.map((r) => ({ id: r.item.id, label: describeLine(r), status: r.item.status, priceCents: r.item.priceCents })),
     totalCents: total,
     balanceCents: balance,
+    walletCents: [...totals.values()].reduce((s, t) => s + t.walletApplied, 0),
+    cardCents: [...totals.values()].reduce((s, t) => s + t.paid, 0),
     latestPayment: pays[0] ? { status: pays[0].status, failureReason: pays[0].failureReason, provider: pays[0].provider } : null,
   };
 }

@@ -21,6 +21,8 @@ type Happening = {
   ids: string[];
   /** Short name for a calendar square. */
   label: string;
+  /** Play Pass funds can be spent on it. */
+  pass: boolean;
 };
 
 const TYPE = Object.fromEntries(HAPPENING_TYPES.map((t) => [t.key, t])) as Record<HappeningType, (typeof HAPPENING_TYPES)[number]>;
@@ -84,6 +86,7 @@ function happeningsFrom(sessions: PublicSession[]): Happening[] {
       status,
       ids: list.map((x) => x.id),
       label: type === "more" ? s.title : TYPE[type].short,
+      pass: list.some((x) => x.playPassEligible),
     });
   }
   return out.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
@@ -225,7 +228,10 @@ export function HappeningsCalendar() {
           </div>
           <div className="flex gap-2">
             <dt className="w-12 shrink-0 text-ink-soft">Price</dt>
-            <dd>{h.price}</dd>
+            <dd>
+              {h.price}
+              {h.pass ? <span className="block text-[0.78rem] text-blue">Play Pass accepted</span> : null}
+            </dd>
           </div>
         </dl>
         {t.notes.length && h.type !== "more" ? <p className="mt-3 text-[0.8rem] text-ink-soft">{t.notes[0]}</p> : null}

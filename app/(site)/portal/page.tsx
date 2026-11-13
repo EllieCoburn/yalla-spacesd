@@ -6,6 +6,7 @@ import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
 import { SignInForm } from "@/components/portal/PortalForms";
 import { isDbConfigured } from "@/lib/db";
+import { safeNextPath } from "@/lib/family-auth";
 import { getGuardian } from "./session";
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string; signin?: string }> }) {
   const sp = await searchParams;
   const configured = isDbConfigured();
-  if (configured && (await getGuardian())) redirect(sp.next && /^\/(book|portal\/)/.test(sp.next) ? sp.next : "/portal/home");
+  if (configured && (await getGuardian())) redirect(safeNextPath(sp.next));
   // While the open preview is on, skip sign-in unless someone asks for it (?signin=1 or an expired link).
   if (PORTAL_OPEN_PREVIEW && !sp.signin && !sp.expired) redirect(sp.next && /^\/portal\//.test(sp.next) ? sp.next : "/portal/home");
 

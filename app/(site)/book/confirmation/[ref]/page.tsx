@@ -110,6 +110,11 @@ export default async function Confirmation({ params, searchParams }: { params: P
               <span className="display text-[1.3rem]">{usd(v.balanceCents > 0 ? v.balanceCents : v.totalCents)}</span>
             </div>
           ) : null}
+          {v.walletCents ? (
+            <p className="mt-2 text-right text-[0.85rem] text-blue">
+              {usd(v.walletCents)} from your Play Pass{v.cardCents ? ` · ${usd(v.cardCents)} by card` : ""}
+            </p>
+          ) : null}
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           {(v.status === "held" || v.status === "pending_payment") && holdValid && (paymentFailed || sp.cancelled) ? (

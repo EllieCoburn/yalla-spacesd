@@ -6,6 +6,7 @@ import { PortalDashboard } from "@/components/portal/PortalDashboard";
 import { CancelForm, CareForm, SignForm } from "@/components/portal/PortalForms";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
+import { walletSummary } from "@/lib/playpass/wallet";
 import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/portal-preview";
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
@@ -31,6 +32,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const { tab = "overview" } = await searchParams;
   const data = g ? await familyPortalData(getDb(), g) : samplePortalData();
   const outstanding = data.forms.filter((f) => f.state !== "complete");
+  const passBalance = g ? (await walletSummary(getDb(), g.familyId)).availableCents : 0;
   const today = todayLA();
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -38,6 +40,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "bookings", label: "Bookings" },
     { key: "forms", label: "Forms", count: outstanding.length },
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
+    { key: "playpass", label: "My Play Pass", href: "/portal/play-pass" },
     { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
     { key: "parking", label: "Parking", href: "/portal/parking" },
   ];
@@ -84,6 +87,12 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            {passBalance > 0 ? (
+              <Link href="/portal/play-pass" className="text-right text-[0.85rem] leading-tight hover:text-blue">
+                <span className="block text-[0.62rem] tracking-[0.12em] text-ink-soft uppercase">Play Pass balance</span>
+                {usd(passBalance)}
+              </Link>
+            ) : null}
             <Link href="/book" className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
               Book care
             </Link>

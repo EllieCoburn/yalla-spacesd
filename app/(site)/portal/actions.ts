@@ -4,23 +4,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { redeemMagicLink, requestMagicLink, revokeFamilySession } from "@/lib/family-auth";
+import { redeemMagicLink, requestMagicLink, revokeFamilySession, safeNextPath } from "@/lib/family-auth";
 import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/public-booking";
 import { clearFamilyCookie, getGuardian, requestContext, setFamilyCookie } from "./session";
 
 export type PortalState = { ok?: boolean; error?: string; message?: string; devLink?: string; at?: number } | undefined;
 
-const safeNext = (n: unknown) => (typeof n === "string" && /^\/(book|portal)(\/|$|\?)/.test(n) ? n : "/portal/home");
+const safeNext = (n: unknown) => safeNextPath(n);
 
 export async function requestLinkAction(_: PortalState, form: FormData): Promise<PortalState> {
   const email = String(form.get("email") ?? "").slice(0, 200);
   const next = safeNext(form.get("next"));
   const { baseUrl } = await requestContext();
-  const { devLink } = await requestMagicLink(getDb(), email, baseUrl);
+  const { devLink } = await requestMagicLink(getDb(), email, baseUrl, next);
   return {
     ok: true,
     message: "If that email belongs to a Yalla family, a sign-in link is on its way. It works once, for 20 minutes.",
-    devLink: devLink ? `${devLink}&next=${encodeURIComponent(next)}` : undefined,
+    devLink: devLink ? (devLink.includes("&next=") ? devLink : `${devLink}&next=${encodeURIComponent(next)}`) : undefined,
     at: Date.now(),
   };
 }

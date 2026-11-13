@@ -59,6 +59,13 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
             What’s <em>on.</em>
           </h2>
           <p className="mt-3 max-w-xl text-ink-soft">Tap a Happening to see the details and add it to your booking. Mix and match as many as you like.</p>
+          <p className="mt-2 text-[0.88rem] text-ink-soft">
+            Coming often?{" "}
+            <Link href="/play-passes" className="text-blue underline-offset-4 hover:underline">
+              A monthly Play Pass
+            </Link>{" "}
+            gives you more to spend on the same experiences.
+          </p>
           <div className="mt-8">
             <HappeningsCalendar />
           </div>

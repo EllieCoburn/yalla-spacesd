@@ -50,6 +50,7 @@ export function Checkout({
   savedChildren,
   includeChildren = [],
   includeExtras = [],
+  walletCents = null,
   onClose,
   onRefresh,
 }: {
@@ -60,6 +61,8 @@ export function Checkout({
   includeChildren?: string[];
   /** Per-family extras chosen on a program page (e.g. coworking), on until changed here. */
   includeExtras?: string[];
+  /** The signed-in family's available Play Pass balance (null when not signed in). */
+  walletCents?: number | null;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -196,6 +199,21 @@ export function Checkout({
     });
   // After Hours siblings on the same evening are capped at the family rate, matching the invoice.
   const evenings = new Map<string, number[]>();
+  // The same sum over Play Pass–eligible sessions only (an estimate; the server decides the real amount).
+  const eligibleEvenings = new Map<string, number[]>();
+  const eligibleTotal =
+    sorted.reduce((sum, s) => {
+      const l = lines.find((x) => x.sessionId === s.id);
+      const n = l?.childKeys.length ?? 0;
+      if (!s.playPassEligible || !n) return sum;
+      const extrasCents = sessionAddonsCents(s.kind, s.programSlug, l!.childKeys.map((k) => l!.addons[k] ?? []));
+      if (s.kind === FAMILY_RATE.kind && s.bookingUnit === "per_child") {
+        const k = familyRateKey(s.programId, s.localDate);
+        eligibleEvenings.set(k, [...(eligibleEvenings.get(k) ?? []), ...Array<number>(n).fill(s.priceCents ?? 0)]);
+        return sum + extrasCents;
+      }
+      return sum + (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : 1) + extrasCents;
+    }, 0) + [...eligibleEvenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0);
   const total =
     sorted.reduce((sum, s) => {
       const n = lines.find((l) => l.sessionId === s.id)?.childKeys.length ?? 0;
@@ -222,6 +240,7 @@ export function Checkout({
       sum + prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices),
     0,
   );
+  const fromPass = Math.min(walletCents ?? 0, eligibleTotal, total);
   const sigKey = (a: Agreement) => `${a.templateId}:${a.childKey ?? "family"}`;
 
   // Load the agreements that must be signed before booking.
@@ -653,10 +672,42 @@ export function Checkout({
                 ))}
               </ul>
 
-              <div className="mt-6 flex items-baseline justify-between">
-                <span className="text-ink-soft">Total</span>
-                <span className="display text-[1.6rem]">{usd(total)}</span>
-              </div>
+              {fromPass > 0 ? (
+                <dl className="mt-6 space-y-1.5 text-[0.95rem]">
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Booking subtotal</dt>
+                    <dd>{usd(total)}</dd>
+                  </div>
+                  <div className="flex justify-between text-blue">
+                    <dt>Applied from Play Pass</dt>
+                    <dd>−{usd(fromPass)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between border-t border-line pt-3">
+                    <dt className="text-ink-soft">Due today</dt>
+                    <dd className="display text-[1.6rem]">{usd(total - fromPass)}</dd>
+                  </div>
+                  <div className="flex justify-between text-[0.82rem] text-ink-soft">
+                    <dt>Remaining Play Pass balance</dt>
+                    <dd>{usd((walletCents ?? 0) - fromPass)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <>
+                  <div className="mt-6 flex items-baseline justify-between">
+                    <span className="text-ink-soft">Total due today</span>
+                    <span className="display text-[1.6rem]">{usd(total)}</span>
+                  </div>
+                  {eligibleTotal > 0 && walletCents == null ? (
+                    <p className="mt-2 text-right text-[0.8rem] text-ink-soft">
+                      Make more room for play with a monthly{" "}
+                      <Link href="/play-passes" className="text-blue underline underline-offset-4">
+                        Play Pass
+                      </Link>
+                      .
+                    </p>
+                  ) : null}
+                </>
+              )}
               {familySaving > 0 ? (
                 <p className="mt-1 text-right text-[0.8rem] text-blue">
                   After Hours family rate: {usd(FAMILY_RATE.familyCents)} for up
@@ -783,7 +834,7 @@ export function Checkout({
             {pending
               ? "Holding your spots…"
               : step === steps.length - 1
-                ? total > 0
+                ? total - fromPass > 0
                   ? `Continue to payment`
                   : "Confirm booking"
                 : "Continue"}

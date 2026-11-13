@@ -469,6 +469,17 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
 
 /* ── Confirmation ── */
 
+/** How a booking was paid, for messages: Play Pass funds and card, when both apply. */
+async function paymentSummary(db: Executor, bookingId: string) {
+  const invs = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
+  if (!invs.length) return "";
+  const t = [...(await invoiceTotals(db, invs.map((i) => i.id))).values()];
+  const wallet = t.reduce((s, x) => s + x.walletApplied, 0);
+  if (!wallet) return "";
+  const card = t.reduce((s, x) => s + x.paid, 0);
+  return `\n\nTotal: ${usd(t.reduce((s, x) => s + x.total, 0))}\nPaid from your Play Pass: ${usd(wallet)}${card ? `\nPaid by card: ${usd(card)}` : ""}`;
+}
+
 async function confirmationVars(db: Executor, bookingId: string) {
   const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
   const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status === "confirmed" || r.item.status === "held");
@@ -478,7 +489,7 @@ async function confirmationVars(db: Executor, bookingId: string) {
     reference: b.reference,
     program: [...new Set(rows.map((r) => r.program.name))].join(", "),
     date: first ? fmtDate(first.session.localDate) : "",
-    booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
+    booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n") + (await paymentSummary(db, bookingId)),
     location: loc?.name ?? "Yalla",
     arrival_instructions: first?.program.arrivalInstructions ?? loc?.arrivalInstructions ?? "",
   };

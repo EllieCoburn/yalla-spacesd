@@ -33,9 +33,12 @@ const DAYS = 42;
 export function BookingExplorer({
   guardian,
   savedChildren,
+  walletCents = null,
 }: {
   guardian: SignedInGuardian | null;
   savedChildren: SavedChild[];
+  /** The signed-in family's available Play Pass balance. */
+  walletCents?: number | null;
 }) {
   const params = useSearchParams();
   const router = useRouter();
@@ -424,6 +427,7 @@ export function BookingExplorer({
           savedChildren={savedChildren}
           includeChildren={comingKids}
           includeExtras={comingExtras}
+          walletCents={walletCents}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
         />

@@ -34,7 +34,10 @@ export type GuardianContext = {
  * the same either way (so the form never reveals whether an email exists); `devLink` is only set
  * in local development while emails are captured instead of sent.
  */
-export async function requestMagicLink(db: Executor, email: string, baseUrl: string): Promise<{ devLink?: string }> {
+/** Where a sign-in link may send the family afterwards (same-site pages only). */
+export const safeNextPath = (n: unknown, fallback = "/portal/home") => (typeof n === "string" && /^\/(book|portal|play-passes)(\/|$|\?)/.test(n) && !n.startsWith("//") ? n : fallback);
+
+export async function requestMagicLink(db: Executor, email: string, baseUrl: string, next?: string): Promise<{ devLink?: string }> {
   const clean = email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(clean)) return {};
   const [g] = await db
@@ -45,7 +48,8 @@ export async function requestMagicLink(db: Executor, email: string, baseUrl: str
   if (!g) return {};
   const token = randomToken();
   await db.insert(familyAuthTokens).values({ guardianId: g.guardians.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + FAMILY_LINK_MS) });
-  const link = `${baseUrl}/portal/verify?token=${token}`;
+  const after = next ? safeNextPath(next, "") : "";
+  const link = `${baseUrl}/portal/verify?token=${token}${after ? `&next=${encodeURIComponent(after)}` : ""}`;
   await notifyFamily(db, { key: "family_sign_in", familyId: g.guardians.familyId, guardianIds: [g.guardians.id], vars: { link }, related: { type: "guardian", id: g.guardians.id } });
   return notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? { devLink: link } : {};
 }

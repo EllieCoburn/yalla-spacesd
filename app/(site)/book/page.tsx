@@ -8,6 +8,7 @@ import { Eyebrow } from "@/components/ui/primitives";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { children } from "@/lib/db/schema";
 import { paymentsStatus } from "@/lib/payments/provider";
+import { walletSummary } from "@/lib/playpass/wallet";
 import { getGuardian } from "../portal/session";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default async function BookPage() {
         .orderBy(asc(children.birthDate))
     : [];
   const testPayments = configured && paymentsStatus().provider === "test";
+  const wallet = guardian ? await walletSummary(getDb(), guardian.familyId) : null;
 
   return (
     <>
@@ -57,7 +59,7 @@ export default async function BookPage() {
       </section>
       {configured ? (
         <Suspense>
-          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null} savedChildren={saved} />
+          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null} savedChildren={saved} walletCents={wallet ? wallet.availableCents : null} />
         </Suspense>
       ) : (
         <section className="pb-32">
