@@ -159,7 +159,9 @@ export function PasswordSignInForm({ next }: { next?: string }) {
         <span className={label}>Password</span>
         <PasswordInput name="password" autoComplete="current-password" />
       </label>
-      <Submit pending="Signing in…">Sign in</Submit>
+      <div className="flex justify-center">
+        <Submit pending="Signing in…">Sign in</Submit>
+      </div>
       <Message state={state} />
     </form>
   );
