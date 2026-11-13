@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { Mark } from "@/components/brand/Mark";
 import { getDb, isDbConfigured } from "@/lib/db";
-import { bookings, invoiceLines, invoices, payments, spaceReservationGroups } from "@/lib/db/schema";
+import { bookings, invoiceLines, invoices, payments, playPassPlans, playPassSubscriptions, spaceReservationGroups } from "@/lib/db/schema";
 import { bookingLines, describeLine } from "@/lib/ops/bookings";
 import { paymentsStatus } from "@/lib/payments/provider";
 import { testPaymentsAllowed } from "@/lib/payments/test-mode";
 import { fmtDateTime } from "@/lib/time";
-import { simulatePayment } from "./actions";
+import { simulateMembership, simulatePayment } from "./actions";
 
 export const metadata: Metadata = { title: "Test checkout", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -26,6 +26,7 @@ export default async function TestCheckout({ params }: { params: Promise<{ ref: 
       </section>
     );
   const db = getDb();
+  if (ref.startsWith("tsub_")) return <MembershipCheckout checkoutRef={ref} />;
   const [p] = await db.select().from(payments).where(eq(payments.checkoutRef, ref));
   if (!p) notFound();
   const [inv] = await db.select().from(invoices).where(eq(invoices.id, p.invoiceId));
@@ -74,6 +75,52 @@ export default async function TestCheckout({ params }: { params: Promise<{ ref: 
                 {process.env.NODE_ENV !== "production" ? (
                   <button name="outcome" value="duplicate" className="w-full pt-2 text-[0.78rem] text-ink-soft underline underline-offset-4">
                     Pay and send a duplicate notification (development)
+                  </button>
+                ) : null}
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Test stand-in for Stripe's subscription checkout (Yalla Play Passes). */
+async function MembershipCheckout({ checkoutRef }: { checkoutRef: string }) {
+  const db = getDb();
+  const [sub] = await db.select().from(playPassSubscriptions).where(eq(playPassSubscriptions.checkoutRef, checkoutRef));
+  if (!sub) notFound();
+  const [plan] = await db.select().from(playPassPlans).where(eq(playPassPlans.id, sub.planId));
+  return (
+    <section className="pt-32 pb-28 lg:pt-40">
+      <div className="shell">
+        <div className="mx-auto max-w-lg">
+          <div className="mb-6 flex items-center gap-3 border border-dashed border-oxblood/50 bg-oxblood/[0.04] px-4 py-3 text-[0.82rem] text-oxblood">
+            <span className="eyebrow text-[0.6rem]">Test checkout</span>
+            <span>No card is saved or charged. This stands in for Stripe.</span>
+          </div>
+          <div className="bg-paper p-8 sm:p-10">
+            <Mark name="window" className="h-9 w-auto text-blue" />
+            <p className="eyebrow mt-6 text-ink-soft">{plan.name} Play Pass · monthly</p>
+            <p className="display mt-3 text-[2.6rem]">{usd(sub.initialChargeCents)}</p>
+            <p className="mt-2 text-[0.9rem] text-ink-soft">
+              Today, then {usd(plan.priceCents)} on the 1st of each month from {sub.nextRenewalOn}.
+            </p>
+            {sub.status !== "pending" ? (
+              <p className="mt-6 text-[0.9rem] text-ink-soft">This checkout is {sub.status === "active" ? "already complete" : sub.status}.</p>
+            ) : (
+              <form action={simulateMembership} className="mt-8 space-y-3">
+                <input type="hidden" name="checkoutRef" value={checkoutRef} />
+                <button name="outcome" value="pay" className="h-14 w-full rounded-full bg-ink text-[0.95rem] text-chalk transition-colors hover:bg-blue">
+                  Save card and pay {usd(sub.initialChargeCents)} (test)
+                </button>
+                <button name="outcome" value="decline" className="h-12 w-full rounded-full border border-ink/25 text-[0.9rem] transition-colors hover:border-ink">
+                  Simulate a declined card
+                </button>
+                {process.env.NODE_ENV !== "production" ? (
+                  <button name="outcome" value="duplicate" className="w-full pt-2 text-[0.78rem] text-ink-soft underline underline-offset-4">
+                    Pay and send duplicate notifications (development)
                   </button>
                 ) : null}
               </form>

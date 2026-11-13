@@ -101,6 +101,31 @@ export const POLICIES = {
     default: false,
     decision: true,
   } as PolicyDef<boolean>,
+  "playpass.rollover": {
+    group: "Play Passes",
+    label: "Unused Play Pass balance",
+    help: "What happens to wallet funds a family hasn’t used. Expiry is never applied automatically until Yalla has reviewed California’s rules on prepaid balances; until then every option keeps the funds.",
+    default: "keep",
+    decision: true,
+    options: [
+      { value: "keep", label: "Keep all unused funds (no expiry)" },
+      { value: "one_month_review", label: "Intended policy: roll over one month, up to one month’s allocation (shown for review only; nothing expires)" },
+    ],
+  } as PolicyDef<string>,
+  "playpass.restoreOnFamilyCancel": {
+    group: "Play Passes",
+    label: "Return Play Pass funds when a family cancels online",
+    help: "When a family cancels a booking in the portal (within the program’s cancellation window), the Play Pass part of what they paid goes back to their wallet automatically. Card payments still follow the booking refund policy.",
+    default: true,
+    decision: true,
+  } as PolicyDef<boolean>,
+  "playpass.siblingDiscountWithWallet": {
+    group: "Play Passes",
+    label: "Sibling discount on Play Pass spending",
+    help: "Whether the sibling discount (Billing) also applies to eligible sessions paid from a Play Pass. Off means members pay the published per-child price from their wallet. The After Hours family rate is part of the published price and always applies.",
+    default: false,
+    decision: true,
+  } as PolicyDef<boolean>,
   "security.requireMfaForOwners": {
     group: "Security",
     label: "Require two-step verification for owners",

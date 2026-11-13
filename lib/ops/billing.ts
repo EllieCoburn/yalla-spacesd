@@ -12,6 +12,7 @@
 import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
+import { restoreWalletPayment } from "@/lib/playpass/wallet";
 import { credits, discounts, guardians, invoiceLines, invoices, payments, refunds, scheduledCharges } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { activeProvider, providerFor } from "@/lib/payments/provider";
@@ -28,7 +29,9 @@ export type InvoiceTotals = {
   adjustments: number;
   total: number;
   paid: number;
+  /** Prepaid value applied: account credit and Play Pass funds (walletApplied is the Play Pass part). */
   creditApplied: number;
+  walletApplied: number;
   refunded: number;
   balance: number;
 };
@@ -36,7 +39,7 @@ export type InvoiceTotals = {
 export async function invoiceTotals(db: Executor, invoiceIds: string[]): Promise<Map<string, InvoiceTotals>> {
   const out = new Map<string, InvoiceTotals>();
   if (!invoiceIds.length) return out;
-  for (const id of invoiceIds) out.set(id, { invoiceId: id, charges: 0, discounts: 0, tax: 0, adjustments: 0, total: 0, paid: 0, creditApplied: 0, refunded: 0, balance: 0 });
+  for (const id of invoiceIds) out.set(id, { invoiceId: id, charges: 0, discounts: 0, tax: 0, adjustments: 0, total: 0, paid: 0, creditApplied: 0, walletApplied: 0, refunded: 0, balance: 0 });
   const lines = await db
     .select({ invoiceId: invoiceLines.invoiceId, kind: invoiceLines.kind, amount: sql<number>`sum(${invoiceLines.amountCents})::int` })
     .from(invoiceLines)
@@ -57,7 +60,10 @@ export async function invoiceTotals(db: Executor, invoiceIds: string[]): Promise
   for (const p of pays) {
     const t = out.get(p.invoiceId)!;
     if (p.method === "credit") t.creditApplied += p.amount;
-    else t.paid += p.amount;
+    else if (p.method === "wallet") {
+      t.creditApplied += p.amount;
+      t.walletApplied += p.amount;
+    } else t.paid += p.amount;
   }
   const refs = await db
     .select({ invoiceId: refunds.invoiceId, amount: sql<number>`sum(${refunds.amountCents})::int` })
@@ -239,7 +245,11 @@ export async function refundPayment(
     await audit(db, actor, { action: "billing.refund_requested", entityType: "invoice", entityId: p.invoiceId, summary: `Requested ${usd(input.amountCents)} refund: ${input.reason}` });
   }
 
-  if (p.method === "credit") {
+  if (p.method === "wallet") {
+    // Play Pass funds go back to the family's wallet, to the allocations they came from.
+    await restoreWalletPayment(db, { paymentId: p.id, amountCents: input.amountCents, key: `restore:${input.idempotencyKey}`, note: `Returned: ${input.reason}`, createdBy: actor.name });
+    [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date() }).where(eq(refunds.id, refund.id)).returning();
+  } else if (p.method === "credit") {
     // Credit applications are reversed back to the family's credit balance.
     await db.insert(credits).values({ familyId: p.familyId, amountCents: input.amountCents, reason: `Reversed credit: ${input.reason}`, invoiceId: p.invoiceId, createdBy: actor.name });
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date() }).where(eq(refunds.id, refund.id)).returning();

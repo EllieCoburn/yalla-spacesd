@@ -19,7 +19,23 @@ export type NormalizedEvent =
   | { id: string; type: "payment.failed"; checkoutRef: string; providerRef?: string; reason: string }
   | { id: string; type: "checkout.expired"; checkoutRef: string }
   | { id: string; type: "refund.updated"; refundRef: string; status: "succeeded" | "failed"; reason?: string }
-  | { id: string; type: "dispute.updated"; paymentRef: string; status: string }
+  | { id: string; type: "dispute.updated"; paymentRef: string; status: string; amountCents?: number }
+  // Yalla Play Passes (memberships). `localId` is our subscription id, carried in provider metadata.
+  | { id: string; type: "membership.checkout_completed"; checkoutRef: string; customerRef: string | null; subscriptionRef: string | null; localId?: string }
+  | {
+      id: string;
+      type: "membership.invoice_paid";
+      invoiceRef: string;
+      subscriptionRef: string | null;
+      localId?: string;
+      amountCents: number;
+      reason: "initial" | "renewal" | "other";
+      chargeRef?: string | null;
+    }
+  | { id: string; type: "membership.invoice_failed"; invoiceRef: string; subscriptionRef: string | null; localId?: string; amountCents: number; reason: string }
+  | { id: string; type: "membership.subscription_updated"; subscriptionRef: string; localId?: string; status: string; cancelAtPeriodEnd: boolean; ended: boolean }
+  /** A refund on a card payment: amountCents is the total refunded on it so far. */
+  | { id: string; type: "membership.charge_refunded"; paymentRef: string; amountCents: number }
   | { id: string; type: "ignored"; rawType: string };
 
 export interface PaymentProvider {
@@ -117,6 +133,10 @@ export const stripeProvider: PaymentProvider = {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {
         const s = event.data.object as Stripe.Checkout.Session;
+        if (s.mode === "subscription") {
+          const ref = (x: string | { id: string } | null) => (typeof x === "string" ? x : (x?.id ?? null));
+          return { id: event.id, type: "membership.checkout_completed", checkoutRef: s.id, customerRef: ref(s.customer), subscriptionRef: ref(s.subscription), localId: s.metadata?.playPassSubscriptionId };
+        }
         if (s.payment_status !== "paid") return { id: event.id, type: "ignored", rawType: `${event.type}:${s.payment_status}` };
         return { id: event.id, type: "payment.succeeded", checkoutRef: s.id, providerRef: String(s.payment_intent), amountCents: s.amount_total ?? 0 };
       }
@@ -137,7 +157,38 @@ export const stripeProvider: PaymentProvider = {
       case "charge.dispute.created":
       case "charge.dispute.closed": {
         const d = event.data.object as Stripe.Dispute;
-        return { id: event.id, type: "dispute.updated", paymentRef: String(d.payment_intent), status: d.status };
+        return { id: event.id, type: "dispute.updated", paymentRef: String(d.payment_intent), status: d.status, amountCents: d.amount };
+      }
+      case "invoice.paid":
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice;
+        const sd = inv.parent?.subscription_details;
+        const localId = sd?.metadata?.playPassSubscriptionId;
+        if (!localId) return { id: event.id, type: "ignored", rawType: event.type };
+        const subscriptionRef = typeof sd?.subscription === "string" ? sd.subscription : (sd?.subscription?.id ?? null);
+        if (event.type === "invoice.payment_failed")
+          return { id: event.id, type: "membership.invoice_failed", invoiceRef: inv.id!, subscriptionRef, localId, amountCents: inv.amount_due, reason: "The card payment didn’t go through" };
+        const reason = inv.billing_reason === "subscription_create" ? "initial" : inv.billing_reason === "subscription_cycle" ? "renewal" : "other";
+        return { id: event.id, type: "membership.invoice_paid", invoiceRef: inv.id!, subscriptionRef, localId, amountCents: inv.amount_paid, reason };
+      }
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        if (!sub.metadata?.playPassSubscriptionId) return { id: event.id, type: "ignored", rawType: event.type };
+        return {
+          id: event.id,
+          type: "membership.subscription_updated",
+          subscriptionRef: sub.id,
+          localId: sub.metadata.playPassSubscriptionId,
+          status: sub.status,
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+          ended: event.type === "customer.subscription.deleted",
+        };
+      }
+      case "charge.refunded": {
+        const c = event.data.object as Stripe.Charge;
+        if (!c.payment_intent) return { id: event.id, type: "ignored", rawType: event.type };
+        return { id: event.id, type: "membership.charge_refunded", paymentRef: typeof c.payment_intent === "string" ? c.payment_intent : c.payment_intent.id, amountCents: c.amount_refunded };
       }
       default:
         return { id: event.id, type: "ignored", rawType: event.type };

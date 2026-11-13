@@ -189,6 +189,9 @@ export const programs = pgTable("programs", {
   priceCents: integer("price_cents"),
   priceUnit: text("price_unit").notNull().default("session"), // session | series | hour | month | event
   depositCents: integer("deposit_cents"),
+  /** Yalla Play Passes: shown as eligible, and whether wallet funds may be spent on it. Both default off. */
+  playPassEligible: boolean("play_pass_eligible").notNull().default(false),
+  walletRedemptionAllowed: boolean("wallet_redemption_allowed").notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   archivedAt: ts("archived_at"),
@@ -284,6 +287,8 @@ export const sessions = pgTable(
     bookingOpensAt: ts("booking_opens_at"),
     bookingClosesAt: ts("booking_closes_at"),
     notes: text("notes"),
+    /** Play Pass override for this session: null follows the program. */
+    playPassEligible: boolean("play_pass_eligible"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1060,4 +1065,167 @@ export const spaceEntitlements = pgTable(
     archivedAt: ts("archived_at"),
   },
   (t) => [index("space_entitlements_family_idx").on(t.familyId)],
+);
+
+/* ───────────────────────── Yalla Play Passes ───────────────────────── */
+
+/**
+ * Membership offerings. A plan row is never repriced: changing a price or allocation creates a new
+ * row (and Stripe price), so existing members keep exactly what they signed up for.
+ */
+export const playPassPlans = pgTable("play_pass_plans", {
+  id: id(),
+  /** play | gather | belong — stable across versions. */
+  tier: text("tier").notNull(),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull(),
+  allocationCents: integer("allocation_cents").notNull(),
+  minExperiences: integer("min_experiences").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  /** Offered to new members. Retired versions keep serving the members on them. */
+  active: boolean("active").notNull().default(true),
+  /** Stripe price id per mode, created on first use. */
+  stripePriceTest: text("stripe_price_test"),
+  stripePriceLive: text("stripe_price_live"),
+  createdBy: text("created_by"),
+  createdAt: createdAt(),
+  retiredAt: ts("retired_at"),
+});
+
+/** One family's Play Pass subscription. A family has at most one that isn't ended. */
+export const playPassSubscriptions = pgTable(
+  "play_pass_subscriptions",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => playPassPlans.id),
+    /** A tier change takes effect at the next renewal. */
+    nextPlanId: text("next_plan_id").references(() => playPassPlans.id),
+    status: text("status").notNull(), // pending | active | past_due | canceled | abandoned
+    provider: text("provider").notNull(), // test | stripe
+    checkoutRef: text("checkout_ref").unique(),
+    customerRef: text("customer_ref"),
+    subscriptionRef: text("subscription_ref").unique(),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /** First month: the share of the month remaining, applied identically to charge and allocation. */
+    startDate: date("start_date").notNull(),
+    prorationDays: integer("proration_days").notNull(),
+    monthDays: integer("month_days").notNull(),
+    initialChargeCents: integer("initial_charge_cents").notNull(),
+    initialAllocationCents: integer("initial_allocation_cents").notNull(),
+    nextRenewalOn: date("next_renewal_on"),
+    termsVersion: text("terms_version").notNull(),
+    termsAcceptedAt: ts("terms_accepted_at").notNull(),
+    termsAcceptedBy: text("terms_accepted_by").notNull(),
+    lastPaymentFailedAt: ts("last_payment_failed_at"),
+    lastFailureReason: text("last_failure_reason"),
+    canceledAt: ts("canceled_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("play_pass_subs_family_idx").on(t.familyId),
+    uniqueIndex("play_pass_subs_one_open_idx").on(t.familyId).where(sql`status in ('pending', 'active', 'past_due')`),
+  ],
+);
+
+/** Each month's (or adjustment's) wallet funding, kept so rollover and expiry can be decided per allocation. */
+export const walletAllocations = pgTable(
+  "wallet_allocations",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    subscriptionId: text("subscription_id").references(() => playPassSubscriptions.id),
+    planId: text("plan_id").references(() => playPassPlans.id),
+    kind: text("kind").notNull(), // initial | renewal | adjustment
+    periodStart: date("period_start").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    /** The paid provider invoice that funded it (unique: a payment funds the wallet once). */
+    sourceRef: text("source_ref").unique(),
+    /** Set only if an expiry policy is adopted; null means the funds don't expire. */
+    expiresOn: date("expires_on"),
+    reversedAt: ts("reversed_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("wallet_allocations_family_idx").on(t.familyId, t.periodStart)],
+);
+
+/**
+ * The wallet ledger. Balance = sum of entries; nothing is ever edited. Debits name the allocation
+ * they draw from (oldest first), so each allocation's use is always known.
+ */
+export const walletEntries = pgTable(
+  "wallet_entries",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    allocationId: text("allocation_id").references(() => walletAllocations.id),
+    kind: text("kind").notNull(), // allocation | booking_debit | booking_refund | adjustment | expiration | payment_reversal
+    amountCents: integer("amount_cents").notNull(),
+    bookingId: text("booking_id").references(() => bookings.id),
+    invoiceId: text("invoice_id").references(() => invoices.id),
+    paymentId: text("payment_id").references(() => payments.id),
+    reservationId: text("reservation_id"),
+    note: text("note"),
+    createdBy: text("created_by").notNull(),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("wallet_entries_family_idx").on(t.familyId, t.createdAt)],
+);
+
+/** Funds set aside while a booking is being paid for; released if the hold ends unpaid. */
+export const walletReservations = pgTable(
+  "wallet_reservations",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    bookingId: text("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    invoiceId: text("invoice_id")
+      .notNull()
+      .references(() => invoices.id),
+    amountCents: integer("amount_cents").notNull(),
+    status: text("status").notNull(), // held | captured | released
+    expiresAt: ts("expires_at").notNull(),
+    createdAt: createdAt(),
+    settledAt: ts("settled_at"),
+  },
+  (t) => [uniqueIndex("wallet_reservations_one_held_idx").on(t.bookingId).where(sql`status = 'held'`)],
+);
+
+/** Provider invoices for memberships (renewal receipts, failures and billing history). */
+export const playPassCharges = pgTable(
+  "play_pass_charges",
+  {
+    id: id(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => playPassSubscriptions.id),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    invoiceRef: text("invoice_ref").notNull().unique(),
+    chargeRef: text("charge_ref"),
+    reason: text("reason").notNull(), // initial | renewal | other
+    amountCents: integer("amount_cents").notNull(),
+    status: text("status").notNull(), // paid | failed | refunded | disputed
+    periodStart: date("period_start"),
+    failureReason: text("failure_reason"),
+    refundedCents: integer("refunded_cents").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("play_pass_charges_sub_idx").on(t.subscriptionId)],
 );

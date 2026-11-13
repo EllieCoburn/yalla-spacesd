@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth/crypto";
 import { getDb } from "@/lib/db";
-import { bookings, invoices, payments, spaceReservationGroups } from "@/lib/db/schema";
+import { bookings, invoices, payments, playPassSubscriptions, spaceReservationGroups } from "@/lib/db/schema";
 import { paymentsStatus, signTestPayload } from "@/lib/payments/provider";
 import { testPaymentsAllowed } from "@/lib/payments/test-mode";
 import { requestContext } from "../../../portal/session";
@@ -42,4 +42,28 @@ export async function simulatePayment(form: FormData) {
         ? `/portal/spaces/confirmation/${space.reference}${outcome === "decline" ? "?cancelled=1" : ""}`
         : `/pay/complete?invoice=${encodeURIComponent(inv.number)}`,
   );
+}
+
+/** Test stand-in for completing a Play Pass subscription checkout, via signed webhooks. */
+export async function simulateMembership(form: FormData) {
+  const checkoutRef = String(form.get("checkoutRef") ?? "");
+  const outcome = String(form.get("outcome") ?? "");
+  if (paymentsStatus().provider !== "test" || !testPaymentsAllowed()) redirect("/play-passes");
+  const db = getDb();
+  const [sub] = await db.select().from(playPassSubscriptions).where(eq(playPassSubscriptions.checkoutRef, checkoutRef));
+  if (!sub) redirect("/play-passes");
+  // Stripe keeps a declined card on its checkout page; nothing is created.
+  if (outcome === "decline") redirect(`/play-passes/join?declined=1`);
+  const { baseUrl } = await requestContext();
+  const subscriptionRef = sub.subscriptionRef ?? `tsubref_${randomToken(10)}`;
+  const send = async (event: Record<string, unknown>) => {
+    const body = JSON.stringify(event);
+    await fetch(`${baseUrl}/api/webhooks/test`, { method: "POST", headers: { "Content-Type": "application/json", "x-yalla-test-signature": signTestPayload(body) }, body, cache: "no-store" });
+  };
+  const completed = { id: `evt_test_${randomToken(10)}`, type: "membership.checkout_completed", checkoutRef, customerRef: `tcus_${sub.familyId.slice(0, 8)}`, subscriptionRef, localId: sub.id };
+  const paid = { id: `evt_test_${randomToken(10)}`, type: "membership.invoice_paid", invoiceRef: `tin_${randomToken(10)}`, subscriptionRef, localId: sub.id, amountCents: sub.initialChargeCents, reason: "initial", chargeRef: `tpi_${randomToken(10)}` };
+  await send(completed);
+  await send(paid);
+  if (outcome === "duplicate" && process.env.NODE_ENV !== "production") await send(paid);
+  redirect(`/play-passes/welcome?ref=${sub.id}`);
 }

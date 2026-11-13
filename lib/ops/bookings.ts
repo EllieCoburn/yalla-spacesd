@@ -38,6 +38,7 @@ import { getPolicy } from "./settings";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 import { addonsFor, validAddons } from "@/lib/booking/addons";
+import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
 
@@ -334,9 +335,17 @@ export async function bookingLines(db: Executor, bookingId: string) {
   return rows;
 }
 
-async function siblingDiscountLines(db: Executor, rows: Awaited<ReturnType<typeof bookingLines>>): Promise<LineInput[]> {
+async function siblingDiscountLines(db: Executor, rows: Awaited<ReturnType<typeof bookingLines>>, familyId: string): Promise<LineInput[]> {
   const percent = await getPolicy(db, "billing.siblingDiscountPercent");
   if (!percent) return [];
+  // Play Pass members pay the published per-child price from their wallet unless Yalla chooses to stack the discount.
+  if (rows.length && !(await getPolicy(db, "playpass.siblingDiscountWithWallet")) && (await walletSummary(db, familyId)).availableCents > 0) {
+    const eligible = await eligibleSessionIds(
+      db,
+      rows.map((r) => r.session.id),
+    );
+    rows = rows.filter((r) => !eligible.has(r.session.id));
+  }
   const out: LineInput[] = [];
   const bySession = new Map<string, typeof rows>();
   for (const r of rows) if (r.item.childId && r.program.bookingUnit === "per_child" && r.program.kind !== FAMILY_RATE.kind) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
@@ -386,7 +395,7 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
         lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine({ ...r, child: null })}`, unitCents: a.priceCents, bookingItemId: r.item.id });
       } else lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
     }
-  lines.push(...(await siblingDiscountLines(db, rows)), ...familyRateLines(rows));
+  lines.push(...(await siblingDiscountLines(db, rows, b.familyId)), ...familyRateLines(rows));
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }
 
@@ -414,14 +423,17 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   let [inv] = await db.select().from(invoices).where(and(eq(invoices.bookingId, b.id), ne(invoices.status, "void")));
   if (!inv) inv = await invoiceForBooking(db, actor, b.id);
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
-  if (t.balance <= 0) {
-    await confirmBooking(db, actor, b.id, { reason: "No payment due" });
+  // Play Pass funds are set aside first; the card pays only what's left.
+  const fromWallet = b.source !== "admin" && t.balance > 0 ? await reserveForBooking(db, b.id, inv.id, t.balance) : 0;
+  const due = t.balance - fromWallet;
+  if (due <= 0) {
+    await confirmBooking(db, actor, b.id, { reason: fromWallet ? "Paid from Play Pass" : "No payment due" });
     return { url: `${urls.base}/book/confirmation/${b.reference}`, free: true };
   }
   const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)));
   const provider = activeProvider();
   const paymentId = crypto.randomUUID();
-  let idem = `checkout:${b.id}:${inv.id}:${t.balance}:${b.holdExpiresAt.getTime()}`;
+  let idem = `checkout:${b.id}:${inv.id}:${due}:${b.holdExpiresAt.getTime()}`;
   const existing = await db.select().from(payments).where(eq(payments.idempotencyKey, idem));
   // A declined or abandoned attempt gets a fresh key so the family can try again.
   if (existing[0] && existing[0].status !== "pending") idem = `${idem}:retry-${randomToken(6)}`;
@@ -430,7 +442,7 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   }
   const checkout = await provider.createCheckout({
     paymentId,
-    amountCents: t.balance,
+    amountCents: due,
     description: `Yalla booking ${b.reference}`,
     customerEmail: primary?.email,
     successUrl: `${urls.base}/book/confirmation/${b.reference}`,
@@ -442,7 +454,7 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     id: paymentId,
     invoiceId: inv.id,
     familyId: b.familyId,
-    amountCents: t.balance,
+    amountCents: due,
     method: "card",
     status: "pending",
     provider: provider.name,
@@ -451,7 +463,7 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     idempotencyKey: idem,
   });
   await db.update(bookings).set({ status: "pending_payment", updatedAt: new Date() }).where(eq(bookings.id, b.id));
-  await event(db, b.id, actor, "checkout_started", { provider: provider.name, amount: t.balance });
+  await event(db, b.id, actor, "checkout_started", { provider: provider.name, amount: due, fromPlayPass: fromWallet || undefined });
   return { url: provider.name === "test" ? `${urls.base}${checkout.url}` : checkout.url, free: false };
 }
 
@@ -501,12 +513,15 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
       for (const i of items) need.set(i.sessionId, (need.get(i.sessionId) ?? 0) + i.spots);
       const short = [...need].find(([sid, n]) => n > avail.get(sid)!.remaining);
       if (short) {
+        await releaseForBooking(tx, b.id);
         await tx.update(bookings).set({ status: "needs_attention", updatedAt: now }).where(eq(bookings.id, b.id));
         await event(tx, b.id, actor, "needs_attention", { reason: "Hold expired before confirmation and the spots were taken", trigger: opts.reason });
         await audit(tx, actor, { action: "booking.needs_attention", entityType: "booking", entityId: b.id, summary: `${b.reference}: confirmed late and capacity is no longer available — staff follow-up needed` });
         return { status: "needs_attention" as const, changed: true };
       }
     }
+    // Spend any Play Pass funds set aside for this booking (the rest was paid by card, or nothing was due).
+    await captureForBooking(tx, actor, b.id);
     await tx.update(bookingItems).set({ status: "confirmed" }).where(and(eq(bookingItems.bookingId, b.id), eq(bookingItems.status, "held")));
     await tx.update(bookings).set({ status: "confirmed", holdExpiresAt: null, updatedAt: now }).where(eq(bookings.id, b.id));
     await event(tx, b.id, actor, "confirmed", { reason: opts.reason, lateConfirmation: !holdValid || undefined });
@@ -607,6 +622,7 @@ export async function cancelBooking(db: DB, actor: Actor, input: { bookingId: st
         ),
       );
     const allCancelled = target.length === active.length;
+    if (allCancelled) await releaseForBooking(tx, b.id);
     await tx
       .update(bookings)
       .set({ status: allCancelled ? "cancelled" : b.status, cancelledAt: allCancelled ? now : b.cancelledAt, cancelReason: allCancelled ? input.reason : b.cancelReason, updatedAt: now })
@@ -745,6 +761,11 @@ export async function expireHolds(db: DB, now = new Date()) {
     .set({ status: "expired", updatedAt: now })
     .where(and(inArray(bookings.status, ["held", "pending_payment"]), sql`${bookings.holdExpiresAt} < ${now.toISOString()}::timestamptz`))
     .returning({ id: bookings.id });
+  for (const e of expired) await releaseForBooking(db, e.id);
+  await releaseExpiredReservations(db, now);
   return expired.length;
 }
 
+
+/** Template variables describing a booking (for confirmation and cancellation messages). */
+export const bookingConfirmationVars = (db: Executor, bookingId: string) => confirmationVars(db, bookingId);

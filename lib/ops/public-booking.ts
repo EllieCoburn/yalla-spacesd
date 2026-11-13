@@ -27,14 +27,19 @@ import {
   payments,
   programPrices,
   programs,
+  refunds,
   scheduleSeries,
   sessions,
 } from "@/lib/db/schema";
 import { requestMagicLink, guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { activeProvider } from "@/lib/payments/provider";
 import { ageInMonths, fmtDate } from "@/lib/time";
-import { invoiceTotals, familyLedger } from "./billing";
-import { bookingLines, cancelBooking, createHold, describeLine, startCheckout } from "./bookings";
+import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
+import { getPolicy } from "./settings";
+import { notifyFamily } from "@/lib/notify";
+import { addonsFor } from "@/lib/booking/addons";
+import { heldReservation } from "@/lib/playpass/wallet";
+import { bookingConfirmationVars, bookingLines, cancelBooking, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
 import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
@@ -415,13 +420,16 @@ export async function retryCheckout(db: DB, reference: string, baseUrl: string) 
   const provider = activeProvider();
   if (pending[0]?.checkoutRef) return { url: provider.name === "test" ? `${baseUrl}/pay/test/${pending[0].checkoutRef}` : (pending[0].providerRef ?? `${baseUrl}/book/confirmation/${b.reference}`), free: false };
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  // Play Pass funds already set aside for this booking stay applied; the card covers the rest.
+  const due = t.balance - ((await heldReservation(db, b.id))?.amountCents ?? 0);
+  if (due <= 0) return startCheckout(db, PUBLIC, b.id, { base: baseUrl });
   const attempts = (await db.select({ id: payments.id }).from(payments).where(eq(payments.invoiceId, inv.id))).length;
   const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)));
   const paymentId = crypto.randomUUID();
   const idem = `checkout:${b.id}:${inv.id}:attempt-${attempts + 1}`;
   const checkout = await provider.createCheckout({
     paymentId,
-    amountCents: t.balance,
+    amountCents: due,
     description: `Yalla booking ${b.reference}`,
     customerEmail: primary?.email,
     successUrl: `${baseUrl}/book/confirmation/${b.reference}`,
@@ -433,7 +441,7 @@ export async function retryCheckout(db: DB, reference: string, baseUrl: string) 
     id: paymentId,
     invoiceId: inv.id,
     familyId: b.familyId,
-    amountCents: t.balance,
+    amountCents: due,
     method: "card",
     status: "pending",
     provider: provider.name,
@@ -635,7 +643,39 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
   const deadline = x.p.cancellationDeadlineHours;
   if (deadline == null) throw new OpsError("contact", "This booking can’t be cancelled online. Please contact Yalla.");
   if ((x.s.startsAt.getTime() - Date.now()) / 3600_000 < deadline) throw new OpsError("deadline", `Online cancellation closed ${deadline} hours before the start. Please contact Yalla.`);
-  await cancelBooking(db, guardianActor(g), { bookingId: x.b.id, itemIds: [itemId], reason: "Cancelled by family in the portal", notify: true });
+  await cancelBooking(db, guardianActor(g), { bookingId: x.b.id, itemIds: [itemId], reason: "Cancelled by family in the portal", notify: false });
+  // The Play Pass part of what was paid for this item goes back to the wallet (Settings → Play Passes).
+  let restored = 0;
+  if (await getPolicy(db, "playpass.restoreOnFamilyCancel")) restored = await restoreWalletForItem(db, guardianActor(g), x.b.id, x.i, x.p.kind, x.p.slug);
+  const vars = await bookingConfirmationVars(db, x.b.id);
+  await notifyFamily(db, {
+    key: "booking_cancellation",
+    familyId: x.b.familyId,
+    vars: { ...vars, refund_note: restored ? `${usd(restored)} has been returned to your Play Pass balance.` : "If a refund or credit applies, we’ll confirm it separately." },
+    related: { type: "booking", id: x.b.id },
+  });
+}
+
+/** Return Play Pass funds spent on one cancelled item: its price and extras, up to what the wallet paid. */
+async function restoreWalletForItem(db: DB, actor: Actor, bookingId: string, item: typeof bookingItems.$inferSelect, kind: string, slug: string) {
+  const invs = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
+  if (!invs.length) return 0;
+  const walletPays = await db
+    .select()
+    .from(payments)
+    .where(and(inArray(payments.invoiceId, invs.map((i) => i.id)), eq(payments.method, "wallet"), eq(payments.status, "succeeded")));
+  let want = (item.priceCents ?? 0) + addonsFor(kind, slug).filter((a) => item.addons.includes(a.key)).reduce((s, a) => s + a.priceCents, 0);
+  let total = 0;
+  for (const p of walletPays) {
+    if (want <= 0) break;
+    const [{ back }] = await db.select({ back: sql<number>`coalesce(sum(${refunds.amountCents}), 0)::int` }).from(refunds).where(and(eq(refunds.paymentId, p.id), eq(refunds.status, "succeeded")));
+    const amount = Math.min(want, p.amountCents - back);
+    if (amount <= 0) continue;
+    await refundPayment(db, actor, { paymentId: p.id, amountCents: amount, reason: "Booking cancelled by the family", reduceAmountOwed: true, idempotencyKey: `playpass-cancel:${item.id}:${p.id}` });
+    want -= amount;
+    total += amount;
+  }
+  return total;
 }
 
 export async function familySignForm(db: Executor, g: GuardianContext, input: { templateId: string; childId: string | null; signatureText: string; consent: boolean; ip?: string; userAgent?: string }) {

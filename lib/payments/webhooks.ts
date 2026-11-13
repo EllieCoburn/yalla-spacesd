@@ -15,6 +15,7 @@ import { notifyFamily } from "@/lib/notify";
 import { refreshInvoiceStatus, invoiceTotals, usd } from "@/lib/ops/billing";
 import { confirmBooking } from "@/lib/ops/bookings";
 import { confirmSpaceGroup } from "@/lib/spaces/engine";
+import { applyMembershipEvent, membershipDispute } from "@/lib/playpass/membership";
 import { fmtDateTime } from "@/lib/time";
 import type { NormalizedEvent, PaymentProvider } from "./provider";
 
@@ -54,6 +55,7 @@ export async function processEvent(db: DB, providerName: string, evt: Normalized
 }
 
 async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
+  if (evt.type.startsWith("membership.")) return applyMembershipEvent(db, evt as Extract<NormalizedEvent, { type: `membership.${string}` }>);
   switch (evt.type) {
     case "payment.succeeded": {
       const changed = await db.transaction(async (tx) => {
@@ -128,7 +130,7 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
     }
     case "dispute.updated": {
       const [p] = await db.select().from(payments).where(eq(payments.providerRef, evt.paymentRef));
-      if (!p) return "ignored";
+      if (!p) return membershipDispute(db, { paymentRef: evt.paymentRef, status: evt.status, amountCents: evt.amountCents });
       await db.update(payments).set({ disputeStatus: evt.status }).where(eq(payments.id, p.id));
       await audit(db, WEBHOOK, { action: "billing.dispute", entityType: "invoice", entityId: p.invoiceId, summary: `Payment dispute: ${evt.status}` });
       return "dispute recorded";

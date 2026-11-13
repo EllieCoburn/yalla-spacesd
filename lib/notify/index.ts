@@ -25,9 +25,41 @@ export type TemplateKey =
   | "staff_password_reset"
   | "staff_invite"
   | "family_sign_in"
-  | "space_confirmation";
+  | "space_confirmation"
+  | "playpass_welcome"
+  | "playpass_renewal"
+  | "playpass_payment_failed"
+  | "playpass_change";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
+  playpass_welcome: {
+    name: "Play Pass welcome",
+    subject: "Welcome to your {{plan}} Play Pass",
+    body: "Hi {{guardian_first_name}},\n\nWelcome to Yalla Play Passes. Your {{plan}} Play Pass is active.\n\nPaid today: {{amount}}\nAdded to your Play Pass: {{added}}\nAvailable to spend: {{balance}}\n\nFrom {{next_renewal}}, your Play Pass renews on the 1st of each month: {{monthly_price}}, with {{monthly_allocation}} to spend on Yalla experiences.\n\nYour balance is applied automatically when you book eligible experiences, for any of your children. You can see your balance, change your pass or stop renewals anytime under My Play Pass in the Family Portal.\n\nWe can’t wait to play,\nYalla",
+    essential: true,
+    audience: "billing",
+  },
+  playpass_renewal: {
+    name: "Play Pass monthly renewal",
+    subject: "Your {{plan}} Play Pass has renewed",
+    body: "Hi {{guardian_first_name}},\n\nYour {{plan}} Play Pass renewed today.\n\nPaid: {{amount}}\nAdded to your Play Pass: {{added}}\nAvailable to spend: {{balance}}\n\nNext renewal: {{next_renewal}}.\n\nYalla",
+    essential: true,
+    audience: "billing",
+  },
+  playpass_payment_failed: {
+    name: "Play Pass payment failed",
+    subject: "We couldn’t process your Play Pass payment",
+    body: "Hi {{guardian_first_name}},\n\nYour Play Pass payment of {{amount}} didn’t go through ({{reason}}). We’ll try again automatically over the next few days.\n\nTo update your card, open My Play Pass in the Family Portal and choose “Update payment method”. Your current balance is unaffected.\n\nYalla",
+    essential: true,
+    audience: "billing",
+  },
+  playpass_change: {
+    name: "Play Pass change",
+    subject: "Your Play Pass has been updated",
+    body: "Hi {{guardian_first_name}},\n\n{{change_summary}}\n\nYou can review your Play Pass anytime under My Play Pass in the Family Portal.\n\nYalla",
+    essential: true,
+    audience: "billing",
+  },
   space_confirmation: {
     name: "Workspace reservation confirmation",
     subject: "Your space is all yours: {{workspace}}",
@@ -244,9 +276,18 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_invite: ["name", "invited_by", "role", "link"],
   family_sign_in: ["guardian_first_name", "link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
+  playpass_welcome: ["guardian_first_name", "plan", "amount", "added", "balance", "monthly_price", "monthly_allocation", "next_renewal"],
+  playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
+  playpass_payment_failed: ["guardian_first_name", "amount", "reason"],
+  playpass_change: ["guardian_first_name", "change_summary"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
+  plan: "Gather",
+  added: "$200",
+  monthly_price: "$180",
+  monthly_allocation: "$200",
+  next_renewal: "Tuesday 1 December",
   guardian_first_name: "Jordan",
   name: "Sam Staff",
   reference: "YL-SAMPLE",
