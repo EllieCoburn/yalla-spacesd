@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { isDbConfigured } from "@/lib/db";
 import { balboaLots, balboaPassesHref, monthlyLots, parkingAddress, parkingApps, parkingIntro, parkingOptions, parkSmarterHref } from "@/content/parking";
-import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
-import { getGuardian } from "../session";
+import { getGuardian } from "../portal/session";
 
-export const metadata: Metadata = { title: "Parking guide", robots: { index: false } };
+export const metadata: Metadata = { title: "Parking guide", description: "Where to park when visiting Yalla in Bankers Hill, San Diego: street parking, meters, nearby lots and Balboa Park." };
 export const dynamic = "force-dynamic";
 
 const ext = "underline decoration-blue/40 underline-offset-4 hover:text-blue hover:decoration-blue";
@@ -44,19 +42,19 @@ function Note({ children }: { children: ReactNode }) {
 }
 
 export default async function ParkingGuide() {
-  // Families only: the guide is part of the Family Portal (open to all while the portal preview is on).
-  if (!PORTAL_OPEN_PREVIEW && (!isDbConfigured() || !(await getGuardian()))) redirect("/portal?next=/portal/parking");
+  // Public, and also reachable from the Family Portal (signed-in families get a link back).
+  const signedIn = isDbConfigured() && !!(await getGuardian());
 
   return (
     <div className="pt-28 pb-24 lg:pt-36">
       <div className="shell">
-        <Link href="/portal/home" className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
-          ← Family Portal
+        <Link href={signedIn ? "/portal/home" : "/book-a-tour"} className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+          {signedIn ? "← Family Portal" : "← Book a tour"}
         </Link>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <p className="eyebrow text-ink-soft">Family Portal · Parking</p>
+            <p className="eyebrow text-ink-soft">{signedIn ? "Family Portal · Parking" : "Visiting Yalla · Parking"}</p>
             <h1 className="display mt-5 text-[clamp(2.4rem,1.8rem+2.4vw,4rem)]">
               Parking guide for <em>Yalla families.</em>
             </h1>

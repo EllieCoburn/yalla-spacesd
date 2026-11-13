@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Facts, PageHero, Section } from "@/components/site/PageParts";
 import { TourForm } from "@/components/site/TourForm";
-import { Draft, ToConfirm } from "@/components/ui/Draft";
+import { Draft } from "@/components/ui/Draft";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { site } from "@/content/site";
@@ -76,9 +77,15 @@ export default function BookATourPage() {
               items={[
                 { label: "Neighborhood", value: "Bankers Hill, near Balboa Park’s west entrance" },
                 { label: "Hours", value: `Weekday cohorts: ${site.hours}, Early Bird from 8:00am. Weekend, evening and camp times vary.` },
-                { label: "Parking", value: <ToConfirm /> },
-                { label: "Arriving", value: <>Entrance & check-in <ToConfirm /></> },
-                { label: "Tour length", value: <ToConfirm /> },
+                {
+                  label: "Parking",
+                  value: (
+                    <Link href="/parking" className="underline decoration-blue/40 underline-offset-4 hover:text-blue">
+                      See our parking guide
+                    </Link>
+                  ),
+                },
+                { label: "Arriving", value: "Your tour guide will meet you in the front lobby at the time of your tour." },
               ]}
             />
           </div>

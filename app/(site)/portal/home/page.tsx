@@ -40,7 +40,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
     { key: "playpass", label: "My Play Pass", href: "/portal/play-pass" },
     { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
-    { key: "parking", label: "Parking", href: "/portal/parking" },
+    { key: "parking", label: "Parking", href: "/parking" },
     { key: "account", label: "Account", href: "/portal/account" },
   ];
 
@@ -160,7 +160,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                   <p className="mt-2 text-[0.88rem] text-ink-soft">Find a quiet corner, take a call, or settle in for a productive day.</p>
                   <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Find a space</span>
                 </Link>
-                <Link href="/portal/parking" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
+                <Link href="/parking" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
                   <p className="eyebrow text-[0.6rem] text-ink-soft">Getting here</p>
                   <p className="display mt-3 text-[1.4rem]">Parking guide</p>
                   <p className="mt-2 text-[0.88rem] text-ink-soft">Free park-and-walk lots, meters, discounted monthly spots and our driveway policy.</p>
