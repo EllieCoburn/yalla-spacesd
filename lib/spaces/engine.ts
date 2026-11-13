@@ -296,7 +296,6 @@ export const COMMUNITY_MESSAGE =
  * a past confirmed booking not marked absent), or the family has a Club Yalla membership underway.
  */
 export async function inCommunity(db: Executor, familyId: string, now = new Date()) {
-  const today = todayLA(now);
   const [r] = await db.execute<{ ok: boolean }>(sql`
     select exists (
       select 1 from attendance_records a join children c on c.id = a.child_id
@@ -309,7 +308,7 @@ export async function inCommunity(db: Executor, familyId: string, now = new Date
         and s.ends_at < ${now.toISOString()}::timestamptz and i.attendance not in ('absent', 'no_show', 'late_cancel')
     ) or exists (
       select 1 from memberships m
-      where m.family_id = ${familyId} and m.status in ('active', 'paused') and m.starts_on <= ${today}
+      where m.family_id = ${familyId} and m.status in ('upcoming', 'active', 'paused')
     ) as ok`);
   return !!r?.ok;
 }

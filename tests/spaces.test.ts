@@ -337,6 +337,17 @@ describe("Community", () => {
     expect(g.totalCents).toBe(3500);
   });
 
+  it("counts a Club Yalla family as community from enrollment, before their first day", async () => {
+    const f = await newFamily("Enrolled");
+    const [loc] = await db().insert(s.locations).values({ name: "Yalla" }).returning();
+    const [p] = await db().insert(s.programs).values({ slug: "club", name: "Club Yalla", kind: "membership", status: "published", locationId: loc.id }).returning();
+    const [c] = await db().insert(s.cohorts).values({ name: "Sprouts" }).returning();
+    await db()
+      .insert(s.memberships)
+      .values({ familyId: f.family.id, childId: f.children[0].id, programId: p.id, cohortId: c.id, weekdays: [1, 2, 3], startsOn: addDaysISO(todayLA(), 30), status: "upcoming", priceCents: 100000 });
+    expect(await inCommunity(db(), f.family.id)).toBe(true);
+  });
+
   it("prices a desk half day at $18, 8:30am to 12pm, on a Saturday too", async () => {
     const ws = await seedSpaces();
     const f = await family("Desk");
