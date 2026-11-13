@@ -254,7 +254,7 @@ export default function BelongingPage() {
             We’d love to <em>meet your family.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/about", label: "About Yalla" }}
       />
     </>

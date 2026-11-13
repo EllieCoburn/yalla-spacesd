@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
       { source: "/programs/yalla-after-hours", destination: "/programs/yalla-happenings#after-hours", permanent: false },
       // Yalla Celebrations is paused for now.
       { source: "/programs/yalla-celebrations", destination: "/programs/yalla-happenings", permanent: false },
+      // The Visit page is now Book a tour.
+      { source: "/visit", destination: "/book-a-tour", permanent: false },
       // The Spaces page now lives on the About page.
       { source: "/spaces", destination: "/about#our-space", permanent: false },
     ];

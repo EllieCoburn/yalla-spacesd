@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
-import { ToConfirm } from "@/components/ui/Draft";
 import { nav, site } from "@/content/site";
 import { TEAM_PUBLIC } from "@/content/team";
 
@@ -54,9 +53,6 @@ export function SiteFooter() {
                   <Link href="/book" className="link-underline">Book care</Link>
                 </li>
                 <li>
-                  <Link href="/visit" className="link-underline">Book a tour</Link>
-                </li>
-                <li>
                   <Link href="/belonging" className="link-underline">Belonging at Yalla</Link>
                 </li>
                 <li>
@@ -65,20 +61,22 @@ export function SiteFooter() {
               </ul>
             </div>
             <div className="col-span-2 sm:col-span-1">
-              <p className="eyebrow mb-5 text-chalk/60">Find us</p>
+              <p className="eyebrow mb-5 text-chalk/60">Visit &amp; connect</p>
               <p className="text-chalk/90">
-                {site.address.value}
-              </p>
-              <p className="mt-4 text-chalk/90">
-                Weekday cohorts 8:30am – 4:30pm
+                408 Nutmeg Street
                 <br />
-                Weekend, evening & camp times vary
+                San Diego, CA 92103
+              </p>
+              <p className="mt-4 text-chalk/90">Visits by appointment or reservation only</p>
+              <p className="mt-4">
+                <a href="tel:+16197754008" className="link-underline">
+                  619.775.4008
+                </a>
               </p>
               <p className="mt-4">
-                <a href={`mailto:${site.email.value}`} className="link-underline">
-                  {site.email.value}
-                </a>
-                {site.email.confirm ? <ToConfirm /> : null}
+                <Link href="/book-a-tour" className="link-underline">
+                  Book a tour
+                </Link>
               </p>
             </div>
           </div>

@@ -145,7 +145,7 @@ export default function FaqPage() {
             Still curious? <em>Come visit.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/book", label: "Book care" }}
       />
     </>

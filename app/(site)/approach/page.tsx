@@ -185,7 +185,7 @@ export default function ApproachPage() {
           </>
         }
         body="The best way to understand our approach is to see it in person. Visit Yalla and meet the people behind it."
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/experience", label: "The Yalla Experience" }}
       />
     </>

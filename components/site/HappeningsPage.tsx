@@ -134,7 +134,7 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
               Read the FAQ
             </Link>{" "}
             or{" "}
-            <Link href="/visit" className="underline underline-offset-4 hover:text-blue">
+            <Link href="/book-a-tour" className="underline underline-offset-4 hover:text-blue">
               book a tour
             </Link>
             .

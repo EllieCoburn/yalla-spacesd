@@ -60,7 +60,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 <Button href={p.cta.href} size="lg">
                   {p.cta.label}
                 </Button>
-                <Button href="/visit" variant="outline" size="lg">
+                <Button href="/book-a-tour" variant="outline" size="lg">
                   Book a tour
                 </Button>
               </Reveal>

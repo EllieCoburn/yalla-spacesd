@@ -163,7 +163,7 @@ export default function AboutPage() {
             We’d love to <em>meet you.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/experience", label: "The Yalla experience" }}
       />
     </>

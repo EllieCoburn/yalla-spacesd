@@ -7,7 +7,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { site } from "@/content/site";
 
 export const metadata: Metadata = {
-  title: "Visit Yalla",
+  title: "Book a tour",
   description: "Book a tour of Yalla in Bankers Hill, San Diego. Location, parking and what to expect.",
 };
 
@@ -15,11 +15,11 @@ const mapsQuery = encodeURIComponent(site.address.value ?? `${site.neighborhood}
 const mapsEmbed = `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
 const mapsLink = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
 
-export default function VisitPage() {
+export default function BookATourPage() {
   return (
     <>
       <PageHero
-        eyebrow="Visit Yalla"
+        eyebrow="Book a tour"
         mark="arch"
         title={
           <>

@@ -51,7 +51,7 @@ const questions = {
       </Link>{" "}
       or{" "}
       <Link
-        href="/visit"
+        href="/book-a-tour"
         className="underline underline-offset-4 hover:text-blue"
       >
         book a tour

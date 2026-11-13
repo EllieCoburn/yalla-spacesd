@@ -184,7 +184,7 @@ export default function ExperiencePage() {
         }
         body="Browse every program, or come and see the space for yourself."
         primary={{ href: "/programs", label: "Explore programs" }}
-        secondary={{ href: "/visit", label: "Book a tour" }}
+        secondary={{ href: "/book-a-tour", label: "Book a tour" }}
       />
     </>
   );

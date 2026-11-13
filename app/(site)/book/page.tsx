@@ -70,7 +70,7 @@ export default async function BookPage() {
                 Online booking <em>opens soon.</em>
               </h2>
               <p className="mx-auto mt-4 max-w-sm text-ink-soft">In the meantime, we’d love to hear from you. Tell us what you’re looking for and we’ll be in touch.</p>
-              <Link href="/visit" className="mt-8 inline-flex h-12 items-center rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">
+              <Link href="/book-a-tour" className="mt-8 inline-flex h-12 items-center rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">
                 Get in touch
               </Link>
             </div>

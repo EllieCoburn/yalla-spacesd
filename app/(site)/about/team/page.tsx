@@ -86,7 +86,7 @@ export default function TeamPage() {
             Come meet <em>the team.</em>
           </>
         }
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/about", label: "About Yalla" }}
       />
     </>

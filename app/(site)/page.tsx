@@ -224,7 +224,7 @@ export default function Home() {
               meaningful play, and a community that welcomes your whole family.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
-              <Button href="/visit">Plan a visit</Button>
+              <Button href="/book-a-tour">Plan a visit</Button>
               <Button href="/experience" variant="outline">
                 The Yalla experience
               </Button>

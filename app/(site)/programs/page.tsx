@@ -67,7 +67,7 @@ export default function ProgramsPage() {
           </>
         }
         body="A tour is the easiest way to find the right fit for your family."
-        primary={{ href: "/visit", label: "Book a tour" }}
+        primary={{ href: "/book-a-tour", label: "Book a tour" }}
         secondary={{ href: "/book", label: "Browse availability" }}
       />
     </>

@@ -14,8 +14,8 @@ export const site = {
   extendedCare: "Early Bird care from 8:00am",
   yearRound: true,
   email: { value: "hello@yallaspacesd.com", confirm: false },
-  address: { value: "408 Nutmeg St, San Diego, CA 92103" as string | null, confirm: false },
-  phone: { value: null as string | null, confirm: true },
+  address: { value: "408 Nutmeg Street, San Diego, CA 92103" as string | null, confirm: false },
+  phone: { value: "619.775.4008" as string | null, confirm: false },
   instagram: { value: "https://www.instagram.com/yallachildcare/", confirm: false },
   pinterest: { value: "https://www.pinterest.com/yallachildcare/", confirm: false },
   amazon: { value: "https://www.amazon.com/shop/yallachildcare", confirm: false },
@@ -26,7 +26,6 @@ export const nav = [
   { href: "/club-yalla", label: "Club Yalla", short: "Club Yalla" },
   { href: "/programs", label: "Programs", short: "Programs" },
   { href: "/about", label: "About Yalla", short: "About" },
-  { href: "/visit", label: "Visit Yalla", short: "Visit" },
 ] as const;
 
 export const secondaryNav = [
