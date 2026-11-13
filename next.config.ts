@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
       { source: "/prospective", destination: "/membership", permanent: false },
       { source: "/prospective/:path*", destination: "/membership", permanent: false },
       { source: "/programs/club-yalla", destination: "/club-yalla", permanent: true },
+      // The Spaces page now lives on the About page.
+      { source: "/spaces", destination: "/about#our-space", permanent: false },
     ];
   },
 };
