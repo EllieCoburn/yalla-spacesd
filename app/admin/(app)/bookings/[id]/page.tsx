@@ -14,6 +14,7 @@ import { usd } from "@/lib/ops/billing";
 import { PAPERWORK_LABEL } from "@/lib/ops/forms";
 import { ageLabel, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
 import { and, eq, inArray } from "drizzle-orm";
+import { STAFF_CANCEL_MODES } from "@/lib/ops/yalla-cancellations";
 import {
   absenceAction,
   addChildAction,
@@ -46,7 +47,9 @@ const EVENT_LABEL: Record<string, string> = {
 
 const DONE: Record<string, string> = {
   moved: "Moved. The booking history was updated, and any price difference was invoiced separately.",
-  cancelled: "Cancelled and the spots released. No refund was issued — use Billing if a refund or credit applies.",
+  cancelled: "Cancelled and the spots released. Nothing was paid back.",
+  cancelled_credit: "Cancelled and the spots released. What the family paid is back in their Yalla Wallet as credit.",
+  cancelled_offer: "Cancelled and the spots released. The family has been asked to choose Yalla Wallet credit (plus the bonus) or a full refund in their Family Portal.",
   child_added: "Child added. Any charge for the extra place was added as a new invoice.",
 };
 
@@ -297,10 +300,11 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                             <ActionForm
                               action={cancelAction}
                               submit={{ label: "Cancel this item", variant: "danger" }}
-                              confirm={{ title: "Cancel this item?", body: "The spot is released. No refund is issued automatically.", confirmLabel: "Yes, cancel item", danger: true }}
+                              confirm={{ title: "Cancel this item?", body: "The spot is released, and any money is handled as chosen above.", confirmLabel: "Yes, cancel item", danger: true }}
                             >
                               <input type="hidden" name="bookingId" value={b.id} />
                               <input type="hidden" name="itemIds" value={i.item.id} />
+                              <SelectField name="mode" label="Who’s cancelling?" defaultValue="family_policy" options={STAFF_CANCEL_MODES} />
                               <TextField name="reason" label="Reason" required />
                               <Checkbox name="notify" label="Email the family" defaultChecked />
                             </ActionForm>
@@ -555,12 +559,13 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                 submit={{ label: "Cancel booking", variant: "danger" }}
                 confirm={{
                   title: `Cancel all ${active.length} item(s) on ${b.reference}?`,
-                  body: billing && cancelPreview.paidCents > 0 ? `${usd(cancelPreview.paidCents)} has been paid. No refund will be issued by this action.` : "The spots will be released immediately.",
+                  body: billing && cancelPreview.paidCents > 0 ? `${usd(cancelPreview.paidCents)} has been paid. It’s handled as chosen: Yalla Wallet credit, the family’s choice of credit or refund, or nothing.` : "The spots will be released immediately.",
                   confirmLabel: "Yes, cancel booking",
                   danger: true,
                 }}
               >
                 <input type="hidden" name="bookingId" value={b.id} />
+                <SelectField name="mode" label="Who’s cancelling?" defaultValue="family_policy" options={STAFF_CANCEL_MODES} hint="Family cancellations follow the 24-hour credit rule. When Yalla cancels, the family chooses credit plus the bonus or a full refund." />
                 <TextField name="reason" label="Reason" required />
                 <Checkbox name="notify" label="Email the family a cancellation notice" defaultChecked />
               </ActionForm>

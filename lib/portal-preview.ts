@@ -36,6 +36,7 @@ export function samplePortalData(): PortalData {
     endsAt: at(days, end),
     child,
     canCancel: true,
+    creditOnCancel: true,
     cancelNote: "Free to cancel until 48 hours before.",
   });
   const form = (templateId: string, title: string, childId: string | null, forChild: string | null, state: "complete" | "missing" | "unsigned") => ({

@@ -29,7 +29,7 @@ export type NormalizedEvent =
       subscriptionRef: string | null;
       localId?: string;
       amountCents: number;
-      reason: "initial" | "renewal" | "other";
+      reason: "initial" | "renewal" | "upgrade" | "resume" | "other";
       chargeRef?: string | null;
     }
   | { id: string; type: "membership.invoice_failed"; invoiceRef: string; subscriptionRef: string | null; localId?: string; amountCents: number; reason: string }
@@ -163,12 +163,13 @@ export const stripeProvider: PaymentProvider = {
       case "invoice.payment_failed": {
         const inv = event.data.object as Stripe.Invoice;
         const sd = inv.parent?.subscription_details;
-        const localId = sd?.metadata?.playPassSubscriptionId;
+        const localId = sd?.metadata?.playPassSubscriptionId ?? inv.metadata?.playPassSubscriptionId;
         if (!localId) return { id: event.id, type: "ignored", rawType: event.type };
         const subscriptionRef = typeof sd?.subscription === "string" ? sd.subscription : (sd?.subscription?.id ?? null);
         if (event.type === "invoice.payment_failed")
           return { id: event.id, type: "membership.invoice_failed", invoiceRef: inv.id!, subscriptionRef, localId, amountCents: inv.amount_due, reason: "The card payment didn’t go through" };
-        const reason = inv.billing_reason === "subscription_create" ? "initial" : inv.billing_reason === "subscription_cycle" ? "renewal" : "other";
+        const yalla = inv.metadata?.yallaReason;
+        const reason = yalla === "upgrade" || yalla === "resume" ? yalla : inv.billing_reason === "subscription_create" ? "initial" : inv.billing_reason === "subscription_cycle" ? "renewal" : "other";
         return { id: event.id, type: "membership.invoice_paid", invoiceRef: inv.id!, subscriptionRef, localId, amountCents: inv.amount_paid, reason };
       }
       case "customer.subscription.updated":

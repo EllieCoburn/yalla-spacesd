@@ -12,6 +12,8 @@ import { availabilityFor } from "@/lib/ops/capacity";
 import { applyDueChanges } from "@/lib/ops/memberships";
 import { autoOffer, expireOffers } from "@/lib/ops/waitlist";
 import { expireSpaceHolds } from "@/lib/spaces/engine";
+import { expireCredits } from "@/lib/playpass/wallet";
+import { applyPlayPassSchedules } from "@/lib/playpass/changes";
 import { fmtDate } from "@/lib/time";
 
 export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; membershipChanges: number; offers: number; reminders: number };
@@ -21,6 +23,10 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
   const expiredOffers = (await expireOffers(db, now)).length;
   const membershipChanges = await applyDueChanges(db, SYSTEM);
+  // Cancellation credits are valid 24 months; record any that have lapsed.
+  await expireCredits(db);
+  // Play Pass notice periods, downgrades and pauses.
+  await applyPlayPassSchedules(db);
 
   // Offer freed spots to waiting families (only programs with automatic offers enabled).
   const waiting = await db

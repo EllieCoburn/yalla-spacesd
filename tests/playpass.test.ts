@@ -233,7 +233,7 @@ describe("Play Pass in booking checkout", () => {
     expect(await bookingStatus(r.booking.id)).toBe("confirmed");
     const t = await totals(r.invoice.id);
     expect(t).toMatchObject({ total: 6500, walletApplied: 6500, balance: 0 });
-    expect(await walletSummary(db(), f.family.id)).toEqual({ balanceCents: 13500, reservedCents: 0, availableCents: 13500 });
+    expect(await walletSummary(db(), f.family.id)).toMatchObject({ balanceCents: 13500, reservedCents: 0, availableCents: 13500 });
   });
 
   it("3 · partial wallet funds plus a card payment ($40 + $25 for $65)", async () => {
@@ -244,11 +244,11 @@ describe("Play Pass in booking checkout", () => {
     const r = await book(f.family.id, [{ sessionId: sess.id, childId: f.children[0].id }]);
     expect(r.card?.amountCents).toBe(2500);
     // Reserved, not yet spent, and not available for anything else.
-    expect(await walletSummary(db(), f.family.id)).toEqual({ balanceCents: 4000, reservedCents: 4000, availableCents: 0 });
+    expect(await walletSummary(db(), f.family.id)).toMatchObject({ balanceCents: 4000, reservedCents: 4000, availableCents: 0 });
     await processEvent(db(), "test", { id: evtId(), type: "payment.succeeded", checkoutRef: r.card!.checkoutRef!, providerRef: "pi_p", amountCents: 2500 });
     expect(await bookingStatus(r.booking.id)).toBe("confirmed");
     expect(await totals(r.invoice.id)).toMatchObject({ total: 6500, paid: 2500, walletApplied: 4000, balance: 0 });
-    expect(await walletSummary(db(), f.family.id)).toEqual({ balanceCents: 0, reservedCents: 0, availableCents: 0 });
+    expect(await walletSummary(db(), f.family.id)).toMatchObject({ balanceCents: 0, reservedCents: 0, availableCents: 0 });
   });
 
   it("4 · two children in one event share the family balance", async () => {
@@ -341,7 +341,7 @@ describe("Play Pass in booking checkout", () => {
     const r = await book(f.family.id, [{ sessionId: sess.id, childId: f.children[0].id }]);
     await processEvent(db(), "test", { id: evtId(), type: "payment.failed", checkoutRef: r.card!.checkoutRef!, reason: "Card declined" });
     expect(await bookingStatus(r.booking.id)).not.toBe("confirmed");
-    expect(await walletSummary(db(), f.family.id)).toEqual({ balanceCents: 4000, reservedCents: 4000, availableCents: 0 });
+    expect(await walletSummary(db(), f.family.id)).toMatchObject({ balanceCents: 4000, reservedCents: 4000, availableCents: 0 });
   });
 
   it("18 · an abandoned checkout releases both the space and the reserved funds", async () => {
@@ -352,7 +352,7 @@ describe("Play Pass in booking checkout", () => {
     const r = await book(f.family.id, [{ sessionId: sess.id, childId: f.children[0].id }]);
     await expireHolds(db(), new Date(Date.now() + 2 * 3600_000));
     expect(await bookingStatus(r.booking.id)).toBe("expired");
-    expect(await walletSummary(db(), f.family.id)).toEqual({ balanceCents: 4000, reservedCents: 0, availableCents: 4000 });
+    expect(await walletSummary(db(), f.family.id)).toMatchObject({ balanceCents: 4000, reservedCents: 0, availableCents: 4000 });
   });
 
   it("20 · a family can't touch another family's bookings or wallet", async () => {

@@ -134,6 +134,20 @@
       "when": 1794609601696,
       "tag": "0018_faq_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794613113860,
+      "tag": "0019_wallet_credits_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794613555553,
+      "tag": "0020_play_pass_changes",
+      "breakpoints": true
     }
   ]
 }

@@ -5,7 +5,9 @@ import { Capacity, Card, Empty, FilterBar, FilterField, inputCls, LinkButton, No
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
-import { locations, programs } from "@/lib/db/schema";
+import { children, lateFees, locations, programs } from "@/lib/db/schema";
+import { ActionForm, TextField } from "@/components/admin/forms";
+import { waiveLateFeeAction } from "./actions";
 import { roster } from "@/lib/ops/attendance";
 import { daySessions } from "@/lib/ops/dashboard";
 import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
@@ -21,6 +23,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
   const list = await daySessions(db, { date, programId: sp.program || undefined, locationId: sp.location || undefined });
   const selectedId = sp.session && list.some((l) => l.session.id === sp.session) ? sp.session : list.find((l) => l.expected > 0)?.session.id ?? list[0]?.session.id;
   const r = selectedId ? await roster(db, selectedId, staff.permissions) : null;
+  const fees = r ? (await db.select({ fee: lateFees, first: children.firstName, preferred: children.preferredName }).from(lateFees).innerJoin(children, eq(children.id, lateFees.childId)).where(eq(lateFees.sessionId, r.session.id))).map((x) => ({ fee: x.fee, child: x.preferred || x.first })) : [];
   const q = (extra: Record<string, string>) =>
     `/admin/roster?${new URLSearchParams({ date, ...(sp.program ? { program: sp.program } : {}), ...(sp.location ? { location: sp.location } : {}), ...extra })}`;
   const expected = r?.children.filter((c) => c.expected || c.attendance?.status === "checked_in" || c.attendance?.status === "checked_out") ?? [];
@@ -152,6 +155,28 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                     ))}
                   </ul>
                 </details>
+              ) : null}
+              {fees.length ? (
+                <div className="mt-6">
+                  <Card title="Late departures">
+                    <ul className="space-y-3 text-[0.85rem]">
+                      {fees.map((f) => (
+                        <li key={f.fee.id} className="flex flex-wrap items-center justify-between gap-3">
+                          <span>
+                            {f.child} · {f.fee.minutesLate} minutes late · ${(f.fee.amountCents / 100).toFixed(2)}
+                            {f.fee.status === "waived" ? <span className="text-ink-soft"> · waived by {f.fee.waivedBy}: {f.fee.waivedReason}</span> : null}
+                          </span>
+                          {f.fee.status === "charged" && can(staff, "billing.manage") ? (
+                            <ActionForm action={waiveLateFeeAction} submit={{ label: "Waive", variant: "ghost" }} className="flex items-end gap-2">
+                              <input type="hidden" name="feeId" value={f.fee.id} />
+                              <TextField name="reason" label="Reason" required />
+                            </ActionForm>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </div>
               ) : null}
               <div className="mt-6 max-w-sm">
                 <Capacity

@@ -141,10 +141,11 @@ export default async function SpaceReservation({ params }: { params: Promise<{ i
               <ActionForm
                 action={cancelReservationAction}
                 submit={{ label: "Cancel reservation", variant: "danger" }}
-                confirm={{ title: "Cancel this reservation?", body: g.totalCents ? "The space is released. Nothing is refunded automatically — refund or credit from the invoice if appropriate." : "The space is released and any complimentary minutes return to the family’s day.", confirmLabel: "Yes, cancel", danger: true }}
+                confirm={{ title: "Cancel this reservation?", body: g.totalCents ? "The space is released. If Yalla is cancelling, the family chooses Yalla Wallet credit plus the bonus or a full refund." : "The space is released and any complimentary minutes return to the family’s day.", confirmLabel: "Yes, cancel", danger: true }}
               >
                 <input type="hidden" name="groupId" value={g.id} />
                 <TextField name="reason" label="Reason" required hint="Shown to the family." />
+                {g.totalCents ? <Checkbox name="yalla" label="Yalla is cancelling (the family chooses credit + bonus or a full refund)" /> : null}
               </ActionForm>
             </Card>
           ) : null}

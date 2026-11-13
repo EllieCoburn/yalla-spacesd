@@ -834,6 +834,61 @@ export const refunds = pgTable("refunds", {
   completedAt: ts("completed_at"),
 });
 
+/**
+ * When Yalla cancels a paid reservation, the family chooses: Yalla Wallet credit plus a bonus, or
+ * a full refund to the original payment method (Policies & Terms).
+ */
+export const cancellationOffers = pgTable(
+  "cancellation_offers",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    bookingId: text("booking_id").references(() => bookings.id),
+    spaceGroupId: text("space_group_id"),
+    itemIds: text("item_ids").array().notNull().default(sql`'{}'::text[]`),
+    description: text("description").notNull(),
+    reason: text("reason").notNull(),
+    /** What was paid and can be returned. */
+    amountCents: integer("amount_cents").notNull(),
+    bonusPercent: integer("bonus_percent").notNull().default(5),
+    status: text("status").notNull().default("pending"), // pending | credited | refunded
+    creditedCents: integer("credited_cents"),
+    refundedCents: integer("refunded_cents"),
+    resolvedAt: ts("resolved_at"),
+    resolvedBy: text("resolved_by"),
+    createdBy: text("created_by").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("cancellation_offers_family_idx").on(t.familyId, t.status)],
+);
+
+/** Late departures: the fee charged (or waived) for one child on one session. */
+export const lateFees = pgTable(
+  "late_fees",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    childId: text("child_id")
+      .notNull()
+      .references(() => children.id),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id),
+    minutesLate: integer("minutes_late").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    invoiceId: text("invoice_id").references(() => invoices.id),
+    status: text("status").notNull().default("charged"), // charged | waived
+    waivedBy: text("waived_by"),
+    waivedReason: text("waived_reason"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("late_fees_child_session_idx").on(t.childId, t.sessionId)],
+);
+
 /** Account credit ledger: positive = granted, negative = applied. */
 export const credits = pgTable("credits", {
   id: id(),
@@ -1134,6 +1189,20 @@ export const playPassSubscriptions = pgTable(
     customerRef: text("customer_ref"),
     subscriptionRef: text("subscription_ref").unique(),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /** 30 days' notice: the last day of membership, and when notice was given. */
+    cancelEffectiveOn: date("cancel_effective_on"),
+    cancelRequestedAt: ts("cancel_requested_at"),
+    /** Prorated final charge on the 1st of the last month (null until worked out). */
+    finalChargeCents: integer("final_charge_cents"),
+    /** A downgrade, given 30 days' notice, starts with the first renewal on or after this date. */
+    downgradeEffectiveOn: date("downgrade_effective_on"),
+    /** A pause of up to 60 days (with 30 days' notice): paused from `pauseStartsOn`, back on `resumeOn`. */
+    pauseStartsOn: date("pause_starts_on"),
+    resumeOn: date("resume_on"),
+    /** When the pause actually began with the billing provider (renewals are skipped while paused). */
+    pauseAppliedAt: ts("pause_applied_at"),
+    /** The provider has been told to bill the prorated final month. */
+    finalPriceSet: boolean("final_price_set").notNull().default(false),
     /** First month: the share of the month remaining, applied identically to charge and allocation. */
     startDate: date("start_date").notNull(),
     prorationDays: integer("proration_days").notNull(),
@@ -1166,7 +1235,7 @@ export const walletAllocations = pgTable(
       .references(() => families.id),
     subscriptionId: text("subscription_id").references(() => playPassSubscriptions.id),
     planId: text("plan_id").references(() => playPassPlans.id),
-    kind: text("kind").notNull(), // initial | renewal | adjustment
+    kind: text("kind").notNull(), // initial | renewal | adjustment | credit (cancellation credit, 24 months)
     periodStart: date("period_start").notNull(),
     amountCents: integer("amount_cents").notNull(),
     /** The paid provider invoice that funded it (unique: a payment funds the wallet once). */
@@ -1220,6 +1289,8 @@ export const walletReservations = pgTable(
       .notNull()
       .references(() => invoices.id),
     amountCents: integer("amount_cents").notNull(),
+    /** The part of `amountCents` drawn from Yalla credits (the rest is Play Pass balance). */
+    creditCents: integer("credit_cents").notNull().default(0),
     status: text("status").notNull(), // held | captured | released
     expiresAt: ts("expires_at").notNull(),
     createdAt: createdAt(),
@@ -1241,9 +1312,12 @@ export const playPassCharges = pgTable(
       .references(() => families.id),
     invoiceRef: text("invoice_ref").notNull().unique(),
     chargeRef: text("charge_ref"),
-    reason: text("reason").notNull(), // initial | renewal | other
+    reason: text("reason").notNull(), // initial | renewal | upgrade | resume | other
     amountCents: integer("amount_cents").notNull(),
-    status: text("status").notNull(), // paid | failed | refunded | disputed
+    status: text("status").notNull(), // pending | paid | failed | refunded | disputed
+    /** For upgrade and resume charges: the plan it pays for and the balance it adds once paid. */
+    planId: text("plan_id"),
+    allocationCents: integer("allocation_cents"),
     periodStart: date("period_start"),
     failureReason: text("failure_reason"),
     refundedCents: integer("refunded_cents").notNull().default(0),

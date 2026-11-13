@@ -19,9 +19,10 @@ import type { NormalizedEvent } from "@/lib/payments/provider";
 import { fmtDate, todayLA, zonedDateTime } from "@/lib/time";
 import { activeMembershipBilling, membershipBillingFor } from "./provider";
 import { allocate, lockFamily, usd, walletSummary } from "./wallet";
+import { finalMonth } from "./changes";
 
 /** Bump when the recurring-billing summary families agree to changes. */
-export const TERMS_VERSION = "2026-11-draft";
+export const TERMS_VERSION = "2026-11-notice";
 const WEBHOOK: Actor = { type: "webhook", name: "Payment provider" };
 
 export type Plan = typeof playPassPlans.$inferSelect;
@@ -276,14 +277,29 @@ export async function applyMembershipEvent(db: DB, evt: MembershipEvent): Promis
         const [sub] = await tx.select().from(playPassSubscriptions).where(eq(playPassSubscriptions.id, sub0.id)).for("update");
         const [already] = await tx.select().from(playPassCharges).where(eq(playPassCharges.invoiceRef, evt.invoiceRef));
         if (already?.status === "paid" || already?.status === "refunded" || already?.status === "disputed") return null;
-        // Renewal: a plan change waiting for this date takes effect now.
-        let planId = sub.planId;
-        if (evt.reason === "renewal" && sub.nextPlanId) planId = sub.nextPlanId;
-        const plan = (await planById(tx, planId))!;
         const today = todayLA();
+        // Renewal: a downgrade whose 30-day notice has ended takes effect now. An upgrade or a
+        // reactivation after a pause pays for the plan recorded with its charge.
+        let planId = sub.planId;
+        const downgradeDue = !sub.downgradeEffectiveOn || sub.downgradeEffectiveOn <= today;
+        const switched = evt.reason === "renewal" && !!sub.nextPlanId && downgradeDue;
+        if (switched) planId = sub.nextPlanId!;
+        const special = (evt.reason === "upgrade" || evt.reason === "resume") && already?.planId ? already : null;
+        if (special) planId = special.planId!;
+        const plan = (await planById(tx, planId))!;
         const initial = evt.reason === "initial";
-        const allocation = initial ? sub.initialAllocationCents : evt.reason === "renewal" ? plan.allocationCents : 0;
-        const expected = initial ? sub.initialChargeCents : plan.priceCents;
+        // The final month after 30 days' notice is prorated through the end date; renewals that
+        // fall in a pause add nothing.
+        const final = evt.reason === "renewal" && sub.cancelEffectiveOn && sub.cancelEffectiveOn.slice(0, 7) === today.slice(0, 7) ? finalMonth(plan, sub.cancelEffectiveOn) : null;
+        const inPause = evt.reason === "renewal" && !!sub.pauseStartsOn && !!sub.resumeOn && today >= sub.pauseStartsOn && today < sub.resumeOn;
+        const allocation = initial
+          ? sub.initialAllocationCents
+          : special
+            ? (special.allocationCents ?? 0)
+            : evt.reason === "renewal" && !inPause
+              ? (final?.allocationCents ?? plan.allocationCents)
+              : 0;
+        const expected = initial ? sub.initialChargeCents : special ? special.amountCents : (final?.chargeCents ?? plan.priceCents);
         if (evt.reason !== "other" && evt.amountCents !== expected)
           await audit(tx, WEBHOOK, { action: "playpass.amount_mismatch", entityType: "family", entityId: sub.familyId, summary: `Provider collected ${usd(evt.amountCents)} for a ${usd(expected)} Play Pass charge` });
         if (already) await tx.update(playPassCharges).set({ status: "paid", amountCents: evt.amountCents, failureReason: null, updatedAt: new Date() }).where(eq(playPassCharges.id, already.id));
@@ -293,7 +309,7 @@ export async function applyMembershipEvent(db: DB, evt: MembershipEvent): Promis
             familyId: sub.familyId,
             invoiceRef: evt.invoiceRef,
             chargeRef: evt.chargeRef ?? null,
-            reason: initial ? "initial" : evt.reason === "renewal" ? "renewal" : "other",
+            reason: initial ? "initial" : evt.reason === "other" ? "other" : evt.reason,
             amountCents: evt.amountCents,
             status: "paid",
             periodStart: initial ? sub.startDate : today.slice(0, 8) + "01",
@@ -304,17 +320,26 @@ export async function applyMembershipEvent(db: DB, evt: MembershipEvent): Promis
             subscriptionId: sub.id,
             planId,
             kind: initial ? "initial" : "renewal",
-            periodStart: initial ? sub.startDate : today.slice(0, 8) + "01",
+            periodStart: initial ? sub.startDate : special ? today : today.slice(0, 8) + "01",
             amountCents: allocation,
             sourceRef: `invoice:${evt.invoiceRef}`,
             createdBy: "Play Pass billing",
-            note: initial ? `${plan.name} Play Pass · ${sub.prorationDays === sub.monthDays ? "first month" : `first ${sub.prorationDays} days`}` : `${plan.name} Play Pass · ${fmtDate(today, "MMMM yyyy")}`,
+            note: initial
+              ? `${plan.name} Play Pass · ${sub.prorationDays === sub.monthDays ? "first month" : `first ${sub.prorationDays} days`}`
+              : evt.reason === "upgrade"
+                ? `Upgrade to ${plan.name} · rest of ${fmtDate(today, "MMMM")}`
+                : evt.reason === "resume"
+                  ? `${plan.name} Play Pass · back from your pause`
+                  : final
+                    ? `${plan.name} Play Pass · final ${final.days} days`
+                    : `${plan.name} Play Pass · ${fmtDate(today, "MMMM yyyy")}`,
           });
         await tx
           .update(playPassSubscriptions)
           .set({
             planId,
-            nextPlanId: evt.reason === "renewal" ? null : sub.nextPlanId,
+            nextPlanId: switched || evt.reason === "upgrade" ? null : sub.nextPlanId,
+            downgradeEffectiveOn: evt.reason === "upgrade" ? null : sub.downgradeEffectiveOn,
             status: "active",
             nextRenewalOn: firstOfNextMonth(today),
             lastPaymentFailedAt: null,
@@ -323,9 +348,16 @@ export async function applyMembershipEvent(db: DB, evt: MembershipEvent): Promis
           })
           .where(eq(playPassSubscriptions.id, sub.id));
         await audit(tx, WEBHOOK, { action: initial ? "playpass.activated" : "playpass.renewed", entityType: "family", entityId: sub.familyId, summary: `${plan.name} Play Pass: ${usd(evt.amountCents)} paid, ${usd(allocation)} added to the wallet` });
-        return { sub, plan, allocation, initial };
+        return { sub, plan, allocation, initial, upgraded: evt.reason === "upgrade" && planId !== sub.planId };
       });
       if (!res) return "already processed";
+      // An upgrade is paid: bill the new price from the next 1st.
+      if (res.upgraded && res.sub.subscriptionRef) {
+        const billing = membershipBillingFor(res.sub.provider);
+        const price = await billing.ensurePrice(res.plan);
+        if (price.save) await db.update(playPassPlans).set(price.save).where(eq(playPassPlans.id, res.plan.id));
+        await billing.changePrice(res.sub.subscriptionRef, price.priceRef);
+      }
       // Remember which card payment this was, so a later refund or dispute can be matched.
       if (!evt.chargeRef) {
         const ref = await membershipBillingFor(res.sub.provider).paymentRefForInvoice(evt.invoiceRef).catch(() => null);

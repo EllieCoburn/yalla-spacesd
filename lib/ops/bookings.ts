@@ -339,7 +339,7 @@ async function siblingDiscountLines(db: Executor, rows: Awaited<ReturnType<typeo
   const percent = await getPolicy(db, "billing.siblingDiscountPercent");
   if (!percent) return [];
   // Play Pass members pay the published per-child price from their wallet unless Yalla chooses to stack the discount.
-  if (rows.length && !(await getPolicy(db, "playpass.siblingDiscountWithWallet")) && (await walletSummary(db, familyId)).availableCents > 0) {
+  if (rows.length && !(await getPolicy(db, "playpass.siblingDiscountWithWallet")) && (await walletSummary(db, familyId)).passCents > 0) {
     const eligible = await eligibleSessionIds(
       db,
       rows.map((r) => r.session.id),

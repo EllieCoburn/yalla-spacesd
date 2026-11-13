@@ -12,7 +12,7 @@
 import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
-import { restoreWalletPayment } from "@/lib/playpass/wallet";
+import { issueCredit, restoreWalletPayment } from "@/lib/playpass/wallet";
 import { credits, discounts, guardians, invoiceLines, invoices, payments, refunds, scheduledCharges } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { activeProvider, providerFor } from "@/lib/payments/provider";
@@ -222,7 +222,15 @@ export async function applyCredit(db: Executor, actor: Actor, invoiceId: string,
 export async function refundPayment(
   db: Executor,
   actor: Actor,
-  input: { paymentId: string; amountCents: number; reason: string; reduceAmountOwed: boolean; idempotencyKey: string },
+  input: {
+    paymentId: string;
+    amountCents: number;
+    reason: string;
+    reduceAmountOwed: boolean;
+    idempotencyKey: string;
+    /** Return a card or offline payment as Yalla Wallet credit (valid 24 months) instead of to the card. */
+    toWallet?: boolean;
+  },
 ) {
   const [p] = await db.select().from(payments).where(eq(payments.id, input.paymentId));
   if (!p || p.status !== "succeeded") throw new OpsError("invalid", "Only successful payments can be refunded.");
@@ -253,6 +261,9 @@ export async function refundPayment(
     // Credit applications are reversed back to the family's credit balance.
     await db.insert(credits).values({ familyId: p.familyId, amountCents: input.amountCents, reason: `Reversed credit: ${input.reason}`, invoiceId: p.invoiceId, createdBy: actor.name });
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date() }).where(eq(refunds.id, refund.id)).returning();
+  } else if (input.toWallet) {
+    await issueCredit(db, { familyId: p.familyId, amountCents: input.amountCents, sourceRef: `refund:${refund.id}`, note: input.reason, createdBy: actor.name });
+    [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date(), providerRef: "yalla_wallet" }).where(eq(refunds.id, refund.id)).returning();
   } else if (p.provider === "offline") {
     // Offline refunds are recorded as given by staff (cash/check returned).
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date(), providerRef: "offline" }).where(eq(refunds.id, refund.id)).returning();

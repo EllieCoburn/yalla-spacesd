@@ -11,12 +11,14 @@ import { familyEmail } from "@/lib/playpass/admin";
 import { familyPlayPass } from "@/lib/playpass/membership";
 import { allocationsWithUse } from "@/lib/playpass/wallet";
 import { fmtDate, fmtTime } from "@/lib/time";
-import { adjustWalletAction, simulateRenewalAction } from "../actions";
+import { adjustWalletAction, courtesyCreditAction, recordOfferChoiceAction, simulateRenewalAction } from "../actions";
+import { familyOffers, bonusFor } from "@/lib/ops/yalla-cancellations";
 
 export const metadata = { title: "Play Pass family" };
 
 const KIND: Record<string, string> = {
   allocation: "Monthly allocation",
+  credit: "Yalla credit (cancellation)",
   booking_debit: "Booking",
   booking_refund: "Returned (cancellation or refund)",
   adjustment: "Adjustment",
@@ -44,6 +46,9 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
     .orderBy(asc(sessions.startsAt))
     .limit(12);
   const manage = can(staff, "playpass.manage");
+  const billing = can(staff, "billing.manage");
+  const refunds = can(staff, "billing.refund");
+  const offers = (await familyOffers(db, familyId)).filter((o) => o.status === "pending");
 
   return (
     <>
@@ -106,6 +111,41 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Card title="Yalla credits">
+          <p className="text-[0.85rem]">
+            <Money cents={wallet.creditCents} /> in cancellation credits{wallet.nextCreditExpiry ? `, next expiring ${fmtDate(wallet.nextCreditExpiry)}` : ""}. Play Pass balance: <Money cents={wallet.passCents} />.
+          </p>
+          {offers.map((o) => (
+            <div key={o.id} className="mt-4 rounded-lg border border-[#3d40b8]/20 bg-[#e9e9fb]/40 p-4 text-[0.85rem]">
+              <p className="font-medium text-ink">Waiting on the family: {o.description}</p>
+              <p className="mt-1 text-ink-soft">
+                Yalla cancelled ({o.reason}). They can take <Money cents={o.amountCents + bonusFor(o.amountCents, o.bonusPercent)} /> credit or a <Money cents={o.amountCents} /> refund in their Family Portal.
+              </p>
+              {refunds ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionForm action={recordOfferChoiceAction} submit={{ label: "Record: credit + bonus", variant: "secondary" }} className="">
+                    <input type="hidden" name="offerId" value={o.id} />
+                    <input type="hidden" name="choice" value="credit" />
+                  </ActionForm>
+                  <ActionForm action={recordOfferChoiceAction} submit={{ label: "Record: full refund", variant: "ghost" }} className="" confirm={{ title: "Refund to the original payment method?", confirmLabel: "Refund" }}>
+                    <input type="hidden" name="offerId" value={o.id} />
+                    <input type="hidden" name="choice" value="refund" />
+                  </ActionForm>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {billing ? (
+            <div className="mt-5 border-t border-ink/8 pt-4">
+              <p className="mb-3 text-[0.8rem] text-ink-soft">Courtesy credit, e.g. a late cancellation because a child was unwell. Valid 24 months.</p>
+              <ActionForm action={courtesyCreditAction} submit={{ label: "Add credit" }} resetOnSuccess confirm={{ title: "Add this Yalla credit?", confirmLabel: "Add credit" }}>
+                <input type="hidden" name="familyId" value={familyId} />
+                <MoneyField name="amount" label="Amount" required />
+                <TextArea name="note" label="Reason (the family sees this)" required rows={2} />
+              </ActionForm>
+            </div>
+          ) : null}
+        </Card>
         <Card title="Wallet ledger" padded={false}>
           {activity.length ? (
             <Table dense head={["Date", "Entry", "Amount"]}>

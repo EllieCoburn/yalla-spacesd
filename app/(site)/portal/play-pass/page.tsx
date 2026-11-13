@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
-import { ChangePlanForm, RenewalForm } from "@/components/playpass/PassForms";
+import { ChangePlanForm, PassButton, PauseForm, type TierOption } from "@/components/playpass/PassForms";
+import { changeOptions } from "@/lib/playpass/changes";
 import { billingPortalAction } from "@/app/(site)/play-passes/actions";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPlayPass, offeredPlans } from "@/lib/playpass/membership";
 import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
-import { addDaysISO, fmtDate } from "@/lib/time";
+import { addDaysISO, fmtDate, todayLA } from "@/lib/time";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "My Play Pass", robots: { index: false } };
@@ -43,6 +44,24 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
   const plans = await offeredPlans(db);
   const live = sub && (sub.status === "active" || sub.status === "past_due");
   const endsOn = sub?.nextRenewalOn ? fmtDate(sub.nextRenewalOn, "MMMM d") : null;
+  const opts = live ? await changeOptions(db, sub!) : null;
+  const pausedNow = !!(sub?.pauseStartsOn && sub.resumeOn && sub.pauseStartsOn <= addDaysISO(sub.resumeOn, -1) && sub.pauseAppliedAt);
+  const tierOptions: TierOption[] = opts
+    ? plans.map((p) => {
+        const up = opts.upgrades.find((u) => u.plan.id === p.id);
+        const down = opts.downgrades.find((d) => d.plan.id === p.id);
+        return {
+          tier: p.tier,
+          label: `${p.name} · ${usd(p.priceCents).replace(".00", "")}`,
+          kind: up ? "upgrade" : down ? "downgrade" : "current",
+          detail: up
+            ? `Upgrades right away: ${usd(up.chargeCents)} now for the rest of this month, and ${usd(up.allocationCents)} more to spend. ${usd(p.priceCents)} a month from the 1st.`
+            : down
+              ? `With 30 days’ notice, ${p.name} starts ${fmtDate(down.startsOn, "MMMM d")}: ${usd(p.priceCents)} a month with ${usd(p.allocationCents)} to spend.`
+              : "",
+        } satisfies TierOption;
+      })
+    : [];
 
   return (
     <Shell>
@@ -63,8 +82,16 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
         <div className="bg-mist p-8 lg:col-span-2">
           <p className="eyebrow text-[0.62rem] text-ink-soft">Your Play Pass</p>
           <p className="display mt-3 text-[2rem]">{plan && live ? `${plan.name} Membership` : sub?.status === "pending" ? "Setting up your pass" : "No active pass"}</p>
-          <p className="mt-6 text-[0.8rem] tracking-[0.12em] text-ink-soft uppercase">Available balance</p>
-          <p className="display text-[clamp(2.6rem,2rem+2vw,3.6rem)]">{usd(wallet.availableCents)}</p>
+          <p className="mt-6 text-[0.8rem] tracking-[0.12em] text-ink-soft uppercase">Play Pass balance</p>
+          <p className="display text-[clamp(2.6rem,2rem+2vw,3.6rem)]">{usd(wallet.passCents)}</p>
+          {wallet.creditCents ? (
+            <p className="text-[0.85rem] text-ink-soft">
+              Plus {usd(wallet.creditCents)} in Yalla credits.{" "}
+              <Link href="/portal/wallet" className="underline underline-offset-4 hover:text-blue">
+                See your Yalla Wallet
+              </Link>
+            </p>
+          ) : null}
           {wallet.reservedCents ? <p className="text-[0.85rem] text-ink-soft">{usd(wallet.reservedCents)} set aside for a booking you’re checking out</p> : null}
           {wallet.balanceCents < 0 ? <p className="mt-2 text-[0.85rem] text-oxblood">Your balance is below zero after a refunded payment. We’ll be in touch.</p> : null}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -82,10 +109,19 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
         {/* Membership facts */}
         <dl className="divide-y divide-line border-y border-line text-[0.92rem] lg:self-start">
           {[
-            ["Status", sub ? (sub.cancelAtPeriodEnd && live && sub.nextRenewalOn ? `Active until ${fmtDate(addDaysISO(sub.nextRenewalOn, -1), "MMMM d")}` : (STATUS[sub.status] ?? sub.status)) : "—"],
+            [
+              "Status",
+              sub
+                ? live && sub.cancelEffectiveOn
+                  ? `Active until ${fmtDate(sub.cancelEffectiveOn, "MMMM d")}`
+                  : live && pausedNow
+                    ? `Paused until ${fmtDate(addDaysISO(sub.resumeOn!, -1), "MMMM d")}`
+                    : (STATUS[sub.status] ?? sub.status)
+                : "—",
+            ],
             ["Monthly price", plan && live ? usd(plan.priceCents) : "—"],
             ["Added each month", plan && live ? usd(plan.allocationCents) : "—"],
-            ["Next renewal", live && !sub!.cancelAtPeriodEnd && endsOn ? `${endsOn}${nextPlan ? ` · ${nextPlan.name}, ${usd(nextPlan.priceCents)}` : ""}` : "—"],
+            ["Next renewal", live && endsOn && !(sub!.cancelEffectiveOn && sub!.cancelEffectiveOn < sub!.nextRenewalOn!) ? `${endsOn}${nextPlan && !sub!.downgradeEffectiveOn ? ` · ${nextPlan.name}, ${usd(nextPlan.priceCents)}` : ""}${sub!.cancelEffectiveOn && sub!.finalChargeCents ? ` · final ${usd(sub!.finalChargeCents)}` : ""}` : "—"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4 py-3">
               <dt className="text-ink-soft">{k}</dt>
@@ -96,33 +132,84 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
       </div>
 
       {/* Manage */}
-      {live ? (
-        <section className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-3">
-          <div>
-            <p className="display text-[1.4rem]">Change your pass</p>
-            <p className="mt-1 text-[0.85rem] text-ink-soft">Takes effect at your next renewal on the 1st. Nothing is charged or credited now.</p>
-            <div className="mt-5">
-              <ChangePlanForm current={(nextPlan ?? plan)!.tier} options={plans.map((p) => ({ tier: p.tier, label: `${p.name} · ${usd(p.priceCents).replace(".00", "")}` }))} />
+      {live && opts ? (
+        <section className="mt-14 border-t border-line pt-10">
+          {sub!.cancelEffectiveOn || sub!.pauseStartsOn || (nextPlan && sub!.downgradeEffectiveOn) ? (
+            <div className="mb-10 space-y-4">
+              {sub!.cancelEffectiveOn ? (
+                <div className="flex flex-wrap items-center justify-between gap-4 border border-line bg-paper p-5 text-[0.92rem]">
+                  <p className="max-w-xl">
+                    Your Play Pass ends on <strong className="font-medium">{fmtDate(sub!.cancelEffectiveOn, "EEEE, MMMM d")}</strong>. Regular billing continues until then
+                    {sub!.finalChargeCents ? `, with a prorated final payment of ${usd(sub!.finalChargeCents)} on ${fmtDate(sub!.cancelEffectiveOn.slice(0, 8) + "01", "MMMM d")}` : ""}. Your balance stays in your wallet.
+                  </p>
+                  {sub!.cancelEffectiveOn >= todayLA() ? <PassButton kind="undoCancel" label="Keep my Play Pass" /> : null}
+                </div>
+              ) : null}
+              {sub!.pauseStartsOn && sub!.resumeOn ? (
+                <div className="flex flex-wrap items-center justify-between gap-4 border border-line bg-paper p-5 text-[0.92rem]">
+                  <p className="max-w-xl">
+                    Paused {fmtDate(sub!.pauseStartsOn, "MMMM d")} through {fmtDate(addDaysISO(sub!.resumeOn, -1), "MMMM d")}. It reactivates on {fmtDate(sub!.resumeOn, "MMMM d")}, when the rest of that month is charged. To end instead of reactivating, give notice by {fmtDate(addDaysISO(sub!.resumeOn, -30), "MMMM d")}.
+                  </p>
+                  {!pausedNow ? <PassButton kind="undoPause" label="Cancel the pause" /> : null}
+                </div>
+              ) : null}
+              {nextPlan && sub!.downgradeEffectiveOn ? (
+                <p className="border border-line bg-paper p-5 text-[0.92rem]">
+                  Changing to {nextPlan.name} after your 30 days’ notice ({usd(nextPlan.priceCents)} a month from the first renewal on or after {fmtDate(sub!.downgradeEffectiveOn, "MMMM d")}). Choose {plan!.name} below to keep your current pass.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="display text-[1.4rem]">Change your pass</p>
+              <p className="mt-1 text-[0.85rem] text-ink-soft">Upgrade anytime, right away. Downgrades need 30 days’ notice.</p>
+              <div className="mt-5">
+                <ChangePlanForm current={plan!.tier} options={tierOptions} />
+              </div>
+            </div>
+            <div>
+              <p className="display text-[1.4rem]">Pause</p>
+              <p className="mt-1 text-[0.85rem] text-ink-soft">Up to 60 days in a row, with 30 days’ notice. No renewals while paused; it reactivates automatically.</p>
+              <div className="mt-5">{sub!.pauseStartsOn || sub!.cancelEffectiveOn ? <p className="text-[0.85rem] text-ink-soft">{sub!.pauseStartsOn ? "You have a pause scheduled." : "Not available while your pass is set to end."}</p> : <PauseForm earliest={opts.pause.earliestStart} maxDays={opts.pause.maxDays} />}</div>
+            </div>
+            <div>
+              <p className="display text-[1.4rem]">Cancel</p>
+              <p className="mt-1 text-[0.85rem] text-ink-soft">
+                With 30 days’ notice, your Play Pass ends {fmtDate(opts.cancel.endOn, "MMMM d")}
+                {opts.cancel.final ? ` with a prorated final payment of ${usd(opts.cancel.final.chargeCents)}` : ""}. Your balance stays in your wallet.
+              </p>
+              <div className="mt-5">
+                {sub!.cancelEffectiveOn ? (
+                  <p className="text-[0.85rem] text-ink-soft">Notice received.</p>
+                ) : (
+                  <PassButton
+                    kind="cancel"
+                    label="Give 30 days’ notice"
+                    confirmText={`Cancel your Play Pass? It stays active until ${fmtDate(opts.cancel.endOn, "MMMM d")}, and regular billing continues until then${opts.cancel.final ? `, with a final prorated payment of ${usd(opts.cancel.final.chargeCents)}` : ""}.`}
+                  />
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="display text-[1.4rem]">Payment method</p>
+              <p className="mt-1 text-[0.85rem] text-ink-soft">Update your card and see receipts on Stripe’s secure page.</p>
+              <form action={billingPortalAction} className="mt-5">
+                <button className="inline-flex h-12 items-center rounded-full border border-ink/25 px-7 text-[0.9rem] hover:border-ink">Update payment method</button>
+              </form>
             </div>
           </div>
-          <div>
-            <p className="display text-[1.4rem]">{sub!.cancelAtPeriodEnd ? "Keep your pass" : "Stop renewing"}</p>
-            <p className="mt-1 text-[0.85rem] text-ink-soft">
-              {sub!.cancelAtPeriodEnd
-                ? "Your pass is set to end. You can keep it renewing instead."
-                : "Your pass stays active through the month you’ve paid for, and your balance stays in your wallet."}
-            </p>
-            <div className="mt-5">
-              <RenewalForm renew={sub!.cancelAtPeriodEnd} label={sub!.cancelAtPeriodEnd ? "Keep renewing" : "Stop renewing"} />
-            </div>
-          </div>
-          <div>
-            <p className="display text-[1.4rem]">Payment method</p>
-            <p className="mt-1 text-[0.85rem] text-ink-soft">Update your card and see receipts on Stripe’s secure page.</p>
-            <form action={billingPortalAction} className="mt-5">
-              <button className="inline-flex h-12 items-center rounded-full border border-ink/25 px-7 text-[0.9rem] hover:border-ink">Update payment method</button>
-            </form>
-          </div>
+          <p className="mt-8 text-[0.8rem] text-ink-soft">
+            See{" "}
+            <Link href="/policies#membership-changes" className="underline underline-offset-4 hover:text-blue">
+              upgrades, downgrades and pauses
+            </Link>{" "}
+            and{" "}
+            <Link href="/policies#canceling-a-membership" className="underline underline-offset-4 hover:text-blue">
+              canceling a membership
+            </Link>
+            .
+          </p>
         </section>
       ) : null}
 
@@ -158,13 +245,13 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
               {charges.map((c) => (
                 <li key={c.id} className="flex items-baseline justify-between gap-4 py-3 text-[0.9rem]">
                   <span>
-                    {c.reason === "initial" ? "First month" : c.reason === "renewal" ? "Monthly renewal" : "Payment"}
+                    {c.reason === "initial" ? "First month" : c.reason === "renewal" ? "Monthly renewal" : c.reason === "upgrade" ? "Upgrade" : c.reason === "resume" ? "Back from your pause" : "Payment"}
                     <span className="block text-[0.78rem] text-ink-soft">{fmtDate(c.createdAt.toISOString().slice(0, 10), "MMM d, yyyy")}</span>
                   </span>
                   <span className="text-right">
                     {usd(c.amountCents)}
                     <span className={`block text-[0.72rem] ${c.status === "failed" ? "text-oxblood" : "text-ink-soft"}`}>
-                      {c.status === "paid" ? "Paid" : c.status === "failed" ? "Didn’t go through" : c.status === "refunded" ? `Refunded ${usd(c.refundedCents)}` : "Disputed"}
+                      {c.status === "paid" ? "Paid" : c.status === "pending" ? "Processing" : c.status === "failed" ? "Didn’t go through" : c.status === "refunded" ? `Refunded ${usd(c.refundedCents)}` : "Disputed"}
                     </span>
                   </span>
                 </li>

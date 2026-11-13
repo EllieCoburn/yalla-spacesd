@@ -1,5 +1,7 @@
 "use server";
 
+import { STAFF_CANCEL_MODES, staffCancelBooking, type StaffCancelMode } from "@/lib/ops/yalla-cancellations";
+
 import { redirect } from "next/navigation";
 import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
@@ -75,8 +77,10 @@ export const moveAction = adminAction("bookings.manage", async ({ db, actor, str
 
 export const cancelAction = adminAction("bookings.manage", async ({ db, actor, str, all, bool }) => {
   const itemIds = all("itemIds").filter(Boolean);
-  await cancelBooking(db, actor, { bookingId: str("bookingId"), itemIds: itemIds.length ? itemIds : undefined, reason: str("reason"), notify: bool("notify") });
-  redirect(`/admin/bookings/${str("bookingId")}?done=cancelled`);
+  const mode = str("mode") as StaffCancelMode;
+  if (!STAFF_CANCEL_MODES.some((m) => m.value === mode)) throw new OpsError("invalid", "Choose who cancelled.");
+  const r = await staffCancelBooking(db, actor, { bookingId: str("bookingId"), itemIds: itemIds.length ? itemIds : undefined, reason: str("reason"), notify: bool("notify"), mode });
+  redirect(`/admin/bookings/${str("bookingId")}?done=${r.offered ? "cancelled_offer" : r.credited ? "cancelled_credit" : "cancelled"}`);
 });
 
 export const addChildAction = adminAction("bookings.manage", async ({ db, actor, staff, str, bool }) => {

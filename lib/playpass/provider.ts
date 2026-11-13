@@ -41,6 +41,15 @@ export interface MembershipBilling {
   setCancelAtPeriodEnd(subscriptionRef: string, cancel: boolean): Promise<void>;
   /** Switch the plan from the next renewal (no charge or credit now). */
   changePrice(subscriptionRef: string, priceRef: string | null): Promise<void>;
+  /** End the membership at a moment (Unix seconds), or clear a scheduled end with null. No proration. */
+  scheduleEnd(subscriptionRef: string, endAt: number | null): Promise<void>;
+  /** Bill the next renewal at a one-off prorated amount (the final month). */
+  setFinalPrice(subscriptionRef: string, plan: PlanForBilling, amountCents: number): Promise<void>;
+  /** Stop billing until `resumesAt` (Unix seconds); renewals in between are skipped. */
+  pause(subscriptionRef: string, resumesAt: number): Promise<void>;
+  resume(subscriptionRef: string): Promise<void>;
+  /** Charge the saved card now, on the membership (an upgrade's difference, or the rest of the month after a pause). */
+  chargeNow(input: { subscriptionRef: string; customerRef: string | null; localId: string; amountCents: number; description: string; reason: "upgrade" | "resume"; idempotencyKey: string }): Promise<{ invoiceRef: string }>;
   /** Stripe's hosted page for the payment method and billing history; null in test mode. */
   portalUrl(customerRef: string, returnUrl: string): Promise<string | null>;
   /** The card payment reference behind a paid invoice (used to match later refunds and disputes). */
@@ -59,6 +68,13 @@ export const testMembershipBilling: MembershipBilling = {
   },
   async setCancelAtPeriodEnd() {},
   async changePrice() {},
+  async scheduleEnd() {},
+  async setFinalPrice() {},
+  async pause() {},
+  async resume() {},
+  async chargeNow(input) {
+    return { invoiceRef: `tin_${input.reason}_${input.idempotencyKey.replace(/[^a-zA-Z0-9]/g, "").slice(-24)}` };
+  },
   async portalUrl() {
     return null;
   },
@@ -126,6 +142,38 @@ export const stripeMembershipBilling: MembershipBilling = {
     const sub = await stripe().subscriptions.retrieve(ref);
     const item = sub.items.data[0];
     await stripe().subscriptions.update(ref, { items: [{ id: item.id, price: priceRef! }], proration_behavior: "none" });
+  },
+  async scheduleEnd(ref, endAt) {
+    await stripe().subscriptions.update(ref, endAt ? { cancel_at: endAt, proration_behavior: "none" } : { cancel_at: "" as unknown as number, proration_behavior: "none" });
+  },
+  async setFinalPrice(ref, plan, amountCents) {
+    const sub = await stripe().subscriptions.retrieve(ref);
+    const item = sub.items.data[0];
+    const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
+    await stripe().subscriptions.update(ref, {
+      items: [{ id: item.id, price_data: { currency: "usd", product, unit_amount: amountCents, recurring: { interval: "month" } } }],
+      proration_behavior: "none",
+      metadata: { ...sub.metadata, yallaFinalMonth: plan.id },
+    });
+  },
+  async pause(ref, resumesAt) {
+    await stripe().subscriptions.update(ref, { pause_collection: { behavior: "void", resumes_at: resumesAt } });
+  },
+  async resume(ref) {
+    await stripe().subscriptions.update(ref, { pause_collection: "" as unknown as Stripe.SubscriptionUpdateParams.PauseCollection });
+  },
+  async chargeNow(input) {
+    if (!input.customerRef) throw new Error("No saved customer for this Play Pass.");
+    const metadata = { playPassSubscriptionId: input.localId, yallaReason: input.reason };
+    await stripe().invoiceItems.create({ customer: input.customerRef, subscription: input.subscriptionRef, amount: input.amountCents, currency: "usd", description: input.description, metadata }, { idempotencyKey: `${input.idempotencyKey}:item` });
+    const inv = await stripe().invoices.create(
+      { customer: input.customerRef, subscription: input.subscriptionRef, collection_method: "charge_automatically", auto_advance: true, pending_invoice_items_behavior: "include", metadata },
+      { idempotencyKey: `${input.idempotencyKey}:invoice` },
+    );
+    await stripe()
+      .invoices.pay(inv.id!)
+      .catch(() => undefined); // a failure arrives as invoice.payment_failed
+    return { invoiceRef: inv.id! };
   },
   async portalUrl(customerRef, returnUrl) {
     const s = await stripe().billingPortal.sessions.create({ customer: customerRef, return_url: returnUrl });

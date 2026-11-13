@@ -10,7 +10,8 @@
 import { eq, sql } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import type { DB } from "@/lib/db";
-import { bookings, invoices, payments, refunds, spaceReservationGroups, webhookEvents } from "@/lib/db/schema";
+import { bookings, invoices, payments, refunds, spaceReservationGroups, spaceReservations, walletReservations, webhookEvents } from "@/lib/db/schema";
+import { getPolicy } from "@/lib/ops/settings";
 import { notifyFamily } from "@/lib/notify";
 import { refreshInvoiceStatus, invoiceTotals, usd } from "@/lib/ops/billing";
 import { confirmBooking } from "@/lib/ops/bookings";
@@ -100,18 +101,32 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
       });
       if (!res) return "no change";
       const [inv] = await db.select().from(invoices).where(eq(invoices.id, res.invoiceId));
-      const [b] = inv.bookingId ? await db.select().from(bookings).where(eq(bookings.id, inv.bookingId)) : [];
-      // The hold keeps running; the family can retry until it expires.
-      if (b && b.status === "pending_payment") await db.update(bookings).set({ status: "held" }).where(eq(bookings.id, b.id));
-      if (inv.spaceGroupId)
-        await db
-          .update(spaceReservationGroups)
-          .set({ status: "held" })
-          .where(sql`${spaceReservationGroups.id} = ${inv.spaceGroupId} AND ${spaceReservationGroups.status} = 'pending_payment'`);
+      let [b] = inv.bookingId ? await db.select().from(bookings).where(eq(bookings.id, inv.bookingId)) : [];
+      // A failed payment extends the hold to 12 hours (Settings) from the time of booking, so the
+      // family can resolve it and retry; after that the spots are released as usual.
+      const holdMs = (await getPolicy(db, "booking.failedPaymentHoldHours")) * 3600_000;
+      const later = (createdAt: Date, current: Date | null) => {
+        const until = new Date(createdAt.getTime() + holdMs);
+        return current && current > until ? current : until;
+      };
+      if (b && ["held", "pending_payment"].includes(b.status) && b.holdExpiresAt && b.holdExpiresAt > new Date()) {
+        const until = later(b.createdAt, b.holdExpiresAt);
+        [b] = await db.update(bookings).set({ status: "held", holdExpiresAt: until }).where(eq(bookings.id, b.id)).returning();
+        await db.update(walletReservations).set({ expiresAt: until }).where(sql`${walletReservations.bookingId} = ${b.id} AND ${walletReservations.status} = 'held'`);
+      }
+      let spaceHold: Date | null = null;
+      if (inv.spaceGroupId) {
+        const [g] = await db.select().from(spaceReservationGroups).where(eq(spaceReservationGroups.id, inv.spaceGroupId));
+        if (g && ["held", "pending_payment"].includes(g.status) && g.holdExpiresAt && g.holdExpiresAt > new Date()) {
+          spaceHold = later(g.createdAt, g.holdExpiresAt);
+          await db.update(spaceReservationGroups).set({ status: "held", holdExpiresAt: spaceHold }).where(eq(spaceReservationGroups.id, g.id));
+          await db.update(spaceReservations).set({ holdExpiresAt: spaceHold }).where(sql`${spaceReservations.groupId} = ${g.id} AND ${spaceReservations.status} = 'held'`);
+        }
+      }
       await notifyFamily(db, {
         key: "payment_failed",
         familyId: inv.familyId,
-        vars: { invoice_number: inv.number, amount: usd(res.amountCents), reason: evt.reason, hold_until: b?.holdExpiresAt ? fmtDateTime(b.holdExpiresAt) : "—" },
+        vars: { invoice_number: inv.number, amount: usd(res.amountCents), reason: evt.reason, hold_until: b?.holdExpiresAt ? fmtDateTime(b.holdExpiresAt) : spaceHold ? fmtDateTime(spaceHold) : "—" },
         related: { type: "invoice", id: inv.id },
       });
       return "failure recorded";

@@ -68,3 +68,18 @@ The full journey was also exercised in a browser in test mode: join (prorated $1
 - To stop wallet spending: turn off eligibility for the programs. Balances are kept.
 - Stripe subscriptions are managed in Stripe; cancelling them there is reflected here by webhook. Nothing in the ledger is ever deleted.
 - The migration only adds tables and columns; reverting the code leaves them unused and harmless.
+
+## Membership changes (Policies & Terms)
+
+- **Cancel**: 30 days' notice (`requestCancel`). Billing continues; a mid-month end date makes the 1st of that month a prorated final charge (fee ÷ days in month × days through the end date), with the balance prorated the same way.
+- **Upgrade**: immediate (`changeTier`). The rest of the month's price difference is charged now (`chargeNow`, reason `upgrade`); the extra balance is added when the verified payment arrives, and the new price applies from the next 1st.
+- **Downgrade**: 30 days' notice; the new pass starts at the first renewal on or after the notice ends.
+- **Pause**: up to 60 days, 30 days' notice. Renewals are skipped; on reactivation the rest of that month is charged (reason `resume`). Notice given 30+ days before reactivation ends the pass without reactivating.
+- The daily job `applyPlayPassSchedules` (lib/jobs.ts) carries these out. Tests: tests/playpass-changes.test.ts.
+- **Stripe**: the adapter uses `cancel_at`, `pause_collection`, a one-off subscription price for the final month and subscription invoices for upgrade/resume charges. Verify each in Stripe test mode before live.
+
+## Yalla Wallet credits
+
+- Cancellation credits are wallet allocations of kind `credit`, valid 24 months (`issueCredit`, `expireCredits`). They pay for any booking; Play Pass balance pays only for eligible experiences. Credits never pay membership dues.
+- Family cancels 24+ hours ahead → what they paid returns to the wallet (lib/ops/credits.ts). Later → no credit; staff can add a courtesy credit.
+- Yalla cancels → the family chooses credit + 5% or a full refund in the Family Portal (lib/ops/yalla-cancellations.ts).

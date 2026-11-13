@@ -39,6 +39,7 @@ import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
 import { addonsFor } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
+import { itemValue, returnPaid } from "./credits";
 import { bookingConfirmationVars, bookingLines, cancelBooking, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
@@ -548,8 +549,8 @@ export async function familyPortalData(db: Executor, g: GuardianContext) {
     .orderBy(asc(sessions.startsAt));
   const now = new Date();
   const childName = new Map(kids.map((k) => [k.id, k.preferredName || k.firstName]));
+  const creditHours = await getPolicy(db, "booking.creditCutoffHours");
   const mapItem = (x: (typeof items)[number]) => {
-    const deadline = x.p.cancellationDeadlineHours;
     const hoursAhead = (x.s.startsAt.getTime() - now.getTime()) / 3600_000;
     return {
       itemId: x.i.id,
@@ -563,8 +564,13 @@ export async function familyPortalData(db: Executor, g: GuardianContext) {
       startsAt: x.s.startsAt.toISOString(),
       endsAt: x.s.endsAt.toISOString(),
       child: x.i.childId ? (childName.get(x.i.childId) ?? "") : "",
-      canCancel: x.i.status === "confirmed" && deadline != null && hoursAhead >= deadline,
-      cancelNote: deadline == null ? "To change this booking, please contact Yalla." : hoursAhead < deadline ? `Changes close ${deadline} hours before the start. Please contact Yalla.` : `Free to cancel until ${deadline} hours before.`,
+      canCancel: x.i.status === "confirmed" && hoursAhead > 0,
+      /** Cancelling now returns what was paid to the Yalla Wallet. */
+      creditOnCancel: hoursAhead >= creditHours,
+      cancelNote:
+        hoursAhead >= creditHours
+          ? `Cancel at least ${creditHours} hours ahead to get Yalla Wallet credit.`
+          : `Less than ${creditHours} hours away: cancelling now isn’t eligible for credit. Unwell? Please contact us.`,
     };
   };
   const upcoming = items.filter((x) => x.s.endsAt > now && x.i.status !== "cancelled").map(mapItem);
@@ -635,7 +641,12 @@ export async function familyUpdateCare(db: Executor, g: GuardianContext, childId
   await updateChild(db, guardianActor(g), childId, { allergies: patch.allergies.trim() || null, medicalNotes: patch.medicalNotes.trim() || null, careNotes: patch.careNotes.trim() || null });
 }
 
-export async function familyCancelItem(db: DB, g: GuardianContext, itemId: string) {
+/**
+ * A family cancels one booked child-session from the portal, any time before it starts. Cancelling
+ * 24+ hours ahead returns what was paid to their Yalla Wallet (Play Pass funds to their balance,
+ * card payments as credit valid 24 months); later cancellations aren't credited. No cash refunds.
+ */
+export async function familyCancelItem(db: DB, g: GuardianContext, itemId: string, now = new Date()) {
   const [x] = await db
     .select({ i: bookingItems, b: bookings, s: sessions, p: programs })
     .from(bookingItems)
@@ -645,42 +656,38 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
     .where(eq(bookingItems.id, itemId));
   if (!x || x.b.familyId !== g.familyId) throw new OpsError("not_found", "Booking not found.");
   if (!g.canBook) throw new OpsError("forbidden", "Your account can’t change bookings.");
-  const deadline = x.p.cancellationDeadlineHours;
-  if (deadline == null) throw new OpsError("contact", "This booking can’t be cancelled online. Please contact Yalla.");
-  if ((x.s.startsAt.getTime() - Date.now()) / 3600_000 < deadline) throw new OpsError("deadline", `Online cancellation closed ${deadline} hours before the start. Please contact Yalla.`);
+  if (x.i.status !== "confirmed") throw new OpsError("invalid", "This booking is already cancelled.");
+  const hoursAhead = (x.s.startsAt.getTime() - now.getTime()) / 3600_000;
+  if (hoursAhead <= 0) throw new OpsError("started", "This session has already started. Please contact Yalla.");
+  const cutoff = await getPolicy(db, "booking.creditCutoffHours");
   await cancelBooking(db, guardianActor(g), { bookingId: x.b.id, itemIds: [itemId], reason: "Cancelled by family in the portal", notify: false });
-  // The Play Pass part of what was paid for this item goes back to the wallet (Settings → Play Passes).
-  let restored = 0;
-  if (await getPolicy(db, "playpass.restoreOnFamilyCancel")) restored = await restoreWalletForItem(db, guardianActor(g), x.b.id, x.i, x.p.kind, x.p.slug);
+  const credited =
+    hoursAhead >= cutoff
+      ? (
+          await returnPaid(db, guardianActor(g), {
+            bookingId: x.b.id,
+            amountCents: itemValue(x.i, x.p.kind, x.p.slug),
+            key: `family-cancel:${x.i.id}`,
+            reason: "Cancelled by the family",
+            to: "wallet",
+          })
+        ).total
+      : 0;
   const vars = await bookingConfirmationVars(db, x.b.id);
   await notifyFamily(db, {
     key: "booking_cancellation",
     familyId: x.b.familyId,
-    vars: { ...vars, refund_note: restored ? `${usd(restored)} has been returned to your Play Pass balance.` : "If a refund or credit applies, we’ll confirm it separately." },
+    vars: {
+      ...vars,
+      refund_note: credited
+        ? `${usd(credited)} has been returned to your Yalla Wallet. Credit from a cancellation can be used toward any Yalla booking for 24 months.`
+        : hoursAhead >= cutoff
+          ? "Nothing was paid for this booking, so there’s nothing to return."
+          : `Because this was cancelled less than ${cutoff} hours before it began, it isn’t eligible for credit. If your child is unwell or something unexpected came up, please contact us.`,
+    },
     related: { type: "booking", id: x.b.id },
   });
-}
-
-/** Return Play Pass funds spent on one cancelled item: its price and extras, up to what the wallet paid. */
-async function restoreWalletForItem(db: DB, actor: Actor, bookingId: string, item: typeof bookingItems.$inferSelect, kind: string, slug: string) {
-  const invs = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
-  if (!invs.length) return 0;
-  const walletPays = await db
-    .select()
-    .from(payments)
-    .where(and(inArray(payments.invoiceId, invs.map((i) => i.id)), eq(payments.method, "wallet"), eq(payments.status, "succeeded")));
-  let want = (item.priceCents ?? 0) + addonsFor(kind, slug).filter((a) => item.addons.includes(a.key)).reduce((s, a) => s + a.priceCents, 0);
-  let total = 0;
-  for (const p of walletPays) {
-    if (want <= 0) break;
-    const [{ back }] = await db.select({ back: sql<number>`coalesce(sum(${refunds.amountCents}), 0)::int` }).from(refunds).where(and(eq(refunds.paymentId, p.id), eq(refunds.status, "succeeded")));
-    const amount = Math.min(want, p.amountCents - back);
-    if (amount <= 0) continue;
-    await refundPayment(db, actor, { paymentId: p.id, amountCents: amount, reason: "Booking cancelled by the family", reduceAmountOwed: true, idempotencyKey: `playpass-cancel:${item.id}:${p.id}` });
-    want -= amount;
-    total += amount;
-  }
-  return total;
+  return { credited, late: hoursAhead < cutoff };
 }
 
 export async function familySignForm(db: Executor, g: GuardianContext, input: { templateId: string; childId: string | null; signatureText: string; consent: boolean; ip?: string; userAgent?: string }) {

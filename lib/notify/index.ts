@@ -29,13 +29,15 @@ export type TemplateKey =
   | "playpass_welcome"
   | "playpass_renewal"
   | "playpass_payment_failed"
-  | "playpass_change";
+  | "playpass_change"
+  | "yalla_cancellation"
+  | "late_fee";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
     name: "Play Pass welcome",
     subject: "Welcome to your {{plan}} Play Pass",
-    body: "Hi {{guardian_first_name}},\n\nWelcome to Yalla Play Passes. Your {{plan}} Play Pass is active.\n\nPaid today: {{amount}}\nAdded to your Play Pass: {{added}}\nAvailable to spend: {{balance}}\n\nFrom {{next_renewal}}, your Play Pass renews on the 1st of each month: {{monthly_price}}, with {{monthly_allocation}} to spend on Yalla experiences.\n\nYour balance is applied automatically when you book eligible experiences, for any of your children. You can see your balance, change your pass or stop renewals anytime under My Play Pass in the Family Portal.\n\nWe can’t wait to play,\nYalla",
+    body: "Hi {{guardian_first_name}},\n\nWelcome to Yalla Play Passes. Your {{plan}} Play Pass is active.\n\nPaid today: {{amount}}\nAdded to your Play Pass: {{added}}\nAvailable to spend: {{balance}}\n\nFrom {{next_renewal}}, your Play Pass renews on the 1st of each month: {{monthly_price}}, with {{monthly_allocation}} to spend on Yalla experiences.\n\nYour balance is applied automatically when you book eligible experiences, for any of your children. You can see your balance, upgrade, pause or give notice to cancel under My Play Pass in the Family Portal.\n\nWe can’t wait to play,\nYalla",
     essential: true,
     audience: "billing",
   },
@@ -87,6 +89,20 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\nWe’ve updated your booking {{reference}}.\n\n{{change_summary}}\n\n{{booking_details}}\n\nQuestions? Just reply to this email.\n\nYalla",
     essential: true,
     audience: "family",
+  },
+  yalla_cancellation: {
+    name: "Yalla cancelled a reservation",
+    subject: "We’ve had to cancel your reservation. Choose how you’d like your {{amount}} back",
+    body: "Hi {{guardian_first_name}},\n\nWe’re sorry: we’ve had to cancel the following reservation.\n\n{{booking_details}}\nReason: {{reason}}\n\nYou paid {{amount}}. Please choose how you’d like it back in your Family Portal, under Yalla Wallet:\n\n- Yalla Wallet credit of {{credit_amount}} (the full amount plus {{bonus_percent}}% as a thank-you for your flexibility), usable on any Yalla booking for 24 months, or\n- A full refund of {{amount}} to your original payment method. We process refunds within 7 business days; when the funds appear depends on your bank or card issuer.\n\nThank you for understanding,\nYalla",
+    essential: true,
+    audience: "billing",
+  },
+  late_fee: {
+    name: "Late departure fee",
+    subject: "A late departure fee for {{child_name}}",
+    body: "Hi {{guardian_first_name}},\n\n{{child_name}} was collected {{minutes_late}} minutes after the end of their session on {{date}} (after our five-minute grace period). As set out in our policies, a late fee of {{amount}} applies and has been added to your account.\n\nYou can see and pay it in your Family Portal under Payments. Questions? Just reply to this email.\n\nYalla",
+    essential: true,
+    audience: "billing",
   },
   booking_cancellation: {
     name: "Booking cancellation",
@@ -280,6 +296,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
   playpass_payment_failed: ["guardian_first_name", "amount", "reason"],
   playpass_change: ["guardian_first_name", "change_summary"],
+  yalla_cancellation: ["guardian_first_name", "booking_details", "reason", "amount", "credit_amount", "bonus_percent"],
+  late_fee: ["guardian_first_name", "child_name", "minutes_late", "date", "amount"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {

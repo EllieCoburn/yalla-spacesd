@@ -50,7 +50,7 @@ export function Checkout({
   savedChildren,
   includeChildren = [],
   includeExtras = [],
-  walletCents = null,
+  wallet = null,
   onClose,
   onRefresh,
 }: {
@@ -61,8 +61,8 @@ export function Checkout({
   includeChildren?: string[];
   /** Per-family extras chosen on a program page (e.g. coworking), on until changed here. */
   includeExtras?: string[];
-  /** The signed-in family's available Play Pass balance (null when not signed in). */
-  walletCents?: number | null;
+  /** The signed-in family's Yalla Wallet: Play Pass balance and Yalla credits (null when not signed in). */
+  wallet?: { passCents: number; creditCents: number } | null;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -240,7 +240,10 @@ export function Checkout({
       sum + prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices),
     0,
   );
-  const fromPass = Math.min(walletCents ?? 0, eligibleTotal, total);
+  // Play Pass balance covers eligible experiences; Yalla credits cover anything left.
+  const passUse = Math.min(wallet?.passCents ?? 0, eligibleTotal, total);
+  const fromPass = passUse + Math.min(wallet?.creditCents ?? 0, total - passUse);
+  const walletCents = wallet ? wallet.passCents + wallet.creditCents : null;
   const sigKey = (a: Agreement) => `${a.templateId}:${a.childKey ?? "family"}`;
 
   // Load the agreements that must be signed before booking.
@@ -679,7 +682,7 @@ export function Checkout({
                     <dd>{usd(total)}</dd>
                   </div>
                   <div className="flex justify-between text-blue">
-                    <dt>Applied from Play Pass</dt>
+                    <dt>Applied from Yalla Wallet</dt>
                     <dd>−{usd(fromPass)}</dd>
                   </div>
                   <div className="flex items-baseline justify-between border-t border-line pt-3">
@@ -687,7 +690,7 @@ export function Checkout({
                     <dd className="display text-[1.6rem]">{usd(total - fromPass)}</dd>
                   </div>
                   <div className="flex justify-between text-[0.82rem] text-ink-soft">
-                    <dt>Remaining Play Pass balance</dt>
+                    <dt>Remaining in your Yalla Wallet</dt>
                     <dd>{usd((walletCents ?? 0) - fromPass)}</dd>
                   </div>
                 </dl>

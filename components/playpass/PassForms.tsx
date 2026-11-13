@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { changePlanAction, setRenewalAction, startPlayPassAction, type PassState } from "@/app/(site)/play-passes/actions";
+import { cancelPassAction, changeTierAction, pausePassAction, startPlayPassAction, undoCancelAction, undoPauseAction, type PassState } from "@/app/(site)/play-passes/actions";
 
 const field = "mt-1.5 w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -52,7 +52,7 @@ export function ConfirmPass({ tier, terms, label }: { tier: string; terms: strin
       </ul>
       <label className="mt-6 flex cursor-pointer items-start gap-3 text-[0.92rem]">
         <input type="checkbox" name="accept" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
-        <span>I agree to these monthly billing terms and authorize Yalla to charge my saved card on the 1st of each month until I stop renewing.</span>
+        <span>I agree to these monthly billing terms and authorize Yalla to charge my saved card on the 1st of each month until my membership ends (30 days’ notice to cancel).</span>
       </label>
       <div className="mt-6">
         <Submit pending="Opening secure payment…" disabled={!ok}>
@@ -65,11 +65,17 @@ export function ConfirmPass({ tier, terms, label }: { tier: string; terms: strin
   );
 }
 
-export function RenewalForm({ renew, label }: { renew: boolean; label: string }) {
-  const [state, action] = useActionState(setRenewalAction, undefined);
+/** A one-button action (cancel with notice, undo a cancellation, undo a pause), with a confirmation. */
+export function PassButton({ kind, label, confirmText }: { kind: "cancel" | "undoCancel" | "undoPause"; label: string; confirmText?: string }) {
+  const fn = kind === "cancel" ? cancelPassAction : kind === "undoCancel" ? undoCancelAction : undoPauseAction;
+  const [state, action] = useActionState(fn, undefined);
   return (
-    <form action={action}>
-      <input type="hidden" name="renew" value={renew ? "1" : "0"} />
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (confirmText && !confirm(confirmText)) e.preventDefault();
+      }}
+    >
       <Submit pending="Saving…" variant="outline">
         {label}
       </Submit>
@@ -78,12 +84,15 @@ export function RenewalForm({ renew, label }: { renew: boolean; label: string })
   );
 }
 
-export function ChangePlanForm({ options, current }: { options: { tier: string; label: string }[]; current: string }) {
-  const [state, action] = useActionState(changePlanAction, undefined);
+export type TierOption = { tier: string; label: string; detail: string; kind: "upgrade" | "downgrade" | "current" };
+
+export function ChangePlanForm({ options, current }: { options: TierOption[]; current: string }) {
+  const [state, action] = useActionState(changeTierAction, undefined);
   const [tier, setTier] = useState(current);
+  const chosen = options.find((o) => o.tier === tier);
   return (
     <form action={action}>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Play Pass from your next renewal">
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Choose your Play Pass">
         {options.map((o) => (
           <label key={o.tier} className={`cursor-pointer rounded-full border px-4 py-2 text-[0.85rem] ${tier === o.tier ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink"}`}>
             <input type="radio" name="tier" value={o.tier} checked={tier === o.tier} onChange={() => setTier(o.tier)} className="sr-only" />
@@ -91,11 +100,32 @@ export function ChangePlanForm({ options, current }: { options: { tier: string; 
           </label>
         ))}
       </div>
+      {chosen && chosen.tier !== current ? <p className="mt-3 text-[0.85rem] text-ink-soft">{chosen.detail}</p> : null}
       <div className="mt-4">
         <Submit pending="Saving…" variant="outline" disabled={tier === current}>
-          Save for next renewal
+          {chosen?.kind === "upgrade" ? "Upgrade now" : chosen?.kind === "downgrade" ? "Give notice to downgrade" : "Save"}
         </Submit>
       </div>
+      <Note state={state} />
+    </form>
+  );
+}
+
+export function PauseForm({ earliest, maxDays }: { earliest: string; maxDays: number }) {
+  const [state, action] = useActionState(pausePassAction, undefined);
+  return (
+    <form action={action} className="space-y-3">
+      <label className="block text-[0.85rem]">
+        <span className="text-ink-soft">First day of your pause</span>
+        <input type="date" name="startOn" min={earliest} defaultValue={earliest} required className={field} />
+      </label>
+      <label className="block text-[0.85rem]">
+        <span className="text-ink-soft">How many days (up to {maxDays})</span>
+        <input type="number" name="days" min={1} max={maxDays} defaultValue={maxDays} required className={field} />
+      </label>
+      <Submit pending="Saving…" variant="outline">
+        Schedule pause
+      </Submit>
       <Note state={state} />
     </form>
   );

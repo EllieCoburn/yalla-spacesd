@@ -94,7 +94,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
               {existing && existing.status !== "pending" ? (
                 <div className="bg-paper p-7">
                   <p className="display text-[1.6rem]">Your family already has a Play Pass.</p>
-                  <p className="mt-2 text-ink-soft">You can switch passes or stop renewals anytime.</p>
+                  <p className="mt-2 text-ink-soft">Upgrade anytime. Downgrades, pauses and cancellations need 30 days’ notice.</p>
                   <Link href="/portal/play-pass" className="mt-6 inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
                     Go to My Play Pass
                   </Link>

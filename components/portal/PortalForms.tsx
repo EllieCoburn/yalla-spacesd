@@ -85,13 +85,16 @@ export function CareForm({ childId, care }: { childId: string; care: { allergies
   );
 }
 
-export function CancelForm({ itemId, label }: { itemId: string; label: string }) {
+export function CancelForm({ itemId, label, credit }: { itemId: string; label: string; credit: boolean }) {
   const [state, action] = useActionState(cancelItemAction, undefined);
   return (
     <form
       action={action}
       onSubmit={(e) => {
-        if (!confirm(`Cancel ${label}? Cancelling doesn’t issue a refund automatically — Yalla will confirm any refund or credit.`)) e.preventDefault();
+        const msg = credit
+          ? `Cancel ${label}? What you paid will be returned to your Yalla Wallet as credit you can use for any Yalla booking within 24 months. (Yalla doesn’t give cash refunds.)`
+          : `Cancel ${label}? It’s less than 24 hours away, so this cancellation isn’t eligible for credit. If your child is unwell, please contact us instead: illness may be an exception.`;
+        if (!confirm(msg)) e.preventDefault();
       }}
       className="flex flex-col items-end gap-1"
     >

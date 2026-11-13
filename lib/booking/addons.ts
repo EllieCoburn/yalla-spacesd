@@ -4,13 +4,13 @@
  * after it ends, per child, per day. Immersive Play Sessions offer coworking for the grown-up who
  * stays, charged once per family per session however many children come (perFamily).
  */
-export type Addon = { key: string; label: string; time: string; priceCents: number; perFamily?: boolean };
+export type Addon = { key: string; label: string; time: string; priceCents: number; perFamily?: boolean; /** Minutes this extra adds after the session ends (for late fees). */ extendsEndMinutes?: number };
 
 export const ADDONS: Record<string, Addon[]> = {
   "immersive-play": [{ key: "cowork", label: "Coworking for you", time: "9:00am – 12:00pm", priceCents: 1500, perFamily: true }],
   camp: [
     { key: "early", label: "Early Bird", time: "8:00 – 9:00am", priceCents: 2000 },
-    { key: "late", label: "Late stay", time: "3:00 – 4:30pm", priceCents: 3000 },
+    { key: "late", label: "Late stay", time: "3:00 – 4:30pm", priceCents: 3000, extendsEndMinutes: 90 },
   ],
 };
 

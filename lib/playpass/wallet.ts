@@ -8,40 +8,75 @@
  *   the booking is confirmed, and released if the hold ends unpaid. Reservations count against
  *   the available balance, so the same dollars can't be spent twice.
  * - All changes to one family's wallet run inside a transaction holding a lock on that family.
+ * - Two pools share the wallet: Play Pass balance (spent only on eligible Happenings, never
+ *   expires) and Yalla credits from cancellations (kind "credit": spent on any booking, each valid
+ *   24 months from issue). Credits never pay membership dues.
  */
 import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
 import { bookingItems, bookings, families, invoiceLines, invoices, payments, programs, sessions, walletAllocations, walletEntries, walletReservations } from "@/lib/db/schema";
 import { refreshInvoiceStatus } from "@/lib/ops/billing";
-import { todayLA } from "@/lib/time";
+import { addDaysISO, todayLA } from "@/lib/time";
+
+/** Cancellation credits are valid for 24 months from the date they're issued. */
+export const creditExpiry = (issued = todayLA()) => {
+  const [y, m, d] = issued.split("-").map(Number);
+  const target = `${y + 2}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  // Feb 29 → Feb 28 when the later year isn't a leap year.
+  return new Date(`${target}T12:00:00Z`).toISOString().slice(0, 10) === target ? target : addDaysISO(`${y + 2}-03-01`, -1);
+};
 
 export const usd = (cents: number) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
-export type WalletSummary = { balanceCents: number; reservedCents: number; availableCents: number };
+export type WalletSummary = {
+  balanceCents: number;
+  reservedCents: number;
+  availableCents: number;
+  /** Play Pass balance and Yalla credits, each net of what's held for checkouts. */
+  passCents: number;
+  creditCents: number;
+  /** The soonest a credit expires (for "use by" reminders). */
+  nextCreditExpiry: string | null;
+};
+
+const LEFT = sql<number>`coalesce((select sum(e.amount_cents) from wallet_entries e where e.allocation_id = "wallet_allocations"."id"), 0)::int`;
+const live = (today: string) => sql`(${walletAllocations.expiresOn} is null or ${walletAllocations.expiresOn} >= ${today})`;
 
 /** Serialize wallet changes for one family. */
 export async function lockFamily(tx: Executor, familyId: string) {
   await tx.select({ id: families.id }).from(families).where(eq(families.id, familyId)).for("update");
 }
 
-export async function walletSummary(db: Executor, familyId: string): Promise<WalletSummary> {
-  const [b] = await db.select({ n: sql<number>`coalesce(sum(${walletEntries.amountCents}), 0)::int` }).from(walletEntries).where(eq(walletEntries.familyId, familyId));
+export async function walletSummary(db: Executor, familyId: string, today = todayLA()): Promise<WalletSummary> {
+  const open = await openAllocations(db, familyId, "any", today);
+  const pass = open.filter((o) => o.a.kind !== "credit").reduce((s, o) => s + o.left, 0);
+  const credit = open.filter((o) => o.a.kind === "credit").reduce((s, o) => s + o.left, 0);
   const [r] = await db
-    .select({ n: sql<number>`coalesce(sum(${walletReservations.amountCents}), 0)::int` })
+    .select({ n: sql<number>`coalesce(sum(${walletReservations.amountCents}), 0)::int`, c: sql<number>`coalesce(sum(${walletReservations.creditCents}), 0)::int` })
     .from(walletReservations)
     .where(and(eq(walletReservations.familyId, familyId), eq(walletReservations.status, "held")));
-  return { balanceCents: b.n, reservedCents: r.n, availableCents: Math.max(0, b.n - r.n) };
+  const balance = pass + credit;
+  const passCents = Math.max(0, pass - (r.n - r.c));
+  const creditCents = Math.max(0, credit - r.c);
+  const next = open.filter((o) => o.a.kind === "credit" && o.a.expiresOn).map((o) => o.a.expiresOn!).sort()[0] ?? null;
+  return { balanceCents: balance, reservedCents: r.n, availableCents: passCents + creditCents, passCents, creditCents, nextCreditExpiry: next };
 }
 
-/** What's left of each allocation, oldest first. */
-async function openAllocations(db: Executor, familyId: string) {
+/**
+ * What's left of each live allocation. Play Pass funds oldest first; credits soonest-expiring
+ * first. Expired credits are left out (the expiry job records them).
+ */
+async function openAllocations(db: Executor, familyId: string, pool: "pass" | "credit" | "any" = "any", today = todayLA()) {
   const rows = await db
-    .select({ a: walletAllocations, left: sql<number>`coalesce((select sum(e.amount_cents) from wallet_entries e where e.allocation_id = "wallet_allocations"."id"), 0)::int` })
+    .select({ a: walletAllocations, left: LEFT })
     .from(walletAllocations)
-    .where(eq(walletAllocations.familyId, familyId))
-    .orderBy(asc(walletAllocations.periodStart), asc(walletAllocations.createdAt));
-  return rows.filter((r) => r.left > 0);
+    .where(and(eq(walletAllocations.familyId, familyId), live(today)))
+    .orderBy(asc(walletAllocations.expiresOn), asc(walletAllocations.periodStart), asc(walletAllocations.createdAt));
+  const open = rows.filter((r) => r.left > 0);
+  const pass = open.filter((r) => r.a.kind !== "credit");
+  const credit = open.filter((r) => r.a.kind === "credit");
+  return pool === "pass" ? pass : pool === "credit" ? credit : [...pass, ...credit];
 }
 
 /**
@@ -50,7 +85,18 @@ async function openAllocations(db: Executor, familyId: string) {
  */
 export async function allocate(
   tx: Executor,
-  input: { familyId: string; subscriptionId?: string | null; planId?: string | null; kind: "initial" | "renewal" | "adjustment"; periodStart?: string; amountCents: number; sourceRef?: string | null; createdBy: string; note: string },
+  input: {
+    familyId: string;
+    subscriptionId?: string | null;
+    planId?: string | null;
+    kind: "initial" | "renewal" | "adjustment" | "credit";
+    periodStart?: string;
+    amountCents: number;
+    sourceRef?: string | null;
+    expiresOn?: string | null;
+    createdBy: string;
+    note: string;
+  },
 ) {
   if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) throw new OpsError("invalid", "An allocation must be a positive whole number of cents.");
   await lockFamily(tx, input.familyId);
@@ -64,6 +110,7 @@ export async function allocate(
       periodStart: input.periodStart ?? todayLA(),
       amountCents: input.amountCents,
       sourceRef: input.sourceRef ?? null,
+      expiresOn: input.expiresOn ?? null,
     })
     .onConflictDoNothing({ target: walletAllocations.sourceRef })
     .returning();
@@ -71,7 +118,7 @@ export async function allocate(
   await tx.insert(walletEntries).values({
     familyId: input.familyId,
     allocationId: a.id,
-    kind: input.kind === "adjustment" ? "adjustment" : "allocation",
+    kind: input.kind === "adjustment" ? "adjustment" : input.kind === "credit" ? "credit" : "allocation",
     amountCents: input.amountCents,
     note: input.note,
     createdBy: input.createdBy,
@@ -80,16 +127,23 @@ export async function allocate(
   return a;
 }
 
-/** Spend from the oldest allocations first. Caller holds the family lock and has checked funds. */
+/**
+ * Spend: Play Pass funds first (up to `passMax`), then credits. Caller holds the family lock and
+ * has checked funds.
+ */
 async function debit(
   tx: Executor,
-  input: { familyId: string; amountCents: number; kind: "booking_debit" | "adjustment" | "expiration"; key: string; bookingId?: string; invoiceId?: string; paymentId?: string; reservationId?: string; note: string; createdBy: string },
+  input: { familyId: string; amountCents: number; passMax?: number; kind: "booking_debit" | "adjustment" | "expiration"; key: string; bookingId?: string; invoiceId?: string; paymentId?: string; reservationId?: string; note: string; createdBy: string },
 ) {
   let left = input.amountCents;
+  let passLeft = input.passMax ?? Number.POSITIVE_INFINITY;
   let i = 0;
   for (const { a, left: room } of await openAllocations(tx, input.familyId)) {
     if (left <= 0) break;
-    const take = Math.min(room, left);
+    const isPass = a.kind !== "credit";
+    const take = Math.min(room, left, isPass ? passLeft : Number.POSITIVE_INFINITY);
+    if (take <= 0) continue;
+    if (isPass) passLeft -= take;
     await tx.insert(walletEntries).values({
       familyId: input.familyId,
       allocationId: a.id,
@@ -105,7 +159,7 @@ async function debit(
     });
     left -= take;
   }
-  if (left > 0) throw new OpsError("insufficient", "There isn’t enough Play Pass balance for that.");
+  if (left > 0) throw new OpsError("insufficient", "There isn’t enough in the Yalla Wallet for that.");
 }
 
 /* ── Eligibility ── */
@@ -167,12 +221,15 @@ export async function reserveForBooking(db: DB, bookingId: string, invoiceId: st
     await lockFamily(tx, b.familyId);
     const existing = await heldReservation(tx, bookingId);
     if (existing) return existing.amountCents;
-    const { availableCents } = await walletSummary(tx, b.familyId);
-    if (availableCents <= 0) return 0;
-    const eligible = await eligibleInvoiceCents(tx, bookingId, invoiceId);
-    const amount = Math.min(availableCents, eligible, outstandingCents);
+    const w = await walletSummary(tx, b.familyId);
+    if (w.availableCents <= 0) return 0;
+    // Play Pass funds cover eligible items; credits cover anything that's left.
+    const eligible = w.passCents ? await eligibleInvoiceCents(tx, bookingId, invoiceId) : 0;
+    const pass = Math.min(w.passCents, eligible, outstandingCents);
+    const credit = Math.min(w.creditCents, outstandingCents - pass);
+    const amount = pass + credit;
     if (amount <= 0) return 0;
-    await tx.insert(walletReservations).values({ familyId: b.familyId, bookingId, invoiceId, amountCents: amount, status: "held", expiresAt: b.holdExpiresAt });
+    await tx.insert(walletReservations).values({ familyId: b.familyId, bookingId, invoiceId, amountCents: amount, creditCents: credit, status: "held", expiresAt: b.holdExpiresAt });
     return amount;
   });
 }
@@ -197,10 +254,12 @@ export async function captureForBooking(tx: Executor, actor: Actor, bookingId: s
       .limit(1);
     const captured = await tx.select({ id: walletReservations.id }).from(walletReservations).where(and(eq(walletReservations.bookingId, bookingId), eq(walletReservations.status, "captured")));
     if (!released || captured.length) return 0;
-    const { availableCents } = await walletSummary(tx, b.familyId);
-    const amount = Math.min(released.amountCents, availableCents);
+    const w = await walletSummary(tx, b.familyId);
+    const pass = Math.min(released.amountCents - released.creditCents, w.passCents);
+    const credit = Math.min(released.amountCents - pass, w.creditCents);
+    const amount = pass + credit;
     if (amount <= 0) return 0;
-    [r] = await tx.insert(walletReservations).values({ familyId: b.familyId, bookingId, invoiceId: released.invoiceId, amountCents: amount, status: "held", expiresAt: new Date() }).returning();
+    [r] = await tx.insert(walletReservations).values({ familyId: b.familyId, bookingId, invoiceId: released.invoiceId, amountCents: amount, creditCents: credit, status: "held", expiresAt: new Date() }).returning();
   }
   const [inv] = await tx.select().from(invoices).where(eq(invoices.id, r.invoiceId));
   const [pay] = await tx
@@ -222,6 +281,7 @@ export async function captureForBooking(tx: Executor, actor: Actor, bookingId: s
     await debit(tx, {
       familyId: b.familyId,
       amountCents: r.amountCents,
+      passMax: r.amountCents - r.creditCents,
       kind: "booking_debit",
       key: `debit:${r.id}`,
       bookingId,
@@ -231,7 +291,7 @@ export async function captureForBooking(tx: Executor, actor: Actor, bookingId: s
       note: `Booking ${b.reference}${inv ? ` (${inv.number})` : ""}`,
       createdBy: actor.name,
     });
-    await audit(tx, actor, { action: "playpass.wallet_spent", entityType: "booking", entityId: bookingId, summary: `${usd(r.amountCents)} from Play Pass applied to ${b.reference}` });
+    await audit(tx, actor, { action: "playpass.wallet_spent", entityType: "booking", entityId: bookingId, summary: `${usd(r.amountCents)} from the Yalla Wallet applied to ${b.reference}` });
   }
   await tx.update(walletReservations).set({ status: "captured", settledAt: new Date() }).where(eq(walletReservations.id, r.id));
   await refreshInvoiceStatus(tx, r.invoiceId);
@@ -323,6 +383,35 @@ export async function adjustWallet(db: DB, actor: Actor, input: { familyId: stri
     }
     await audit(tx, actor, { action: "playpass.wallet_adjusted", entityType: "family", entityId: input.familyId, summary: `Play Pass balance adjusted by ${usd(input.amountCents)}: ${input.note}` });
   });
+}
+
+/**
+ * A cancellation credit: added to the wallet, valid 24 months. Idempotent on `sourceRef`.
+ */
+export async function issueCredit(tx: Executor, input: { familyId: string; amountCents: number; sourceRef: string; note: string; createdBy: string; issuedOn?: string }) {
+  return allocate(tx, { familyId: input.familyId, kind: "credit", amountCents: input.amountCents, sourceRef: input.sourceRef, expiresOn: creditExpiry(input.issuedOn), createdBy: input.createdBy, note: input.note });
+}
+
+/** Record expired credits in the ledger (daily job). Balances already leave them out. */
+export async function expireCredits(db: DB, today = todayLA()) {
+  const due = await db
+    .select({ a: walletAllocations, left: LEFT })
+    .from(walletAllocations)
+    .where(and(eq(walletAllocations.kind, "credit"), lt(walletAllocations.expiresOn, today)));
+  let n = 0;
+  for (const { a, left } of due) {
+    if (left <= 0) continue;
+    await db.transaction(async (tx) => {
+      await lockFamily(tx, a.familyId);
+      const inserted = await tx
+        .insert(walletEntries)
+        .values({ familyId: a.familyId, allocationId: a.id, kind: "expiration", amountCents: -left, note: `Credit expired ${a.expiresOn}`, createdBy: "system", idempotencyKey: `expire:${a.id}` })
+        .onConflictDoNothing({ target: walletEntries.idempotencyKey })
+        .returning();
+      if (inserted.length) n++;
+    });
+  }
+  return n;
 }
 
 /** Recent ledger activity for a family, newest first. */

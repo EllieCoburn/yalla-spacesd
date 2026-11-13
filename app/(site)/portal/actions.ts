@@ -6,6 +6,8 @@ import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
 import { redeemMagicLink, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
 import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/public-booking";
+import { resolveOffer } from "@/lib/ops/yalla-cancellations";
+import { guardianActor } from "@/lib/family-auth";
 import { clearFamilyCookie, getGuardian, requestContext, setFamilyCookie } from "./session";
 
 export type PortalState = { ok?: boolean; error?: string; message?: string; devLink?: string; at?: number } | undefined;
@@ -142,8 +144,12 @@ export async function updateCareAction(_: PortalState, form: FormData): Promise<
 export async function cancelItemAction(_: PortalState, form: FormData): Promise<PortalState> {
   return run(async () => {
     const g = await guardianOrFail();
-    await familyCancelItem(getDb(), g, String(form.get("itemId")));
-    return "Cancelled. If a refund or credit applies, Yalla will confirm it separately.";
+    const r = await familyCancelItem(getDb(), g, String(form.get("itemId")));
+    return r.credited
+      ? `Cancelled. $${(r.credited / 100).toFixed(2)} is back in your Yalla Wallet.`
+      : r.late
+        ? "Cancelled. This cancellation wasn’t eligible for credit. If your child is unwell, please contact us."
+        : "Cancelled.";
   });
 }
 
@@ -161,4 +167,18 @@ export async function signFormAction(_: PortalState, form: FormData): Promise<Po
     });
     return "Thank you — received.";
   });
+}
+
+/** After Yalla cancels: the family chooses Yalla Wallet credit (plus the bonus) or a full refund. */
+export async function chooseOfferAction(_: PortalState, form: FormData): Promise<PortalState> {
+  const choice = String(form.get("choice"));
+  const res = await run(async () => {
+    const g = await guardianOrFail();
+    if (choice !== "credit" && choice !== "refund") throw new OpsError("invalid", "Choose credit or a refund.");
+    await resolveOffer(getDb(), guardianActor(g), { offerId: String(form.get("offerId")), familyId: g.familyId, choice });
+    revalidatePath("/portal", "layout");
+    return "Done.";
+  });
+  if (res?.ok) redirect(`/portal/wallet?chosen=${choice}`);
+  return res;
 }

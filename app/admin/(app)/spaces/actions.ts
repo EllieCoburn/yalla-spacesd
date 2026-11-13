@@ -1,5 +1,7 @@
 "use server";
 
+import { staffCancelSpace } from "@/lib/ops/yalla-cancellations";
+
 import { OpsError } from "@/lib/audit";
 import { adminAction } from "@/lib/admin/action";
 import { can } from "@/lib/auth/staff";
@@ -28,11 +30,13 @@ export const createReservationAction = adminAction("spaces.manage", async ({ db,
   return { message: `Reserved · ${g.reference}`, data: { id: g.id } };
 });
 
-export const cancelReservationAction = adminAction("spaces.manage", async ({ db, actor, str }) => {
+export const cancelReservationAction = adminAction("spaces.manage", async ({ db, actor, str, bool }) => {
   const reason = str("reason");
   if (!reason) throw new OpsError("invalid", "Give a reason. Families see it on their cancelled reservation.");
-  const g = await cancelSpaceGroup(db, actor, str("groupId"), { reason });
-  return g.totalCents > 0 ? "Cancelled. The space is free again. To refund or credit the payment, open the invoice in Billing." : "Cancelled. The space is free again.";
+  const r = await staffCancelSpace(db, actor, { groupId: str("groupId"), reason, yalla: bool("yalla") });
+  return r.offered
+    ? "Cancelled. The family has been asked to choose Yalla Wallet credit (plus the bonus) or a full refund in their Family Portal."
+    : "Cancelled. The space is free again.";
 });
 
 export const moveReservationAction = adminAction("spaces.manage", async ({ db, actor, staff, str, num, bool }) => {

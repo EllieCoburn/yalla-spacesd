@@ -27,5 +27,6 @@ export const WALLET_EXPLAINER =
 export const billingTerms = (p: { name: string; price: string; allocation: string; today: string; firstBalance: string; renewal: string }) => [
   `Today you’ll pay ${p.today} and ${p.firstBalance} will be added to your Play Pass.`,
   `From ${p.renewal}, your ${p.name} Play Pass renews automatically on the 1st of every month: ${p.price} is charged to your saved card and ${p.allocation} is added to your balance.`,
-  "You can change your pass or stop renewals anytime in the Family Portal. Changes apply from your next renewal; stopping renewals doesn’t remove balance you’ve already paid for.",
+  "Upgrade anytime, right away. Downgrades and cancellations need 30 days’ notice, and you can pause for up to 60 days with 30 days’ notice, all from the Family Portal.",
+  "If you cancel, billing continues through the 30-day notice period. If it ends partway through a month, a prorated final payment for just those days is charged on the 1st of that month. Balance you’ve already paid for stays in your wallet.",
 ];
