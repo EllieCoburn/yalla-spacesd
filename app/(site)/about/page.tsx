@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Mark } from "@/components/brand/Mark";
-import { OurStory } from "@/components/site/OurStory";
+import { AboutOverview } from "@/components/site/AboutOverview";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { Draft, ToConfirm } from "@/components/ui/Draft";
 import Link from "next/link";
@@ -36,7 +36,7 @@ export default function AboutPage() {
         lede="Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and ways to play, learn, and connect in San Diego."
       />
 
-      <OurStory />
+      <AboutOverview />
 
       <Section>
         <div className="shell">
