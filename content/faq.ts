@@ -235,7 +235,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 90,
     status: "published",
     question: "How do I cancel my Club Yalla membership?",
-    answer: `Club Yalla memberships require 30 days’ written notice to cancel, which you can submit through your Family Portal or by email. Your membership stays active throughout the notice period. Read the full ${POLICY_LINK}, including how the final payment works.`,
+    answer: "Club Yalla memberships require 30 days’ written notice to cancel, submitted through your Family Portal or by email to [membership@yallaspacesd.com](mailto:membership@yallaspacesd.com). Your membership stays active throughout the notice period, and we’ll confirm your end date and any remaining charges in writing. See [canceling a membership](/policies#canceling-a-membership), including how the final payment works.",
   },
   {
     id: "meals",
@@ -320,7 +320,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 70,
     status: "published",
     question: "Can I change my Play Pass membership tier?",
-    answer: "Yes, from My Play Pass in the Family Portal. Changes to a different pass take effect from your next renewal on the 1st.",
+    answer: "Yes. You can upgrade anytime, without advance notice. Downgrades need 30 days’ notice and take effect once the notice period ends. See [upgrades, downgrades and pauses](/policies#membership-changes).",
   },
   {
     id: "play-pass-cancel",
@@ -329,7 +329,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 80,
     status: "published",
     question: "How do I cancel my Play Pass membership?",
-    answer: `Play Pass memberships require 30 days’ notice to cancel, and regular billing continues through the notice period. Read the full ${POLICY_LINK}, including how the final payment works.`,
+    answer: "Play Pass memberships require 30 days’ notice to cancel, submitted through your Family Portal or by email to [membership@yallaspacesd.com](mailto:membership@yallaspacesd.com). Regular billing continues through the notice period. See [canceling a membership](/policies#canceling-a-membership), including how the final payment works.",
   },
 
   /* ── Bookings & Happenings ── */
@@ -394,20 +394,22 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "what-to-bring",
     category: "bookings",
+    pages: { flex: 4, camp: 4 },
     order: 60,
-    status: "draft",
-    needs: "What children should bring for Yalla Flex, Camp Yalla and each Happening (Immersive Play has its own answer).",
+    status: "published",
     question: "What should my child bring?",
-    answer: "",
+    answer:
+      "Please send your child with a labeled water bottle, lunch box, light jacket, and one spare outfit. Label all belongings so we can help them find their way home.\n\nComfortable clothes that can get messy are encouraged: mud, water, paint, and other hands-on materials are often part of our play. Some programs include extra packing notes in their booking confirmation. Yalla is nut-free, so please don’t send foods containing peanuts or tree nuts.",
   },
   {
     id: "flex-arrival",
     category: "bookings",
+    pages: { flex: 3 },
     order: 65,
-    status: "draft",
-    needs: "How arrival and departure work on a Flex day (times, where families go, who may collect a child).",
+    status: "published",
     question: "How do arrival and departure work on a Flex day?",
-    answer: "",
+    answer:
+      "Check your child in and sign them out at our lobby kiosk. Yalla Flex is childcare and coworking together, so you’ll stay onsite in our coworking space while your child is in care. Please keep your family profile current with emergency contacts and everyone authorized to collect your child; we may ask for photo identification. See [arrival and departure](/policies#arrival-departure).",
   },
   {
     id: "camp-meals",
@@ -425,7 +427,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 70,
     status: "published",
     question: "How do I change or cancel a reservation?",
-    answer: `You’ll find your upcoming reservations in your Family Portal. When you cancel a reservation, the amount paid is returned to your family’s Yalla Wallet as a credit for future bookings. Read our full ${POLICY_LINK}.`,
+    answer: `Cancel through your Family Portal, by phone at 619.775.4008, or by email at [hello@yallaspacesd.com](mailto:hello@yallaspacesd.com). Cancel at least 24 hours before your reservation begins and the amount paid is returned to your family’s Yalla Wallet as a credit; no-shows aren’t eligible for credit. If your child is unwell, please let us know as soon as you can: illness and other extenuating circumstances may be exempt from the 24-hour requirement. Read our full ${POLICY_LINK}.`,
   },
   {
     id: "multiple-children",
@@ -519,7 +521,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What is the Yalla Wallet?",
     answer:
-      "Your family’s Yalla Wallet holds your Play Pass balance and any credits returned to you when you cancel a reservation or service. When you’re signed in, it’s applied automatically at checkout, and it’s shared by your whole family.",
+      "Your Yalla Wallet keeps your family’s cancellation credits together so you can use them toward future Yalla bookings. Credits can be used for any Yalla service or experience except recurring membership dues, are nontransferable, and stay in your wallet even if you cancel your membership. When you’re signed in, your wallet is applied automatically at checkout.\n\nPlay Pass members also see their monthly Play Pass balance here. Membership benefits are kept separate from cancellation credits.",
   },
   {
     id: "wallet-credit-length",
@@ -527,7 +529,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 30,
     status: "published",
     question: "How long do Yalla Wallet credits last?",
-    answer: `Credits returned to your Yalla Wallet when you cancel can be applied toward future bookings and services for up to 24 months. See our ${POLICY_LINK}.`,
+    answer: "Each cancellation credit is valid for 24 months from the date it’s issued. The 24-month period applies to cancellation credits, not to unused membership benefits. See [your Yalla Wallet](/policies#yalla-wallet).",
   },
   {
     id: "cash-refunds",
@@ -535,7 +537,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 40,
     status: "published",
     question: "Can I receive a cash refund?",
-    answer: `Yalla does not issue cash refunds for any services. When you cancel, the amount paid is returned to your Yalla Wallet as a credit. See our ${POLICY_LINK}.`,
+    answer: "Yalla doesn’t provide cash refunds for family-initiated cancellations, except where required by law; the amount paid is returned to your Yalla Wallet as a credit instead. If Yalla cancels your reservation, you can choose a full refund to your original payment method or a Yalla Wallet credit plus 5%. See [if Yalla cancels or changes your reservation](/policies#yalla-cancels).",
   },
   {
     id: "prorated-billing",
@@ -543,7 +545,44 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 50,
     status: "published",
     question: "How does prorated membership billing work?",
-    answer: `When you join a Play Pass partway through a month, your first payment and your first balance both cover just the days left in that month, and you’ll see both amounts before you confirm.\n\nWhen a Club Yalla or Play Pass membership ends partway through a month, a final prorated payment is charged on the first of that month, covering only the days leading up to your cancellation date. See our ${POLICY_LINK}.`,
+    answer: `When you join a Play Pass partway through a month, your first payment and your first balance both cover just the days left in that month, and you’ll see both amounts before you confirm.\n\nWhen a Club Yalla or Play Pass membership ends partway through a month, a prorated final payment is charged on the 1st of that month. We divide your monthly fee by the number of days in that month, then multiply by the days up to and including your membership end date. See [your final payment](/policies#canceling-a-membership).`,
+  },
+  {
+    id: "yalla-cancels",
+    category: "billing",
+    order: 45,
+    status: "published",
+    policy: "yalla-cancels",
+    question: "What happens if Yalla cancels or changes my reservation?",
+    answer: "",
+  },
+  {
+    id: "membership-changes",
+    category: "billing",
+    alsoIn: ["club-yalla", "play-pass"],
+    order: 55,
+    status: "published",
+    policy: "membership-changes",
+    question: "Can I pause, upgrade, or downgrade my membership?",
+    answer: "",
+  },
+  {
+    id: "late-fee",
+    category: "bookings",
+    order: 95,
+    status: "published",
+    question: "What if I’m running late?",
+    answer:
+      "Please call us at 619.775.4008 as soon as you know. A late arrival doesn’t extend your reserved session, and after a five-minute grace period at the end of the session, a late fee of $10 is charged for each additional 10 minutes. Letting us know doesn’t waive the fee, but it helps our team plan.",
+  },
+  {
+    id: "nut-free",
+    category: "getting-started",
+    order: 85,
+    status: "published",
+    policy: "food-allergies",
+    question: "Is Yalla nut-free?",
+    answer: "",
   },
   {
     id: "update-payment",

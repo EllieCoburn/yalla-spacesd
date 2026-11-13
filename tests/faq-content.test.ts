@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_FAQS, FAQ_CATEGORIES, FAQ_PAGES } from "@/content/faq";
-import { policyById } from "@/content/policies";
+import { POLICIES, policyById } from "@/content/policies";
 
 describe("FAQ content", () => {
   it("gives every question one unique id", () => {
@@ -36,5 +36,15 @@ describe("FAQ content", () => {
       const text = `${f.question} ${f.answer}`.toLowerCase();
       for (const w of ["classroom", "daycare", "drop-off", "pick-up", "nap", "teacher", "school year"]) expect(text.includes(w), `${f.id}: ${w}`).toBe(false);
     }
+  });
+
+  it("keeps public policies in Yalla's language, with every published FAQ policy link resolving", () => {
+    for (const pol of POLICIES.filter((x) => x.public)) {
+      const text = JSON.stringify(pol.sections).toLowerCase();
+      for (const w of ["classroom", "daycare", "drop-off", "pickup", "pick-up", " nap", "teacher", "school", "the app"]) expect(text.includes(w), `${pol.id}: ${w}`).toBe(false);
+      expect(pol.chapter, pol.id).toBeTruthy();
+    }
+    const anchors = new Set(POLICIES.map((x) => x.id));
+    for (const f of DEFAULT_FAQS) for (const m of f.answer.matchAll(/\/policies#([a-z-]+)/g)) expect(anchors.has(m[1]), `${f.id} → ${m[1]}`).toBe(true);
   });
 });

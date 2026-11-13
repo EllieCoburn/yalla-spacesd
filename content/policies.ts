@@ -1,9 +1,26 @@
 /**
- * Yalla's formal policies: the one place each policy's wording lives. FAQ answers and the
- * Policies & Terms page render these; nothing else should restate them.
+ * Yalla's formal policies: the one place each policy's wording lives. The Policies & Terms page,
+ * FAQ answers and the Family Portal render these; nothing else should restate them.
  *
  * Only policies Yalla has approved belong here. Do not add or reword policy language without Yalla.
  */
+
+/** Shown at the top of Policies & Terms once Yalla sets it, e.g. "2026-12-01". Hidden while null. */
+export const POLICIES_EFFECTIVE_DATE: string | null = null;
+
+export const POLICIES_INTRO =
+  "Our policies help keep Yalla welcoming, thoughtful, and predictable for everyone. Here you’ll find the details on reservations, memberships, payments, and spending time in our community.";
+
+export const POLICY_CHAPTERS = [
+  { id: "reservations", title: "Reservations, Payments & Cancellations" },
+  { id: "memberships", title: "Memberships" },
+  { id: "attendance", title: "Attendance, Arrival & Departure" },
+  { id: "health", title: "Health, Food & Individual Support" },
+  { id: "community", title: "Play & Community Life" },
+  { id: "safety", title: "Emergencies, Privacy & Communication" },
+] as const;
+
+export type PolicyChapter = (typeof POLICY_CHAPTERS)[number]["id"];
 
 export type Policy = {
   id: string;
@@ -12,6 +29,8 @@ export type Policy = {
   approved: boolean;
   /** Listed on the public Policies & Terms page. Family-only policies live in the Family Portal. */
   public: boolean;
+  /** Where it sits on Policies & Terms. */
+  chapter?: PolicyChapter;
   /**
    * Paragraphs use the FAQ formatting: a blank line between paragraphs, "- " for list items,
    * [words](link) for links and **words** for emphasis. `short` names a section in a page's contents;
@@ -20,36 +39,271 @@ export type Policy = {
   sections: { heading?: string; short?: string; note?: boolean; paragraphs: string[] }[];
 };
 
+const PHONE = "619.775.4008";
+const HELLO = "[hello@yallaspacesd.com](mailto:hello@yallaspacesd.com)";
+const MEMBERSHIP = "[membership@yallaspacesd.com](mailto:membership@yallaspacesd.com)";
+
+const p = (id: string, chapter: PolicyChapter, title: string, ...paragraphs: string[]): Policy => ({ id, chapter, title, approved: true, public: true, sections: [{ paragraphs }] });
+
 export const POLICIES: Policy[] = [
+  /* ── Reservations, Payments & Cancellations ── */
+  p(
+    "making-a-reservation",
+    "reservations",
+    "Making a reservation",
+    "Yalla programming and coworking are available by reservation. Before booking, please review the dates, times, age requirements, parent-presence requirements, and included services for the offering you’ve chosen.",
+    "A reservation is confirmed once you receive your booking confirmation and any required payment has been completed. Each child attending must be included in the reservation.",
+  ),
+  p(
+    "payments",
+    "reservations",
+    "Payments",
+    "Individual bookings are paid at checkout. Membership charges follow the billing schedule provided when you enroll. Any additional charges will be explained before you authorize them.",
+  ),
+  p(
+    "failed-payments",
+    "reservations",
+    "Failed payments",
+    "If your payment is unsuccessful, your reserved space will be held for 12 hours from the time of booking so you can resolve the payment issue. If payment isn’t completed within that period, your reservation will be released and the space made available to other families.",
+    "You’re welcome to pay onsite if space is still available when you arrive. However, availability can’t be guaranteed without a confirmed, paid reservation.",
+  ),
   {
     id: "cancellation-refund",
-    title: "Cancellation & refund policy",
+    chapter: "reservations",
+    title: "Canceling a reservation",
     approved: true,
     public: true,
     sections: [
       {
         paragraphs: [
-          "We understand that plans change! When you cancel a reservation or service, the amount paid will be returned to your family’s Yalla Wallet as a credit that can be applied toward future bookings and services for up to 24 months. Yalla does not issue cash refunds for any services.",
+          "When you cancel a reservation, the amount paid is returned to your family’s Yalla Wallet as a credit. Cancellation credits may be used for up to 24 months from the date they are issued. Yalla does not provide cash refunds for family-initiated cancellations, except where required by law.",
         ],
       },
       {
-        heading: "Club Yalla Memberships",
+        heading: "24 hours’ notice",
         paragraphs: [
-          "Club Yalla memberships require 30 days’ written notice to cancel. Notice can be submitted through your Family Portal or by email. Your membership will remain active throughout the 30-day notice period.",
+          "To receive a credit, please cancel at least 24 hours before your reservation begins. No-shows are not eligible for credit.",
+          "We understand that unexpected circumstances arise, particularly when little ones are feeling under the weather. Illness and other extenuating circumstances may be exempt from the 24-hour requirement. We would always rather a child stay home to rest and recover than attend Yalla while unwell.",
         ],
       },
       {
-        heading: "Play Pass Memberships",
-        paragraphs: ["Play Pass memberships also require 30 days’ notice to cancel. Cancellations can be managed directly through the Yalla app."],
-      },
-      {
-        heading: "Final Membership Payments",
+        heading: "How to cancel",
         paragraphs: [
-          "For both Club Yalla and Play Pass memberships, regular billing will continue throughout the 30-day notice period. If your cancellation takes effect partway through a month, a final prorated payment will be charged on the first of that month, covering only the days leading up to your membership’s cancellation date.",
+          `Cancel through your [Family Portal](/portal), call us at ${PHONE}, or email ${HELLO}. If illness or another extenuating circumstance prevents you from giving 24 hours’ notice, please contact us as soon as you can.`,
         ],
+      },
+      {
+        heading: "Memberships",
+        paragraphs: ["Club Yalla and Play Pass memberships require 30 days’ notice to cancel. See [canceling a membership](/policies#canceling-a-membership)."],
       },
     ],
   },
+  p(
+    "yalla-wallet",
+    "reservations",
+    "Your Yalla Wallet",
+    "Your Yalla Wallet keeps your family’s cancellation credits together so you can use them toward future Yalla bookings.",
+    "Wallet credits can be used toward any Yalla service or experience except recurring membership dues. Credits are nontransferable and remain in your family’s Yalla Wallet even if you cancel your membership. Each credit is valid for 24 months from the date it is issued.",
+    "Cancellation credits are separate from the monthly benefits included with a membership. The 24-month credit period does not apply to unused membership benefits.",
+  ),
+  p(
+    "yalla-cancels",
+    "reservations",
+    "If Yalla cancels or changes your reservation",
+    "If Yalla needs to cancel or make a significant change to your reservation, we’ll let you know promptly using the contact information on your booking. When Yalla cancels a reservation, you may choose either:",
+    "- **Yalla Wallet credit plus 5%**: the full value of your reservation as a Yalla Wallet credit, plus an extra 5% as a thank-you for your flexibility. For example, a canceled $180 reservation becomes a $189 credit.\n- **A full refund**: the original amount paid, returned to your original payment method. Yalla processes refunds within 7 business days; how long the funds take to appear depends on your bank or card issuer.",
+    "We want families to feel confident booking with Yalla, knowing that if we need to change plans, we’ll make things right.",
+  ),
+
+  /* ── Memberships ── */
+  p(
+    "choosing-a-membership",
+    "memberships",
+    "Choosing your membership",
+    "[Club Yalla](/club-yalla) and [Play Pass](/play-passes) memberships offer different ways to be part of our community. Your enrollment details explain the services, access, and benefits included with your plan.",
+    "A membership does not guarantee availability outside your confirmed schedule or reservations.",
+  ),
+  p(
+    "membership-billing",
+    "memberships",
+    "Monthly billing and renewal",
+    "Memberships renew automatically and are billed on the 1st of each month, unless your enrollment agreement says otherwise. Pricing, recurring charges, and cancellation terms are shown to you before you enroll.",
+  ),
+  {
+    id: "canceling-a-membership",
+    chapter: "memberships",
+    title: "Canceling a membership",
+    approved: true,
+    public: true,
+    sections: [
+      {
+        heading: "Club Yalla",
+        paragraphs: [
+          `Club Yalla memberships require 30 days’ written notice, submitted through your [Family Portal](/portal) or by email to ${MEMBERSHIP}. Your notice period begins on the date you submit your request, and your membership stays active throughout it. We’ll confirm your membership end date and any remaining charges in writing.`,
+        ],
+      },
+      {
+        heading: "Play Pass",
+        paragraphs: [
+          `Play Pass memberships require 30 days’ notice, submitted through your [Family Portal](/portal) or by email to ${MEMBERSHIP}. We’ll confirm your membership end date and any remaining charges after you submit your request.`,
+        ],
+      },
+      {
+        heading: "Your final payment",
+        paragraphs: [
+          "Regular billing continues throughout your 30-day notice period. If your notice period ends partway through a month, a prorated final payment is charged on the 1st of that month, covering only the days through your membership end date.",
+          "To prorate, we divide your monthly fee by the number of days in that month, then multiply by the number of days up to and including your membership end date.",
+        ],
+      },
+      {
+        paragraphs: ["Canceling an individual reservation does not cancel your membership."],
+      },
+    ],
+  },
+  p(
+    "membership-changes",
+    "memberships",
+    "Upgrades, downgrades and pauses",
+    "We understand that your family’s needs may change, and memberships can change with them.",
+    "- **Upgrades**: upgrade anytime, without advance notice.\n- **Downgrades**: downgrade with 30 days’ notice. Your new membership takes effect once the notice period ends.\n- **Pauses**: pause for up to 60 consecutive days, with 30 days’ notice. Your membership reactivates automatically and regular billing resumes on the 61st day.\n- **Canceling during a pause**: if you decide not to return, submit your cancellation at least 30 days before your scheduled reactivation date. Otherwise, your membership reactivates on the 61st day and regular billing continues until your 30-day notice takes effect.",
+    `Please submit downgrade, pause, and cancellation requests through your [Family Portal](/portal) or by email to ${MEMBERSHIP}.`,
+  ),
+
+  /* ── Attendance, Arrival & Departure ── */
+  p(
+    "parent-presence",
+    "attendance",
+    "Parent presence",
+    "Each offering notes whether a parent or caregiver stays onsite or whether children can stay on their own. Please follow the requirements for the program you’ve reserved.",
+    "Club Yalla and Yalla Flex require a parent or designated caregiver to remain onsite. For offerings where parents may leave, an authorized adult must stay reachable throughout the session and be available to collect their child if needed.",
+  ),
+  p(
+    "arrival-departure",
+    "attendance",
+    "Arrival and departure",
+    "Children are checked in and signed out at our lobby kiosk. Please keep your family profile up to date with current emergency contacts and everyone authorized to collect your child.",
+    "We may ask for photo identification before releasing a child to an authorized adult.",
+  ),
+  p(
+    "late-departure",
+    "attendance",
+    "Running late",
+    `Please let us know if you’re running late. A late arrival doesn’t extend your reserved session.`,
+    `Please plan to collect your child by the end of their reserved session. After a five-minute grace period, a late fee of $10 is charged for each additional 10 minutes. If you expect to be delayed, please call ${PHONE} as soon as possible so our team can plan; letting us know doesn’t waive the late fee.`,
+  ),
+  p(
+    "what-to-bring",
+    "attendance",
+    "What to bring",
+    "Please send your child with a labeled water bottle, lunch box, light jacket, and one spare outfit. Label all belongings so we can help them find their way home.",
+    "Comfortable clothes that can get messy are encouraged. Mud, water, paint, and other hands-on materials are often part of our play. Some programs include extra packing notes in their booking confirmation.",
+  ),
+
+  /* ── Health, Food & Individual Support ── */
+  p(
+    "illness-summary",
+    "health",
+    "Illness",
+    "Please keep your child home when they’re unwell or unable to comfortably take part in the session. If your child becomes ill while at Yalla, we’ll contact you to arrange for them to go home.",
+    "Enrolled families can read the full [illness policy](/portal/illness-policy) in the Family Portal, including when to keep your child home and when they can return.",
+  ),
+  p(
+    "food-allergies",
+    "health",
+    "Food and allergies",
+    "Yalla is a nut-free environment. Please don’t send foods containing peanuts or tree nuts.",
+    "Tell us about any food allergies, dietary needs, or emergency care requirements before your child attends. We ask families to avoid sharing food and to work with our team on any individual food-safety arrangements. Although we take precautions, we can’t guarantee an allergen-free environment.",
+  ),
+  p(
+    "medication",
+    "health",
+    "Medication and topical products",
+    "Yalla does not give medication, with two exceptions: emergency medication, such as an EpiPen, and authorized over-the-counter topical products, such as diaper rash cream, sunscreen, and ointments.",
+    "A completed authorization form must be on file before our team can give any emergency medication or apply any topical product. Products must be in their original packaging, labeled with your child’s name, and come with instructions that match the authorization form. Please hand them directly to a team member rather than leaving them in your child’s bag.",
+    "EpiPens are the only medication we keep onsite. Please provide them in a storage container labeled with your child’s name, with the authorization and emergency care instructions on file. Other authorized products come with your child each session and go home with them at departure.",
+  ),
+  p(
+    "individual-support",
+    "health",
+    "Helping us support your child",
+    "Children arrive with different temperaments, experiences, and support needs. Please share anything that helps us welcome your child, such as communication preferences, sensory needs, toileting support, separation concerns, and comforting routines.",
+    "We welcome conversations about accommodations and will work with you to understand the support your child needs.",
+  ),
+
+  /* ── Play & Community Life ── */
+  p(
+    "approach-to-play",
+    "community",
+    "Our approach to play",
+    "We create thoughtful environments where children can explore, build relationships, and follow their own ideas. Our educarers and guides observe closely and offer support, gentle redirection, and help navigating social-emotional challenges.",
+    "Our goal is to protect meaningful play while helping children care for themselves, one another, and the space.",
+  ),
+  p(
+    "community-safety",
+    "community",
+    "Keeping our community safe",
+    "Children are learning how to communicate, manage big feelings, and share space. We respond to challenges with calm support and clear boundaries.",
+    "If a situation can’t be safely supported during a session, we may ask a parent or caregiver to help or to take their child home early. When challenges continue, we’ll work with the family on next steps and any additional support or accommodations.",
+    "Adults are expected to treat children, families, and team members with respect. Threatening, discriminatory, or abusive conduct is not permitted.",
+  ),
+  p(
+    "ending-participation",
+    "community",
+    "Suspending or ending participation",
+    "Yalla may suspend or end a child’s participation when necessary for the safety, well-being, and needs of that child, other children, and our community. If we make that decision, we’ll speak with the family directly and explain the circumstances.",
+    "When Yalla ends a child’s participation, we refund the full remaining value of any unused, prepaid sessions to the original payment method; families are never asked to accept Yalla Wallet credit instead. Yalla processes these refunds within 7 business days; how long the funds take to appear depends on your bank or card issuer.",
+  ),
+  p(
+    "outdoor-play",
+    "community",
+    "Outdoor and messy play",
+    "Outdoor exploration is part of life at Yalla. Children may play with water, mud, paint, and natural materials, with activities adjusted for weather and conditions. Please dress your child for the day’s forecast, and expect signs of a good day’s play on their clothes.",
+    "We’ll let you know in advance about any activity that needs separate permission.",
+  ),
+  p(
+    "coworking",
+    "community",
+    "Coworking and shared spaces",
+    "Please use workspaces and communal areas with consideration for others, and follow posted guidance for calls, room reservations, and shared equipment.",
+    "Private offices and desks are reserved through the [Family Portal](/portal/spaces) by families in the Yalla community. Outside a child’s booked session, parents and caregivers are responsible for supervising their children.",
+  ),
+  p(
+    "belongings",
+    "community",
+    "Personal belongings, lost and found",
+    "Please bring only what your child needs for the session and keep valuables at home. Label everything, and check for your child’s things before you leave.",
+    "Lost items are kept for up to 60 days; just ask a team member if something is missing. After 60 days, unclaimed items may be donated or added to Yalla’s collection for community use.",
+  ),
+
+  /* ── Emergencies, Privacy & Communication ── */
+  p(
+    "emergencies",
+    "safety",
+    "Emergencies and injuries",
+    "Families must complete the required emergency information and authorizations before their child attends. Please keep your contact details and emergency contacts current so we can reach you promptly.",
+    "If a child needs urgent medical attention, our team will contact emergency services as appropriate and notify the parent or caregiver as soon as possible.",
+  ),
+  p(
+    "photography",
+    "safety",
+    "Photography",
+    "Families choose separately whether to allow photos shared privately with participating families, and photos used publicly on Yalla’s website, social media, or promotional materials. Taking part in our programs never requires photo consent.",
+    "Because children share play spaces, your child may occasionally appear in the background of a photo. That never overrides your choices: before sharing, we take reasonable steps to leave out, crop, or blur identifiable children whose families haven’t opted in to that use.",
+    `You can update your choices anytime in your [Family Portal](/portal) or by emailing ${HELLO}. Changes apply to future photos and sharing. To have an existing image removed from a Yalla channel, contact us; we can’t guarantee removal of copies others have already downloaded or shared.`,
+    "Please respect other families’ privacy and ask before photographing or sharing images of other children.",
+  ),
+  p(
+    "family-information",
+    "safety",
+    "Family information",
+    `We collect the information needed to manage reservations, communicate with families, and support children’s participation. Questions about how your information is collected, used, stored, or shared? Email ${HELLO}.`,
+  ),
+  p(
+    "policy-updates",
+    "safety",
+    "Policy updates",
+    "This page shows the effective date of our policies. We’ll tell affected families directly about any material change to an existing membership or booking before it takes effect, with any required notice or consent.",
+  ),
   {
     // Source: "Yalla Coworking & Childcare Illness Policy" (PDF supplied by Yalla). Wording as supplied;
     // underlined phrases are shown in bold.
