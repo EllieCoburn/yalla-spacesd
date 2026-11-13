@@ -12,7 +12,7 @@ import { walletSummary } from "@/lib/playpass/wallet";
 import { getGuardian } from "../portal/session";
 
 export const metadata: Metadata = {
-  title: "Book Care",
+  title: "Explore Yalla",
   description: "Browse live availability for Yalla Flex, Camp Yalla and Yalla Happenings, and reserve in moments.",
 };
 
@@ -36,12 +36,12 @@ export default async function BookPage() {
       <section className="pt-32 pb-10 lg:pt-40">
         <div className="shell flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
           <div>
-            <Eyebrow>Book care</Eyebrow>
+            <Eyebrow>Explore Yalla</Eyebrow>
             <h1 className="display mt-6 text-[clamp(2.8rem,1.6rem+4vw,5rem)]">
-              Find your <em>days.</em>
+              Explore what’s <em>happening.</em>
             </h1>
             <p className="mt-5 max-w-lg text-[1.05rem] text-ink-soft">
-              Filter by offering, your child’s age and date, then reserve. Everything you book appears in your Family Portal.
+              Browse Yalla’s offerings, check availability, and reserve the experiences that work for your family.
             </p>
           </div>
           {guardian ? (
