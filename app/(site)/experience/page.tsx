@@ -29,16 +29,15 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     items: [
       { slug: "yalla-flex", how: "Childcare and coworking by the day, Monday to Friday, when there’s space." },
       { slug: "camp-yalla", how: "Themed weeks, booked as a set so friends and educators stay the same." },
-      { slug: "yalla-weekends", how: "A few hours of weekend care while you work, run errands or rest." },
       { slug: "yalla-after-hours", how: "An evening of play for children while parents enjoy a night out." },
     ],
   },
   {
     mark: "sun",
     title: "Moments together",
-    intro: "Gatherings and occasions for the whole family.",
+    intro: "Play, gatherings and occasions for the whole family.",
     items: [
-      { slug: "yalla-happenings", how: "Immersive Play Sessions, plus pop-ups, workshops and community gatherings." },
+      { slug: "yalla-happenings", how: "Immersive Play, weekend play sessions, pop-ups, workshops and community gatherings, all in one calendar." },
       { slug: "yalla-celebrations", how: "Private parties and special occasions, planned with you." },
     ],
   },

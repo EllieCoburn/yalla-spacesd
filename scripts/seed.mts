@@ -83,7 +83,7 @@ const P = async (v: Partial<typeof s.programs.$inferInsert> & { slug: string; na
   (await db.select().from(s.programs).where(eq(s.programs.slug, v.slug)))[0];
 const club = await P({ slug: "club-yalla", name: "Club Yalla", kind: "membership", tagline: "Your weekly childcare rhythm", parentPresence: "required", bookingMode: "enroll", minAgeMonths: 4, maxAgeMonths: 66, priceUnit: "month" });
 const flex = await P({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", tagline: "Drop-in childcare", parentPresence: "required", minAgeMonths: 4, maxAgeMonths: 66, minNoticeHours: 12, cancellationDeadlineHours: 24, advanceBookingDays: 60 });
-const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind: "weekend", tagline: "A little room in your weekend", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6000, defaultCapacity: 34, minNoticeHours: 24 });
+const weekends = await P({ slug: "yalla-weekends", name: "Weekend Play Sessions", kind: "happening", tagline: "Morning and afternoon play on the weekend", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6000, defaultCapacity: 34, minNoticeHours: 24 });
 const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "individual", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 16000, defaultCapacity: 26 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
@@ -112,7 +112,7 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: club.id, title: `Club Yalla · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
-// Yalla Weekends: first and second Saturday, AM and PM play sessions in three age groups (the 0007 migration does the same in production).
+// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007 and 0013 migrations do the same in production).
 const weekendGroups = [
   { label: "18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
   { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 12 },
@@ -123,7 +123,7 @@ if (!weekendMonthly)
   for (const monthWeek of [1, 2])
     for (const [name, startTime, endTime] of [["AM play session", "09:00", "12:00"], ["PM play session", "13:00", "16:00"]])
       for (const g of weekendGroups)
-        await createSeries(db, admin, { programId: weekends.id, title: `Yalla Weekends · ${name} · ${g.label}`, weekdays: [6], monthWeek, startTime, endTime, startsOn: start, endsOn: addDaysISO(today, 365), capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, priceCents: 6000, locationId: loc.id });
+        await createSeries(db, admin, { programId: weekends.id, title: `Weekend Play · ${name} · ${g.label}`, weekdays: [6], monthWeek, startTime, endTime, startsOn: start, endsOn: addDaysISO(today, 365), capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, priceCents: 6000, locationId: loc.id });
 // After Hours: second Friday of each month, three age groups (the 0003 migration does the same in production).
 const afterHoursGroups = [
   { title: "Yalla After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },

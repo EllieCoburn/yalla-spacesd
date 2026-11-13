@@ -12,7 +12,7 @@ import { getGuardian } from "../portal/session";
 
 export const metadata: Metadata = {
   title: "Book Care",
-  description: "Browse live availability for Yalla Flex, Yalla Weekends, Yalla After Hours, Camp Yalla and Yalla Happenings, and reserve in moments.",
+  description: "Browse live availability for Yalla Flex, Yalla After Hours, Camp Yalla and Yalla Happenings, and reserve in moments.",
 };
 
 export const dynamic = "force-dynamic";

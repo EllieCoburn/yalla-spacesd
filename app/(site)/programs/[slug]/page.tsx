@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { BOOKING_PAGES, ProgramBookingPage } from "@/components/site/ProgramBookingPage";
+import { HappeningsPage } from "@/components/site/HappeningsPage";
 import { EventEnquiryForm } from "@/components/site/EventEnquiryForm";
 import { FlexRates } from "@/components/site/FlexRates";
 import { CtaBand, FactRows, FactsAccordion } from "@/components/site/PageParts";
@@ -26,6 +27,7 @@ const pending = <span className="text-ink-soft">Details coming soon <ToConfirm /
 export default async function ProgramPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = getProgram((await params).slug);
   if (!p || p.kind === "membership") notFound();
+  if (p.kind === "happening") return <HappeningsPage p={p} />;
   if (BOOKING_PAGES[p.kind]) return <ProgramBookingPage p={p} />;
   // Every other way into Yalla, Club Yalla included, so the set reads as a whole.
   const others = [...otherPrograms.filter((o) => o.slug !== p.slug), clubYalla];

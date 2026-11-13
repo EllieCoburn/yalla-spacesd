@@ -121,52 +121,16 @@ export const programs: ProgramContent[] = [
     cta: { label: "View camp dates", href: "/book?offering=camp" },
   },
   {
-    slug: "yalla-weekends",
-    kind: "weekend",
-    name: "Yalla Weekends",
-    short: "Weekend care",
-    tagline: "A little room in your weekend",
-    summary:
-      "Weekend sessions for when you need a few hours for work, errands or simply yourself, while your child has a weekend of their own.",
-    body: [
-      "Yalla Weekends bring Yalla’s calm and creativity to your weekend.",
-      "Two play sessions on the first and second Saturday of every month: a morning session and an afternoon session. Children play with others close to their age, in three groups: 18 months to 4 years, 4 to 7 years, and 7 to 10 years.",
-    ],
-    image: "/photos/rainbow-light.jpg",
-    imageAlt: "A toddler standing in rainbow light on a wooden floor",
-    motif: "dotsun",
-    ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 7 years, and 7 – 10 years",
-    days: "The first and second Saturday of every month. AM play session 9:00am – 12:00pm; PM play session 1:00 – 4:00pm",
-    pricing: "$60 per child per play session",
-    facts: {
-      ages: groups("4 – 7 years"),
-      days: [
-        {
-          lead: "The first and second Saturday of every month",
-          rows: [
-            { label: "AM play session", value: "9:00am – 12:00pm" },
-            { label: "PM play session", value: "1:00 – 4:00pm" },
-          ],
-        },
-      ],
-      pricing: [{ rows: [{ label: "Per child, per play session", value: "$60" }] }],
-    },
-    included: null,
-    parentOnsite: false,
-    bookingMode: "instant",
-    cta: { label: "See weekend sessions", href: "/book?offering=weekend" },
-  },
-  {
     slug: "yalla-happenings",
     kind: "happening",
     name: "Yalla Happenings",
     short: "Pop-up events",
-    tagline: "Pop-ups, workshops & community gatherings",
+    tagline: "Play, gatherings and more, all in one calendar",
     summary:
-      "Immersive Play Sessions for children 3 to 8, plus pop-ups, workshops and gatherings that bring the Yalla community together.",
+      "Immersive Play Sessions, weekend play sessions, pop-ups, workshops and gatherings that bring the Yalla community together, all in one calendar.",
     body: [
       "Yalla is a community as much as a place. Happenings are how we gather: small, thoughtful events that make family life feel a little less solitary.",
-      "Immersive Play Sessions, 9:00am to 12:00pm for children 3 to 8 years, are three-hour blocks to settle in, follow their curiosity and go deep in their play.",
+      "Immersive Play Sessions, 9:00am to 12:00pm for children 3 to 8 years, are three-hour blocks to settle in, follow their curiosity and go deep in their play. Weekend Play Sessions give children 18 months to 10 years a morning or afternoon of play with others their age.",
       "Upcoming Happenings appear in the booking calendar, where you can reserve a place.",
     ],
     image: "/photos/paint-wall.jpg",

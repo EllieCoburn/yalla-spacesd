@@ -27,7 +27,7 @@ const groups: { title: string; items: QA[] }[] = [
       },
       {
         q: "Do I need a membership to come to Yalla?",
-        a: "No. Yalla Flex, Camp Yalla, Yalla Weekends, Yalla After Hours and Yalla Happenings are booked online, one session at a time, and Yalla Celebrations begin with an enquiry. Club Yalla is our recurring weekday membership and begins with an application.",
+        a: "No. Yalla Flex, Camp Yalla, Yalla After Hours and Yalla Happenings (including Immersive Play and weekend play sessions) are booked online, one session at a time, and Yalla Celebrations begin with an enquiry. Club Yalla is our recurring weekday membership and begins with an application.",
       },
       {
         q: "What ages do you care for?",
@@ -39,7 +39,7 @@ const groups: { title: string; items: QA[] }[] = [
       },
       {
         q: "What are your hours?",
-        a: "Hours vary by program. Our weekday cohorts (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps, weekend sessions, After Hours evenings and Happenings have their own times, listed in the booking calendar.",
+        a: "Hours vary by program. Our weekday cohorts (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps, After Hours evenings and Happenings have their own times, listed in the booking calendar.",
       },
     ],
   },
@@ -55,7 +55,7 @@ const groups: { title: string; items: QA[] }[] = [
     title: "Booking & changes",
     items: [
       {
-        q: "How do I book Yalla Flex, Camp Yalla, Weekends, After Hours or Happenings?",
+        q: "How do I book Yalla Flex, Camp Yalla, After Hours or Happenings?",
         a: "Head to Book Care, filter by offering, your child’s age and date, then choose your sessions and reserve. Your bookings live in the Family Portal, where you can view or change them.",
       },
       {

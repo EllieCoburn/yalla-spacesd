@@ -14,7 +14,6 @@ import { stateLabel, usd } from "./format";
 export const offerings: { kind: string; label: string }[] = [
   { kind: "all", label: "Everything" },
   { kind: "drop_in", label: "Yalla Flex" },
-  { kind: "weekend", label: "Yalla Weekends" },
   { kind: "parents_night", label: "Yalla After Hours" },
   { kind: "camp", label: "Camp Yalla" },
   { kind: "happening", label: "Yalla Happenings" },
@@ -42,7 +41,8 @@ export function BookingExplorer({
   const params = useSearchParams();
   const router = useRouter();
   const [offering, setOffering] = useState<string>(
-    params.get("offering") || "all",
+    // Yalla Weekends is now part of Happenings; old links still land in the right place.
+    params.get("offering") === "weekend" ? "happening" : params.get("offering") || "all",
   );
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));
@@ -150,7 +150,7 @@ export function BookingExplorer({
     [childAge],
   );
   const byKind = useMemo(
-    () => all.filter((s) => offering === "all" || s.kind === offering),
+    () => all.filter((s) => offering === "all" || s.kind === offering || (offering === "happening" && s.kind === "weekend")),
     [all, offering],
   );
   const days = useMemo(
@@ -441,17 +441,18 @@ export function BookingExplorer({
   );
 }
 
-// Yalla Weekends: split each Saturday into its AM and PM play sessions.
+// Weekend Play Sessions (a Happening): split each day into its AM and PM play sessions.
+const isWeekendPlay = (s: PublicSession) => s.programSlug === "yalla-weekends" || s.kind === "weekend";
 function playSessionGroups(list: PublicSession[]) {
-  const other = list.filter((s) => s.kind !== "weekend");
-  const weekend = list.filter((s) => s.kind === "weekend");
+  const other = list.filter((s) => !isWeekendPlay(s));
+  const weekend = list.filter(isWeekendPlay);
   const isAM = (s: PublicSession) => fmtTime(s.startsAt).endsWith("am");
   return [
     { key: "other", label: null, list: other },
-    { key: "am", label: "AM play session", list: weekend.filter(isAM) },
+    { key: "am", label: "Weekend Play · AM session", list: weekend.filter(isAM) },
     {
       key: "pm",
-      label: "PM play session",
+      label: "Weekend Play · PM session",
       list: weekend.filter((s) => !isAM(s)),
     },
   ].filter((g) => g.list.length);
@@ -465,7 +466,7 @@ function ageGroupTitle(s: PublicSession) {
 const kindName: Record<string, string> = {
   drop_in: "Yalla Flex · Drop-in",
   nature: "Yalla Outside",
-  weekend: "Yalla Weekends",
+  weekend: "Yalla Happenings",
   happening: "Yalla Happenings",
   parents_night: "Yalla After Hours",
   camp: "Camp Yalla",
@@ -529,7 +530,7 @@ function SessionRow({
         </span>
         <span>
           <span className="eyebrow block text-[0.58rem] text-ink-soft">
-            {kindName[s.kind] ?? s.programName}
+            {s.kind === "happening" && s.programName !== "Yalla Happenings" ? `Yalla Happenings · ${s.programName}` : (kindName[s.kind] ?? s.programName)}
             {s.cohort ? ` · ${s.cohort}` : ""}
           </span>
           <span className="display mt-1 block text-[1.35rem]">
