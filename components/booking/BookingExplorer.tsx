@@ -82,6 +82,7 @@ export function BookingExplorer({
       (params.get("children") ?? "").split(",").filter(Boolean).slice(0, 12),
     [],
   ); // eslint-disable-line react-hooks/exhaustive-deps
+  const comingExtras = useMemo(() => (params.get("extras") ?? "").split(",").filter(Boolean).slice(0, 6), []); // eslint-disable-line react-hooks/exhaustive-deps
   const preselected = useRef(false);
 
   const load = useCallback(async () => {
@@ -423,6 +424,7 @@ export function BookingExplorer({
           guardian={guardian}
           savedChildren={savedChildren}
           includeChildren={comingKids}
+          includeExtras={comingExtras}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
         />

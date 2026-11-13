@@ -49,6 +49,7 @@ export function Checkout({
   guardian,
   savedChildren,
   includeChildren = [],
+  includeExtras = [],
   onClose,
   onRefresh,
 }: {
@@ -57,6 +58,8 @@ export function Checkout({
   savedChildren: SavedChild[];
   /** Saved children to start ticked (chosen by name on a program page). */
   includeChildren?: string[];
+  /** Per-family extras chosen on a program page (e.g. coworking), on until changed here. */
+  includeExtras?: string[];
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -104,6 +107,12 @@ export function Checkout({
     Record<string, Record<string, string[]>>
   >({});
 
+  /** A child's extras for a session; per-family extras chosen earlier apply until changed. */
+  const extrasOf = (e: typeof extras, s: PublicSession, key: string) =>
+    e[s.id]?.[key] ??
+    addonsFor(s.kind, s.programSlug)
+      .filter((a) => a.perFamily && includeExtras.includes(a.key))
+      .map((a) => a.key);
   const sorted = useMemo(
     () => [...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [sessions],
@@ -143,7 +152,7 @@ export function Checkout({
         sessionId: s.id,
         childKeys,
         addons: Object.fromEntries(
-          childKeys.map((k) => [k, extras[s.id]?.[k] ?? []]),
+          childKeys.map((k) => [k, extrasOf(extras, s, k)]),
         ),
       };
     })
@@ -561,7 +570,7 @@ export function Checkout({
                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem]">
                           <span className="text-ink-soft">Staying?</span>
                           {forFamily.map((a) => {
-                            const on = coming.some((c) => (extras[s.id]?.[c.key] ?? []).includes(a.key));
+                            const on = coming.some((c) => extrasOf(extras, s, c.key).includes(a.key));
                             return (
                               <label key={a.key} className="inline-flex cursor-pointer items-center gap-2">
                                 <input
@@ -572,7 +581,7 @@ export function Checkout({
                                       ...e,
                                       [s.id]: Object.fromEntries(
                                         coming.map((c) => {
-                                          const cur = (e[s.id]?.[c.key] ?? []).filter((k) => k !== a.key);
+                                          const cur = extrasOf(e, s, c.key).filter((k) => k !== a.key);
                                           return [c.key, on ? cur : [...cur, a.key]];
                                         }),
                                       ),

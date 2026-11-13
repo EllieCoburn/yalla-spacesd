@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { familyRateTotal } from "@/lib/booking/family-rate";
 import type { PublicSession } from "@/lib/ops/public-booking";
 import { ageInMonths } from "@/lib/time";
+import { addonsFor } from "@/lib/booking/addons";
 
 /**
  * An age group (matched to sessions by its minimum age in months) or a cohort (matched by name).
@@ -76,6 +77,9 @@ export function ProgramDates({
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [picked, setPicked] = useState<string[]>([]);
   const [hint, setHint] = useState(false);
+  /** Extras for the grown-up (e.g. coworking during Immersive Play), once per session. */
+  const forFamily = addonsFor(kind, program).filter((a) => a.perFamily);
+  const [stay, setStay] = useState<string[]>([]);
   /** A signed-in family's children; null until known, empty for everyone else. */
   const [kids, setKids] = useState<Child[] | null>(null);
   const [chosenKids, setChosenKids] = useState<string[]>([]);
@@ -241,6 +245,10 @@ export function ProgramDates({
     total += familyRate
       ? familyRateTotal(prices)
       : prices.reduce((a, b) => a + b, 0);
+    if (prices.length)
+      total += forFamily
+        .filter((a) => stay.includes(a.key))
+        .reduce((sum, a) => sum + a.priceCents, 0);
   }
 
   const book = () => {
@@ -255,9 +263,10 @@ export function ProgramDates({
     const who = byName
       ? `&children=${pickedKids.map((k) => k.id).join(",")}`
       : "";
+    const extras = stay.length ? `&extras=${stay.join(",")}` : "";
     if (lines.length)
       router.push(
-        `/book?offering=${kind}&select=${lines.map((s) => s.id).join(",")}&until=${picked[picked.length - 1]}${who}`,
+        `/book?offering=${kind}&select=${lines.map((s) => s.id).join(",")}&until=${picked[picked.length - 1]}${who}${extras}`,
       );
     else router.push(`/book?offering=${kind}&date=${picked[0]}${who}`);
   };
@@ -422,6 +431,33 @@ export function ProgramDates({
             </p>
           </>
         )}
+        {forFamily.map((a) => (
+          <label
+            key={a.key}
+            className={`mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors sm:max-w-md ${stay.includes(a.key) ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
+          >
+            <span>
+              <span className="block text-[0.95rem]">
+                Staying? {a.label} +{usd(a.priceCents)}
+              </span>
+              <span className="text-[0.78rem] text-ink-soft">
+                {a.time}, once per session for your family
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={stay.includes(a.key)}
+              onChange={() =>
+                setStay((s) =>
+                  s.includes(a.key)
+                    ? s.filter((k) => k !== a.key)
+                    : [...s, a.key],
+                )
+              }
+              className="h-5 w-5 accent-[var(--color-blue)]"
+            />
+          </label>
+        ))}
       </div>
 
       {/* Dates */}
