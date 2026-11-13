@@ -52,10 +52,7 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
             </>
           ) : (
             <div className="mt-12 border-t border-line pt-8">
-              <p className="text-[0.85rem] text-oxblood">Preview: sign-in isn’t connected on this deployment.</p>
-              <Link href="/portal/home" className="mt-3 inline-flex items-center gap-2 text-[0.95rem] text-blue underline-offset-4 hover:underline">
-                Explore the portal with a sample family →
-              </Link>
+              <p className="text-ink-soft">Family sign-in opens soon. In the meantime, we’re happy to help at hello@yallaspacesd.com.</p>
             </div>
           )}
 

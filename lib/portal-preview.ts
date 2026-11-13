@@ -6,7 +6,7 @@ import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
  * made-up sample family. Real families who sign in still see only their own records, and the
  * preview never reads or changes real data. Set to false before launch so the portal needs sign-in.
  */
-export const PORTAL_OPEN_PREVIEW = true;
+export const PORTAL_OPEN_PREVIEW = false;
 
 export type PortalData = Awaited<ReturnType<typeof familyPortalData>>;
 

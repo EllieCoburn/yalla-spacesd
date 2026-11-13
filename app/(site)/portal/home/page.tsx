@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
-import { PortalDashboard } from "@/components/portal/PortalDashboard";
 import { CancelForm, CareForm, SignForm } from "@/components/portal/PortalForms";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
@@ -22,8 +21,7 @@ const STATE_LABEL: Record<string, string> = { complete: "Complete", missing: "Ne
 export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const g = isDbConfigured() ? await getGuardian() : null;
   if (!g && !PORTAL_OPEN_PREVIEW) {
-    // Without a database this deployment can only show the illustrative preview.
-    if (!isDbConfigured()) return <PortalDashboard />;
+    // Signed-out visitors always go to sign-in (there is no sample portal once it's locked).
     redirect("/portal");
   }
   // Open preview: no one is signed in, so show a made-up sample family instead of real records.
