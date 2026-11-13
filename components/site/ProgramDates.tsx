@@ -113,7 +113,11 @@ export function ProgramDates({
             { cache: "no-store" },
           );
           const json = (await res.json()) as { sessions?: PublicSession[] };
-          found.push(...(json.sessions ?? []).filter((s) => !program || s.programSlug === program));
+          found.push(
+            ...(json.sessions ?? []).filter(
+              (s) => !program || s.programSlug === program,
+            ),
+          );
         }
         if (!cancelled) setSessions(found);
       } catch {
@@ -269,6 +273,89 @@ export function ProgramDates({
         `/book?offering=${kind}&select=${lines.map((s) => s.id).join(",")}&until=${picked[picked.length - 1]}${who}${extras}`,
       );
     else router.push(`/book?offering=${kind}&date=${picked[0]}${who}`);
+  };
+
+  /** Full on a chosen group's session, and whether its waitlist is open. */
+  const fullState = (day: string) => {
+    if (!known || pickable(day)) return null;
+    const coming = comingOn(day);
+    const st = (coming.length ? coming : groups).map(
+      (g) => sessionFor(day, g)?.state,
+    );
+    return st.some((x) => x?.state === "full" && x.waitlist)
+      ? "waitlist"
+      : st.some((x) => x?.state === "full")
+        ? "full"
+        : "closed";
+  };
+
+  /** One date. Status is shown in words only: a few spots left, or full with the waitlist. */
+  const tile = (d: string, flowTile: boolean) => {
+    const on = picked.includes(d);
+    const full = fullState(d);
+    const few = !full && fewLeft(d);
+    const status =
+      full === "waitlist"
+        ? "Full · join waitlist"
+        : full === "full"
+          ? "Session full"
+          : full
+            ? "Closed"
+            : few
+              ? "A few spots left"
+              : null;
+    const label = `${fmt(d, { weekday: "long", month: "long", day: "numeric", ...(flowTile ? { year: "numeric" } : {}) })}${status ? `, ${status.toLowerCase()}` : ""}`;
+    const shape = `relative flex flex-col items-center justify-center rounded-xl border px-1 text-center transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${
+      flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]"
+    }`;
+    const inner = (
+      <>
+        <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">
+          {flowTile
+            ? fmt(d, { month: "short" }) +
+              (d.slice(0, 4) !== today.slice(0, 4) ? ` ’${d.slice(2, 4)}` : "")
+            : fmt(d, { weekday: "short" })}
+        </span>
+        <span
+          className={`font-serif leading-none ${flowTile ? "text-[1.6rem]" : "text-[1.45rem]"}`}
+        >
+          {fmt(d, { day: "numeric" })}
+        </span>
+        {status ? (
+          <span
+            className={`mt-1 text-[0.6rem] leading-tight ${on ? "opacity-80" : full ? "" : "text-oxblood"}`}
+          >
+            {status}
+          </span>
+        ) : flowTile ? (
+          <span className="mt-0.5 text-[0.62rem] opacity-60">
+            {fmt(d, { weekday: "short" })}
+          </span>
+        ) : null}
+      </>
+    );
+    if (full === "waitlist")
+      return (
+        <a
+          href={`/book?offering=${kind}&date=${d}`}
+          aria-label={label}
+          className={`${shape} border-dashed border-ink/25 text-ink-soft hover:border-ink hover:text-ink`}
+        >
+          {inner}
+        </a>
+      );
+    return (
+      <button
+        type="button"
+        disabled={!!full}
+        aria-pressed={on}
+        onClick={() => toggle(d)}
+        aria-label={label}
+        className={`${shape} ${on ? "border-ink bg-ink text-chalk" : full ? "cursor-not-allowed border-dashed border-ink/15 text-ink/40" : "border-ink/15 bg-paper hover:border-ink"}`}
+      >
+        {inner}
+      </button>
+    );
   };
 
   const units = (n: number) => `${n} ${unit}${n === 1 ? "" : "s"}`;
@@ -488,49 +575,9 @@ export function ProgramDates({
               </button>
             ) : null}
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-              {all.map((d) => {
-                const on = picked.includes(d);
-                const ok = pickable(d);
-                return (
-                  <li key={d}>
-                    <button
-                      type="button"
-                      disabled={!ok}
-                      aria-pressed={on}
-                      onClick={() => toggle(d)}
-                      aria-label={`${fmt(d, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${ok ? (fewLeft(d) ? ", a few spots left" : "") : ", full"}`}
-                      className={`relative flex h-[5.25rem] w-full flex-col items-center justify-center rounded-xl border transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${
-                        on
-                          ? "border-ink bg-ink text-chalk"
-                          : ok
-                            ? "border-ink/15 bg-paper hover:border-ink"
-                            : "cursor-not-allowed border-dashed border-ink/15 text-ink/30"
-                      }`}
-                    >
-                      <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">
-                        {fmt(d, { month: "short" })}
-                        {d.slice(0, 4) !== today.slice(0, 4)
-                          ? ` ’${d.slice(2, 4)}`
-                          : ""}
-                      </span>
-                      <span
-                        className={`font-serif text-[1.6rem] leading-none ${ok ? "" : "line-through"}`}
-                      >
-                        {fmt(d, { day: "numeric" })}
-                      </span>
-                      <span className="mt-0.5 text-[0.62rem] opacity-60">
-                        {fmt(d, { weekday: "short" })}
-                      </span>
-                      {fewLeft(d) && !on ? (
-                        <span
-                          className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-oxblood"
-                          aria-hidden
-                        />
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
+              {all.map((d) => (
+                <li key={d}>{tile(d, true)}</li>
+              ))}
             </ul>
           </div>
         ) : (
@@ -562,63 +609,15 @@ export function ProgramDates({
                     ) : null}
                   </div>
                   <ul className="flex flex-wrap gap-2">
-                    {list.map((d) => {
-                      const on = picked.includes(d);
-                      const ok = pickable(d);
-                      return (
-                        <li key={d}>
-                          <button
-                            type="button"
-                            disabled={!ok}
-                            aria-pressed={on}
-                            onClick={() => toggle(d)}
-                            aria-label={`${fmt(d, { weekday: "long", month: "long", day: "numeric" })}${ok ? (fewLeft(d) ? ", a few spots left" : "") : ", full"}`}
-                            className={`relative flex h-[4.25rem] w-[4.25rem] flex-col items-center justify-center rounded-xl border transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${
-                              on
-                                ? "border-ink bg-ink text-chalk"
-                                : ok
-                                  ? "border-ink/15 bg-paper hover:border-ink"
-                                  : "cursor-not-allowed border-dashed border-ink/15 text-ink/30"
-                            }`}
-                          >
-                            <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">
-                              {fmt(d, { weekday: "short" })}
-                            </span>
-                            <span
-                              className={`font-serif text-[1.45rem] leading-none ${ok ? "" : "line-through"}`}
-                            >
-                              {fmt(d, { day: "numeric" })}
-                            </span>
-                            {fewLeft(d) && !on ? (
-                              <span
-                                className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-oxblood"
-                                aria-hidden
-                              />
-                            ) : null}
-                          </button>
-                        </li>
-                      );
-                    })}
+                    {list.map((d) => (
+                      <li key={d}>{tile(d, false)}</li>
+                    ))}
                   </ul>
                 </div>
               );
             })}
           </div>
         )}
-        {known ? (
-          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[0.75rem] text-ink-soft">
-            <span className="flex items-center gap-1.5">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-oxblood"
-                aria-hidden
-              />{" "}
-              A few spots left
-            </span>
-            <span>
-              <span className="line-through">12</span> Full
-            </span>
-          </p>
-        ) : null}
       </div>
 
       {/* Summary */}

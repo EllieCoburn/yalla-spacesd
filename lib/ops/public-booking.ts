@@ -67,6 +67,13 @@ export type PublicSession = {
   approvalRequired: boolean;
 };
 
+/** What families see: whether there's room, never how many places are booked or remain. */
+function withoutCounts(st: PublicState): PublicState {
+  if (st.state === "available") return { state: "available", remaining: null };
+  if (st.state === "limited") return { state: "limited", remaining: 0, showCount: false };
+  return st;
+}
+
 type PriceRow = typeof programPrices.$inferSelect;
 
 /** Same precedence as bookings.priceFor, with the price table loaded once. */
@@ -128,7 +135,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       localDate: s.localDate,
       startsAt: s.startsAt.toISOString(),
       endsAt: s.endsAt.toISOString(),
-      state: publicState(s, p, remaining, now),
+      state: withoutCounts(publicState(s, p, remaining, now)),
       priceCents: pickPrice(s, p, table),
       ages: { min: minAge, max: maxAge },
       eligible,
@@ -367,7 +374,7 @@ async function precheck(db: Executor, input: PublicBookingInput): Promise<Public
       return {
         ok: false,
         code: "capacity",
-        error: remaining === 0 ? `${label} is fully booked.` : `Only ${remaining} ${remaining === 1 ? "spot remains" : "spots remain"} for ${label}, and this booking needs ${n}.`,
+        error: remaining === 0 ? `${label} is now full. You can join the waitlist.` : `There isn’t room for everyone in this booking on ${label}. Try fewer children or another date.`,
       };
     for (const l of input.lines.filter((x) => x.sessionId === s.id)) {
       for (const key of l.childKeys) {

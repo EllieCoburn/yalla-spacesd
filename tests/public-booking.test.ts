@@ -59,7 +59,11 @@ describe("public booking", () => {
       }),
     );
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/Only 1 spot remains .* needs 2/);
+    // Families are told there isn't room, never how many places remain.
+    if (!res.ok) {
+      expect(res.error).toMatch(/isn’t room for everyone/);
+      expect(res.error).not.toMatch(/\d+ spots? remain/);
+    }
     expect(await db().select().from(s.payments)).toHaveLength(0);
     expect(await db().select().from(s.families)).toHaveLength(0);
   });
@@ -92,8 +96,9 @@ describe("public booking", () => {
     await createHold(db(), owner, { familyId: f.family.id, items: [{ sessionId: full.id, childId: f.children[0].id }], source: "admin" });
     const list = await listPublicSessions(db(), { from: todayLA(), to: addDaysISO(todayLA(), 10) });
     const byId = new Map(list.map((x) => [x.id, x.state]));
-    expect(byId.get(open.id)).toMatchObject({ state: "available", remaining: 10 });
-    expect(byId.get(low.id)).toMatchObject({ state: "limited", remaining: 1 });
+    // States only: the public list carries no counts.
+    expect(byId.get(open.id)).toMatchObject({ state: "available", remaining: null });
+    expect(byId.get(low.id)).toMatchObject({ state: "limited", remaining: 0, showCount: false });
     expect(byId.get(full.id)).toMatchObject({ state: "full" });
   });
 });
