@@ -160,11 +160,11 @@ export default function ClubYallaPage() {
           {/* Rates callout */}
           <Reveal className="mt-20 flex flex-col items-start justify-between gap-8 bg-mist p-8 sm:p-12 md:flex-row md:items-center">
             <div>
-              <p className="eyebrow text-ink-soft">Membership rates</p>
+              <p className="eyebrow text-ink-soft">Club Yalla membership</p>
               <p className="display mt-3 text-[clamp(1.7rem,1.3rem+1.2vw,2.4rem)]">
-                Tuition by cohort and days, <em>openly shared.</em>
+                Explore our 2026–2027 <em>membership rates.</em>
               </p>
-              <p className="mt-3 text-ink-soft">Monthly tuition for every cohort, plus fees and workspace upgrades.</p>
+              <p className="mt-3 text-ink-soft">View monthly tuition by age group and weekly schedule, along with additional fees and coworking options.</p>
             </div>
             <Button href="/membership" size="lg">
               View membership rates
