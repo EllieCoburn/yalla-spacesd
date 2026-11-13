@@ -224,7 +224,9 @@ export function CreateAccountForm({ next }: { next?: string }) {
         ) : null}
       </fieldset>
 
-      <Submit pending="Creating your account…">Create account</Submit>
+      <div className="flex justify-center">
+        <Submit pending="Creating your account…">Create account</Submit>
+      </div>
       <Message state={state} />
     </form>
   );
