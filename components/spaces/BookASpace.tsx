@@ -905,7 +905,6 @@ function BookingSheet({
                   <p>
                     {fmtDay(weekSpan[0], "short")} – {fmtDay(weekSpan[weekSpan.length - 1], "short")}, {fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))} each day
                   </p>
-                  <p className="mt-2 text-[0.85rem] text-ink-soft">We’ll check every day of the week before you pay. A week is booked whole or not at all.</p>
                 </div>
               ) : null}
 
