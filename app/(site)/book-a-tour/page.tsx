@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Facts, PageHero, Section } from "@/components/site/PageParts";
 import { TourForm } from "@/components/site/TourForm";
-import { Draft } from "@/components/ui/Draft";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { site } from "@/content/site";
@@ -101,13 +100,13 @@ export default function BookATourPage() {
             </h2>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
-            <Draft note="Yalla to confirm the tour format">
+            <div>
               <ol className="space-y-10">
                 {[
-                  ["A warm welcome", "We’ll meet you at the door and show you around."],
-                  ["Cohort spaces & play garden", "See where children play, explore and rest, and how the daily rhythm flows."],
-                  ["The coworking space", "Get a feel for where you’d work, and how close you’d be."],
-                  ["Your questions", "Days, programs, start dates: we’ll talk through whatever is on your mind."],
+                  ["A warm welcome", "A Yalla team member will greet you and introduce you to our community."],
+                  ["Explore our spaces", "Take a guided walk through our coworking areas, childcare cohorts, play spaces, and shared outdoor environments."],
+                  ["Get to know Yalla", "Learn more about our philosophy, daily rhythms, and the programs and experiences we offer."],
+                  ["Let’s talk!", "We’ll answer your questions about membership, programming, scheduling, and anything else you’d like to know."],
                 ].map(([t, b], i) => (
                   <li key={t} className="hairline grid gap-3 border-t pt-7 sm:grid-cols-[3rem_1fr]">
                     <span className="font-serif text-blue italic">0{i + 1}</span>
@@ -118,7 +117,7 @@ export default function BookATourPage() {
                   </li>
                 ))}
               </ol>
-            </Draft>
+            </div>
           </div>
         </div>
       </Section>
