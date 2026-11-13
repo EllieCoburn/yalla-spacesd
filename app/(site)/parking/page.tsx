@@ -7,6 +7,7 @@ import { balboaLots, balboaPassesHref, monthlyLots, parkingAddress, parkingApps,
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { bookings, memberships, playPassSubscriptions } from "@/lib/db/schema";
+import { AppLink } from "@/components/site/AppLink";
 import { getGuardian } from "../portal/session";
 
 /** Enrolled in a Yalla program: a Club Yalla membership, a confirmed booking, or a Play Pass. */
@@ -213,8 +214,8 @@ export default async function ParkingGuide() {
             <p>We encourage families who want to park in a nearby paid lot to use parking apps to save money and time:</p>
             <ul className="flex flex-wrap gap-2">
               {parkingApps.map((a) => (
-                <li key={a} className="rounded-full border border-ink/15 px-4 py-1.5 text-[0.9rem] text-ink">
-                  {a}
+                <li key={a.name}>
+                  <AppLink app={a} />
                 </li>
               ))}
             </ul>

@@ -32,4 +32,23 @@ export const monthlyLots = [
   { name: "Park West Lot", walk: "5 minute walk", address: "2550 Fifth Ave, San Diego, CA 92103", billed: "Through the Family Portal on the last day of each month" },
 ];
 
-export const parkingApps = ["Parkopedia", "SpotHero", "ParkMobile"];
+/**
+ * Parking apps. On iPhone the App Store link opens, on Android the Google Play link, and on a
+ * computer the website. Parkopedia retired its app on July 1, 2026 (its App Store listing says
+ * its services moved to its website), so it always opens the website.
+ */
+export const parkingApps: { name: string; web: string; ios?: string; android?: string }[] = [
+  { name: "Parkopedia", web: "https://www.parkopedia.com" },
+  {
+    name: "SpotHero",
+    web: "https://spothero.com",
+    ios: "https://apps.apple.com/us/app/spothero-1-rated-parking-app/id499097243",
+    android: "https://play.google.com/store/apps/details?id=com.spothero.spothero",
+  },
+  {
+    name: "ParkMobile",
+    web: "https://parkmobile.io",
+    ios: "https://apps.apple.com/us/app/parkmobile-park-pay-go/id365399299",
+    android: "https://play.google.com/store/apps/details?id=net.sharewire.parkmobilev2",
+  },
+];
