@@ -40,7 +40,7 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
         <div className="mx-auto w-full max-w-md px-6">
           <p className="eyebrow text-ink-soft">Family Portal</p>
           <h1 className="display mt-6 text-[clamp(2.6rem,2rem+2vw,3.6rem)]">
-            Sign in to <em>your family.</em>
+            Sign in to your <em>Family Portal.</em>
           </h1>
           <p className="mt-5 text-ink-soft">Children’s profiles, forms, upcoming bookings and payments, all in one place. You’ll stay signed in on this device until you sign out.</p>
           {sp.expired ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">That link has expired or was already used. Sign in with your password, or request a new link below.</p> : null}
@@ -49,7 +49,7 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
             <>
               <PasswordSignInForm next={sp.next} />
               <p className="mt-8 text-[0.95rem]">
-                New to Yalla?{" "}
+                Don’t have an account yet?{" "}
                 <Link href={`/portal/join${sp.next ? `?next=${encodeURIComponent(sp.next)}` : ""}`} className="text-blue underline underline-offset-4">
                   Create your family account
                 </Link>
@@ -67,14 +67,11 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
           )}
 
           <p className="mt-10 text-[0.9rem] text-ink-soft">
-            Considering Yalla?{" "}
+            New to Yalla?{" "}
             <Link href="/programs" className="text-ink underline underline-offset-4">
-              Explore programs
-            </Link>{" "}
-            or{" "}
-            <Link href="/club-yalla" className="text-ink underline underline-offset-4">
-              Club Yalla
+              Explore our programs
             </Link>
+            .
           </p>
         </div>
       </div>
