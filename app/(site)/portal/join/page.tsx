@@ -22,7 +22,7 @@ export default async function JoinPortal({ searchParams }: { searchParams: Promi
           <h1 className="display mt-6 text-[clamp(2.6rem,2rem+2vw,3.6rem)]">
             Create your <em>family account.</em>
           </h1>
-          <p className="mt-5 text-ink-soft">Book Yalla experiences, keep your children’s details in one place, and manage everything from any device.</p>
+          <p className="mt-5 text-ink-soft">Explore and book Yalla experiences, manage your family’s details, and access your reservations, memberships, forms, and payments in one convenient place.</p>
           {configured ? (
             <CreateAccountForm next={sp.next} />
           ) : (
