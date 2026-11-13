@@ -163,10 +163,10 @@ export const programs: ProgramContent[] = [
     short: "Pop-up events",
     tagline: "Pop-ups, workshops & community gatherings",
     summary:
-      "Immersive Play Sessions on the first and third Saturday mornings for children 3 to 8, plus pop-ups, workshops and gatherings that bring the Yalla community together.",
+      "Immersive Play Sessions for children 3 to 8, plus pop-ups, workshops and gatherings that bring the Yalla community together.",
     body: [
       "Yalla is a community as much as a place. Happenings are how we gather: small, thoughtful events that make family life feel a little less solitary.",
-      "Immersive Play Sessions run on the first and third Saturday of every month, 9:00am to 12:00pm, for children 3 to 8 years: three-hour blocks to settle in, follow their curiosity and go deep in their play.",
+      "Immersive Play Sessions, 9:00am to 12:00pm for children 3 to 8 years, are three-hour blocks to settle in, follow their curiosity and go deep in their play.",
       "Upcoming Happenings appear in the booking calendar, where you can reserve a place.",
     ],
     image: "/photos/paint-wall.jpg",

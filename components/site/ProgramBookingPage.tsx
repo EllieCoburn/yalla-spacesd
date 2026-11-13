@@ -137,7 +137,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
   happening: {
     title: (
       <>
-        Immersive Play Sessions, <em>first and third Saturdays.</em>
+        Immersive Play Sessions, <em>three hours of deep play.</em>
       </>
     ),
     lede: "Our Immersive Play Sessions offer three-hour blocks for children to settle in, follow their curiosity, and go deep in their play.",
@@ -174,7 +174,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
     ),
     datesTitle: (
       <>
-        Choose your <em>Saturdays.</em>
+        Choose your <em>sessions.</em>
       </>
     ),
     unit: "day",

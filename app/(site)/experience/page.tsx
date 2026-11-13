@@ -38,7 +38,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     title: "Moments together",
     intro: "Gatherings and occasions for the whole family.",
     items: [
-      { slug: "yalla-happenings", how: "Immersive Play Sessions on Saturday mornings, plus pop-ups, workshops and community gatherings." },
+      { slug: "yalla-happenings", how: "Immersive Play Sessions, plus pop-ups, workshops and community gatherings." },
       { slug: "yalla-celebrations", how: "Private parties and special occasions, planned with you." },
     ],
   },
