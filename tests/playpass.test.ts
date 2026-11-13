@@ -372,3 +372,33 @@ describe("Play Pass in booking checkout", () => {
     expect((await walletSummary(db(), other.family.id)).balanceCents).toBe(20000);
   });
 });
+
+describe("Play Pass administration", () => {
+  it("a new price applies to new members only; existing members renew on their own plan", async () => {
+    const { newPlanVersion } = await import("@/lib/playpass/admin");
+    await plans();
+    const f = await family("Existing");
+    const sub = await join(f, "gather");
+    await newPlanVersion(db(), owner, { tier: "gather", name: "Gather", priceCents: 19000, allocationCents: 21000, minExperiences: 3 });
+    const before = (await walletSummary(db(), f.family.id)).balanceCents;
+    await processEvent(db(), "test", { id: evtId(), type: "membership.invoice_paid", invoiceRef: "tin_old", subscriptionRef: sub.subscriptionRef, localId: sub.id, amountCents: 18000, reason: "renewal" });
+    expect((await walletSummary(db(), f.family.id)).balanceCents).toBe(before + 20000);
+    const offered = await db().select().from(s.playPassPlans).where(and(eq(s.playPassPlans.tier, "gather"), eq(s.playPassPlans.active, true)));
+    expect(offered.map((p) => p.priceCents)).toEqual([19000]);
+  });
+
+  it("reports membership cash separately from wallet value", async () => {
+    const { financialReport } = await import("@/lib/playpass/admin");
+    await plans();
+    const f = await family("Report");
+    const sub = await join(f, "gather");
+    const p = await eligibleProgram();
+    const sess = await session(p.id, { capacity: 4 });
+    await book(f.family.id, [{ sessionId: sess.id, childId: f.children[0].id }]);
+    const r = await financialReport(db());
+    expect(r.membershipCashCents).toBe(sub.initialChargeCents);
+    expect(r.allocatedCents).toBe(sub.initialAllocationCents);
+    expect(r.redeemedCents).toBe(Math.min(6500, sub.initialAllocationCents));
+    expect(r.unredeemedCents).toBe(r.allocatedCents - r.redeemedCents);
+  });
+});
