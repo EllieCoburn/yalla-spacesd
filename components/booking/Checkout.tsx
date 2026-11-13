@@ -143,6 +143,17 @@ export function Checkout({
   };
   const isOn = (sid: string, key: string) =>
     (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
+  // A Happening with several age groups arrives as one session per group: show only the groups
+  // a chosen child fits, and say which chosen sessions none of the children can attend.
+  const fits = (s: PublicSession) => chosen.some((c) => eligible(s, c));
+  const shownSessions = sorted.filter(fits);
+  const skipped = [
+    ...new Map(
+      sorted
+        .filter((s) => !sorted.some((o) => o.programId === s.programId && o.startsAt === s.startsAt && fits(o)))
+        .map((s) => [`${s.programId}|${s.startsAt}`, s]),
+    ).values(),
+  ];
   const lines = sorted
     .map((s) => {
       const childKeys = chosen
@@ -517,8 +528,14 @@ export function Checkout({
               <p className="mt-2 text-ink-soft">
                 Choose who’s attending each session.
               </p>
+              {skipped.length ? (
+                <p className="mt-4 border-l-2 border-oxblood/40 pl-3 text-[0.85rem] text-oxblood">
+                  Not included, as none of the children you chose are in its age range:{" "}
+                  {skipped.map((s) => `${s.title.split(" · ")[0]} on ${fmtDate(s.localDate, "EEE d MMM")}`).join(", ")}.
+                </p>
+              ) : null}
               <ul className="mt-8 divide-y divide-line border-y border-line">
-                {sorted.map((s) => (
+                {shownSessions.map((s) => (
                   <li key={s.id} className="py-5">
                     <div className="flex items-baseline justify-between gap-4">
                       <p className="display text-[1.25rem]">{s.title}</p>
