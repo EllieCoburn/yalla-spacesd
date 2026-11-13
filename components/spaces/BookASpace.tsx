@@ -561,6 +561,19 @@ function BookingSheet({
   const remaining = allowance ? Math.min(allowance.dailyMinutes, allowance.remainingMinutes + extra) : 0;
   const busy = localBusy(view.busy, ws.id, skip);
   const priced = Object.fromEntries(ws.pricedTypes.map((p) => [p.bookingType, p.cents])) as Record<string, number>;
+  // A half or full day that has already begun can be booked for what's left, from the next half
+  // hour, at a prorated price. Returns the start it would get (or null once it's over).
+  const fromNow = (a: number, b: number) => {
+    if (nowMin == null || a > nowMin) return a;
+    const next = Math.ceil((nowMin + 0.01) / 30) * 30;
+    return next < b ? next : null;
+  };
+  const prorate = (cents: number, a: number, b: number) => {
+    const f = fromNow(a, b);
+    return f == null ? null : Math.round((cents * (b - f)) / (b - a));
+  };
+  const fd = { a: toMin(view.config.fullDay.start), b: toMin(view.config.fullDay.end) };
+  const fdFrom = fromNow(fd.a, fd.b);
 
   const kinds: { kind: Kind; title: string; detail: string; disabled?: string }[] = [];
   if (ws.complimentary)
@@ -580,9 +593,23 @@ function BookingSheet({
     if (priced.half_day != null && (view.config.halfDay.morning || view.config.halfDay.afternoon)) {
       const h = view.config.halfDay;
       const only = h.morning && !h.afternoon ? h.morning : !h.morning && h.afternoon ? h.afternoon : null;
-      kinds.push({ kind: "half_day", title: "Half day", detail: only ? `${usd(priced.half_day)} · ${fmtRange(toMin(only.start), toMin(only.end))}` : usd(priced.half_day) });
+      const ended = (["morning", "afternoon"] as const).every((k) => !h[k] || fromNow(toMin(h[k]!.start), toMin(h[k]!.end)) == null);
+      kinds.push({
+        kind: "half_day",
+        title: "Half day",
+        detail: only ? `${usd(priced.half_day)} · ${fmtRange(toMin(only.start), toMin(only.end))}` : usd(priced.half_day),
+        disabled: ended ? "Today’s half day has ended. A full day is prorated for the time that’s left." : undefined,
+      });
     }
-    if (priced.full_day != null) kinds.push({ kind: "full_day", title: "Full day", detail: `${usd(priced.full_day)} · ${fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))}` });
+    if (priced.full_day != null) kinds.push({
+        kind: "full_day",
+        title: "Full day",
+        detail:
+          fdFrom != null && fdFrom !== fd.a
+            ? `${usd(prorate(priced.full_day, fd.a, fd.b)!)} · ${fmtRange(fdFrom, fd.b)} · prorated, already underway`
+            : `${usd(priced.full_day)} · ${fmtRange(fd.a, fd.b)}`,
+        disabled: fdFrom == null ? "Today’s session has ended." : undefined,
+      });
     if (priced.week != null)
       kinds.push({ kind: "week", title: "Week", detail: `${usd(priced.week)} · ${view.config.week.mode === "calendar" ? "Monday – Friday" : `${view.config.week.days} days in a row, starting any day`}` });
   }
@@ -630,7 +657,10 @@ function BookingSheet({
   // If the chosen start doesn't fit the chosen duration, fall back gracefully.
   const startOk = c.start != null && starts.includes(c.start);
   const halfWindow = c.half ? view.config.halfDay[c.half] : null;
-  const windowFree = (a: number, b: number) => !busy.some((x) => a < x.end && b > x.start) && (nowMin == null || a > nowMin);
+  const windowFree = (a: number, b: number) => {
+    const f = fromNow(a, b);
+    return f != null && !busy.some((x) => f < x.end && b > x.start);
+  };
 
   const input: ReserveInput | null = !c.kind
     ? null
@@ -852,7 +882,9 @@ function BookingSheet({
                       .map((h) => {
                         const w = view.config.halfDay[h]!;
                         const free = windowFree(toMin(w.start), toMin(w.end));
-                        const past = nowMin != null && toMin(w.start) <= nowMin;
+                        const from = fromNow(toMin(w.start), toMin(w.end));
+                        const past = from == null;
+                        const late = from != null && from !== toMin(w.start);
                         return (
                           <button
                             key={h}
@@ -863,7 +895,7 @@ function BookingSheet({
                             className={`border px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none disabled:opacity-40 ${c.half === h ? "border-ink bg-paper" : "border-line hover:border-ink/40"}`}
                           >
                             <span className="block capitalize">{h}</span>
-                            <span className="text-[0.8rem] text-ink-soft">{free ? fmtRange(toMin(w.start), toMin(w.end)) : past ? "Already started" : "Reserved"}</span>
+                            <span className="text-[0.8rem] text-ink-soft">{free ? (late ? `${fmtRange(from!, toMin(w.end))} · ${usd(prorate(priced.half_day, toMin(w.start), toMin(w.end))!)} prorated` : fmtRange(toMin(w.start), toMin(w.end))) : past ? "Ended" : "Reserved"}</span>
                           </button>
                         );
                       })}
@@ -873,8 +905,11 @@ function BookingSheet({
 
               {c.kind === "full_day" ? (
                 <p className="text-[0.95rem]">
-                  {fmtDay(view.date)}, {fmtRange(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end))}
-                  {!windowFree(toMin(view.config.fullDay.start), toMin(view.config.fullDay.end)) ? <span className="mt-2 block text-[0.88rem] text-ink-soft">Part of this day is already reserved. Try another date.</span> : null}
+                  {fmtDay(view.date)}, {fmtRange(fdFrom ?? fd.a, fd.b)}
+                  {fdFrom != null && fdFrom !== fd.a ? (
+                    <span className="mt-2 block text-[0.88rem] text-ink-soft">Today’s session is already underway, so you’ll pay only for the time that’s left.</span>
+                  ) : null}
+                  {fdFrom != null && !windowFree(fd.a, fd.b) ? <span className="mt-2 block text-[0.88rem] text-ink-soft">Part of this day is already reserved. Try another date.</span> : null}
                 </p>
               ) : null}
 
@@ -921,8 +956,17 @@ function BookingSheet({
               <dl className="divide-y divide-line border-y border-line">
                 <Row label="Space" value={`${ws.name} · ${CATEGORY_LABEL[ws.category]}`} />
                 <Row label={q.intervals.length > 1 ? "Dates" : "Date"} value={q.intervals.length > 1 ? `${fmtDay(q.intervals[0].localDate, "short")} – ${fmtDay(q.intervals[q.intervals.length - 1].localDate, "short")}` : fmtDay(q.intervals[0].localDate)} />
-                <Row label="Time" value={`${fmtRange(laMinutes(q.intervals[0].startsAt), laMinutes(q.intervals[0].endsAt))}${q.intervals.length > 1 ? " each day" : ""}`} />
-                <Row label="Duration" value={q.bookingType === "week" ? `${q.intervals.length} days` : q.bookingType === "full_day" ? "Full day" : q.bookingType === "half_day" ? "Half day" : fmtDuration(q.minutes)} />
+                <Row
+                  label="Time"
+                  value={
+                    q.intervals.length > 1
+                      ? `${fmtRange(laMinutes(q.intervals[q.intervals.length - 1].startsAt), laMinutes(q.intervals[q.intervals.length - 1].endsAt))} each day${
+                          laMinutes(q.intervals[0].startsAt) !== laMinutes(q.intervals[q.intervals.length - 1].startsAt) ? ` (from ${fmtMin(laMinutes(q.intervals[0].startsAt))} on the first day)` : ""
+                        }`
+                      : fmtRange(laMinutes(q.intervals[0].startsAt), laMinutes(q.intervals[0].endsAt))
+                  }
+                />
+                <Row label="Duration" value={q.bookingType === "week" ? `${q.intervals.length} days` : q.proratedFromCents != null ? fmtDuration(q.minutes) : q.bookingType === "full_day" ? "Full day" : q.bookingType === "half_day" ? "Half day" : fmtDuration(q.minutes)} />
               </dl>
               <dl className="space-y-2 text-[0.95rem]">
                 {q.bookingType === "complimentary" ? (
@@ -935,8 +979,12 @@ function BookingSheet({
                     <dt>
                       {KIND_LABEL[q.bookingType]}
                       {q.bookingType === "hourly" ? ` · ${fmtDuration(q.minutes)}` : ""}
+                      {q.proratedFromCents != null ? " · prorated" : ""}
                     </dt>
-                    <dd className="tabular-nums">{usd(q.priceCents)}</dd>
+                    <dd className="tabular-nums">
+                      {q.proratedFromCents != null ? <span className="mr-2 text-ink-soft line-through">{usd(q.proratedFromCents)}</span> : null}
+                      {usd(q.priceCents)}
+                    </dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4 border-t border-line pt-3">
@@ -994,7 +1042,13 @@ function BookingSheet({
               </button>
             ) : (
               <span className="text-[0.85rem] text-ink-soft" aria-live="polite">
-                {c.kind === "complimentary" ? "Included with tuition" : c.kind && priced[c.kind] != null ? (c.kind === "hourly" && c.minutes ? usd(Math.round((priced.hourly * c.minutes) / 60)) : usd(priced[c.kind])) : ""}
+                {c.kind === "complimentary" ? "Included with tuition" : c.kind && priced[c.kind] != null ? (c.kind === "hourly" && c.minutes
+                      ? usd(Math.round((priced.hourly * c.minutes) / 60))
+                      : c.kind === "full_day"
+                        ? usd(prorate(priced.full_day, fd.a, fd.b) ?? priced.full_day)
+                        : c.kind === "half_day" && halfWindow
+                          ? usd(prorate(priced.half_day, toMin(halfWindow.start), toMin(halfWindow.end)) ?? priced.half_day)
+                          : usd(priced[c.kind])) : ""}
               </span>
             )}
             {step === "choose" ? (

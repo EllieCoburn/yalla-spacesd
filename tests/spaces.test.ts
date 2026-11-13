@@ -359,6 +359,43 @@ describe("Community", () => {
   });
 });
 
+describe("Booking a day that has already begun", () => {
+  // Monday Nov 16 2026 in San Diego (PST, UTC-8): 8:30am = 16:30Z.
+  const day = "2026-11-16";
+  const at = (hhmm: string) => new Date(Date.parse(`${day}T${hhmm}:00Z`) + 8 * 3600_000);
+
+  it("charges the full price up to the start, then prorates by the half hour", async () => {
+    const ws = await seedSpaces();
+    const f = await family("Late");
+    const full = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, now: at("08:27") });
+    expect(full).toMatchObject({ priceCents: 3500, proratedFromCents: null, minutes: 480 });
+    const late = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, now: at("08:31") });
+    expect(late.intervals[0].startsAt).toBe(at("09:00").toISOString());
+    expect(late).toMatchObject({ priceCents: Math.round((3500 * 450) / 480), proratedFromCents: 3500, minutes: 450 });
+    const afternoon = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, now: at("14:27") });
+    expect(afternoon.intervals[0].startsAt).toBe(at("14:30").toISOString());
+    expect(afternoon.priceCents).toBe(875);
+    const half = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "half_day", date: day, half: "morning" } as ReserveInput, { familyId: f.family.id, now: at("10:05") });
+    expect(half.intervals[0].startsAt).toBe(at("10:30").toISOString());
+    expect(half.priceCents).toBe(Math.round((1800 * 90) / 210));
+    await expect(quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, now: at("16:05") })).rejects.toThrow(/already ended/);
+  });
+
+  it("never prorates a day that hasn't begun, and stores the prorated time and price", async () => {
+    const ws = await seedSpaces();
+    const f = await family("Store");
+    const tomorrow = await quoteSpace(db(), { workspaceId: ws.zora.id, bookingType: "full_day", date: "2026-11-17" }, { familyId: f.family.id, now: at("14:27") });
+    expect(tomorrow).toMatchObject({ priceCents: 3500, proratedFromCents: null });
+    // Someone had the desk this morning; the afternoon is still free to book.
+    const other = await family("Morning");
+    await createReservation(db(), owner, { workspaceId: ws.zora.id, bookingType: "half_day", date: day, half: "morning" } as ReserveInput, { familyId: other.family.id, source: "admin", charge: "none", now: at("07:00") });
+    const g = await createReservation(db(), familyActor(), { workspaceId: ws.zora.id, bookingType: "full_day", date: day }, { familyId: f.family.id, source: "portal", now: at("12:10") });
+    expect(g.totalCents).toBe(Math.round((3500 * 240) / 480));
+    const [row] = await db().select().from(s.spaceReservations).where(eq(s.spaceReservations.groupId, g.id));
+    expect(row.startsAt.toISOString()).toBe(at("12:30").toISOString());
+  });
+});
+
 describe("Time handling", () => {
   it("keeps 8:30am local across the daylight saving change", async () => {
     const ws = { id: "w", name: "Jane", hours: null } as unknown as typeof s.workspaces.$inferSelect;

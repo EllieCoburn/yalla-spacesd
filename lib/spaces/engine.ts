@@ -275,6 +275,8 @@ export type Quote = {
   intervals: { localDate: string; startsAt: string; endsAt: string }[];
   minutes: number;
   priceCents: number;
+  /** Set when a half day, full day or week was booked after it began: the full price before proration. */
+  proratedFromCents: number | null;
   rate: { id: string; priceCents: number; unit: string } | null;
   complimentaryMinutes: number;
   allowance: Allowance | null;
@@ -327,16 +329,28 @@ export async function quoteSpace(db: Executor, input: ReserveInput, ctx: Ctx): P
   const horizon = addDaysISO(input.date, 14);
   const closed = await closedDates(db, input.date, horizon);
   const intervals = planIntervals(cfg, ws, input, closed);
-  const minutes = intervals.reduce((s, i) => s + (i.endsAt.getTime() - i.startsAt.getTime()) / 60000, 0);
+  const span = (list: Interval[]) => list.reduce((s, i) => s + (i.endsAt.getTime() - i.startsAt.getTime()) / 60000, 0);
+  const fullMinutes = span(intervals);
 
   if (!ctx.override) {
     const earliest = new Date(now.getTime() + ws.minNoticeMinutes * 60000);
-    if (intervals[0].startsAt <= earliest) throw new OpsError("past", ws.minNoticeMinutes ? `Please book at least ${ws.minNoticeMinutes} minutes ahead.` : "That time has already started. Choose a later time.");
+    // A half day, full day or week that has already begun can still be booked for what's left of
+    // it, from the next half hour, at a prorated price. Only once it has begun: never in advance.
+    const PRORATABLE: BookingType[] = ["half_day", "full_day", "week"];
+    if (PRORATABLE.includes(input.bookingType) && intervals[0].startsAt < earliest) {
+      const step = 30 * 60000;
+      const from = new Date(Math.ceil(earliest.getTime() / step) * step);
+      if (from >= intervals[0].endsAt) throw new OpsError("past", "That time has already ended. Choose a later time.");
+      intervals[0] = { ...intervals[0], startsAt: from };
+    }
+    if (intervals[0].startsAt < earliest) throw new OpsError("past", ws.minNoticeMinutes ? `Please book at least ${ws.minNoticeMinutes} minutes ahead.` : "That time has already started. Choose a later time.");
     if (intervals[0].localDate > addDaysISO(todayLA(now), ws.maxAdvanceDays)) throw new OpsError("too_far", `${ws.name} can be booked up to ${ws.maxAdvanceDays} days ahead.`);
   }
 
+  const minutes = span(intervals);
   let rate: RateRow | null = null;
   let priceCents = 0;
+  let proratedFromCents: number | null = null;
   let complimentaryMinutes = 0;
   let allowance: Allowance | null = null;
   let problem: string | null = null;
@@ -356,7 +370,13 @@ export async function quoteSpace(db: Executor, input: ReserveInput, ctx: Ctx): P
   } else {
     rate = await rateFor(db, ws, input.bookingType, input.date);
     if (!rate) problem = `${BOOKING_TYPE_LABEL[input.bookingType]} reservations for ${ws.name} don’t have a price yet, so they can’t be booked online.`;
-    else priceCents = priceFor(rate, input.bookingType, minutes);
+    else {
+      priceCents = priceFor(rate, input.bookingType, minutes);
+      if (input.bookingType !== "hourly" && minutes < fullMinutes) {
+        proratedFromCents = priceCents;
+        priceCents = Math.round((priceCents * minutes) / fullMinutes);
+      }
+    }
   }
   // Coworking is for families already in the Yalla community (staff can still book for anyone).
   if (!ctx.override && ctx.familyId && !(await inCommunity(db, ctx.familyId, now))) problem = COMMUNITY_MESSAGE;
@@ -371,6 +391,7 @@ export async function quoteSpace(db: Executor, input: ReserveInput, ctx: Ctx): P
     intervals: intervals.map((i) => ({ localDate: i.localDate, startsAt: i.startsAt.toISOString(), endsAt: i.endsAt.toISOString() })),
     minutes,
     priceCents,
+    proratedFromCents,
     rate: rate ? { id: rate.id, priceCents: rate.priceCents, unit: RATE_UNIT[input.bookingType as PaidBookingType] } : null,
     complimentaryMinutes,
     allowance,
@@ -467,7 +488,10 @@ export function describeWhen(intervals: { localDate: string; startsAt: string | 
   if (!intervals.length) return "";
   const first = intervals[0];
   const last = intervals[intervals.length - 1];
-  if (intervals.length > 1) return `${fmtDate(first.localDate, "EEE MMM d")} – ${fmtDate(last.localDate, "EEE MMM d")}, ${fmtTime(first.startsAt)} – ${fmtTime(first.endsAt)} daily`;
+  if (intervals.length > 1) {
+    const late = fmtTime(first.startsAt) !== fmtTime(last.startsAt);
+    return `${fmtDate(first.localDate, "EEE MMM d")} – ${fmtDate(last.localDate, "EEE MMM d")}, ${fmtTime(last.startsAt)} – ${fmtTime(last.endsAt)} daily${late ? ` (from ${fmtTime(first.startsAt)} on the first day)` : ""}`;
+  }
   return `${fmtDate(first.localDate, "EEE MMM d")}, ${fmtTime(first.startsAt)} – ${fmtTime(first.endsAt)}`;
 }
 
