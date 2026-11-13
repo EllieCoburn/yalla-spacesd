@@ -84,11 +84,11 @@ const P = async (v: Partial<typeof s.programs.$inferInsert> & { slug: string; na
 const club = await P({ slug: "club-yalla", name: "Club Yalla", kind: "membership", tagline: "Your weekly childcare rhythm", parentPresence: "required", bookingMode: "enroll", minAgeMonths: 4, maxAgeMonths: 66, priceUnit: "month" });
 const flex = await P({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", tagline: "Drop-in childcare", parentPresence: "required", minAgeMonths: 4, maxAgeMonths: 66, minNoticeHours: 12, cancellationDeadlineHours: 24, advanceBookingDays: 60 });
 const weekends = await P({ slug: "yalla-weekends", name: "Weekend Play Sessions", kind: "happening", tagline: "Morning and afternoon play on the weekend", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6000, defaultCapacity: 34, minNoticeHours: 24 });
-const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
+const after = await P({ slug: "yalla-after-hours", name: "After Hours Evenings", kind: "parents_night", tagline: "An evening of play for them, a night out for you", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "individual", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 16000, defaultCapacity: 26 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
 const immersive = await P({ slug: "immersive-play", name: "Immersive Play Sessions", kind: "happening", tagline: "Three unhurried hours to go deep in their play", parentPresence: "optional", minAgeMonths: 36, maxAgeMonths: 107, priceCents: 4500, defaultCapacity: 12 });
-await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required" });
+await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required", status: "paused" });
 await P({ slug: "yalla-outside", name: "Yalla Outside", kind: "nature", tagline: "Nature exploration in Balboa Park", status: "draft", bookingMode: "request" });
 
 for (const [i, c] of cohortDefs.entries()) {
@@ -126,9 +126,9 @@ if (!weekendMonthly)
         await createSeries(db, admin, { programId: weekends.id, title: `Weekend Play · ${name} · ${g.label}`, weekdays: [6], monthWeek, startTime, endTime, startsOn: start, endsOn: addDaysISO(today, 365), capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, priceCents: 6000, locationId: loc.id });
 // After Hours: second Friday of each month, three age groups (the 0003 migration does the same in production).
 const afterHoursGroups = [
-  { title: "Yalla After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
-  { title: "Yalla After Hours · 4 – 6 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 },
-  { title: "Yalla After Hours · 7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 10 },
+  { title: "After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
+  { title: "After Hours · 4 – 6 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 },
+  { title: "After Hours · 7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 10 },
 ];
 const [afterHoursMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, after.id), isNotNull(s.scheduleSeries.monthWeek)));
 if (!afterHoursMonthly)
@@ -146,7 +146,7 @@ const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).w
 if (!campExisting)
   for (const day of campDays)
     for (const g of afterHoursGroups)
-      await createSession(db, admin, { programId: camp.id, title: g.title.replace("Yalla After Hours", "Camp Yalla"), localDate: day, startTime: "09:00", endTime: "15:00", capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, locationId: loc.id });
+      await createSession(db, admin, { programId: camp.id, title: g.title.replace("After Hours", "Camp Yalla"), localDate: day, startTime: "09:00", endTime: "15:00", capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, locationId: loc.id });
 let thanksgiving = "2026-11-26";
 if (thanksgiving < today) thanksgiving = addDaysISO(today, 40);
 await addBlackout(db, admin, { startsOn: thanksgiving, endsOn: addDaysISO(thanksgiving, 1), reason: "Thanksgiving (sample closure)", confirmAffected: true });

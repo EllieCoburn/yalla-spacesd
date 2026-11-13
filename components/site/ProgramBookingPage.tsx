@@ -94,42 +94,6 @@ export const BOOKING_PAGES: Record<string, Page> = {
       questions,
     ],
   },
-  parents_night: {
-    title: (
-      <>
-        Evenings out, <em>on select dates.</em>
-      </>
-    ),
-    lede: "An evening of play for them, a night out for you. For children 18 months to 10 years, each spending the evening in a separate group with others their own age.",
-    facts: [
-      { label: "Hours", value: "5:00 – 9:00pm" },
-      { label: "Ages", value: "18 months – 10 years" },
-      { label: "Price", value: "$65 per child" },
-    ],
-    priceNote:
-      "Siblings: $85 for up to three children, +$25 for each additional child. Applied automatically when you book them together.",
-    datesTitle: (
-      <>
-        Choose your <em>evenings.</em>
-      </>
-    ),
-    unit: "evening",
-    groups: AGE_GROUPS(6500),
-    horizonDays: 365,
-    familyRate: true,
-    goodToKnow: [
-      {
-        label: "Separate age groups",
-        lines: [
-          "18 months – 4 years",
-          "4 – 6 years",
-          "7 – 10 years",
-          "Each with its own evening, planned for its age",
-        ],
-      },
-      questions,
-    ],
-  },
   drop_in: {
     title: (
       <>

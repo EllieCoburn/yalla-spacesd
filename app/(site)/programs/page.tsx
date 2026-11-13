@@ -9,7 +9,7 @@ import { otherPrograms } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "Programs",
-  description: "Weekly childcare, drop-in days, camps, Happenings like immersive and weekend play, parents’ nights out and private events at Yalla in Bankers Hill, San Diego.",
+  description: "Weekly childcare, drop-in days, camps, and Happenings like immersive play, weekend play and evenings out at Yalla in Bankers Hill, San Diego.",
 };
 
 export default function ProgramsPage() {
@@ -23,7 +23,7 @@ export default function ProgramsPage() {
             A little Yalla <em>for every kind of day.</em>
           </>
         }
-        lede="Drop-in days, camps, evenings out, Happenings and private celebrations. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
+        lede="Drop-in days, camps and Happenings, from immersive play to evenings out. Each has its own shape, and every one shares the same warmth, intention and attention to detail."
       />
 
       <section className="pb-10">

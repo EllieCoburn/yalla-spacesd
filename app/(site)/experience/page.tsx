@@ -10,7 +10,7 @@ import { getProgram, programHref } from "@/content/programs";
 
 export const metadata: Metadata = {
   title: "The Yalla Experience",
-  description: "What every Yalla program shares, and the many ways families take part: weekly membership, drop-in days, camps, weekends, evenings, pop-ups and private celebrations.",
+  description: "What every Yalla program shares, and the many ways families take part: weekly membership, drop-in days, camps, and Happenings like immersive play, weekend play and evenings out.",
 };
 
 const principles = [
@@ -29,7 +29,6 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     items: [
       { slug: "yalla-flex", how: "Childcare and coworking by the day, Monday to Friday, when there’s space." },
       { slug: "camp-yalla", how: "Themed weeks, booked as a set so friends and educators stay the same." },
-      { slug: "yalla-after-hours", how: "An evening of play for children while parents enjoy a night out." },
     ],
   },
   {
@@ -37,8 +36,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     title: "Moments together",
     intro: "Play, gatherings and occasions for the whole family.",
     items: [
-      { slug: "yalla-happenings", how: "Immersive Play, weekend play sessions, pop-ups, workshops and community gatherings, all in one calendar." },
-      { slug: "yalla-celebrations", how: "Private parties and special occasions, planned with you." },
+      { slug: "yalla-happenings", how: "Immersive Play, weekend play, After Hours evenings, pop-ups, workshops and community gatherings, all in one calendar." },
     ],
   },
   {
@@ -60,7 +58,7 @@ export default function ExperiencePage() {
             One way of caring, <em>many ways in.</em>
           </>
         }
-        lede="A drop-in day, a camp week, a weekend morning, an evening out, a celebration or a weekly rhythm: every way of joining Yalla rests on the same things. Attentive people, thoughtful spaces, and room to play and connect."
+        lede="A drop-in day, a camp week, a weekend morning, an evening out or a weekly rhythm: every way of joining Yalla rests on the same things. Attentive people, thoughtful spaces, and room to play and connect."
         image={{ src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" }}
       />
 

@@ -64,7 +64,7 @@ export function samplePortalData(): PortalData {
     memberships: [{ id: "preview-m", child: "Ava", weekdays: [1, 2, 3, 4, 5], dayLength: "full", startsOn: addDaysISO(today, -120), endsOn: null, status: "active" }],
     upcoming: [
       booking("p1", sat, "09:00", "12:00", "Weekend Play · AM play session · 18 months – 4 years", "Leo", "YL-SAMPLE1"),
-      booking("p2", fri, "17:00", "21:00", "Yalla After Hours · 18 months – 4 years", "Leo", "YL-SAMPLE2"),
+      booking("p2", fri, "17:00", "21:00", "After Hours · 18 months – 4 years", "Leo", "YL-SAMPLE2"),
     ].sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     past: [{ ...booking("p0", -12, "08:30", "16:30", "Yalla Flex · Full day", "Leo", "YL-SAMPLE0"), canCancel: false }],
     forms: [

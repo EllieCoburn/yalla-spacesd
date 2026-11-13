@@ -23,15 +23,22 @@ const kinds = [
     facts: ["Ages 18 months – 10 years", "Morning 9:00am – 12:00pm", "Afternoon 1:00 – 4:00pm", "$60 per child"],
   },
   {
+    id: "after-hours",
+    dot: "bg-ink",
+    name: "After Hours Evenings",
+    body: "An evening of play for them, a night out for you, with children in separate groups alongside others their own age.",
+    facts: ["Ages 18 months – 10 years", "5:00 – 9:00pm", "$65 per child", "Siblings: family rate"],
+  },
+  {
     id: "calendar",
-    dot: "bg-ink/40",
+    dot: "bg-stone",
     name: "Pop-ups & gatherings",
     body: "Workshops, seasonal events and community gatherings that make family life feel a little less solitary.",
     facts: ["Details with each event"],
   },
 ];
 
-/** Yalla Happenings: one calendar for Immersive Play, weekend play sessions, pop-ups and more. */
+/** Yalla Happenings: one calendar for Immersive Play, weekend play, After Hours evenings, pop-ups and more. */
 export function HappeningsPage({ p }: { p: ProgramContent }) {
   return (
     <>
@@ -51,7 +58,7 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
                 Play, gatherings <em>and more.</em>
               </h1>
               <p className="mt-6 max-w-lg text-[1.1rem] text-ink-soft">
-                Happenings are how we gather: immersive play, weekend play sessions, workshops and community events, all in one calendar.
+                Happenings are how we gather: immersive play, weekend play, evenings out, workshops and community events, all in one calendar.
               </p>
               <div className="mt-10">
                 <Button href="#calendar" size="lg">
@@ -67,11 +74,11 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
           </div>
 
           {/* The kinds of Happenings */}
-          <div className="mt-16 grid gap-px overflow-hidden border border-line bg-line md:grid-cols-3">
+          <div className="mt-16 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
             {kinds.map((k) => (
               <a key={k.name} href={`#${k.id}`} className="group bg-chalk p-7 transition-colors hover:bg-paper">
-                <p className="flex items-center gap-2.5">
-                  <span className={`h-2.5 w-2.5 rounded-full ${k.dot}`} aria-hidden />
+                <p className="flex items-start gap-2.5">
+                  <span className={`mt-[0.7rem] h-2.5 w-2.5 shrink-0 rounded-full ${k.dot}`} aria-hidden />
                   <span className="display text-[1.45rem]">{k.name}</span>
                 </p>
                 <p className="mt-3 text-[0.95rem] text-ink-soft">{k.body}</p>
@@ -233,6 +240,65 @@ export function HappeningsPage({ p }: { p: ProgramContent }) {
               </Link>
               .
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* After Hours */}
+      <section id="after-hours" className="scroll-mt-24 py-16 lg:py-24">
+        <div className="shell">
+          <Eyebrow className="flex items-center gap-2.5">
+            <span className="h-2 w-2 rounded-full bg-ink" aria-hidden /> After Hours Evenings
+          </Eyebrow>
+          <div className="mt-6 grid gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <h2 className="display text-[clamp(2.2rem,1.5rem+2.2vw,3.6rem)]">
+                Evenings out, <em>on select dates.</em>
+              </h2>
+              <p className="mt-6 text-[1.05rem] leading-relaxed">
+                An evening of play for them, a night out for you. For children 18 months to 10 years, each spending the evening in a separate group with others their own age.
+              </p>
+              <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
+                {[
+                  ["Hours", "5:00 – 9:00pm"],
+                  ["Ages", "18 months – 10 years"],
+                  ["Price", "$65 per child"],
+                ].map(([l, v]) => (
+                  <div key={l}>
+                    <dt className="eyebrow text-[0.6rem] text-ink-soft">{l}</dt>
+                    <dd className="mt-1 font-serif text-[1.35rem]">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-4 max-w-xl border-l-2 border-blue/40 pl-3 text-[0.92rem] leading-relaxed">
+                Siblings: $85 for up to three children, +$25 for each additional child. Applied automatically when you book them together.
+              </p>
+            </div>
+            <div className="lg:col-span-4 lg:col-start-9 lg:pt-4">
+              <p className="eyebrow text-[0.62rem] text-ink-soft">Separate age groups</p>
+              <div className="mt-3 space-y-0.5">
+                <p>18 months – 4 years</p>
+                <p>4 – 6 years</p>
+                <p>7 – 10 years</p>
+                <p className="text-ink-soft">Each with its own evening, planned for its age</p>
+              </div>
+            </div>
+          </div>
+          <h3 className="display mt-16 text-[clamp(1.7rem,1.3rem+1.2vw,2.4rem)]">
+            Choose your <em>evenings.</em>
+          </h3>
+          <div className="mt-6 max-w-4xl">
+            <ProgramDates
+              kind="parents_night"
+              groups={[
+                { key: "a", label: "18 mo – 4 yrs", minAge: 18, maxAge: 47, priceCents: 6500 },
+                { key: "b", label: "4 – 6 yrs", minAge: 48, maxAge: 83, priceCents: 6500 },
+                { key: "c", label: "7 – 10 yrs", minAge: 84, maxAge: 131, priceCents: 6500 },
+              ]}
+              unit="evening"
+              horizonDays={365}
+              familyRate
+            />
           </div>
         </div>
       </section>

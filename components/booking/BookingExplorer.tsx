@@ -14,7 +14,6 @@ import { stateLabel, usd } from "./format";
 export const offerings: { kind: string; label: string }[] = [
   { kind: "all", label: "Everything" },
   { kind: "drop_in", label: "Yalla Flex" },
-  { kind: "parents_night", label: "Yalla After Hours" },
   { kind: "camp", label: "Camp Yalla" },
   { kind: "happening", label: "Yalla Happenings" },
 ];
@@ -42,7 +41,7 @@ export function BookingExplorer({
   const router = useRouter();
   const [offering, setOffering] = useState<string>(
     // Yalla Weekends is now part of Happenings; old links still land in the right place.
-    params.get("offering") === "weekend" ? "happening" : params.get("offering") || "all",
+    ["weekend", "parents_night"].includes(params.get("offering") ?? "") ? "happening" : params.get("offering") || "all",
   );
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));
@@ -150,7 +149,7 @@ export function BookingExplorer({
     [childAge],
   );
   const byKind = useMemo(
-    () => all.filter((s) => offering === "all" || s.kind === offering || (offering === "happening" && s.kind === "weekend")),
+    () => all.filter((s) => offering === "all" || s.kind === offering || (offering === "happening" && (s.kind === "weekend" || s.kind === "parents_night"))),
     [all, offering],
   );
   const days = useMemo(
@@ -468,7 +467,7 @@ const kindName: Record<string, string> = {
   nature: "Yalla Outside",
   weekend: "Yalla Happenings",
   happening: "Yalla Happenings",
-  parents_night: "Yalla After Hours",
+  parents_night: "Yalla Happenings · After Hours Evenings",
   camp: "Camp Yalla",
   private_event: "Yalla Celebrations",
 };

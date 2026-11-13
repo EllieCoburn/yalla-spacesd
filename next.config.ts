@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       { source: "/programs/club-yalla", destination: "/club-yalla", permanent: true },
       // Yalla Weekends is now Weekend Play Sessions, part of Yalla Happenings.
       { source: "/programs/yalla-weekends", destination: "/programs/yalla-happenings#weekend-play", permanent: false },
+      // Yalla After Hours is now After Hours Evenings, part of Yalla Happenings.
+      { source: "/programs/yalla-after-hours", destination: "/programs/yalla-happenings#after-hours", permanent: false },
+      // Yalla Celebrations is paused for now.
+      { source: "/programs/yalla-celebrations", destination: "/programs/yalla-happenings", permanent: false },
       // The Spaces page now lives on the About page.
       { source: "/spaces", destination: "/about#our-space", permanent: false },
     ];

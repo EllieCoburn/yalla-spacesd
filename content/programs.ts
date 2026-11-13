@@ -127,7 +127,7 @@ export const programs: ProgramContent[] = [
     short: "Pop-up events",
     tagline: "Play, gatherings and more, all in one calendar",
     summary:
-      "Immersive Play Sessions, weekend play sessions, pop-ups, workshops and gatherings that bring the Yalla community together, all in one calendar.",
+      "Immersive Play, weekend play, After Hours evenings, pop-ups, workshops and gatherings that bring the Yalla community together, all in one calendar.",
     body: [
       "Yalla is a community as much as a place. Happenings are how we gather: small, thoughtful events that make family life feel a little less solitary.",
       "Immersive Play Sessions, 9:00am to 12:00pm for children 3 to 8 years, are three-hour blocks to settle in, follow their curiosity and go deep in their play. Weekend Play Sessions give children 18 months to 10 years a morning or afternoon of play with others their age.",
@@ -169,66 +169,6 @@ export const programs: ProgramContent[] = [
     parentOnsite: true,
     bookingMode: "enroll",
     cta: { label: "Apply for membership", href: "/apply" },
-  },
-  {
-    slug: "yalla-after-hours",
-    kind: "parents_night",
-    name: "Yalla After Hours",
-    short: "Parents’ night out",
-    tagline: "Their evening of play. Your night out.",
-    summary:
-      "Evenings when the children have their own night at Yalla, with familiar faces and a cozy evening rhythm, while you have yours.",
-    body: [
-      "Yalla After Hours turns Yalla into an evening of slow play with the educators your children already know.",
-      "Children spend the evening in separate groups with others their own age, each with plans suited to them: 18 months to 4 years, 4 to 6 years, and 7 to 10 years. Spaces are limited each evening and open in the booking calendar ahead of time.",
-    ],
-    image: "/photos/tulle.jpg",
-    imageAlt: "A child playing with embroidered tulle in soft evening light",
-    motif: "moon",
-    ages: "18 months – 10 years, in separate age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
-    days: "Select evenings every month, 5:00pm – 9:00pm",
-    pricing: "$65 per child, or $85 per family for up to three children, plus $25 for each additional child. The family rate is applied automatically when you book siblings together.",
-    facts: {
-      ages: groups(),
-      days: [{ rows: [{ label: "Select evenings every month", value: "5:00 – 9:00pm" }] }],
-      pricing: [
-        {
-          rows: [
-            { label: "One child", value: "$65" },
-            { label: "Family rate, up to three children", value: "$85" },
-            { label: "Each additional child", value: "+$25" },
-          ],
-          note: "The family rate is applied automatically when you book siblings together.",
-        },
-      ],
-    },
-    included: null,
-    parentOnsite: false,
-    bookingMode: "instant",
-    cta: { label: "Book an evening", href: "/book?offering=parents_night" },
-  },
-  {
-    slug: "yalla-celebrations",
-    kind: "private_event",
-    name: "Yalla Celebrations",
-    short: "Private events",
-    tagline: "Private parties & special occasions",
-    summary:
-      "Host a private party or special occasion at Yalla. Tell us what you have in mind and we’ll help you shape it.",
-    body: [
-      "Yalla is a beautiful setting for a gathering: thoughtfully designed rooms, a leafy yard and a historic corner of Bankers Hill.",
-      "Every private event is planned with you. Share your date, your guest count and your ideas, and we’ll be in touch to plan the details.",
-    ],
-    image: "/photos/painting.jpg",
-    imageAlt: "Bright paint and brushes on a party table",
-    motif: "bunting",
-    ages: null,
-    days: null,
-    pricing: null,
-    included: null,
-    parentOnsite: null,
-    bookingMode: "inquire",
-    cta: { label: "Enquire about a private event", href: "/programs/yalla-celebrations#enquire" },
   },
 ];
 

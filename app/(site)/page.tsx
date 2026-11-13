@@ -90,14 +90,14 @@ export default function Home() {
                 {
                   mark: "window" as const,
                   title: "Care as you need it",
-                  body: "Yalla Flex drop-in days, Camp Yalla and Yalla After Hours, all bookable in one calendar.",
+                  body: "Yalla Flex drop-in days and Camp Yalla, all bookable in one calendar.",
                   href: "/book",
                   link: "Book care",
                 },
                 {
                   mark: "sun" as const,
                   title: "Come together",
-                  body: "Yalla Happenings bring immersive play, weekend play sessions, workshops and gatherings. Yalla Celebrations host your private occasions.",
+                  body: "Yalla Happenings bring immersive play, weekend play, evenings out, workshops and gatherings, all in one calendar.",
                   href: "/programs/yalla-happenings",
                   link: "Happenings",
                 },
@@ -196,7 +196,7 @@ export default function Home() {
                 The next two weeks, <em className="text-mist!">at a glance.</em>
               </h2>
               <p className="mt-6 max-w-md text-chalk/70">
-                Flex days, After Hours, Camp Yalla and Happenings live in one calendar. Choose a date, add your children and reserve in a
+                Flex days, Camp Yalla and Happenings live in one calendar. Choose a date, add your children and reserve in a
                 few taps.
               </p>
               <Button href="/book" variant="light" className="mt-10">
