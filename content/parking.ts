@@ -7,7 +7,7 @@ const walkTo = (from: string) => `https://www.google.com/maps/dir/?api=1&origin=
 export const parkingAddress = YALLA;
 
 export const parkingIntro =
-  "Yalla is fortunate to call the historic Bankers Hill home. While parking in the neighborhood can be limited at times, we’ve put thoughtful options in place to help families plan ahead and park their personal vehicles with confidence before arriving at Yalla each day.";
+  "Yalla is fortunate to call the historic Bankers Hill home. While parking in the neighborhood can be limited at times, we’ve put thoughtful options in place to help families plan ahead and park their personal vehicles with confidence whenever they visit Yalla.";
 
 export const parkingOptions = [
   { id: "park-and-walk", title: "Park and walk", price: "Free with tuition" },
