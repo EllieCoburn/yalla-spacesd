@@ -3,8 +3,6 @@
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { requestMagicLink } from "@/lib/family-auth";
-import { createFamily, findGuardianByEmail } from "@/lib/ops/families";
 import { billingPortalUrl, changePlan, setRenewal, startSignup } from "@/lib/playpass/membership";
 import { getGuardian, requestContext } from "../portal/session";
 
@@ -23,27 +21,6 @@ export async function startPlayPassAction(_: PassState, form: FormData): Promise
     throw e;
   }
   redirect(url);
-}
-
-/** New families: create the account, then confirm the email with a sign-in link back to the pass. */
-export async function createAccountAction(_: PassState, form: FormData): Promise<PassState> {
-  const db = getDb();
-  const tier = String(form.get("tier") ?? "");
-  const next = `/play-passes/join?plan=${encodeURIComponent(tier)}`;
-  const email = String(form.get("email") ?? "").trim().slice(0, 200);
-  const { baseUrl } = await requestContext();
-  if (!(await findGuardianByEmail(db, email))) {
-    try {
-      await createFamily(db, { type: "system", name: "Play Pass signup" }, {
-        guardian: { firstName: String(form.get("firstName") ?? "").slice(0, 80), lastName: String(form.get("lastName") ?? "").slice(0, 80), email, phone: String(form.get("phone") ?? "").slice(0, 40) },
-      });
-    } catch (e) {
-      if (e instanceof OpsError) return { error: e.message, at: Date.now() };
-      throw e;
-    }
-  }
-  const { devLink } = await requestMagicLink(db, email, baseUrl, next);
-  return { message: "Check your email for a link to continue. It works once, for 20 minutes.", devLink, at: Date.now() };
 }
 
 /* ── Managing an existing Play Pass (Family Portal) ── */

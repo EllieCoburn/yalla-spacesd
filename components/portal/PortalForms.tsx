@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { cancelItemAction, requestLinkAction, signFormAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
+import { cancelItemAction, createAccountAction, requestLinkAction, setPasswordAction, signFormAction, signInAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
 
 const field = "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -126,6 +126,121 @@ export function SignForm({ templateId, childId, requiresSignature, body, version
       <Submit variant="outline" pending="Submitting…">
         {requiresSignature ? "Sign" : "Confirm"}
       </Submit>
+      <Message state={state} />
+    </form>
+  );
+}
+
+const label = "block text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase";
+
+function PasswordInput({ name, autoComplete, placeholder }: { name: string; autoComplete: string; placeholder?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input type={show ? "text" : "password"} name={name} required autoComplete={autoComplete} placeholder={placeholder} minLength={8} className={`${field} pr-14 placeholder:text-ink/25`} />
+      <button type="button" onClick={() => setShow((v) => !v)} className="absolute top-1/2 right-0 -translate-y-1/2 text-[0.75rem] text-ink-soft hover:text-ink">
+        {show ? "Hide" : "Show"}
+      </button>
+    </div>
+  );
+}
+
+/** Email and password. */
+export function PasswordSignInForm({ next }: { next?: string }) {
+  const [state, action] = useActionState(signInAction, undefined);
+  return (
+    <form action={action} className="mt-10 space-y-6">
+      <input type="hidden" name="next" value={next ?? ""} />
+      <label className="block">
+        <span className={label}>Email</span>
+        <input type="email" name="email" required autoComplete="email" placeholder="you@example.com" className={`${field} placeholder:text-ink/25`} />
+      </label>
+      <label className="block">
+        <span className={label}>Password</span>
+        <PasswordInput name="password" autoComplete="current-password" />
+      </label>
+      <Submit pending="Signing in…">Sign in</Submit>
+      <Message state={state} />
+    </form>
+  );
+}
+
+/** A new family: the guardian, a password, and their children. */
+export function CreateAccountForm({ next }: { next?: string }) {
+  const [state, action] = useActionState(createAccountAction, undefined);
+  const [rows, setRows] = useState([0]);
+  return (
+    <form action={action} className="mt-10 space-y-6">
+      <input type="hidden" name="next" value={next ?? ""} />
+      <div className="grid gap-6 sm:grid-cols-2">
+        <label className="block">
+          <span className={label}>First name</span>
+          <input name="firstName" required autoComplete="given-name" className={field} />
+        </label>
+        <label className="block">
+          <span className={label}>Last name</span>
+          <input name="lastName" required autoComplete="family-name" className={field} />
+        </label>
+      </div>
+      <label className="block">
+        <span className={label}>Email</span>
+        <input type="email" name="email" required autoComplete="email" placeholder="you@example.com" className={`${field} placeholder:text-ink/25`} />
+      </label>
+      <label className="block">
+        <span className={label}>Password</span>
+        <PasswordInput name="password" autoComplete="new-password" placeholder="At least 8 characters" />
+      </label>
+
+      <fieldset className="border-t border-line pt-6">
+        <legend className="display pr-3 text-[1.4rem]">Your children</legend>
+        <p className="mt-1 text-[0.85rem] text-ink-soft">You can add more children, and their care details, anytime in the portal.</p>
+        <div className="mt-4 space-y-5">
+          {rows.map((r, i) => (
+            <div key={r} className="grid grid-cols-[1fr_auto] items-end gap-4 sm:grid-cols-[1fr_11rem_auto]">
+              <label className="col-span-2 block sm:col-span-1">
+                <span className={label}>Child’s first name</span>
+                <input name="childFirstName" required={i === 0} autoComplete="off" className={field} />
+              </label>
+              <label className="block">
+                <span className={label}>Date of birth</span>
+                <input type="date" name="childBirthDate" required={i === 0} max={new Date().toISOString().slice(0, 10)} className={field} />
+              </label>
+              {rows.length > 1 ? (
+                <button type="button" onClick={() => setRows((x) => x.filter((k) => k !== r))} className="pb-3 text-[0.8rem] text-ink-soft hover:text-ink" aria-label="Remove this child">
+                  Remove
+                </button>
+              ) : (
+                <span />
+              )}
+            </div>
+          ))}
+        </div>
+        {rows.length < 8 ? (
+          <button type="button" onClick={() => setRows((x) => [...x, Math.max(...x) + 1])} className="mt-4 text-[0.88rem] text-blue underline-offset-4 hover:underline">
+            + Add another child
+          </button>
+        ) : null}
+      </fieldset>
+
+      <Submit pending="Creating your account…">Create account</Submit>
+      <Message state={state} />
+    </form>
+  );
+}
+
+export function SetPasswordForm({ hasPassword }: { hasPassword: boolean }) {
+  const [state, action] = useActionState(setPasswordAction, undefined);
+  return (
+    <form action={action} className="space-y-6">
+      <label className="block">
+        <span className={label}>{hasPassword ? "New password" : "Password"}</span>
+        <PasswordInput name="password" autoComplete="new-password" placeholder="At least 8 characters" />
+      </label>
+      <label className="block">
+        <span className={label}>Confirm password</span>
+        <PasswordInput name="confirm" autoComplete="new-password" />
+      </label>
+      <Submit pending="Saving…">{hasPassword ? "Change password" : "Set password"}</Submit>
       <Message state={state} />
     </form>
   );

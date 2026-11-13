@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { redeemMagicLink, requestMagicLink, revokeFamilySession, safeNextPath } from "@/lib/family-auth";
+import { redeemMagicLink, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
 import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/public-booking";
 import { clearFamilyCookie, getGuardian, requestContext, setFamilyCookie } from "./session";
 
@@ -32,6 +32,74 @@ export async function redeemAction(form: FormData) {
   if (!session) redirect("/portal?expired=1");
   await setFamilyCookie(session);
   redirect(next);
+}
+
+/** Email and password sign-in. Stays signed in on this browser until signing out. */
+export async function signInAction(_: PortalState, form: FormData): Promise<PortalState> {
+  const next = safeNext(form.get("next"));
+  const { baseUrl, ip } = await requestContext();
+  let session: string;
+  try {
+    const r = await signInWithPassword(getDb(), { email: String(form.get("email") ?? "").slice(0, 200), password: String(form.get("password") ?? ""), baseUrl, ip });
+    if ("emailed" in r)
+      return {
+        ok: true,
+        message: "You haven’t set a password yet. We’ve emailed you a link to set one. It works once, for 20 minutes.",
+        devLink: r.devLink,
+        at: Date.now(),
+      };
+    session = r.session;
+  } catch (e) {
+    if (e instanceof OpsError) return { ok: false, error: e.message, at: Date.now() };
+    throw e;
+  }
+  await setFamilyCookie(session);
+  redirect(next);
+}
+
+/** Create a family account (guardian, password and children) and sign in. */
+export async function createAccountAction(_: PortalState, form: FormData): Promise<PortalState> {
+  const next = safeNext(form.get("next"));
+  const { baseUrl } = await requestContext();
+  const names = form.getAll("childFirstName").map(String);
+  const births = form.getAll("childBirthDate").map(String);
+  let session: string;
+  try {
+    const r = await registerFamilyAccount(
+      getDb(),
+      {
+        firstName: String(form.get("firstName") ?? "").slice(0, 80),
+        lastName: String(form.get("lastName") ?? "").slice(0, 80),
+        email: String(form.get("email") ?? "").slice(0, 200),
+        password: String(form.get("password") ?? ""),
+        children: names.slice(0, 12).map((n, i) => ({ firstName: n.slice(0, 80), birthDate: births[i] ?? "" })),
+      },
+      baseUrl,
+    );
+    if ("emailed" in r)
+      return {
+        ok: true,
+        message: "Yalla already has this email from an earlier booking. To keep your family’s details safe, we’ve emailed you a link to finish setting up your account.",
+        devLink: r.devLink,
+        at: Date.now(),
+      };
+    session = r.session;
+  } catch (e) {
+    if (e instanceof OpsError) return { ok: false, error: e.message, at: Date.now() };
+    throw e;
+  }
+  await setFamilyCookie(session);
+  redirect(next);
+}
+
+export async function setPasswordAction(_: PortalState, form: FormData): Promise<PortalState> {
+  return run(async () => {
+    const g = await guardianOrFail();
+    const password = String(form.get("password") ?? "");
+    if (password !== String(form.get("confirm") ?? "")) throw new OpsError("invalid", "The two passwords don’t match.");
+    await setFamilyPassword(getDb(), g, password);
+    return "Password saved. You can now sign in with your email and password.";
+  });
 }
 
 export async function signOutAction() {

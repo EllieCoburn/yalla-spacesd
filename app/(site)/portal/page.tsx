@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
 import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
-import { SignInForm } from "@/components/portal/PortalForms";
+import { PasswordSignInForm, SignInForm } from "@/components/portal/PortalForms";
 import { isDbConfigured } from "@/lib/db";
 import { safeNextPath } from "@/lib/family-auth";
 import { getGuardian } from "./session";
@@ -42,13 +42,23 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
           <h1 className="display mt-6 text-[clamp(2.6rem,2rem+2vw,3.6rem)]">
             Sign in to <em>your family.</em>
           </h1>
-          <p className="mt-5 text-ink-soft">Children’s profiles, forms, upcoming bookings and payments, all in one place.</p>
-          {sp.expired ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">That link has expired or was already used. Request a new one below.</p> : null}
+          <p className="mt-5 text-ink-soft">Children’s profiles, forms, upcoming bookings and payments, all in one place. You’ll stay signed in on this device until you sign out.</p>
+          {sp.expired ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">That link has expired or was already used. Sign in with your password, or request a new link below.</p> : null}
 
           {configured ? (
             <>
-              <SignInForm next={sp.next} />
-              <p className="mt-4 text-[0.8rem] text-ink-soft">No passwords to remember. Each guardian signs in with their own email.</p>
+              <PasswordSignInForm next={sp.next} />
+              <p className="mt-8 text-[0.95rem]">
+                New to Yalla?{" "}
+                <Link href={`/portal/join${sp.next ? `?next=${encodeURIComponent(sp.next)}` : ""}`} className="text-blue underline underline-offset-4">
+                  Create your family account
+                </Link>
+              </p>
+              <details className="mt-6 border-t border-line pt-5">
+                <summary className="cursor-pointer text-[0.88rem] text-ink-soft hover:text-ink">Forgot your password, or never set one?</summary>
+                <p className="mt-3 text-[0.85rem] text-ink-soft">We’ll email you a link to sign in and choose a new password.</p>
+                <SignInForm next="/portal/account" />
+              </details>
             </>
           ) : (
             <div className="mt-12 border-t border-line pt-8">

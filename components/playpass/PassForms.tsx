@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { changePlanAction, createAccountAction, setRenewalAction, startPlayPassAction, type PassState } from "@/app/(site)/play-passes/actions";
+import { changePlanAction, setRenewalAction, startPlayPassAction, type PassState } from "@/app/(site)/play-passes/actions";
 
 const field = "mt-1.5 w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -60,35 +60,6 @@ export function ConfirmPass({ tier, terms, label }: { tier: string; terms: strin
         </Submit>
       </div>
       <p className="mt-3 text-center text-[0.78rem] text-ink-soft">Payment is handled securely by Stripe. Yalla never sees or stores your card number.</p>
-      <Note state={state} />
-    </form>
-  );
-}
-
-export function CreateAccount({ tier }: { tier: string }) {
-  const [state, action] = useActionState(createAccountAction, undefined);
-  return (
-    <form action={action} className="space-y-5">
-      <input type="hidden" name="tier" value={tier} />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="block text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">
-          First name
-          <input name="firstName" required autoComplete="given-name" className={`${field} tracking-normal normal-case text-ink`} />
-        </label>
-        <label className="block text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">
-          Last name
-          <input name="lastName" required autoComplete="family-name" className={`${field} tracking-normal normal-case text-ink`} />
-        </label>
-      </div>
-      <label className="block text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">
-        Email
-        <input type="email" name="email" required autoComplete="email" className={`${field} tracking-normal normal-case text-ink`} />
-      </label>
-      <label className="block text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">
-        Phone (optional)
-        <input type="tel" name="phone" autoComplete="tel" className={`${field} tracking-normal normal-case text-ink`} />
-      </label>
-      <Submit pending="Creating your account…">Create account and continue</Submit>
       <Note state={state} />
     </form>
   );

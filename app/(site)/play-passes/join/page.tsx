@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { Mark } from "@/components/brand/Mark";
-import { ConfirmPass, CreateAccount } from "@/components/playpass/PassForms";
-import { SignInForm } from "@/components/portal/PortalForms";
+import { ConfirmPass } from "@/components/playpass/PassForms";
 import { Arrow } from "@/components/ui/primitives";
 import { billingTerms, PLAN_LOOK } from "@/content/playpass";
 import { getDb, isDbConfigured } from "@/lib/db";
@@ -112,18 +111,16 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-10 sm:grid-cols-2">
-                  <div>
-                    <p className="display text-[1.5rem]">Already with Yalla?</p>
-                    <p className="mt-1 text-[0.9rem] text-ink-soft">Sign in, and we’ll bring you right back here.</p>
-                    <SignInForm next={next} />
-                  </div>
-                  <div>
-                    <p className="display text-[1.5rem]">New to Yalla?</p>
-                    <p className="mt-1 text-[0.9rem] text-ink-soft">Create your family account. You’ll add your children when you book.</p>
-                    <div className="mt-6">
-                      <CreateAccount tier={plan.tier} />
-                    </div>
+                <div className="bg-paper p-7">
+                  <p className="display text-[1.6rem]">Sign in to continue</p>
+                  <p className="mt-2 text-ink-soft">Your Play Pass belongs to your family account. New to Yalla? Creating an account takes a minute.</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link href={`/portal?next=${encodeURIComponent(next)}`} className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
+                      Sign in
+                    </Link>
+                    <Link href={`/portal/join?next=${encodeURIComponent(next)}`} className="inline-flex h-11 items-center rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">
+                      Create your account
+                    </Link>
                   </div>
                 </div>
               )}

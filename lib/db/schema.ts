@@ -342,6 +342,10 @@ export const guardians = pgTable(
     canViewBilling: boolean("can_view_billing").notNull().default(false),
     canViewSensitive: boolean("can_view_sensitive").notNull().default(false),
     portalAccess: boolean("portal_access").notNull().default(true),
+    /** Family Portal password (scrypt). Null until the guardian sets one. */
+    passwordHash: text("password_hash"),
+    failedLogins: integer("failed_logins").notNull().default(0),
+    lockedUntil: ts("locked_until"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

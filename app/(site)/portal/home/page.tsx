@@ -41,6 +41,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "playpass", label: "My Play Pass", href: "/portal/play-pass" },
     { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
     { key: "parking", label: "Parking", href: "/portal/parking" },
+    { key: "account", label: "Account", href: "/portal/account" },
   ];
 
   const bookingList = (items: typeof data.upcoming, cancellable: boolean) =>
