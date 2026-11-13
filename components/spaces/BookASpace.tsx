@@ -555,7 +555,12 @@ function BookingSheet({
       kind: "complimentary",
       title: "Complimentary time",
       detail: !signedIn ? "Included with tuition for eligible families" : !allowance?.eligible ? (allowance?.reason ?? "Not included") : `${remaining} of ${allowance.dailyMinutes} minutes left`,
-      disabled: signedIn && allowance && (!allowance.eligible || remaining <= 0) ? (allowance.eligible ? "You’ve used your complimentary workspace time for this day." : "Not included for your family") : undefined,
+      disabled:
+        signedIn && allowance && (!allowance.eligible || remaining <= 0)
+          ? allowance.eligible
+            ? "You’ve used your complimentary workspace time for this day."
+            : `${allowance.reason}${allowance.reason.endsWith("membership") ? " on this day" : ""}`
+          : undefined,
     });
   if (!moving) {
     if (priced.hourly != null) kinds.push({ kind: "hourly", title: "By the hour", detail: `${usd(priced.hourly)} / hour` });
@@ -747,8 +752,10 @@ function BookingSheet({
                       </label>
                     ))}
                   </div>
-                  {ws.complimentary && ws.pricedTypes.length === 0 && signedIn && allowance?.eligible && remaining <= 0 ? (
-                    <p className="mt-3 text-[0.82rem] text-ink-soft">Additional time in {ws.name} isn’t available to book online yet.</p>
+                  {ws.complimentary && ws.pricedTypes.length === 0 && signedIn && allowance && (!allowance.eligible || remaining <= 0) ? (
+                    <p className="mt-3 text-[0.82rem] text-ink-soft">
+                      {ws.name} is reserved with complimentary time only for now; paid time isn’t offered online yet. Paid options are available in our private offices and desks.
+                    </p>
                   ) : null}
                 </fieldset>
               )}
