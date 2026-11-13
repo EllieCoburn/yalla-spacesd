@@ -4,7 +4,21 @@ import type { ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { isDbConfigured } from "@/lib/db";
 import { balboaLots, balboaPassesHref, monthlyLots, parkingAddress, parkingApps, parkingIntro, parkingOptions, parkSmarterHref } from "@/content/parking";
+import { and, eq, inArray } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { bookings, memberships, playPassSubscriptions } from "@/lib/db/schema";
 import { getGuardian } from "../portal/session";
+
+/** Enrolled in a Yalla program: a Club Yalla membership, a confirmed booking, or a Play Pass. */
+async function isEnrolled(familyId: string) {
+  const db = getDb();
+  const [m] = await db.select({ id: memberships.id }).from(memberships).where(and(eq(memberships.familyId, familyId), inArray(memberships.status, ["upcoming", "active", "paused"]))).limit(1);
+  if (m) return true;
+  const [b] = await db.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.familyId, familyId), eq(bookings.status, "confirmed"))).limit(1);
+  if (b) return true;
+  const [p] = await db.select({ id: playPassSubscriptions.id }).from(playPassSubscriptions).where(and(eq(playPassSubscriptions.familyId, familyId), inArray(playPassSubscriptions.status, ["active", "past_due"]))).limit(1);
+  return !!p;
+}
 
 export const metadata: Metadata = { title: "Parking guide", description: "Where to park when visiting Yalla in Bankers Hill, San Diego: street parking, meters, nearby lots and Balboa Park." };
 export const dynamic = "force-dynamic";
@@ -43,7 +57,10 @@ function Note({ children }: { children: ReactNode }) {
 
 export default async function ParkingGuide() {
   // Public, and also reachable from the Family Portal (signed-in families get a link back).
-  const signedIn = isDbConfigured() && !!(await getGuardian());
+  const g = isDbConfigured() ? await getGuardian() : null;
+  const signedIn = !!g;
+  // Partner lot locations are shared with enrolled families only.
+  const enrolled = g ? await isEnrolled(g.familyId) : false;
 
   return (
     <div className="pt-28 pb-24 lg:pt-36">
@@ -150,12 +167,21 @@ export default async function ParkingGuide() {
             <p>We partner with two nearby lots for families who need consistent parking. Yalla subsidizes $50 per month per spot, reducing your monthly cost to $90.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {monthlyLots.map((l, i) => (
-                <div key={l.name} className="border border-line bg-paper p-6">
+                <div key={i} className="border border-line bg-paper p-6">
                   <p className="eyebrow text-[0.58rem] text-ink-soft">
                     Lot {i + 1} · {l.walk}
                   </p>
-                  <p className="display mt-2 text-[1.35rem] text-ink">{l.name}</p>
-                  <p className="mt-1 text-[0.88rem]">{l.address}</p>
+                  {enrolled ? (
+                    <>
+                      <p className="display mt-2 text-[1.35rem] text-ink">{l.name}</p>
+                      <p className="mt-1 text-[0.88rem]">{l.address}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="display mt-2 text-[1.35rem] text-ink">Partner lot</p>
+                      <p className="mt-1 text-[0.88rem] italic">Location shared upon enrollment</p>
+                    </>
+                  )}
                   <dl className="mt-4 divide-y divide-line border-t border-line text-[0.88rem]">
                     <div className="flex justify-between gap-4 py-2">
                       <dt>Regular rate</dt>
@@ -174,6 +200,7 @@ export default async function ParkingGuide() {
               ))}
             </div>
             <Note>
+              {enrolled ? null : <>Lot locations are shared with Yalla families when they enroll in one of our programs. </>}
               Contact the Yalla team at{" "}
               <a href="mailto:hello@yallaspacesd.com" className={ext}>
                 hello@yallaspacesd.com
