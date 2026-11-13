@@ -15,7 +15,7 @@ import {
   familyRateKey,
   familyRateTotal,
 } from "@/lib/booking/family-rate";
-import { addonsCents, addonsFor } from "@/lib/booking/addons";
+import { addonsFor, sessionAddonsCents } from "@/lib/booking/addons";
 
 export type SavedChild = {
   id: string;
@@ -153,9 +153,10 @@ export function Checkout({
     return (
       sum +
       (l
-        ? l.childKeys.reduce(
-            (t, k) => t + addonsCents(s.kind, l.addons[k] ?? []),
-            0,
+        ? sessionAddonsCents(
+            s.kind,
+            s.programSlug,
+            l.childKeys.map((k) => l.addons[k] ?? []),
           )
         : 0)
     );
@@ -550,7 +551,43 @@ export function Checkout({
                         );
                       })}
                     </div>
-                    {addonsFor(s.kind).length
+                    {(() => {
+                      // Extras for the grown-up (e.g. coworking): one choice per session,
+                      // kept on every child coming so it survives changes to who's coming.
+                      const forFamily = addonsFor(s.kind, s.programSlug).filter((a) => a.perFamily);
+                      const coming = chosen.filter((c) => eligible(s, c) && isOn(s.id, c.key));
+                      if (!forFamily.length || !coming.length) return null;
+                      return (
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem]">
+                          <span className="text-ink-soft">Staying?</span>
+                          {forFamily.map((a) => {
+                            const on = coming.some((c) => (extras[s.id]?.[c.key] ?? []).includes(a.key));
+                            return (
+                              <label key={a.key} className="inline-flex cursor-pointer items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  onChange={() =>
+                                    setExtras((e) => ({
+                                      ...e,
+                                      [s.id]: Object.fromEntries(
+                                        coming.map((c) => {
+                                          const cur = (e[s.id]?.[c.key] ?? []).filter((k) => k !== a.key);
+                                          return [c.key, on ? cur : [...cur, a.key]];
+                                        }),
+                                      ),
+                                    }))
+                                  }
+                                  className="h-4 w-4 accent-[var(--color-blue)]"
+                                />
+                                {a.label} <span className="text-ink-soft">({a.time})</span> +{usd(a.priceCents)}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                    {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily).length
                       ? chosen
                           .filter((c) => eligible(s, c) && isOn(s.id, c.key))
                           .map((c) => (
@@ -561,7 +598,7 @@ export function Checkout({
                               <span className="text-ink-soft">
                                 Extras for {c.firstName}:
                               </span>
-                              {addonsFor(s.kind).map((a) => (
+                              {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily).map((a) => (
                                 <label
                                   key={a.key}
                                   className="inline-flex cursor-pointer items-center gap-2"

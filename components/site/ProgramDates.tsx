@@ -55,6 +55,7 @@ export function ProgramDates({
   horizonDays,
   familyRate = false,
   groupNoun = "age group",
+  program,
 }: {
   kind: string;
   groups: DateGroup[];
@@ -66,6 +67,8 @@ export function ProgramDates({
   /** After Hours: siblings on the same evening get the family rate. */
   familyRate?: boolean;
   groupNoun?: string;
+  /** Only this program's sessions (e.g. Immersive Play among other Happenings). */
+  program?: string;
 }) {
   const router = useRouter();
   const [today] = useState(todayLA);
@@ -106,7 +109,7 @@ export function ProgramDates({
             { cache: "no-store" },
           );
           const json = (await res.json()) as { sessions?: PublicSession[] };
-          found.push(...(json.sessions ?? []));
+          found.push(...(json.sessions ?? []).filter((s) => !program || s.programSlug === program));
         }
         if (!cancelled) setSessions(found);
       } catch {
@@ -116,7 +119,7 @@ export function ProgramDates({
     return () => {
       cancelled = true;
     };
-  }, [days, today, horizonDays, kind]);
+  }, [days, today, horizonDays, kind, program]);
 
   const matches = (s: PublicSession, g: DateGroup) =>
     g.cohort ? s.cohort === g.cohort : s.ages.min === g.minAge;
@@ -398,7 +401,9 @@ export function ProgramDates({
             >
               {hint
                 ? `Add at least one child to continue.`
-                : `Bringing more than one? Add each child to their ${groupNoun}.`}
+                : groups.length > 1
+                  ? `Bringing more than one? Add each child to their ${groupNoun}.`
+                  : "Bringing more than one? Add each child."}
               {familyRate
                 ? " Siblings on the same evening get the family rate."
                 : ""}

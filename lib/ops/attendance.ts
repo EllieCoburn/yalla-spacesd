@@ -87,7 +87,7 @@ export async function roster(db: Executor, sessionId: string, perms: readonly Pe
       bookingReference: b.reference,
       bookingItemId: i.id,
       membershipId: null,
-      extras: addonsFor(p?.kind ?? "").filter((a) => i.addons.includes(a.key)).map((a) => `${a.label} (${a.time})`),
+      extras: addonsFor(p?.kind ?? "", p?.slug).filter((a) => i.addons.includes(a.key)).map((a) => `${a.label} (${a.time})`),
       expected: i.status === "confirmed" && i.attendance !== "absent",
       notExpectedReason: i.status === "cancelled" ? "Booking cancelled" : i.attendance === "absent" ? "Absent" : null,
       attendance: attByChild.get(c.id) ?? null,

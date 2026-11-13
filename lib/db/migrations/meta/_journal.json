@@ -85,6 +85,13 @@
       "when": 1794255692087,
       "tag": "0011_camp_july_2027",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794255752087,
+      "tag": "0012_immersive_play",
+      "breakpoints": true
     }
   ]
 }

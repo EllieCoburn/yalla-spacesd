@@ -305,7 +305,7 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
           spots,
           status: "held",
           priceCents: spots === 0 && p.bookingUnit !== "per_child" ? 0 : price.cents,
-          addons: it.childId ? validAddons(p.kind, it.addons) : [],
+          addons: it.childId ? validAddons(p.kind, it.addons, p.slug) : [],
         })
         .returning();
       created.push(row);
@@ -376,9 +376,16 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
   const unpriced = rows.filter((r) => r.item.priceCents == null);
   if (unpriced.length) throw new OpsError("unpriced", `No price is set for ${unpriced[0].program.name}. Set pricing on the program before taking payment.`);
   const lines: LineInput[] = rows.map((r) => ({ kind: "charge", description: describeLine(r), unitCents: r.item.priceCents ?? 0, bookingItemId: r.item.id }));
+  // Per-family extras (e.g. coworking during Immersive Play) are charged once per session.
+  const familyExtras = new Set<string>();
   for (const r of rows)
-    for (const a of addonsFor(r.program.kind).filter((x) => r.item.addons.includes(x.key)))
-      lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
+    for (const a of addonsFor(r.program.kind, r.program.slug).filter((x) => r.item.addons.includes(x.key))) {
+      if (a.perFamily) {
+        if (familyExtras.has(`${r.session.id}:${a.key}`)) continue;
+        familyExtras.add(`${r.session.id}:${a.key}`);
+        lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine({ ...r, child: null })}`, unitCents: a.priceCents, bookingItemId: r.item.id });
+      } else lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
+    }
   lines.push(...(await siblingDiscountLines(db, rows)), ...familyRateLines(rows));
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }

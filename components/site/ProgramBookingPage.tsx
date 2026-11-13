@@ -23,6 +23,10 @@ type Page = {
   familyRate?: boolean;
   goodToKnow: { label: string; lines: ReactNode[] }[];
   after?: ReactNode;
+  /** Shown between the header and the dates, for programs with more to say. */
+  about?: ReactNode;
+  /** Limit the dates to one program of this kind (by slug). */
+  program?: string;
 };
 
 const AGE_GROUPS = (priceCents: number): DateGroup[] => [
@@ -125,6 +129,71 @@ export const BOOKING_PAGES: Record<string, Page> = {
           "4 – 6 years",
           "7 – 10 years",
           "Each with its own evening, planned for its age",
+        ],
+      },
+      questions,
+    ],
+  },
+  happening: {
+    title: (
+      <>
+        Immersive Play Sessions, <em>first and third Saturdays.</em>
+      </>
+    ),
+    lede: "Our Immersive Play Sessions offer three-hour blocks for children to settle in, follow their curiosity, and go deep in their play.",
+    facts: [
+      { label: "Hours", value: "9:00am – 12:00pm" },
+      { label: "Ages", value: "3 – 8 years" },
+      { label: "Price", value: "$45 per child" },
+    ],
+    priceNote: "Staying while they play? Add coworking for you, +$15 per session. Or say goodbye at arrival and come back for departure at 12:00pm.",
+    about: (
+      <div className="grid gap-10 border-t border-line pt-12 lg:grid-cols-12">
+        <div className="space-y-5 text-[1.05rem] leading-relaxed lg:col-span-7">
+          <p>
+            Thoughtfully prepared play landscapes invite them to build, imagine, experiment, and take their ideas in unexpected directions. Guides stay close to offer gentle
+            redirection, help navigate social-emotional conflicts, and support as needed, while giving children space to lead.
+          </p>
+          <p className="font-serif text-[1.3rem] text-blue italic">
+            This is time for their imaginations to wander, their play to unfold, and the magic of their own ideas to come to life.
+          </p>
+        </div>
+        <dl className="space-y-4 lg:col-span-4 lg:col-start-9">
+          {[
+            ["9:00am", "Arrival. Children settle in and the play begins."],
+            ["11:30am", "The group gathers for lunch together. Please pack a lunch from home."],
+            ["12:00pm", "Departure. Children rejoin their families."],
+          ].map(([t, d]) => (
+            <div key={t} className="grid grid-cols-[5rem_1fr] gap-3">
+              <dt className="font-serif text-[1.1rem]">{t}</dt>
+              <dd className="text-ink-soft">{d}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    ),
+    datesTitle: (
+      <>
+        Choose your <em>Saturdays.</em>
+      </>
+    ),
+    unit: "day",
+    groups: [{ key: "a", label: "3 – 8 yrs", minAge: 36, maxAge: 107, priceCents: 4500 }],
+    program: "immersive-play",
+    horizonDays: 365,
+    goodToKnow: [
+      { label: "For ages 3 – 8", lines: ["Immersive Play Sessions are for children 3 to 8 years only"] },
+      { label: "Lunch", lines: ["Packed from home", "Shared together at 11:30am"] },
+      {
+        label: "More Happenings",
+        lines: [
+          <>
+            Pop-ups, workshops and gatherings appear in the{" "}
+            <Link href="/book?offering=happening" className="underline underline-offset-4 hover:text-blue">
+              booking calendar
+            </Link>
+            .
+          </>,
         ],
       },
       questions,
@@ -250,6 +319,12 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
         </div>
       </section>
 
+      {page.about ? (
+        <section className="pb-14 lg:pb-16">
+          <div className="shell">{page.about}</div>
+        </section>
+      ) : null}
+
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
         <div className="shell">
@@ -265,6 +340,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
               horizonDays={page.horizonDays}
               familyRate={page.familyRate}
               groupNoun={page.groupNoun}
+              program={page.program}
             />
           </div>
         </div>

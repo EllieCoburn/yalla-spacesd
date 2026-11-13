@@ -87,6 +87,7 @@ const weekends = await P({ slug: "yalla-weekends", name: "Yalla Weekends", kind:
 const after = await P({ slug: "yalla-after-hours", name: "Yalla After Hours", kind: "parents_night", tagline: "Their evening of play. Your night out.", parentPresence: "not_required", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 6500, defaultCapacity: 26 });
 const camp = await P({ slug: "camp-yalla", name: "Camp Yalla", kind: "camp", tagline: "Seasonal adventures for children", parentPresence: "not_required", seriesMode: "individual", minAgeMonths: 18, maxAgeMonths: 131, priceCents: 16000, defaultCapacity: 26 });
 const happenings = await P({ slug: "yalla-happenings", name: "Yalla Happenings", kind: "happening", tagline: "Pop-ups, workshops & community gatherings", parentPresence: "required", bookingUnit: "per_family", priceCents: 3500 });
+const immersive = await P({ slug: "immersive-play", name: "Immersive Play Sessions", kind: "happening", tagline: "Three unhurried hours to go deep in their play", parentPresence: "optional", minAgeMonths: 36, maxAgeMonths: 107, priceCents: 4500, defaultCapacity: 12 });
 await P({ slug: "yalla-celebrations", name: "Yalla Celebrations", kind: "private_event", tagline: "Private parties & special occasions", bookingUnit: "private_event", bookingMode: "inquire", parentPresence: "required" });
 await P({ slug: "yalla-outside", name: "Yalla Outside", kind: "nature", tagline: "Nature exploration in Balboa Park", status: "draft", bookingMode: "request" });
 
@@ -134,6 +135,11 @@ if (!afterHoursMonthly)
   for (const g of afterHoursGroups)
     await createSeries(db, admin, { programId: after.id, ...g, weekdays: [5], monthWeek: 2, startTime: "17:00", endTime: "21:00", startsOn: start, endsOn: addDaysISO(today, 365), hardCapacity: g.capacity, locationId: loc.id });
 await createSeries(db, admin, { programId: happenings.id, title: "Pop-up workshop", weekdays: [0], startTime: "10:00", endTime: "11:30", startsOn: addDaysISO(today, 3), endsOn: addDaysISO(today, 45), capacity: 14, locationId: loc.id });
+// Immersive Play Sessions: first and third Saturdays, 9:00am – 12:00pm (the 0012 migration does the same in production).
+const [immersiveSeries] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(eq(s.scheduleSeries.programId, immersive.id));
+if (!immersiveSeries)
+  for (const monthWeek of [1, 3])
+    await createSeries(db, admin, { programId: immersive.id, title: `Immersive Play Session · ${monthWeek === 1 ? "First" : "Third"} Saturday`, weekdays: [6], monthWeek, startTime: "09:00", endTime: "12:00", startsOn: start, endsOn: "2027-12-31", capacity: 12, hardCapacity: 12, minAgeMonths: 36, maxAgeMonths: 107, priceCents: 4500, locationId: loc.id });
 // Camp Yalla: the confirmed camp days in three age groups (the 0005 migration does the same in production).
 const campDays = ["2026-11-11", "2026-11-25", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15", "2027-07-05"];
 const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).where(eq(s.sessions.programId, camp.id));
