@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eyebrow } from "@/components/ui/primitives";
+import { Markup } from "@/components/faq/FaqAnswer";
 import { POLICIES } from "@/content/policies";
 
 export const metadata: Metadata = {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default function PoliciesPage() {
-  const list = POLICIES.filter((p) => p.approved);
+  const list = POLICIES.filter((p) => p.approved && p.public);
   return (
     <>
       <section className="pt-32 pb-14 lg:pt-44 lg:pb-16">
@@ -38,7 +39,7 @@ export default function PoliciesPage() {
                   <div key={i} className="space-y-3">
                     {s.heading ? <h3 className="eyebrow text-[0.65rem] text-ink">{s.heading}</h3> : null}
                     {s.paragraphs.map((t, j) => (
-                      <p key={j}>{t}</p>
+                      <Markup key={j} text={t} />
                     ))}
                   </div>
                 ))}

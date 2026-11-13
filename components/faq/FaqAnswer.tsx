@@ -74,7 +74,7 @@ export function FaqAnswer({ faq, policyLink = true }: { faq: Pick<Faq, "answer" 
           <div key={i} className="space-y-3">
             {s.heading ? <p className="eyebrow text-[0.62rem] text-ink">{s.heading}</p> : null}
             {s.paragraphs.map((p, j) => (
-              <p key={j}>{p}</p>
+              <Markup key={j} text={p} />
             ))}
           </div>
         ))}
