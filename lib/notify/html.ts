@@ -77,7 +77,7 @@ function linkify(html: string) {
 }
 
 function button(href: string, label: string) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"><tr><td style="border-radius:999px;background:${C.ink};">
+  return `<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:10px auto 26px;"><tr><td style="border-radius:999px;background:${C.ink};">
 <a href="${esc(href)}" style="display:inline-block;padding:15px 30px;font-family:${SANS};font-size:15px;letter-spacing:0.03em;color:#ffffff;text-decoration:none;border-radius:999px;">${esc(label)}</a>
 </td></tr></table>`;
 }
@@ -151,9 +151,10 @@ export function bodyHtml(body: string, key: string) {
 
   if (signOff) {
     const [lead, name] = signOff.length === 2 ? signOff : [null, signOff[0]];
+    const signature = /^yalla$/i.test(name.trim()) ? "Team Yalla" : name;
     out.push(
       `<p style="margin:8px 0 0;font-family:${SANS};font-size:16px;line-height:1.6;color:${C.ink};">${lead ? esc(lead) : "Warmly,"}</p>` +
-        `<p style="margin:2px 0 0;font-family:${SERIF};font-style:italic;font-size:24px;line-height:1.3;color:${C.blue};">${esc(name)}</p>`,
+        `<p style="margin:2px 0 0;font-family:${SERIF};font-style:italic;font-size:24px;line-height:1.3;color:${C.blue};">${esc(signature)}</p>`,
     );
   }
   return out.join("\n");

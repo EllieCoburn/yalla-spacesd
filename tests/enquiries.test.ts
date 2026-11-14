@@ -49,7 +49,7 @@ describe("Website messages", () => {
     expect(inner).toContain('href="mailto:sam@example.com"');
     expect(inner).toContain('<a href="https://x.test/club-yalla"');
     expect(inner).toContain("Sign in to the Family Portal");
-    expect(inner).toMatch(/italic[^>]*>Yalla</);
+    expect(inner).toMatch(/italic[^>]*>Team Yalla</);
     const full = emailHtml({ key: "tour_received", subject: "Thank you for your tour request", body, audience: "family" });
     expect(full).toContain("/email/hero-space.jpg");
     expect(full).toContain("408 Nutmeg Street");
