@@ -140,7 +140,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 90,
     status: "published",
     question: "What paperwork is needed before my child’s first day?",
-    answer: "Required forms are completed in the Family Portal, where you can see what’s outstanding for each child.",
+    answer: "Before your child’s first day, please submit their onboarding packet, with all required forms, through the [Family Portal](/portal), where you can see what’s still outstanding for each child.\n\nEvery child onsite must have a completed onboarding packet in order to participate in memberships and programs at Yalla.",
   },
 
   /* ── Club Yalla ── */
