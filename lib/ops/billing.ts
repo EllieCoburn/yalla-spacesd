@@ -9,7 +9,7 @@
  *   balance   = total − paid − credit + refunded
  * Corrections are new adjustment lines or refund rows. Settled history is never rewritten.
  */
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
 import { issueCredit, restoreWalletPayment } from "@/lib/playpass/wallet";
@@ -17,6 +17,7 @@ import { credits, discounts, guardians, invoiceLines, invoices, payments, refund
 import { notifyFamily } from "@/lib/notify";
 import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { randomToken } from "@/lib/auth/crypto";
+import { CLUB_YALLA_BILLED_HERE } from "./memberships";
 import { getPolicy } from "./settings";
 
 export const usd = (cents: number) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -319,7 +320,7 @@ export async function invoiceDueCharges(db: DB, actor: Actor, through: string) {
   const due = await db
     .select({ id: scheduledCharges.id })
     .from(scheduledCharges)
-    .where(and(eq(scheduledCharges.status, "scheduled"), lte(scheduledCharges.scheduledFor, through)));
+    .where(and(eq(scheduledCharges.status, "scheduled"), lte(scheduledCharges.scheduledFor, through), CLUB_YALLA_BILLED_HERE ? undefined : isNull(scheduledCharges.membershipId)));
   let created = 0;
   for (const { id } of due) {
     const made = await db.transaction(async (tx) => {

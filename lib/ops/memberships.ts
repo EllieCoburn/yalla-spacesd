@@ -89,7 +89,9 @@ export async function createMembership(db: DB, actor: Actor, input: MembershipIn
       .values({ ...input, endsOn: input.endsOn ?? null, notes: input.notes ?? null, status: statusFor(input.startsOn, input.endsOn) })
       .returning();
     await tx.update(children).set({ cohortId: input.cohortId }).where(eq(children.id, input.childId));
-    await scheduleCharges(tx, m);
+    // Club Yalla tuition is billed by Yalla outside this system (Brightwheel), so no charges are
+    // scheduled here. scheduleCharges stays for when Yalla moves tuition billing into the portal.
+    if (CLUB_YALLA_BILLED_HERE) await scheduleCharges(tx, m);
     await audit(tx, actor, {
       action: "membership.create",
       entityType: "membership",
@@ -99,6 +101,12 @@ export async function createMembership(db: DB, actor: Actor, input: MembershipIn
     return m;
   });
 }
+
+/**
+ * Club Yalla is enrolled and billed manually by Yalla (email and Brightwheel). Nothing in the
+ * website charges, invoices or sells Club Yalla while this is false.
+ */
+export const CLUB_YALLA_BILLED_HERE = false;
 
 /** Future scheduled charges (not invoices). Proration follows the configured policy. */
 async function scheduleCharges(db: Executor, m: typeof memberships.$inferSelect, periods = 3) {
