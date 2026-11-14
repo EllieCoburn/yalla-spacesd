@@ -85,20 +85,20 @@ export default function AboutPage() {
           <div className="mt-20 grid gap-12 md:grid-cols-3 lg:mt-28">
             {[
               {
-                title: "Spaces that invite",
-                body: "Every corner is arranged with care and intention, with materials to build with, pour, paint and wonder over, and room for each child to follow their curiosity.",
+                title: "Thoughtfully designed for childhood",
+                body: "Our environments reflect the belief that children are capable, curious, and active participants in their own learning. Inspired by the Reggio Emilia approach, we use natural materials, open-ended resources, and thoughtfully arranged spaces to encourage creativity, experimentation, and independent discovery. Our environments adapt to the children, experiences, and programs they serve.",
                 img: { src: "/photos/instruments.jpg", alt: "An infant exploring a drum, bells and a tambourine on a woven rug" },
                 shape: "rounded-t-[999px]",
               },
               {
-                title: "Under the trees",
-                body: "San Diego weather is an invitation, and we take it. Our yard sits beneath the trees, made for digging, painting and exploring in the open air.",
+                title: "Room to explore, indoors and out",
+                body: "From art and sensory experiences to movement, imaginative play, and outdoor exploration, Yalla offers children opportunities to engage with the world in meaningful ways. Our indoor and outdoor spaces support a wide range of experiences, with activities and environments thoughtfully adapted to the ages, interests, and needs of each group.",
                 img: { src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" },
                 shape: "",
               },
               {
-                title: "Your desk, a few steps away",
-                body: "A calm, beautifully designed coworking room for focused work, with high-speed internet, coffee and tea, and a shared kitchen, close to your child.",
+                title: "Spaces that bring people together",
+                body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our Bankers Hill location includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
                 img: { src: "/photos/cowork-atrium.webp", alt: "The coworking atrium with long shared desks and hanging textile art" },
                 shape: "rounded-full",
               },
