@@ -60,12 +60,13 @@ export default function AboutPage() {
             <div className="lg:col-span-6">
               <Index n="03">Our space</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                A historic corner of Bankers Hill, <em>made for little lives.</em>
+                A little world of wonder, <em>tucked into Bankers Hill.</em>
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
-              Cohort spaces made for play, a shaded yard for exploring and a calm coworking room for grown-ups, all under one roof, with
-              Balboa Park’s west entrance just down the road.
+              Thoughtfully prepared spaces for play, discovery, creativity, and connection. From our sunlit childcare cohorts and open-ended play
+              environments to our shaded outdoor spaces and welcoming coworking areas, every corner of Yalla has been designed with intention. Just a
+              short stroll from Balboa Park, our space offers room for children to explore and families to feel at home.
             </p>
           </div>
 
