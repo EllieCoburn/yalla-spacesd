@@ -3,7 +3,7 @@ import { Mark } from "@/components/brand/Mark";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 
-/** What Yalla is, in general terms (no founders or history). */
+/** What Yalla is, in general terms (no founders or history). Wording from Yalla. */
 export function AboutOverview() {
   return (
     <section className="bg-paper py-20 lg:py-32">
@@ -15,8 +15,15 @@ export function AboutOverview() {
               What Yalla <em>is.</em>
             </h2>
             <p className="lede mt-10 text-ink">
-              Working from home changed where parents could do their jobs. It did far less to change what it takes to raise a young child while doing one.
+              Childhood deserves spaces designed around its possibilities. Families deserve communities that recognize the many ways they live, work, grow, and care for one another.
             </p>
+            <div className="mt-6 space-y-5 text-[1.08rem] leading-[1.75] text-ink-soft">
+              <p>Yalla brings those ideas together through thoughtful childcare, play-based experiences, flexible programming, and spaces that welcome both children and the adults who love them.</p>
+              <p>
+                Whether it’s a familiar place to spend the week, an afternoon of discovery, an evening to reconnect, or a little more room to navigate everyday life, Yalla exists to make the
+                experience of raising young children richer, more connected, and a little more joyful.
+              </p>
+            </div>
           </div>
           <div className="lg:col-span-5 lg:col-start-8">
             <div className="relative ml-auto aspect-[4/5] w-[78%] overflow-hidden rounded-t-[999px] bg-sand lg:w-full">
@@ -28,23 +35,27 @@ export function AboutOverview() {
         <Reveal className="mt-20 grid gap-10 lg:mt-28 lg:grid-cols-12">
           <div className="space-y-6 text-[1.08rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-2">
             <p>
-              Yalla is a place in San Diego’s Bankers Hill where the needs of children and parents shape the same space. Children have room to move,
-              experiment, revisit a discovery, and build relationships with familiar caregivers. Parents have somewhere comfortable to work, and other adults
-              with whom to share the ordinary texture of a day. There is room for a career, for a childhood, and for moments of connection between the two.
+              Yalla is a community in San Diego’s Bankers Hill built around a simple idea: the early years of childhood should be full of possibility, and the people raising young children
+              deserve meaningful support along the way.
             </p>
             <p>
-              Young children learn through relationships, sensory experiences, movement and play. A thoughtfully prepared environment makes room for those
-              experiences. So does a caregiver who has time to notice what holds a child’s attention, respond to an uncertain moment, or let an investigation
-              continue a little longer. The beauty of a space matters most when it serves the people inside it.
+              Our spaces and experiences are shaped by a deep respect for childhood. We believe children are capable, curious, and naturally driven to explore the world around them. Through
+              relationships, movement, sensory experiences, and open-ended play, they develop an understanding of themselves, others, and their environment. Our role is to create the
+              conditions for that learning to unfold naturally, with attentive caregivers, thoughtfully prepared environments, and time to follow an idea wherever it leads.
             </p>
             <p>
-              Families join in the way that suits them: weekly childcare and coworking with Club Yalla, Flex days when they need them, Camp Yalla, and
-              Happenings like immersive play, weekend play and evenings out.
+              We also recognize that no two families need exactly the same thing. Some find their rhythm through consistent weekday childcare. Others need the flexibility of occasional care,
+              a place to work, an enriching weekend experience, or a trusted community to turn to when life gets busy. Yalla brings these possibilities together through Club Yalla, Yalla Flex,
+              Camp Yalla, Yalla Happenings, and a growing collection of experiences and services for families.
+            </p>
+            <p>
+              What connects everything we do is a belief that children thrive when the adults and communities around them thrive, too. We hope Yalla becomes more than a place families visit.
+              We hope it becomes a familiar part of their lives, a place to build relationships, discover new possibilities, and feel a genuine sense of belonging.
             </p>
           </div>
           <div className="lg:col-span-3 lg:col-start-10 lg:pt-2">
             <p className="display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] leading-[1.25]! text-ink">
-              A more workable relationship between earning a living and raising a child.
+              A little more room for childhood. <em>A little more possibility for family life.</em>
             </p>
             <Mark name="roofline" className="mt-6 h-4 w-auto text-blue" />
           </div>
