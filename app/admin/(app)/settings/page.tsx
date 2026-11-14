@@ -89,11 +89,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     <ActionForm action={policyAction} submit={{ label: p.needsDecision ? "Confirm" : "Save", variant: "secondary" }} className="flex flex-wrap items-end gap-2 [&>div:last-child]:shrink-0">
                       <input type="hidden" name="key" value={p.key} />
                       {"options" in p && p.options ? (
-                        <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={p.options as { value: string; label: string }[]} className="min-w-0 flex-1" />
+                        <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={p.options as { value: string; label: string }[]} className="min-w-[8rem] flex-1" />
                       ) : typeof p.default === "boolean" ? (
-                        <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={[{ value: "false", label: "No" }, { value: "true", label: "Yes" }]} className="min-w-0 flex-1" />
+                        <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={[{ value: "false", label: "No" }, { value: "true", label: "Yes" }]} className="min-w-[8rem] flex-1" />
                       ) : (
-                        <TextField name="value" label="Value" type="number" defaultValue={String(p.value)} className="min-w-0 flex-1" />
+                        <TextField name="value" label="Value" type="number" defaultValue={String(p.value)} className="min-w-[8rem] flex-1" />
                       )}
                     </ActionForm>
                   </li>

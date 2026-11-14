@@ -96,12 +96,12 @@ function FormMessage() {
   if (pending || !state) return null;
   if (!state.ok)
     return (
-      <p role="alert" className="rounded-lg bg-[#f6e3e5] px-3 py-2 text-[0.85rem] text-[#8a2333] ring-1 ring-[#8a2333]/20 ring-inset">
+      <p role="alert" className="order-last w-full rounded-lg bg-[#f6e3e5] px-3 py-2 text-[0.85rem] text-[#8a2333] ring-1 ring-[#8a2333]/20 ring-inset">
         {state.error}
       </p>
     );
   return state.message ? (
-    <p role="status" className="rounded-lg bg-[#e6f0ea] px-3 py-2 text-[0.85rem] text-[#2c6447] ring-1 ring-[#2c6447]/20 ring-inset">
+    <p role="status" className="order-last w-full rounded-lg bg-[#e6f0ea] px-3 py-2 text-[0.85rem] text-[#2c6447] ring-1 ring-[#2c6447]/20 ring-inset">
       {state.message}
     </p>
   ) : null;
