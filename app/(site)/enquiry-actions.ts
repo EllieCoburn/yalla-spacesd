@@ -18,7 +18,7 @@ function detailsFor(kind: EnquiryKind, f: FormData) {
   const v = (k: string) => String(f.get(k) ?? "").trim();
   if (kind === "tour")
     return [
-      { label: "Child’s age or due date", value: v("childAge") },
+      { label: "Child’s age", value: v("childAge") },
       { label: "Interested in", value: v("interests") },
       { label: "Days or times that suit them", value: v("when") },
       { label: "Message", value: v("message") },
@@ -63,12 +63,10 @@ function varsFor(kind: EnquiryKind, f: FormData, base: string): Record<string, s
     const links = chosen
       .map((name) => programs.find((p) => p.name === name))
       .filter((p): p is (typeof programs)[number] => !!p)
-      .map((p) => `• [${p.slug === "club-yalla" ? "A day at Club Yalla" : p.name}](${programUrl(base, p.slug)})`);
+      .map((p) => `• [${p.slug === "club-yalla" ? "A Day at Club Yalla" : p.name}](${programUrl(base, p.slug)})`);
     return {
       interests: chosen.join(", "),
-      explore: links.length
-        ? `While you wait, here’s a little more about what caught your eye:\n\n${links.join("\n")}`
-        : `While you wait, you can [explore our programs](${base}/programs) or [read our FAQ](${base}/faq).`,
+      explore: links.length ? links.join("\n") : `• [Our programs](${base}/programs)\n• [A Day at Club Yalla](${base}/club-yalla)\n• [Frequently asked questions](${base}/faq)`,
     };
   }
   if (kind === "application") return { explore: `In the meantime, you can [read about a day at Club Yalla](${base}/club-yalla) or [browse our FAQ](${base}/faq).` };

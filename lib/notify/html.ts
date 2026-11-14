@@ -56,7 +56,13 @@ const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
-  return body.replace(MD_LINK, "$1: $2").replace(/\n{3,}/g, "\n\n").trim();
+  return body.replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** A template can start with "# Headline" to use a headline other than the subject. */
+export function splitHeadline(body: string, subject: string) {
+  const m = body.replace(/^\s+/, "").match(/^#\s+(.+)\n*/);
+  return m ? { headline: m[1].trim(), rest: body.replace(/^\s+/, "").slice(m[0].length) } : { headline: subject, rest: body };
 }
 
 /** Escapes text and turns "[words](link)", emails, phone numbers and web links into tappable links. */
@@ -116,6 +122,11 @@ export function bodyHtml(body: string, key: string) {
   if (last && last.length <= 2 && last.every((l) => SIGN_OFF.test(l) || l.length < 28) && /yalla$/i.test(last[last.length - 1])) signOff = blocks.pop()!;
 
   blocks.forEach((b, i) => {
+    // "## Section heading" lines.
+    while (b.length && /^##\s+/.test(b[0])) {
+      out.push(`<p style="margin:30px 0 12px;font-family:${SERIF};font-size:21px;line-height:1.3;color:${C.ink};">${esc(b.shift()!.replace(/^##\s+/, ""))}</p>`);
+    }
+    if (!b.length) return;
     if (i === 0 && b.length === 1 && /^(hi|hello|dear)\b.*,$/i.test(b[0])) {
       out.push(`<p style="margin:0 0 18px;font-family:${SERIF};font-size:20px;line-height:1.4;color:${C.ink};">${esc(b[0])}</p>`);
       return;
@@ -165,7 +176,8 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
   const base = assetBase();
   const staff = input.audience === "staff";
   const hero = !staff ? HERO[input.key] : undefined;
-  const preheader = input.body
+  const { headline, rest } = splitHeadline(input.body, input.subject);
+  const preheader = plainText(rest)
     .replace(/^(hi|hello|dear)[^\n]*\n+/i, "")
     .replace(/\s+/g, " ")
     .slice(0, 110);
@@ -200,8 +212,8 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
     ${hero ? `<img src="${base}/email/${hero}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:28px 28px 0 0;">` : ""}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="px" style="padding:${hero ? "36px" : "44px"} 48px 40px;">
       <p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>
-      <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(input.subject)}</h1>
-      ${bodyHtml(input.body, input.key)}
+      <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(headline)}</h1>
+      ${bodyHtml(rest, input.key)}
     </td></tr></table>
   </td></tr>
   <tr><td align="center" style="padding:28px 24px 0;font-family:${SANS};font-size:13px;line-height:1.8;color:${C.soft};">${footer}</td></tr>

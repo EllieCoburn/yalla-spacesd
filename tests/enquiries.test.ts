@@ -54,5 +54,9 @@ describe("Website messages", () => {
     expect(full).toContain("/email/hero-space.jpg");
     expect(full).toContain("408 Nutmeg Street");
     expect(plainText(body)).toContain("A day at Club Yalla: https://x.test/club-yalla");
+    const titled = emailHtml({ key: "tour_received", subject: "Subject line", body: "# We can’t wait to meet you!\n\nHi Sam,\n\n## Your details\n\nName: Sam\nEmail: sam@example.com", audience: "family" });
+    expect(titled).toMatch(/<h1[^>]*>We can’t wait to meet you!<\/h1>/);
+    expect(titled).toContain(">Your details</p>");
+    expect(titled).not.toContain("# ");
   });
 });
