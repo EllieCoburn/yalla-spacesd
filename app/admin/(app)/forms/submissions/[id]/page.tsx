@@ -6,6 +6,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { fmtDate, fmtDateTime } from "@/lib/time";
+import { describeAnswer } from "@/lib/forms/fields";
+import { effectiveFields } from "@/lib/ops/forms";
 
 export const metadata = { title: "Submission" };
 
@@ -18,6 +20,9 @@ export default async function SubmissionPage({ params, searchParams }: { params:
   const docs = can(staff, "forms.documents");
   const { s, t, v, f, c } = d;
   const isCurrent = t.currentVersionId === v.id;
+  // Online forms: answers keyed by field, read against the exact version that was signed.
+  const answers = (s.data as { answers?: Record<string, string> } | null)?.answers ?? null;
+  const fields = effectiveFields(v, t.requiresSignature);
 
   return (
     <>
@@ -86,9 +91,31 @@ export default async function SubmissionPage({ params, searchParams }: { params:
             </Card>
           ) : null}
           {s.data && docs ? (
-            <Card title="Submitted details">
-              <pre className="text-[0.78rem] whitespace-pre-wrap text-ink">{JSON.stringify(s.data, null, 2)}</pre>
-            </Card>
+            answers ? (
+              <Card title="Answers">
+                <dl className="space-y-4 text-[0.85rem]">
+                  {fields
+                    .filter((fl) => fl.type !== "heading" && fl.type !== "info" && answers[fl.id] !== undefined)
+                    .map((fl) => (
+                      <div key={fl.id}>
+                        <dt className="text-ink-soft">{"label" in fl ? fl.label : fl.id}</dt>
+                        <dd className="mt-1 text-ink">
+                          {fl.type === "signature" || fl.type === "initials" ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={answers[fl.id]} alt={fl.type === "signature" ? "Drawn signature" : "Drawn initials"} className={`rounded border border-ink/10 bg-white ${fl.type === "signature" ? "h-24" : "h-16"} w-auto`} />
+                          ) : (
+                            describeAnswer(fl, answers[fl.id])
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              </Card>
+            ) : (
+              <Card title="Submitted details">
+                <pre className="text-[0.78rem] whitespace-pre-wrap text-ink">{JSON.stringify(s.data, null, 2)}</pre>
+              </Card>
+            )
           ) : null}
         </div>
       </div>

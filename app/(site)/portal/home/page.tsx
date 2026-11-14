@@ -19,7 +19,7 @@ const usd = (c: number) => `${c < 0 ? "−" : ""}$${(Math.abs(c) / 100).toFixed(
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const STATE_LABEL: Record<string, string> = { complete: "Complete", missing: "Needed", unsigned: "Needs signature", expired: "Expired — please renew", needs_resign: "Updated — please sign again" };
 
-export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string; signed?: string }> }) {
   const g = isDbConfigured() ? await getGuardian() : null;
   if (!g && !PORTAL_OPEN_PREVIEW) {
     // Signed-out visitors always go to sign-in (there is no sample portal once it's locked).
@@ -28,7 +28,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   // Open preview: no one is signed in, so show a made-up sample family instead of real records.
   const preview = !g;
   const who = g ?? previewGuardian;
-  const { tab = "overview" } = await searchParams;
+  const { tab = "overview", signed } = await searchParams;
   const data = g ? await familyPortalData(getDb(), g) : samplePortalData();
   const outstanding = data.forms.filter((f) => f.state !== "complete");
   const walletBalance = g ? (await walletSummary(getDb(), g.familyId)).availableCents : 0;
@@ -247,7 +247,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               <div className="border border-line bg-paper p-7">
                 <p className="display text-[1.6rem]">Upcoming</p>
                 {bookingList(data.upcoming, true)}
-                <p className="mt-6 text-[0.78rem] text-ink-soft">Cancelling never issues a refund automatically; Yalla confirms any refund or credit. Club Yalla days are managed with the Yalla team.</p>
+                <p className="mt-6 text-[0.78rem] text-ink-soft">Cancel at least 24 hours ahead and what you paid returns to your Yalla Wallet as credit. Club Yalla days are managed with the Yalla team.</p>
               </div>
               <div className="border border-line bg-paper p-7">
                 <p className="display text-[1.6rem]">Past & cancelled</p>
@@ -255,7 +255,13 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               </div>
             </div>
           ) : tab === "forms" ? (
-            data.forms.length === 0 ? (
+            <>
+            {signed ? (
+              <p role="status" className="mb-6 border-l-2 border-blue/50 pl-4 text-[0.92rem] text-blue">
+                Thank you. Your form is signed and saved.
+              </p>
+            ) : null}
+            {data.forms.length === 0 ? (
               <p className="text-ink-soft">No forms are required right now.</p>
             ) : (
               <ul className="space-y-4">
@@ -270,17 +276,30 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                     </div>
                     {f.state !== "complete" ? (
                       f.completableOnline ? (
-                        <SignForm templateId={f.templateId} childId={f.childId} requiresSignature={f.requiresSignature} body={f.body} version={f.version} />
+                        <Link href={`/portal/forms/${f.templateId}${f.childId ? `?child=${f.childId}` : ""}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
+                          {f.requiresSignature ? "Complete and sign" : "Complete form"}
+                        </Link>
                       ) : (
                         <p className="mt-3 text-[0.85rem] text-ink-soft">This one needs a document. Please send it to Yalla and we’ll add it to your file.</p>
                       )
                     ) : f.signedAt ? (
-                      <p className="mt-2 text-[0.8rem] text-ink-soft">Completed {new Date(f.signedAt).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium" })}</p>
+                      <p className="mt-2 text-[0.8rem] text-ink-soft">
+                        Completed {new Date(f.signedAt).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium" })}
+                        {f.completableOnline ? (
+                          <>
+                            {" · "}
+                            <Link href={`/portal/forms/${f.templateId}${f.childId ? `?child=${f.childId}` : ""}`} className="underline underline-offset-4 hover:text-ink">
+                              Update
+                            </Link>
+                          </>
+                        ) : null}
+                      </p>
                     ) : null}
                   </li>
                 ))}
               </ul>
-            )
+            )}
+            </>
           ) : tab === "payments" && data.billing ? (
             <div className="border border-line bg-paper p-7">
               <div className="grid gap-6 sm:grid-cols-2">

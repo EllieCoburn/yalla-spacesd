@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { effectiveFields, OFFERING_KINDS } from "@/lib/ops/forms";
+import { Markup } from "@/components/faq/FaqAnswer";
+
+const FIELD_TYPE: Record<string, string> = { choice: "choice", text: "short answer", textarea: "answer", agree: "tick to agree", initials: "initials", signature: "signature" };
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ENFORCEMENT_LABEL, FREQUENCY_LABEL, KIND_LABEL, LEGAL_NOTE, SCOPE_LABEL } from "@/components/admin/forms-admin/labels";
@@ -11,6 +15,17 @@ import { getDb } from "@/lib/db";
 import { children, families, guardians, programs, sessions } from "@/lib/db/schema";
 import { addDaysISO, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
 import { addRequirementAction, publishVersionAction, recordSubmissionAction, removeRequirementAction, updateTemplateAction } from "../actions";
+
+const ageText = (m: number) => (m % 12 === 0 ? `${m / 12} yr` : m < 24 ? `${m} mo` : `${Math.floor(m / 12)} yr ${m % 12} mo`);
+/** "Ages 18 mo – 5 yr · Club Yalla, Yalla Flex" */
+function audience(r: { minAgeMonths: number | null; maxAgeMonths: number | null; programKinds: string[] }) {
+  const parts: string[] = [];
+  if (r.minAgeMonths != null && r.maxAgeMonths != null) parts.push(`Ages ${ageText(r.minAgeMonths)} – ${ageText(r.maxAgeMonths)}`);
+  else if (r.minAgeMonths != null) parts.push(`Ages ${ageText(r.minAgeMonths)} and up`);
+  else if (r.maxAgeMonths != null) parts.push(`Up to ${ageText(r.maxAgeMonths)}`);
+  if (r.programKinds.length) parts.push(r.programKinds.map((k) => OFFERING_KINDS.find((o) => o.value === k)?.label ?? k).join(", "));
+  return parts.join(" · ");
+}
 
 export default async function FormDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string; record?: string; family?: string; child?: string; v?: string }> }) {
   const staff = await requirePermission("forms.view");
@@ -91,7 +106,30 @@ export default async function FormDetailPage({ params, searchParams }: { params:
           >
             {viewing ? (
               <>
-                <div className="max-h-[28rem] overflow-y-auto rounded-lg border border-ink/8 bg-white p-4 text-[0.88rem] leading-relaxed whitespace-pre-wrap text-ink">{viewing.body}</div>
+                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-lg border border-ink/8 bg-white p-4 text-[0.88rem] leading-relaxed text-ink">
+                  <Markup text={viewing.body} />
+                  {effectiveFields(viewing, t.requiresSignature).length ? (
+                    <div className="border-t border-ink/8 pt-3">
+                      <p className="text-[0.75rem] font-medium tracking-wide text-ink-soft uppercase">Questions</p>
+                      <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+                        {effectiveFields(viewing, t.requiresSignature)
+                          .filter((fl) => fl.type !== "heading" && fl.type !== "info")
+                          .map((fl) => (
+                            <li key={fl.id}>
+                              {fl.label}
+                              <span className="text-ink-soft">
+                                {" "}
+                                · {FIELD_TYPE[fl.type] ?? fl.type}
+                                {"options" in fl ? `: ${fl.options.map((o) => o.label).join(" / ")}` : ""}
+                                {"showIf" in fl && fl.showIf ? " · only if the earlier answer applies" : ""}
+                                {"required" in fl && fl.required === false ? " · optional" : ""}
+                              </span>
+                            </li>
+                          ))}
+                      </ol>
+                    </div>
+                  ) : null}
+                </div>
                 <DL
                   cols={3}
                   items={[
@@ -215,6 +253,7 @@ export default async function FormDetailPage({ params, searchParams }: { params:
                   <span className="text-[0.85rem] text-ink">
                     {SCOPE_LABEL[r.scope] ?? r.scope}
                     {p ? `: ${p.name}` : f ? `: ${f.name}` : c ? `: ${c.preferredName || c.firstName} ${c.lastName}` : r.sessionId ? `: session ${r.sessionId.slice(0, 8)}` : ""}
+                    {audience(r) ? <span className="block text-[0.78rem] text-ink-soft">{audience(r)}</span> : null}
                   </span>
                   {manage ? (
                     <ActionForm action={removeRequirementAction} submit={{ label: "Remove", variant: "ghost" }} confirm={{ title: "Remove this requirement?", body: "Families will no longer be asked for this form in that context. Existing submissions are kept.", confirmLabel: "Remove", danger: true }}>
@@ -234,6 +273,25 @@ export default async function FormDetailPage({ params, searchParams }: { params:
                     <SelectField name="familyId" label="Family (if “one family”)" options={[{ value: "", label: "—" }, ...famRows.map((f) => ({ value: f.id, label: f.name }))]} />
                     <SelectField name="childId" label="Child (if “one child”)" options={[{ value: "", label: "—" }, ...allKids.map((k) => ({ value: k.c.id, label: `${k.c.preferredName || k.c.firstName} ${k.c.lastName} · ${k.f.name}` }))]} />
                     <SelectField name="sessionId" label="Event (if “specific event”)" options={[{ value: "", label: "—" }, ...eventSessions.map((e) => ({ value: e.s.id, label: `${e.s.title ?? e.p.name} · ${fmtDate(e.s.localDate, "EEE d MMM")}` }))]} />
+                    <fieldset className="rounded-lg border border-ink/10 p-3">
+                      <legend className="px-1 text-[0.8rem] font-medium text-ink">Only children who are… (optional)</legend>
+                      <p className="text-[0.75rem] text-ink-soft">Leave blank to include everyone the rule above covers.</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <TextField name="minAgeYears" label="At least (years)" type="number" />
+                        <TextField name="minAgeMonths" label="+ months" type="number" />
+                        <TextField name="maxAgeYears" label="At most (years)" type="number" />
+                        <TextField name="maxAgeMonths" label="+ months" type="number" />
+                      </div>
+                      <p className="mt-3 text-[0.8rem] text-ink">Enrolled in or booked for</p>
+                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[0.82rem]">
+                        {OFFERING_KINDS.map((o) => (
+                          <label key={o.value} className="inline-flex items-center gap-1.5">
+                            <input type="checkbox" name="programKinds" value={o.value} className="h-4 w-4 rounded border-ink/30" />
+                            {o.label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
                   </ActionForm>
                 </Disclosure>
               </div>

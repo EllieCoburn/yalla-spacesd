@@ -7,7 +7,7 @@ import { OpsError } from "@/lib/audit";
 import { children, families, formTemplates } from "@/lib/db/schema";
 import { notificationsMode, notifyFamily } from "@/lib/notify";
 import { addRequirement, createTemplate, deactivateRequirement, paperworkStatus, publishVersion, storeDocument, submitForm, updateTemplateSettings } from "@/lib/ops/forms";
-import { PAPERWORK_LABEL } from "@/lib/ops/forms";
+import { OFFERING_KINDS, PAPERWORK_LABEL } from "@/lib/ops/forms";
 
 const KINDS = ["waiver", "form", "policy", "upload"];
 const ENFORCEMENT = ["blocks_booking", "before_attendance", "informational"];
@@ -53,7 +53,7 @@ export const publishVersionAction = adminAction("forms.manage", async ({ db, act
     : `Version ${v.version} published. Earlier signatures remain valid.`;
 });
 
-export const addRequirementAction = adminAction("forms.manage", async ({ db, actor, str }) => {
+export const addRequirementAction = adminAction("forms.manage", async ({ db, actor, str, num, all }) => {
   const scope = str("scope");
   if (!["all", "program", "membership", "family", "child", "session"].includes(scope)) throw new OpsError("invalid", "Choose who this form is required for.");
   const input = { templateId: str("templateId"), scope, programId: null as string | null, familyId: null as string | null, childId: null as string | null, sessionId: null as string | null };
@@ -75,7 +75,14 @@ export const addRequirementAction = adminAction("forms.manage", async ({ db, act
     if (!str("sessionId")) throw new OpsError("invalid", "Choose a session (event).");
     input.sessionId = str("sessionId");
   }
-  await addRequirement(db, actor, input);
+  // Optional filters: child age (entered in years and months) and kinds of offering.
+  const months = (prefix: string) => {
+    const y = num(`${prefix}Years`);
+    const m = num(`${prefix}Months`);
+    return y == null && m == null ? null : (y ?? 0) * 12 + (m ?? 0);
+  };
+  const kinds = all("programKinds").filter((k) => OFFERING_KINDS.some((o) => o.value === k));
+  await addRequirement(db, actor, { ...input, minAgeMonths: months("minAge"), maxAgeMonths: months("maxAge"), programKinds: kinds });
   return "Requirement added.";
 });
 

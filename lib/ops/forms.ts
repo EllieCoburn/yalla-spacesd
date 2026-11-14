@@ -11,9 +11,20 @@
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { children, documents, formRequirements, formSubmissions, formTemplates, formVersions, guardians, memberships } from "@/lib/db/schema";
+import { bookingItems, bookings, children, documents, formRequirements, formSubmissions, formTemplates, formVersions, guardians, memberships, programs, sessions } from "@/lib/db/schema";
 import { sha256 } from "@/lib/auth/crypto";
-import { addDaysISO, todayLA } from "@/lib/time";
+import { addDaysISO, ageInMonths, todayLA } from "@/lib/time";
+import { validateAnswers, type Answers, type FormField } from "@/lib/forms/fields";
+
+/**
+ * The questions a family answers for a version. A form that needs a signature but defines no
+ * signature field gets one at the end, so every signed form is signed by hand.
+ */
+export function effectiveFields(version: { fields: unknown }, requiresSignature: boolean): FormField[] {
+  const fields = Array.isArray(version.fields) ? (version.fields as FormField[]) : [];
+  if (requiresSignature && !fields.some((f) => f.type === "signature")) return [...fields, { id: "signature", type: "signature", label: "Parent or guardian signature" }];
+  return fields;
+}
 
 export type PaperworkState = "complete" | "missing" | "unsigned" | "expired" | "needs_resign";
 export const PAPERWORK_LABEL: Record<PaperworkState, string> = {
@@ -39,6 +50,42 @@ export type PaperworkItem = {
 
 type Ctx = { familyId: string; childIds: string[]; programIds?: string[]; sessionIds?: string[]; bookingId?: string; onDate?: string };
 
+/** Kinds of offering a requirement can target (program kinds, plus Club Yalla membership). */
+export const OFFERING_KINDS = [
+  { value: "membership", label: "Club Yalla" },
+  { value: "drop_in", label: "Yalla Flex" },
+  { value: "camp", label: "Camp Yalla" },
+  { value: "happening", label: "Yalla Happenings" },
+  { value: "parents_night", label: "After Hours Evenings" },
+] as const;
+
+/**
+ * What each child is enrolled in or booked for: Club Yalla memberships and upcoming (or current)
+ * bookings, plus any programs being booked right now.
+ */
+async function childOfferings(db: Executor, ctx: Ctx, onDate: string) {
+  const out = new Map<string, Set<string>>(ctx.childIds.map((c) => [c, new Set<string>()]));
+  if (!ctx.childIds.length) return out;
+  const mems = await db
+    .select({ childId: memberships.childId })
+    .from(memberships)
+    .where(and(inArray(memberships.childId, ctx.childIds), inArray(memberships.status, ["active", "upcoming", "paused"])));
+  for (const m of mems) out.get(m.childId)?.add("membership");
+  const booked = await db
+    .select({ childId: bookingItems.childId, kind: programs.kind })
+    .from(bookingItems)
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .where(and(inArray(bookingItems.childId, ctx.childIds), inArray(bookingItems.status, ["confirmed", "held"]), sql`${sessions.localDate} >= ${onDate}`));
+  for (const b of booked) if (b.childId) out.get(b.childId)?.add(b.kind);
+  if (ctx.programIds?.length) {
+    const kinds = await db.select({ kind: programs.kind }).from(programs).where(inArray(programs.id, ctx.programIds));
+    for (const c of ctx.childIds) for (const k of kinds) out.get(c)!.add(k.kind);
+  }
+  return out;
+}
+
 /** Templates that apply to a family/children in a given context. */
 export async function applicableTemplates(db: Executor, ctx: Ctx) {
   const memberChildIds = ctx.childIds.length
@@ -54,12 +101,31 @@ export async function applicableTemplates(db: Executor, ctx: Ctx) {
     .from(formRequirements)
     .innerJoin(formTemplates, eq(formTemplates.id, formRequirements.templateId))
     .where(and(eq(formRequirements.active, true), eq(formTemplates.status, "active"), or(...conds)));
-  return rows.map((x) => ({
-    ...x,
-    // Child-scoped and membership-scoped requirements apply only to those children.
-    appliesToChild: (childId: string) =>
-      x.r.scope === "child" ? x.r.childId === childId : x.r.scope === "membership" ? memberChildIds.includes(childId) : true,
-  }));
+  // Age and offering filters narrow a requirement to the children it's meant for.
+  const onDate = ctx.onDate ?? todayLA();
+  const filtered = rows.some((x) => x.r.minAgeMonths != null || x.r.maxAgeMonths != null || x.r.programKinds.length);
+  const births = filtered && ctx.childIds.length ? new Map((await db.select({ id: children.id, birthDate: children.birthDate }).from(children).where(inArray(children.id, ctx.childIds))).map((c) => [c.id, c.birthDate])) : new Map<string, string>();
+  const offerings = filtered ? await childOfferings(db, ctx, onDate) : new Map<string, Set<string>>();
+  const fits = (r: (typeof rows)[number]["r"], childId: string) => {
+    if (r.minAgeMonths != null || r.maxAgeMonths != null) {
+      const birth = births.get(childId);
+      if (!birth) return false;
+      const age = ageInMonths(birth, onDate);
+      if (r.minAgeMonths != null && age < r.minAgeMonths) return false;
+      if (r.maxAgeMonths != null && age > r.maxAgeMonths) return false;
+    }
+    if (r.programKinds.length && !r.programKinds.some((k) => offerings.get(childId)?.has(k))) return false;
+    return true;
+  };
+  return rows
+    .map((x) => ({
+      ...x,
+      // Child-scoped and membership-scoped requirements apply only to those children; filters narrow further.
+      appliesToChild: (childId: string) =>
+        (x.r.scope === "child" ? x.r.childId === childId : x.r.scope === "membership" ? memberChildIds.includes(childId) : true) && fits(x.r, childId),
+    }))
+    // A family-wide form with filters applies when at least one child fits them.
+    .filter((x) => x.t.perChild || !(x.r.minAgeMonths != null || x.r.maxAgeMonths != null || x.r.programKinds.length) || ctx.childIds.some((c) => x.appliesToChild(c)));
 }
 
 export async function paperworkStatus(db: Executor, ctx: Ctx): Promise<Map<string, PaperworkItem[]>> {
@@ -154,13 +220,15 @@ export async function createTemplate(
 }
 
 /** Creates a new immutable version. Earlier signed copies are untouched. */
-export async function publishVersion(db: Executor, actor: Actor, templateId: string, body: string, requiresResign: boolean, silent = false) {
+export async function publishVersion(db: Executor, actor: Actor, templateId: string, body: string, requiresResign: boolean, silent = false, fields?: FormField[]) {
   const [last] = await db.select().from(formVersions).where(eq(formVersions.templateId, templateId)).orderBy(desc(formVersions.version)).limit(1);
-  if (last && last.body === body) throw new OpsError("unchanged", "This text is identical to the current version.");
+  // Edits to the text keep the current questions unless new ones are given.
+  const nextFields = fields ?? ((last?.fields as FormField[] | undefined) ?? []);
+  if (last && last.body === body && JSON.stringify(last.fields) === JSON.stringify(nextFields)) throw new OpsError("unchanged", "This text is identical to the current version.");
   if (last) await db.update(formVersions).set({ status: "superseded" }).where(eq(formVersions.id, last.id));
   const [v] = await db
     .insert(formVersions)
-    .values({ templateId, version: (last?.version ?? 0) + 1, body, contentHash: sha256(body), requiresResign, publishedBy: actor.name })
+    .values({ templateId, version: (last?.version ?? 0) + 1, body, fields: nextFields, contentHash: sha256(body + JSON.stringify(nextFields)), requiresResign, publishedBy: actor.name })
     .returning();
   await db.update(formTemplates).set({ currentVersionId: v.id, updatedAt: new Date() }).where(eq(formTemplates.id, templateId));
   if (!silent)
@@ -176,8 +244,19 @@ export async function publishVersion(db: Executor, actor: Actor, templateId: str
 export async function addRequirement(
   db: Executor,
   actor: Actor,
-  input: { templateId: string; scope: string; programId?: string | null; familyId?: string | null; childId?: string | null; sessionId?: string | null },
+  input: {
+    templateId: string;
+    scope: string;
+    programId?: string | null;
+    familyId?: string | null;
+    childId?: string | null;
+    sessionId?: string | null;
+    minAgeMonths?: number | null;
+    maxAgeMonths?: number | null;
+    programKinds?: string[];
+  },
 ) {
+  if (input.minAgeMonths != null && input.maxAgeMonths != null && input.minAgeMonths > input.maxAgeMonths) throw new OpsError("invalid", "The youngest age must be less than the oldest.");
   const [r] = await db.insert(formRequirements).values(input).returning();
   await audit(db, actor, { action: "forms.requirement", entityType: "form", entityId: input.templateId, summary: `Added requirement (${input.scope})` });
   return r;
@@ -196,6 +275,8 @@ export async function submitForm(
     signatureText?: string | null;
     consent: boolean;
     data?: Record<string, unknown>;
+    /** Answers to the form's questions, including drawn signature and initials. */
+    answers?: Answers;
     documentId?: string | null;
     ip?: string;
     userAgent?: string;
@@ -214,6 +295,13 @@ export async function submitForm(
     if (!signer) throw new OpsError("invalid", "Choose the guardian who is signing.");
     if (!input.consent) throw new OpsError("invalid", "The signer must agree to sign electronically.");
     if (!input.signatureText?.trim()) throw new OpsError("invalid", "Type the signer’s full name as their signature.");
+  }
+  // Online forms: every question is checked against the version being signed.
+  let data = input.data ?? null;
+  if (input.answers) {
+    const checked = validateAnswers(effectiveFields(v, t.requiresSignature), input.answers);
+    if (!checked.ok) throw new OpsError("invalid", checked.error);
+    data = { ...(data ?? {}), answers: checked.answers };
   }
   const now = new Date();
   const expiresOn = t.validForMonths ? addDaysISO(todayLA(now), Math.round(t.validForMonths * 30.44)) : null;
@@ -239,7 +327,7 @@ export async function submitForm(
       childId: input.childId ?? null,
       bookingId: input.bookingId ?? null,
       status: t.requiresSignature ? "signed" : "submitted",
-      data: input.data ?? null,
+      data,
       versionBody: v.body,
       contentHash: v.contentHash,
       signerGuardianId: signer?.id ?? null,

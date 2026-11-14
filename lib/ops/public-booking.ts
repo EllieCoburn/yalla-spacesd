@@ -692,7 +692,7 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
   return { credited, late: hoursAhead < cutoff };
 }
 
-export async function familySignForm(db: Executor, g: GuardianContext, input: { templateId: string; childId: string | null; signatureText: string; consent: boolean; ip?: string; userAgent?: string }) {
+export async function familySignForm(db: Executor, g: GuardianContext, input: { templateId: string; childId: string | null; signatureText: string; consent: boolean; answers?: Record<string, string>; ip?: string; userAgent?: string }) {
   if (input.childId) {
     const [c] = await db.select().from(children).where(and(eq(children.id, input.childId), eq(children.familyId, g.familyId)));
     if (!c) throw new OpsError("not_found", "Child not found.");
@@ -712,7 +712,8 @@ export async function familySignForm(db: Executor, g: GuardianContext, input: { 
     signerGuardianId: g.guardianId,
     signatureText: t.requiresSignature ? input.signatureText : null,
     consent: input.consent,
-    data: t.requiresSignature ? undefined : { confirmed: true },
+    data: t.requiresSignature || input.answers ? undefined : { confirmed: true },
+    answers: input.answers,
     ip: input.ip,
     userAgent: input.userAgent,
   });

@@ -182,3 +182,31 @@ export async function chooseOfferAction(_: PortalState, form: FormData): Promise
   if (res?.ok) redirect(`/portal/wallet?chosen=${choice}`);
   return res;
 }
+
+/** An online form: answers (including drawn signature and initials) are checked on the server. */
+export async function submitOnlineFormAction(_: PortalState, form: FormData): Promise<PortalState> {
+  let answers: Record<string, string> = {};
+  try {
+    const parsed = JSON.parse(String(form.get("answers") ?? "{}"));
+    if (parsed && typeof parsed === "object") answers = Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+  } catch {
+    return { ok: false, error: "Something went wrong reading the form. Please try again.", at: Date.now() };
+  }
+  const res = await run(async () => {
+    const g = await guardianOrFail();
+    const ctx = await requestContext();
+    await familySignForm(getDb(), g, {
+      templateId: String(form.get("templateId")),
+      childId: String(form.get("childId") || "") || null,
+      signatureText: String(form.get("signatureText") ?? ""),
+      consent: form.get("consent") === "on",
+      answers,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
+    revalidatePath("/portal", "layout");
+    return "Signed.";
+  });
+  if (res?.ok) redirect("/portal/home?tab=forms&signed=1");
+  return res;
+}

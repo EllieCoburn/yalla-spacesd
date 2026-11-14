@@ -680,6 +680,11 @@ export const formRequirements = pgTable("form_requirements", {
   familyId: text("family_id").references(() => families.id),
   childId: text("child_id").references(() => children.id),
   sessionId: text("session_id").references(() => sessions.id),
+  /** Narrow who it applies to: children within an age range (months, inclusive)... */
+  minAgeMonths: integer("min_age_months"),
+  maxAgeMonths: integer("max_age_months"),
+  /** ...and children enrolled in or booked for these kinds of offering (empty = any). */
+  programKinds: text("program_kinds").array().notNull().default(sql`'{}'::text[]`),
   active: boolean("active").notNull().default(true),
   createdAt: createdAt(),
 });
