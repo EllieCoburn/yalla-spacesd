@@ -92,6 +92,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                         <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={p.options as { value: string; label: string }[]} className="min-w-[8rem] flex-1" />
                       ) : typeof p.default === "boolean" ? (
                         <SelectField name="value" label="Choice" defaultValue={String(p.value)} options={[{ value: "false", label: "No" }, { value: "true", label: "Yes" }]} className="min-w-[8rem] flex-1" />
+                      ) : typeof p.default === "string" ? (
+                        <TextField name="value" label="Value" defaultValue={String(p.value)} className="min-w-[8rem] flex-1" />
                       ) : (
                         <TextField name="value" label="Value" type="number" defaultValue={String(p.value)} className="min-w-[8rem] flex-1" />
                       )}

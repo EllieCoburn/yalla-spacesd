@@ -45,6 +45,7 @@ import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
 import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
 import { joinWaitlist } from "./waitlist";
+import { submitEnquiry } from "./enquiries";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 
 const PUBLIC: Actor = { type: "system", name: "Public booking" };
@@ -529,6 +530,22 @@ export async function joinPublicWaitlist(
       childId = child.id;
     }
     await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId] });
+    // Let the team know (Admin → Inbox and email). The waitlist itself is in Admin → Waitlist.
+    const [sx] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
+    const [kid] = await db.select().from(children).where(eq(children.id, childId));
+    const who = input.signedIn ? { name: `${input.signedIn.firstName} ${input.signedIn.lastName}`, email: input.signedIn.email } : { name: `${input.guardian.firstName} ${input.guardian.lastName}`, email: input.guardian.email };
+    await submitEnquiry(db, {
+      kind: "waitlist",
+      name: who.name,
+      email: who.email,
+      familyId,
+      baseUrl: input.baseUrl,
+      confirmToFamily: false,
+      details: [
+        { label: "Session", value: sx ? `${sx.s.title ?? sx.p.name}, ${fmtDate(sx.s.localDate, "EEE MMM d")}` : input.sessionId },
+        { label: "Child", value: kid ? `${kid.firstName}, born ${kid.birthDate}` : "" },
+      ],
+    }).catch((e) => console.error("[waitlist notice failed]", (e as Error).message?.slice(0, 120)));
     return { ok: true };
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, code: e.code, error: e.message };

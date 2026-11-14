@@ -18,6 +18,13 @@ export const POLICIES = {
     default: 15,
     decision: false,
   } as PolicyDef<number>,
+  "notifications.staffEmails": {
+    group: "Notifications",
+    label: "Send website messages to",
+    help: "Tour requests, Club Yalla applications, event enquiries and waitlist sign-ups are emailed here (separate several addresses with commas). Everything is also kept in Admin → Inbox.",
+    default: "hello@yallaspacesd.com",
+    decision: false,
+  } as PolicyDef<string>,
   "booking.failedPaymentHoldHours": {
     group: "Booking",
     label: "Hold after a failed payment (hours)",

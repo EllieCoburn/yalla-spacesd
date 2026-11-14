@@ -10,6 +10,7 @@ import { searchAll } from "./search-action";
 const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin", label: "Today", icon: "today", group: "Daily", perm: "dashboard.view", mobile: true },
   { href: "/admin/roster", label: "Roster", icon: "roster", group: "Daily", perm: "roster.view", mobile: true },
+  { href: "/admin/inbox", label: "Inbox", icon: "inbox", group: "Daily", perm: "families.view", mobile: true },
   { href: "/admin/bookings", label: "Bookings", icon: "bookings", group: "Daily", perm: "bookings.view", mobile: true },
   { href: "/admin/waitlist", label: "Waitlist", icon: "waitlist", group: "Daily", perm: "bookings.view" },
   { href: "/admin/spaces", label: "Space reservations", icon: "spaces", group: "Daily", perm: "spaces.view" },

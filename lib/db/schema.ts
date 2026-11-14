@@ -894,6 +894,31 @@ export const lateFees = pgTable(
   (t) => [uniqueIndex("late_fees_child_session_idx").on(t.childId, t.sessionId)],
 );
 
+/**
+ * Messages from the public website: tour requests, Club Yalla applications, event enquiries and
+ * waitlist sign-ups. Each one lands in Admin → Inbox and is emailed to the team.
+ */
+export const enquiries = pgTable(
+  "enquiries",
+  {
+    id: id(),
+    kind: text("kind").notNull(), // tour | application | event | waitlist
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    /** Everything else they told us, as label → answer, in the order asked. */
+    details: jsonb("details").$type<{ label: string; value: string }[]>().notNull().default([]),
+    familyId: text("family_id").references(() => families.id),
+    status: text("status").notNull().default("new"), // new | handled | archived
+    note: text("note"),
+    handledBy: text("handled_by"),
+    handledAt: ts("handled_at"),
+    ip: text("ip"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("enquiries_status_idx").on(t.status, t.createdAt)],
+);
+
 /** Account credit ledger: positive = granted, negative = applied. */
 export const credits = pgTable("credits", {
   id: id(),

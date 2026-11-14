@@ -31,7 +31,9 @@ export type TemplateKey =
   | "playpass_payment_failed"
   | "playpass_change"
   | "yalla_cancellation"
-  | "late_fee";
+  | "late_fee"
+  | "staff_new_enquiry"
+  | "enquiry_received";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -96,6 +98,20 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\nWe’re sorry: we’ve had to cancel the following reservation.\n\n{{booking_details}}\nReason: {{reason}}\n\nYou paid {{amount}}. Please choose how you’d like it back in your Family Portal, under Yalla Wallet:\n\n- Yalla Wallet credit of {{credit_amount}} (the full amount plus {{bonus_percent}}% as a thank-you for your flexibility), usable on any Yalla booking for 24 months, or\n- A full refund of {{amount}} to your original payment method. We process refunds within 7 business days; when the funds appear depends on your bank or card issuer.\n\nThank you for understanding,\nYalla",
     essential: true,
     audience: "billing",
+  },
+  staff_new_enquiry: {
+    name: "New website message (to staff)",
+    subject: "New {{kind}} from {{name}}",
+    body: "A new {{kind}} just came in through the website.\n\n{{details}}\n\nOpen it in the Inbox: {{link}}\n\nReply to the family directly at their email address above.",
+    essential: true,
+    audience: "staff",
+  },
+  enquiry_received: {
+    name: "We received your message (to families)",
+    subject: "We received your {{kind}}",
+    body: "Hi {{name}},\n\nThank you for reaching out to Yalla. We’ve received your {{kind}} and will be in touch soon.\n\nHere’s what you sent us:\n\n{{details}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nYalla",
+    essential: true,
+    audience: "family",
   },
   late_fee: {
     name: "Late departure fee",
@@ -298,6 +314,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   playpass_change: ["guardian_first_name", "change_summary"],
   yalla_cancellation: ["guardian_first_name", "booking_details", "reason", "amount", "credit_amount", "bonus_percent"],
   late_fee: ["guardian_first_name", "child_name", "minutes_late", "date", "amount"],
+  staff_new_enquiry: ["kind", "kind_label", "name", "details", "link"],
+  enquiry_received: ["name", "kind", "details"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {

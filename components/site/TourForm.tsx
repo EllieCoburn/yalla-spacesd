@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { submitEnquiryAction, type EnquiryState } from "@/app/(site)/enquiry-actions";
 import { Mark } from "@/components/brand/Mark";
 import { programs } from "@/content/programs";
 
@@ -21,29 +23,35 @@ export function Field({ name, children, type = "text", required }: { name: strin
   );
 }
 
+/** Submit button that shows progress while sending. */
+export function SendButton({ children, className }: { children: string; className: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className={`${className} disabled:opacity-60`}>
+      {pending ? "Sending…" : children}
+    </button>
+  );
+}
+
 export function TourForm() {
-  const [sent, setSent] = useState(false);
+  const [state, action] = useActionState<EnquiryState, FormData>(submitEnquiryAction, undefined);
   const [interests, setInterests] = useState<string[]>([]);
 
-  if (sent) {
+  if (state?.ok) {
     return (
       <div className="flex min-h-[28rem] flex-col items-center justify-center text-center">
         <Mark name="arch" className="h-14 w-auto text-blue" />
         <h3 className="display mt-8 text-[2.2rem]">Thank you.</h3>
         <p className="mt-4 max-w-sm text-ink-soft">We’ll be in touch shortly to find a time for your visit.</p>
-        <p className="mt-8 text-[0.75rem] text-oxblood">Preview: tour requests aren’t sent anywhere yet.</p>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSent(true);
-      }}
-      className="space-y-7"
-    >
+    <form action={action} className="relative space-y-7">
+      <input type="hidden" name="kind" value="tour" />
+      <input type="hidden" name="interests" value={interests.map((s) => programs.find((p) => p.slug === s)?.name ?? s).join(", ")} />
+      <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <div className="grid gap-7 sm:grid-cols-2">
         <Field name="name" required>
           Your name
@@ -86,9 +94,12 @@ export function TourForm() {
         <span className={label}>Anything you’d like us to know (optional)</span>
       </label>
 
-      <button type="submit" className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-10">
-        Request a tour
-      </button>
+      {state?.error ? (
+        <p role="alert" className="text-[0.9rem] text-oxblood">
+          {state.error}
+        </p>
+      ) : null}
+      <SendButton className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-10">Request a tour</SendButton>
     </form>
   );
 }

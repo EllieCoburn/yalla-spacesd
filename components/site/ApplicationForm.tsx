@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import { submitEnquiryAction, type EnquiryState } from "@/app/(site)/enquiry-actions";
 import { Mark } from "@/components/brand/Mark";
-import { Field } from "./TourForm";
+import { Field, SendButton } from "./TourForm";
 
 const pill = (on: boolean) =>
   `rounded-full border px-4 py-2 text-[0.85rem] transition-all duration-300 ${on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink/60"}`;
 
 export function ApplicationForm() {
-  const [sent, setSent] = useState(false);
+  const [state, action] = useActionState<EnquiryState, FormData>(submitEnquiryAction, undefined);
   const [days, setDays] = useState<number | null>(null);
   const [length, setLength] = useState<"full" | "half" | "custom" | null>(null);
   const [kids, setKids] = useState([0]);
@@ -19,25 +20,25 @@ export function ApplicationForm() {
   const [flex, setFlex] = useState<"set" | "some" | "any" | null>(null);
   const toggleDay = (d: string) => setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]));
 
-  if (sent) {
+  if (state?.ok) {
     return (
       <div className="flex min-h-[26rem] flex-col items-center justify-center text-center">
         <Mark name="sprig" className="h-14 w-auto text-blue" />
         <h3 className="display mt-8 text-[2.2rem]">Thank you for applying.</h3>
         <p className="mt-4 max-w-sm text-ink-soft">We’ll be in touch about cohort availability and the next steps for your family.</p>
-        <p className="mt-8 text-[0.75rem] text-oxblood">Preview: applications aren’t sent anywhere yet.</p>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSent(true);
-      }}
-      className="space-y-9"
-    >
+    <form action={action} className="relative space-y-9">
+      <input type="hidden" name="kind" value="application" />
+      <input type="hidden" name="begin" value={when ?? ""} />
+      <input type="hidden" name="days" value={days ?? ""} />
+      <input type="hidden" name="weekdays" value={weekdays.join(", ")} />
+      <input type="hidden" name="flex" value={flex ?? ""} />
+      <input type="hidden" name="length" value={length ?? ""} />
+      <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <fieldset className="space-y-7">
         <legend className="eyebrow mb-2 text-ink-soft">About you</legend>
         <div className="grid gap-7 sm:grid-cols-2">
@@ -173,13 +174,13 @@ export function ApplicationForm() {
 
       <Field name="message">Anything you’d like us to know</Field>
 
-      <div className="flex justify-center pt-2">
-        <button
-          type="submit"
-          className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-12"
-        >
-          Apply to join Club Yalla
-        </button>
+      <div className="flex flex-col items-center gap-3 pt-2">
+        {state?.error ? (
+          <p role="alert" className="text-[0.9rem] text-oxblood">
+            {state.error}
+          </p>
+        ) : null}
+        <SendButton className="inline-flex h-14 w-full items-center justify-center rounded-full bg-ink text-[0.95rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:w-auto sm:px-12">Apply to join Club Yalla</SendButton>
       </div>
     </form>
   );
