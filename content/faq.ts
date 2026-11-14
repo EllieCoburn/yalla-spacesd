@@ -235,7 +235,7 @@ export const DEFAULT_FAQS: Faq[] = [
     order: 90,
     status: "published",
     question: "How do I cancel my Club Yalla membership?",
-    answer: "Club Yalla memberships require 30 days’ written notice to cancel, submitted through your Family Portal or by email to [membership@yallaspacesd.com](mailto:membership@yallaspacesd.com). Your membership stays active throughout the notice period, and we’ll confirm your end date and any remaining charges in writing. See [canceling a membership](/policies#canceling-a-membership), including how the final payment works.",
+    answer: "Club Yalla memberships require 30 days’ written notice to cancel, submitted through your Family Portal or by email to [membership@yallaspacesd.com](mailto:membership@yallaspacesd.com). Your membership stays active throughout the notice period, and we’ll confirm your end date and any remaining charges in writing. Club Yalla memberships can’t be paused, and once a membership ends, the spot is offered to the next family on our waitlist. See [canceling a membership](/policies#canceling-a-membership), including how the final payment works.",
   },
   {
     id: "meals",

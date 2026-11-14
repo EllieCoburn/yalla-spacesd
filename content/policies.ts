@@ -139,7 +139,7 @@ export const POLICIES: Policy[] = [
       {
         heading: "Club Yalla",
         paragraphs: [
-          `Club Yalla memberships require 30 days’ written notice, submitted through your [Family Portal](/portal) or by email to ${MEMBERSHIP}. Your notice period begins on the date you submit your request, and your membership stays active throughout it. We’ll confirm your membership end date and any remaining charges in writing.`,
+          `Club Yalla memberships require 30 days’ written notice, submitted through your [Family Portal](/portal) or by email to ${MEMBERSHIP}. Your notice period begins on the date you submit your request, and your membership stays active throughout it. We’ll confirm your membership end date and any remaining charges in writing. Club Yalla memberships can’t be paused; once your membership ends, your child’s spot is offered to the next family on our waitlist.`,
         ],
       },
       {
@@ -165,7 +165,8 @@ export const POLICIES: Policy[] = [
     "memberships",
     "Upgrades, downgrades and pauses",
     "We understand that your family’s needs may change, and memberships can change with them.",
-    "- **Upgrades**: upgrade anytime, without advance notice.\n- **Downgrades**: downgrade with 30 days’ notice. Your new membership takes effect once the notice period ends.\n- **Pauses**: pause for up to 60 consecutive days, with 30 days’ notice. Your membership reactivates automatically and regular billing resumes on the 61st day.\n- **Canceling during a pause**: if you decide not to return, submit your cancellation at least 30 days before your scheduled reactivation date. Otherwise, your membership reactivates on the 61st day and regular billing continues until your 30-day notice takes effect.",
+    "- **Upgrades**: upgrade anytime, without advance notice.\n- **Downgrades**: downgrade with 30 days’ notice. Your new membership takes effect once the notice period ends.\n- **Pauses (Play Pass only)**: pause for up to 60 consecutive days, with 30 days’ notice. Your membership reactivates automatically and regular billing resumes on the 61st day.\n- **Canceling during a pause**: if you decide not to return, submit your cancellation at least 30 days before your scheduled reactivation date. Otherwise, your membership reactivates on the 61st day and regular billing continues until your 30-day notice takes effect.",
+    "**Club Yalla memberships can’t be paused.** Club Yalla spots are held for each child, so when a membership is canceled, the spot is offered to the next family on our waitlist.",
     `Please submit downgrade, pause, and cancellation requests through your [Family Portal](/portal) or by email to ${MEMBERSHIP}.`,
   ),
 

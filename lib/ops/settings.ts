@@ -106,7 +106,7 @@ export const POLICIES = {
   "membership.pause": {
     group: "Club Yalla",
     label: "Membership pauses",
-    help: "Whether memberships can be paused, and whether the spot is held during a pause.",
+    help: "Yalla’s policy: Club Yalla memberships can’t be paused. When a membership is canceled, the spot goes to the next family on the waitlist. Keep this set to “Not offered”.",
     default: "not_offered",
     decision: true,
     options: [
