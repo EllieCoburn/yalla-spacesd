@@ -26,7 +26,7 @@ export function AboutOverview() {
             </div>
           </div>
           <div className="lg:col-span-5 lg:col-start-8">
-            <div className="relative ml-auto aspect-[4/5] w-full overflow-hidden rounded-2xl bg-sand">
+            <div className="relative ml-auto aspect-[4/5] w-[78%] overflow-hidden rounded-t-[999px] bg-sand lg:w-full">
               <Image src="/photos/garden.jpg" alt="Yalla’s yard in Bankers Hill" fill sizes="(min-width:1024px) 38vw, 78vw" className="object-cover" />
             </div>
           </div>

@@ -10,10 +10,6 @@ import { Arrow, Button, Index } from "@/components/ui/primitives";
 import { leadership, TEAM_PUBLIC } from "@/content/team";
 import { Reveal } from "@/components/ui/Reveal";
 
-/** One photo shape across the page: soft rounded corners, consistent proportions. */
-const PHOTO = "relative aspect-[4/5] overflow-hidden rounded-2xl bg-sand";
-const PHOTO_WIDE = "relative aspect-[4/3] overflow-hidden rounded-2xl bg-sand";
-
 export const metadata: Metadata = {
   title: "About Yalla",
   description: "The story, values and people behind Yalla Childcare & Coworking in Bankers Hill, San Diego.",
@@ -74,14 +70,14 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-4 sm:grid-cols-3 sm:gap-5">
+          <div className="mt-14 grid grid-cols-6 gap-3 sm:gap-5">
             {[
-              { src: "/photos/painting-table.jpg", alt: "A toddler painting with brushes and bright colors outdoors" },
-              { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall" },
-              { src: "/photos/tulle.jpg", alt: "A child exploring embroidered tulle in the sunlight" },
+              { src: "/photos/painting-table.jpg", alt: "A toddler painting with brushes and bright colors outdoors", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:row-span-2 sm:aspect-auto" },
+              { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/tulle.jpg", alt: "A child exploring embroidered tulle in the sunlight", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full" },
             ].map((img, i) => (
-              <Reveal key={img.src} delay={i * 90} className={PHOTO}>
-                <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 100vw" className="object-cover" />
+              <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 50vw, 100vw" className="object-cover" />
               </Reveal>
             ))}
           </div>
@@ -92,20 +88,23 @@ export default function AboutPage() {
                 title: "Thoughtfully designed for childhood",
                 body: "Our environments reflect the belief that children are capable, curious, and active participants in their own learning. Inspired by the Reggio Emilia approach, we use natural materials, open-ended resources, and thoughtfully arranged spaces to encourage creativity, experimentation, and independent discovery. Our environments adapt to the children, experiences, and programs they serve.",
                 img: { src: "/photos/instruments.jpg", alt: "An infant exploring a drum, bells and a tambourine on a woven rug" },
+                shape: "rounded-full",
               },
               {
                 title: "Room to explore, indoors and out",
                 body: "From art and sensory experiences to movement, imaginative play, and outdoor exploration, Yalla offers children opportunities to engage with the world in meaningful ways. Our indoor and outdoor spaces support a wide range of experiences, with activities and environments thoughtfully adapted to the ages, interests, and needs of each group.",
                 img: { src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" },
+                shape: "rounded-full",
               },
               {
                 title: "Spaces that bring people together",
                 body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our Bankers Hill location includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
                 img: { src: "/photos/cowork-atrium.webp", alt: "The coworking atrium with long shared desks and hanging textile art" },
+                shape: "rounded-full",
               },
             ].map((c, i) => (
               <Reveal key={c.title} delay={i * 90}>
-                <div className={PHOTO}>
+                <div className={`relative aspect-square overflow-hidden bg-sand ${c.shape}`}>
                   <Image src={c.img.src} alt={c.img.alt} fill sizes="(min-width:768px) 30vw, 90vw" className="object-cover" />
                 </div>
                 <h3 className="display mt-8 text-[1.7rem]">{c.title}</h3>
@@ -114,13 +113,13 @@ export default function AboutPage() {
             ))}
           </div>
 
-          <div className="mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5">
+          <div className="mt-14 grid grid-cols-6 gap-3 sm:gap-5">
             {[
-              { src: "/photos/cowork-desk.webp", alt: "A quiet desk for two by the balcony" },
-              { src: "/photos/cowork-kitchen.webp", alt: "The bright coworking kitchen with a long counter by the windows" },
+              { src: "/photos/cowork-desk.webp", alt: "A quiet desk for two by the balcony", className: "col-span-3 aspect-[3/4] sm:col-span-2" },
+              { src: "/photos/cowork-kitchen.webp", alt: "The bright coworking kitchen with a long counter by the windows", className: "col-span-3 aspect-[3/4] sm:col-span-4 sm:aspect-auto" },
             ].map((img, i) => (
-              <Reveal key={img.src} delay={i * 90} className={PHOTO_WIDE}>
-                <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 50vw, 100vw" className="object-cover" />
+              <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 60vw, 50vw" className="object-cover" />
               </Reveal>
             ))}
           </div>
