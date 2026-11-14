@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { CancelForm, CareForm, SignForm } from "@/components/portal/PortalForms";
+import { ResourceHub } from "@/components/portal/ResourceHub";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
 import { walletSummary } from "@/lib/playpass/wallet";
@@ -36,15 +37,13 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "overview", label: "Overview" },
     { key: "children", label: "Children" },
     { key: "bookings", label: "Bookings" },
+    { key: "memberships", label: "Memberships" },
+    { key: "wallet", label: "Yalla Wallet", href: "/portal/wallet" },
     { key: "forms", label: "Forms", count: outstanding.length },
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
-    { key: "wallet", label: "Yalla Wallet", href: "/portal/wallet" },
-    { key: "playpass", label: "My Play Pass", href: "/portal/play-pass" },
     { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
-    { key: "parking", label: "Parking", href: "/parking" },
-    { key: "illness", label: "Illness policy", href: "/portal/illness-policy" },
-    { key: "account", label: "Account", href: "/portal/account" },
   ];
+  // Guides and policies (parking, illness policy and more) live in the resource hub below, not here.
 
   const bookingList = (items: typeof data.upcoming, cancellable: boolean) =>
     items.length === 0 ? (
@@ -96,6 +95,9 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             ) : null}
             <Link href="/book" className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
               Book care
+            </Link>
+            <Link href="/portal/account" className="text-[0.85rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+              Account
             </Link>
             {preview ? null : (
               <form action={signOutAction}>
@@ -162,18 +164,6 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                   <p className="mt-2 text-[0.88rem] text-ink-soft">Find a quiet corner, take a call, or settle in for a productive day.</p>
                   <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Find a space</span>
                 </Link>
-                <Link href="/parking" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
-                  <p className="eyebrow text-[0.6rem] text-ink-soft">Getting here</p>
-                  <p className="display mt-3 text-[1.4rem]">Parking guide</p>
-                  <p className="mt-2 text-[0.88rem] text-ink-soft">Free park-and-walk lots, meters, discounted monthly spots and our driveway policy.</p>
-                  <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Read the guide</span>
-                </Link>
-                <Link href="/portal/illness-policy" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
-                  <p className="eyebrow text-[0.6rem] text-ink-soft">Health &amp; wellness</p>
-                  <p className="display mt-3 text-[1.4rem]">Illness policy</p>
-                  <p className="mt-2 text-[0.88rem] text-ink-soft">When to keep your child home, when they can return, and our vomiting policy.</p>
-                  <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Read the policy</span>
-                </Link>
                 <div className="border border-line bg-paper p-7">
                   <p className="eyebrow text-[0.6rem] text-ink-soft">Your children</p>
                   <ul className="mt-4 space-y-3">
@@ -192,6 +182,40 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                   </ul>
                 </div>
               </div>
+            </div>
+          ) : tab === "memberships" ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="border border-line bg-paper p-7">
+                <p className="eyebrow text-[0.6rem] text-ink-soft">Club Yalla</p>
+                {data.memberships.length ? (
+                  <ul className="mt-4 divide-y divide-line">
+                    {data.memberships.map((m) => (
+                      <li key={m.id} className="py-3">
+                        <p className="display text-[1.25rem]">{m.child}</p>
+                        <p className="mt-1 text-[0.9rem] text-ink-soft">
+                          {m.weekdays.map((d) => WEEKDAY[d]).join(", ")} · {m.dayLength === "half" ? "half days" : "full days"}
+                          {m.status === "upcoming" ? ` · starts ${fmtDate(m.startsOn)}` : m.status === "ended" ? " · ended" : ""}
+                          {m.endsOn && m.status !== "ended" ? ` · until ${fmtDate(m.endsOn)}` : ""}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <>
+                    <p className="display mt-3 text-[1.4rem]">Weekday childcare and coworking.</p>
+                    <p className="mt-2 text-[0.88rem] text-ink-soft">Consistent days each week with a small cohort and familiar caregivers, while you work onsite.</p>
+                    <Link href="/club-yalla" className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 hover:underline">
+                      About Club Yalla
+                    </Link>
+                  </>
+                )}
+              </div>
+              <Link href="/portal/play-pass" className="group border border-line bg-paper p-7 transition-colors hover:border-ink/40">
+                <p className="eyebrow text-[0.6rem] text-ink-soft">Play Pass</p>
+                <p className="display mt-3 text-[1.4rem]">My Play Pass</p>
+                <p className="mt-2 text-[0.88rem] text-ink-soft">Your monthly Play Pass: balance, payments, and upgrading, pausing or giving notice to cancel.</p>
+                <span className="mt-4 inline-block text-[0.85rem] text-blue underline-offset-4 group-hover:underline">Open My Play Pass</span>
+              </Link>
             </div>
           ) : tab === "children" ? (
             <div className="grid gap-6 md:grid-cols-2">
@@ -293,6 +317,10 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
           ) : (
             <p className="text-ink-soft">Choose a section above.</p>
           )}
+        </div>
+
+        <div className="mt-20 border-t border-line pt-10">
+          <ResourceHub limit={4} />
         </div>
       </div>
     </div>
