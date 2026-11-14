@@ -10,7 +10,7 @@ import { Reveal } from "@/components/ui/Reveal";
 export const metadata: Metadata = {
   title: "Belonging at Yalla",
   description:
-    "Different by nature. Together by choice. How belonging shapes the way Yalla understands one another, builds relationships and creates community.",
+    "Come as you are. Belong as you are. How belonging shapes the way Yalla understands one another, builds relationships and creates community.",
 };
 
 type Chapter = { mark: MarkName; title: string; paragraphs: ReactNode[]; closing?: string };
@@ -84,7 +84,7 @@ export default function BelongingPage() {
         mark="dotsun"
         title={
           <>
-            Different by nature. <em>Together by choice.</em>
+            Come as you are. <em>Belong as you are.</em>
           </>
         }
         lede="At Yalla, belonging isn’t a separate initiative. It’s foundational to how we understand one another, build relationships, and create community."
