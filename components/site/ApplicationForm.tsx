@@ -38,7 +38,7 @@ export function ApplicationForm() {
       <input type="hidden" name="weekdays" value={weekdays.join(", ")} />
       <input type="hidden" name="flex" value={flex ?? ""} />
       <input type="hidden" name="length" value={length ?? ""} />
-      <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
+      <input type="text" name="yx_hp" tabIndex={-1} autoComplete="new-password" data-1p-ignore data-lpignore="true" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <fieldset className="space-y-7">
         <legend className="eyebrow mb-2 text-ink-soft">About you</legend>
         <div className="grid gap-7 sm:grid-cols-2">

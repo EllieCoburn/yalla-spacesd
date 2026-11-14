@@ -53,8 +53,9 @@ function detailsFor(kind: EnquiryKind, f: FormData) {
 export async function submitEnquiryAction(_: EnquiryState, form: FormData): Promise<EnquiryState> {
   const kind = String(form.get("kind")) as EnquiryKind;
   if (!["tour", "application", "event"].includes(kind)) return { error: "Something went wrong. Please try again.", at: Date.now() };
-  // Spam trap: people never see or fill this field.
-  if (String(form.get("company") ?? "").trim()) return { ok: true, at: Date.now() };
+  // Hidden field people never see. Browsers can still autofill it, so a filled one is only a hint:
+  // the message is always saved, just flagged and without the automatic reply.
+  const suspect = Boolean(String(form.get("yx_hp") ?? form.get("company") ?? "").trim());
   if (!isDbConfigured()) return { error: "We couldn’t send this right now. Please email hello@yallaspacesd.com or call 619.775.4008.", at: Date.now() };
   try {
     const { baseUrl, ip } = await requestContext();
@@ -63,9 +64,10 @@ export async function submitEnquiryAction(_: EnquiryState, form: FormData): Prom
       name: String(form.get(kind === "application" ? "parentName" : "name") ?? ""),
       email: String(form.get("email") ?? ""),
       phone: String(form.get("phone") ?? ""),
-      details: detailsFor(kind, form),
+      details: [...detailsFor(kind, form), ...(suspect ? [{ label: "Note", value: "Possibly automated (a hidden field was filled). Check before replying." }] : [])],
       ip,
       baseUrl,
+      confirmToFamily: !suspect,
     });
     return { ok: true, at: Date.now() };
   } catch (e) {

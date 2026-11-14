@@ -21,7 +21,7 @@ export function EventEnquiryForm() {
   return (
     <form action={action} className="relative space-y-7">
       <input type="hidden" name="kind" value="event" />
-      <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
+      <input type="text" name="yx_hp" tabIndex={-1} autoComplete="new-password" data-1p-ignore data-lpignore="true" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <div className="grid gap-7 sm:grid-cols-2">
         <Field name="name" required>
           Your name
