@@ -60,6 +60,21 @@ async function sunscreenForm() {
   return template;
 }
 
+describe("Follow-ups shown for either answer", () => {
+  it("asks for initials when either product is allowed, and not when neither is", () => {
+    const either = { anyOf: [{ field: "cream", equals: "yes" }, { field: "lotion", equals: "yes" }] };
+    const fields: FormField[] = [
+      { id: "cream", type: "choice", label: "Cream?", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] },
+      { id: "lotion", type: "choice", label: "Lotion?", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] },
+      { id: "standards", type: "initials", label: "Standards", required: true, showIf: either },
+      { id: "signature", type: "signature", label: "Signature" },
+    ];
+    expect(validateAnswers(fields, { cream: "no", lotion: "no", signature: INK })).toMatchObject({ ok: true });
+    expect(validateAnswers(fields, { cream: "no", lotion: "yes", signature: INK })).toMatchObject({ ok: false, error: expect.stringMatching(/initials/) });
+    expect(validateAnswers(fields, { cream: "yes", lotion: "no", standards: INK, signature: INK })).toMatchObject({ ok: true });
+  });
+});
+
 describe("Signing online", () => {
   it("saves answers and the drawn signature with the exact version signed", async () => {
     const t = await sunscreenForm();

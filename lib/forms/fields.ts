@@ -6,7 +6,8 @@
  * (data URLs). The typed full name and the drawn signature together make the e-signature.
  */
 
-export type ShowIf = { field: string; equals: string };
+/** Show a question only when an earlier answer matches (or when any of several do). */
+export type ShowIf = { field: string; equals: string } | { anyOf: { field: string; equals: string }[] };
 
 export type FormField =
   | { id: string; type: "heading"; text: string }
@@ -23,7 +24,8 @@ export type FormField =
 
 export type Answers = Record<string, string>;
 
-export const isShown = (f: FormField, answers: Answers) => !("showIf" in f) || !f.showIf || answers[f.showIf.field] === f.showIf.equals;
+const matches = (c: ShowIf, answers: Answers): boolean => ("anyOf" in c ? c.anyOf.some((x) => answers[x.field] === x.equals) : answers[c.field] === c.equals);
+export const isShown = (f: FormField, answers: Answers) => !("showIf" in f) || !f.showIf || matches(f.showIf, answers);
 
 const DRAWING = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
 /** About 150 KB of image data: plenty for a signature, small enough to store with the record. */
