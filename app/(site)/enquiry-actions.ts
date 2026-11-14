@@ -3,6 +3,7 @@
 import { OpsError } from "@/lib/audit";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { submitEnquiry, type EnquiryKind } from "@/lib/ops/enquiries";
+import { programs } from "@/content/programs";
 import { requestContext } from "./portal/session";
 
 export type EnquiryState = { ok?: boolean; error?: string; at?: number } | undefined;
@@ -49,6 +50,35 @@ function detailsFor(kind: EnquiryKind, f: FormData) {
   ];
 }
 
+const programUrl = (base: string, slug: string) => `${base}${slug === "club-yalla" ? "/club-yalla" : `/programs/${slug}`}`;
+
+/** Personal touches for the confirmation email, based on what the person chose on the form. */
+function varsFor(kind: EnquiryKind, f: FormData, base: string): Record<string, string> {
+  const v = (k: string) => String(f.get(k) ?? "").trim();
+  if (kind === "tour") {
+    const chosen = v("interests")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const links = chosen
+      .map((name) => programs.find((p) => p.name === name))
+      .filter((p): p is (typeof programs)[number] => !!p)
+      .map((p) => `• [${p.slug === "club-yalla" ? "A day at Club Yalla" : p.name}](${programUrl(base, p.slug)})`);
+    return {
+      interests: chosen.join(", "),
+      explore: links.length
+        ? `While you wait, here’s a little more about what caught your eye:\n\n${links.join("\n")}`
+        : `While you wait, you can [explore our programs](${base}/programs) or [read our FAQ](${base}/faq).`,
+    };
+  }
+  if (kind === "application") return { explore: `In the meantime, you can [read about a day at Club Yalla](${base}/club-yalla) or [browse our FAQ](${base}/faq).` };
+  if (kind === "event") {
+    const occasion = v("occasion");
+    return { occasion, for_occasion: occasion ? ` for your ${occasion.charAt(0).toLowerCase()}${occasion.slice(1)}` : "", preferred_date: v("date"), explore: `In the meantime, you can [take a look around our space](${base}/about).` };
+  }
+  return {};
+}
+
 /** Tour requests, Club Yalla applications and event enquiries from the public website. */
 export async function submitEnquiryAction(_: EnquiryState, form: FormData): Promise<EnquiryState> {
   const kind = String(form.get("kind")) as EnquiryKind;
@@ -68,6 +98,7 @@ export async function submitEnquiryAction(_: EnquiryState, form: FormData): Prom
       ip,
       baseUrl,
       confirmToFamily: !suspect,
+      vars: varsFor(kind, form, baseUrl),
     });
     return { ok: true, at: Date.now() };
   } catch (e) {

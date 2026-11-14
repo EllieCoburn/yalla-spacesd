@@ -23,6 +23,9 @@ export default async function TemplatePage({ params }: { params: Promise<{ key: 
           <span className="flex flex-wrap items-center gap-2">
             <Pill tone="neutral">Essential service message</Pill>
             <span>Sent to {t.audience === "billing" ? "billing contacts" : t.audience === "staff" ? "staff" : "guardians with portal access"}.</span>
+            <a href={`/admin/communications/templates/${key}/preview`} target="_blank" rel="noreferrer" className="text-blue underline">
+              Preview the designed email
+            </a>
           </span>
         }
       />

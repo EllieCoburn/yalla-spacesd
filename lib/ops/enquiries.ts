@@ -19,6 +19,13 @@ export const ENQUIRY_KINDS = {
 } as const;
 export type EnquiryKind = keyof typeof ENQUIRY_KINDS;
 
+/** Each website pathway gets its own confirmation email (editable in Admin → Communications). */
+const FAMILY_TEMPLATE: Partial<Record<EnquiryKind, "tour_received" | "application_received" | "event_received">> = {
+  tour: "tour_received",
+  application: "application_received",
+  event: "event_received",
+};
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Addresses that receive new website messages (Settings → Notifications). */
@@ -29,7 +36,7 @@ export async function staffRecipients(db: Executor) {
 
 export async function submitEnquiry(
   db: DB,
-  input: { kind: EnquiryKind; name: string; email: string; phone?: string; details: { label: string; value: string }[]; familyId?: string | null; ip?: string | null; baseUrl: string; confirmToFamily?: boolean },
+  input: { kind: EnquiryKind; name: string; email: string; phone?: string; details: { label: string; value: string }[]; familyId?: string | null; ip?: string | null; baseUrl: string; confirmToFamily?: boolean; vars?: Record<string, string> },
 ) {
   const name = input.name.trim().slice(0, 200);
   const email = input.email.trim().toLowerCase().slice(0, 200);
@@ -61,7 +68,7 @@ export async function submitEnquiry(
     );
   }
   if (input.confirmToFamily !== false)
-    await notifyStaff(db, { key: "enquiry_received", to: email, vars: { name: name.split(" ")[0], kind: kind.familyNoun, details: summary }, relatedId: e.id }).catch(() => undefined);
+    await notifyStaff(db, { key: FAMILY_TEMPLATE[input.kind] ?? "enquiry_received", to: email, vars: { name: name.split(" ")[0], kind: kind.familyNoun, details: summary, ...input.vars }, relatedId: e.id }).catch(() => undefined);
   return e;
 }
 

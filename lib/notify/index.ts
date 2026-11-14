@@ -10,6 +10,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { guardians, messages, messageTemplates } from "@/lib/db/schema";
+import { emailHtml, plainText } from "./html";
 
 export type TemplateKey =
   | "booking_confirmation"
@@ -33,7 +34,10 @@ export type TemplateKey =
   | "yalla_cancellation"
   | "late_fee"
   | "staff_new_enquiry"
-  | "enquiry_received";
+  | "enquiry_received"
+  | "tour_received"
+  | "application_received"
+  | "event_received";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -106,10 +110,31 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     essential: true,
     audience: "staff",
   },
+  tour_received: {
+    name: "Tour request received (to families)",
+    subject: "Thank you for your tour request",
+    body: "Hi {{name}},\n\nThank you for reaching out to Yalla. We’ve received your tour request, and someone from our team will be in touch soon to find a time for you to come and see the space.\n\nHere’s what you sent us:\n\n{{details}}\n\n{{explore}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nWarmly,\nYalla",
+    essential: true,
+    audience: "family",
+  },
+  application_received: {
+    name: "Club Yalla application received (to families)",
+    subject: "We received your Club Yalla application",
+    body: "Hi {{name}},\n\nThank you for applying to Club Yalla. We’ve received your application, and someone from our team will be in touch soon about next steps.\n\nHere’s what you sent us:\n\n{{details}}\n\n{{explore}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nWarmly,\nYalla",
+    essential: true,
+    audience: "family",
+  },
+  event_received: {
+    name: "Event enquiry received (to families)",
+    subject: "Thank you for thinking of Yalla",
+    body: "Hi {{name}},\n\nThank you for thinking of Yalla{{for_occasion}}. We’ve received your event enquiry, and someone from our team will be in touch soon.\n\nHere’s what you sent us:\n\n{{details}}\n\n{{explore}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nWarmly,\nYalla",
+    essential: true,
+    audience: "family",
+  },
   enquiry_received: {
-    name: "We received your message (to families)",
+    name: "We received your message (general, to families)",
     subject: "We received your {{kind}}",
-    body: "Hi {{name}},\n\nThank you for reaching out to Yalla. We’ve received your {{kind}} and will be in touch soon.\n\nHere’s what you sent us:\n\n{{details}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nYalla",
+    body: "Hi {{name}},\n\nThank you for reaching out to Yalla. We’ve received your {{kind}}, and someone from our team will be in touch soon.\n\nHere’s what you sent us:\n\n{{details}}\n\nIf anything is urgent, call us at 619.775.4008.\n\nWarmly,\nYalla",
     essential: true,
     audience: "family",
   },
@@ -210,12 +235,12 @@ export async function templateFor(db: Executor, key: TemplateKey) {
 }
 
 /** Sends one email through Postmark's transactional ("outbound") message stream. */
-export async function deliver(to: string, subject: string, body: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
+export async function deliver(to: string, subject: string, body: string, html?: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
   try {
     const res = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
       headers: { "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN ?? "", Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ From: process.env.NOTIFICATIONS_FROM, To: to, Subject: subject, TextBody: body, MessageStream: "outbound" }),
+      body: JSON.stringify({ From: process.env.NOTIFICATIONS_FROM, To: to, Subject: subject, TextBody: body, ...(html ? { HtmlBody: html } : {}), MessageStream: "outbound" }),
     });
     const json = (await res.json().catch(() => ({}))) as { MessageID?: string; ErrorCode?: number; Message?: string };
     return res.ok && !json.ErrorCode ? { ok: true, ref: json.MessageID } : { ok: false, error: json.Message ?? `HTTP ${res.status}` };
@@ -266,7 +291,7 @@ export async function notifyFamily(
       .returning({ id: messages.id });
     ids.push(m.id);
     if (mode === "live") {
-      const r = await deliver(g.email, subject, body);
+      const r = await deliver(g.email, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
       await db
         .update(messages)
         .set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null })
@@ -286,7 +311,7 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
     .values({ templateKey: input.key, toAddress: input.to, subject, body, mode, status: mode === "test" ? "captured" : "queued", relatedType: "staff", relatedId: input.relatedId })
     .returning({ id: messages.id });
   if (mode === "live") {
-    const r = await deliver(input.to, subject, body);
+    const r = await deliver(input.to, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
     await db.update(messages).set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null }).where(eq(messages.id, m.id));
   }
   return { id: m.id, mode, body };
@@ -316,10 +341,19 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   late_fee: ["guardian_first_name", "child_name", "minutes_late", "date", "amount"],
   staff_new_enquiry: ["kind", "kind_label", "name", "details", "link"],
   enquiry_received: ["name", "kind", "details"],
+  tour_received: ["name", "details", "interests", "explore"],
+  application_received: ["name", "details", "explore"],
+  event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
   plan: "Gather",
+  interests: "Club Yalla, Yalla Flex",
+  occasion: "Birthday party",
+  for_occasion: " for your birthday party",
+  preferred_date: "Sat 12 Dec",
+  explore: "While you wait, here’s a little more about what caught your eye:\n\n• [A day at Club Yalla](https://www.yallaspacesd.com/club-yalla)\n• [Yalla Flex](https://www.yallaspacesd.com/programs/yalla-flex)",
+  details: "Name: Jordan Rivera\nEmail: jordan@example.com\nPhone: 619 555 0100\nChild’s age or due date: 14 months",
   added: "$200",
   monthly_price: "$180",
   monthly_allocation: "$200",
