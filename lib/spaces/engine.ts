@@ -529,10 +529,13 @@ export async function startSpaceCheckout(db: DB, actor: Actor, groupId: string, 
     return { url: provider.name === "test" ? `${urls.base}/pay/test/${existing.checkoutRef}` : (existing.providerRef ?? confirmUrl), free: false };
   if (existing) idem = `${idem}:retry-${randomToken(6)}`;
   const paymentId = crypto.randomUUID();
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, g.workspaceId));
+  const rows = await db.select().from(spaceReservations).where(and(eq(spaceReservations.groupId, g.id), inArray(spaceReservations.status, ["held", "confirmed"]))).orderBy(asc(spaceReservations.startsAt));
   const checkout = await provider.createCheckout({
     paymentId,
     amountCents: t.balance,
-    description: `Yalla workspace ${g.reference}`,
+    description: `${ws.name} · ${CATEGORY_LABEL[ws.category as Category]} · ${BOOKING_TYPE_LABEL[g.bookingType as BookingType]}`,
+    details: `${describeWhen(rows)}. Reference ${g.reference}`,
     customerEmail: primary?.email,
     successUrl: confirmUrl,
     cancelUrl: `${confirmUrl}?cancelled=1`,

@@ -374,7 +374,8 @@ export async function sendInvoicePaymentLink(db: DB, actor: Actor, invoiceId: st
     const checkout = await provider.createCheckout({
       paymentId,
       amountCents: t.balance,
-      description: `Yalla invoice ${inv.number}`,
+      description: inv.description ? inv.description.slice(0, 120) : `Yalla invoice ${inv.number}`,
+      details: `Invoice ${inv.number}`,
       customerEmail: g?.email,
       successUrl: `${baseUrl}/pay/complete?invoice=${inv.number}`,
       cancelUrl: `${baseUrl}/pay/complete?invoice=${inv.number}&cancelled=1`,

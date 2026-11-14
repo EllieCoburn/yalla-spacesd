@@ -40,7 +40,7 @@ import { notifyFamily } from "@/lib/notify";
 import { addonsFor } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
-import { bookingConfirmationVars, bookingLines, cancelBooking, createHold, describeLine, startCheckout } from "./bookings";
+import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
 import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
@@ -431,10 +431,12 @@ export async function retryCheckout(db: DB, reference: string, baseUrl: string) 
   const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)));
   const paymentId = crypto.randomUUID();
   const idem = `checkout:${b.id}:${inv.id}:attempt-${attempts + 1}`;
+  const label = await checkoutLabel(db, b.id, { walletCents: t.balance - due });
   const checkout = await provider.createCheckout({
     paymentId,
     amountCents: due,
-    description: `Yalla booking ${b.reference}`,
+    description: label.name,
+    details: label.details,
     customerEmail: primary?.email,
     successUrl: `${baseUrl}/book/confirmation/${b.reference}`,
     cancelUrl: `${baseUrl}/book/confirmation/${b.reference}?cancelled=1`,

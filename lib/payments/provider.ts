@@ -44,7 +44,10 @@ export interface PaymentProvider {
   createCheckout(input: {
     paymentId: string;
     amountCents: number;
+    /** What the family is paying for, shown as the item name at checkout. */
     description: string;
+    /** More detail under the name (sessions, children, dates, reference). */
+    details?: string;
     customerEmail?: string;
     successUrl: string;
     cancelUrl: string;
@@ -107,7 +110,12 @@ export const stripeProvider: PaymentProvider = {
       {
         mode: "payment",
         customer_email: input.customerEmail,
-        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: input.amountCents, product_data: { name: input.description } } }],
+        line_items: [
+          {
+            quantity: 1,
+            price_data: { currency: "usd", unit_amount: input.amountCents, product_data: { name: input.description.slice(0, 250), ...(input.details ? { description: input.details.slice(0, 500) } : {}) } },
+          },
+        ],
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
         // Stripe requires at least 30 minutes.

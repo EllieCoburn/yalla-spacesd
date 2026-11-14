@@ -379,6 +379,38 @@ export function describeLine(r: { program: ProgramRow; session: SessionRow; chil
   return `${r.program.name} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(r.session.startsAt)}–${fmtTime(r.session.endsAt)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
 }
 
+/**
+ * How a booking reads at checkout: a name families recognize ("Weekend Play Session · Sat, Nov 21")
+ * and the details (each session and child), with the reference last.
+ */
+export async function checkoutLabel(db: Executor, bookingId: string, opts: { walletCents?: number } = {}) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+  const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status !== "cancelled" && r.item.status !== "moved");
+  const sessionsBooked = [...new Map(rows.map((r) => [r.session.id, r])).values()];
+  const title = (r: (typeof rows)[number]) => r.session.title ?? r.program.name;
+  const children = [...new Set(rows.map((r) => (r.child ? r.child.preferredName || r.child.firstName : null)).filter(Boolean))] as string[];
+  const programs = [...new Set(sessionsBooked.map((r) => r.program.name))];
+  const name =
+    sessionsBooked.length === 1
+      ? `${title(sessionsBooked[0])} · ${fmtDate(sessionsBooked[0].session.localDate, "EEE, MMM d")}`
+      : programs.length === 1
+        ? `${programs[0]} · ${sessionsBooked.length} sessions`
+        : `Yalla booking · ${sessionsBooked.length} sessions`;
+  const lines = sessionsBooked.map((s) => {
+    const kids = rows.filter((r) => r.session.id === s.session.id && r.child).map((r) => r.child!.preferredName || r.child!.firstName);
+    return `${title(s)}, ${fmtDate(s.session.localDate, "EEE MMM d")} ${fmtTime(s.session.startsAt)}–${fmtTime(s.session.endsAt)}${kids.length ? ` (${kids.join(", ")})` : ""}`;
+  });
+  const details = [
+    lines.join(" · "),
+    children.length && sessionsBooked.length > 1 ? `For ${children.join(" and ")}` : null,
+    opts.walletCents ? `$${(opts.walletCents / 100).toFixed(2)} applied from your Yalla Wallet` : null,
+    `Reference ${b.reference}`,
+  ]
+    .filter(Boolean)
+    .join(". ");
+  return { name, details };
+}
+
 async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) {
   const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
   const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status !== "cancelled" && r.item.status !== "moved");
@@ -440,10 +472,12 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   if (existing[0]?.checkoutRef && existing[0].status === "pending") {
     return { url: provider.name === "test" ? `${urls.base}/pay/test/${existing[0].checkoutRef}` : existing[0].providerRef ?? `${urls.base}/book/confirmation/${b.reference}`, free: false };
   }
+  const label = await checkoutLabel(db, b.id, { walletCents: fromWallet });
   const checkout = await provider.createCheckout({
     paymentId,
     amountCents: due,
-    description: `Yalla booking ${b.reference}`,
+    description: label.name,
+    details: label.details,
     customerEmail: primary?.email,
     successUrl: `${urls.base}/book/confirmation/${b.reference}`,
     cancelUrl: `${urls.base}/book/confirmation/${b.reference}?cancelled=1`,
