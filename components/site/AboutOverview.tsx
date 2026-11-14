@@ -55,7 +55,7 @@ export function AboutOverview() {
           </div>
           <div className="lg:col-span-3 lg:col-start-10 lg:pt-2">
             <p className="display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] leading-[1.25]! text-ink">
-              A little more room for childhood. <em>A little more possibility for family life.</em>
+              For the wonder of childhood <em>and the realities of raising children.</em>
             </p>
             <Mark name="roofline" className="mt-6 h-4 w-auto text-blue" />
           </div>
