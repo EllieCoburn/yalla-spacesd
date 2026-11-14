@@ -33,7 +33,7 @@ export function ClubYallaDay({ start = 1 }: { start?: number }) {
         <div className="lg:col-span-4">
           <Index n={String(start).padStart(2, "0")}>A Club Yalla day</Index>
           <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-            Down the hall, <em>not across town.</em>
+            A world of their own. <em>Right next to yours.</em>
           </h2>
         </div>
         <ol className="grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:col-span-7 lg:col-start-6">
