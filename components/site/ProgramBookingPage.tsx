@@ -25,6 +25,13 @@ type Page = {
   familyRate?: boolean;
   goodToKnow: { label: string; lines: ReactNode[] }[];
   after?: ReactNode;
+  /** A calmer header: a short lede, an even grid of key facts, one button and a rates link. */
+  hero?: {
+    lede: string;
+    facts: { label: string; value: string; note?: string }[];
+    cta: string;
+    ratesLink?: { label: string; href: string };
+  };
 };
 
 const AGE_GROUPS = (priceCents: number): DateGroup[] => [
@@ -95,7 +102,18 @@ export const BOOKING_PAGES: Record<string, Page> = {
         Flex days, <em>when you need them.</em>
       </>
     ),
-    lede: "A day of childcare for your child and coworking for you, Monday to Friday, when a spot opens in your child’s age group. Each day shows which age groups are open.",
+    lede: "Thoughtful childcare for your little one, a welcoming coworking space for you. Book a full or half day, Monday–Friday.",
+    hero: {
+      lede: "Thoughtful childcare for your little one, a welcoming coworking space for you. Book a full or half day, Monday–Friday, and explore availability for your child’s age group below.",
+      facts: [
+        { label: "Full day", value: "8:30am–4:30pm" },
+        { label: "Half day", value: "8:30am–12:00pm" },
+        { label: "Ages", value: "4 months–4 years" },
+        { label: "Full-day rates", value: `Starting at $${Math.min(...cohorts.map((c) => c.daily.full))}`, note: "Childcare + coworking included" },
+      ],
+      cta: "Explore availability",
+      ratesLink: { label: "View all rates", href: "#rates" },
+    },
     facts: [
       { label: "Hours", value: "8:30am – 4:30pm, or a half day to 12:00pm" },
       { label: "Ages", value: "4 months – 4 years" },
@@ -149,6 +167,49 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
   return (
     <>
       {/* Header */}
+      {page.hero ? (
+        <section className="pt-32 pb-16 lg:pt-40 lg:pb-24">
+          <div className="shell">
+            <Link href="/programs" className="eyebrow inline-flex items-center gap-3 text-ink-soft hover:text-ink">
+              <Arrow className="h-3 w-4 rotate-180" /> All programs
+            </Link>
+            <div className="mt-10 grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+              <div className="lg:col-span-7">
+                <Eyebrow className="flex items-center gap-3">
+                  {p.motif ? <Mark name={p.motif} className="h-5 w-auto text-blue" /> : null}
+                  {p.name}
+                </Eyebrow>
+                <h1 className="display mt-6 text-[clamp(2.4rem,1.7rem+2.6vw,4rem)]">{page.title}</h1>
+                <p className="mt-6 max-w-xl text-[1.12rem] leading-relaxed text-ink-soft">{page.hero.lede}</p>
+                <dl className="mt-10 grid max-w-xl grid-cols-2 gap-x-8 gap-y-7 border-t border-line pt-8">
+                  {page.hero.facts.map((f) => (
+                    <div key={f.label}>
+                      <dt className="eyebrow text-[0.6rem] text-ink-soft">{f.label}</dt>
+                      <dd className="mt-2 text-[1.08rem] text-ink">{f.value}</dd>
+                      {f.note ? <dd className="mt-1 text-[0.84rem] text-ink-soft">{f.note}</dd> : null}
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+                  <Button href="#dates" size="lg">
+                    {page.hero.cta}
+                  </Button>
+                  {page.hero.ratesLink ? (
+                    <a href={page.hero.ratesLink.href} className="link-underline pb-0.5 text-[0.95rem] text-ink">
+                      {page.hero.ratesLink.label}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+              <div className="hidden lg:col-span-4 lg:col-start-9 lg:block">
+                <div className="relative mx-auto aspect-[4/5] max-h-[34rem] overflow-hidden rounded-t-[999px] bg-sand">
+                  <Image src={p.image} alt={p.imageAlt} fill priority sizes="30vw" className="object-cover" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
       <section className="pt-32 pb-14 lg:pt-40 lg:pb-16">
         <div className="shell">
           <Link
@@ -209,6 +270,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
           </div>
         </div>
       </section>
+      )}
 
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
