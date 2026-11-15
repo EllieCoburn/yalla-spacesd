@@ -405,9 +405,34 @@ export function Checkout({
     return null;
   })();
 
+  // Each chosen spot needs enough children who fit its age group on the day, checked as soon as
+  // birth dates are entered, with the exact birth-date range for that session.
+  const fmtBorn = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const bornRange = (sess: PublicSession) => {
+    const [y, m, d] = sess.localDate.split("-").map(Number);
+    const latest = sess.ages.min != null ? new Date(Date.UTC(y, m - 1 - sess.ages.min, d)) : null;
+    const earliest = sess.ages.max != null ? new Date(Date.UTC(y, m - 1 - (sess.ages.max + 1), d + 1)) : null;
+    if (latest && earliest) return `born between ${fmtBorn(earliest)} and ${fmtBorn(latest)}`;
+    if (latest) return `born on or before ${fmtBorn(latest)}`;
+    if (earliest) return `born on or after ${fmtBorn(earliest)}`;
+    return null;
+  };
+  const ageProblem = (() => {
+    if (!chosen.length) return null;
+    for (const sess of fixed) {
+      const fit = chosen.filter((c) => eligible(sess, c)).length;
+      if (fit >= spotsOf(sess.id)) continue;
+      const range = bornRange(sess);
+      const label = `${sess.title} on ${fmtDate(sess.localDate, "EEE d MMM")}`;
+      const who = chosen.length === 1 ? `${chosen[0].firstName} isn’t in the age group for ${label}.` : `Not enough of the children you added are in the age group for ${label}.`;
+      return `${who}${range ? ` To attend, a child must be ${range}.` : ""} Check the date of birth, or go back and choose the right age group.`;
+    }
+    return null;
+  })();
+
   const canNext =
     step === 0
-      ? chosen.length > 0 && chosen.length >= needed && !unfinished
+      ? chosen.length > 0 && chosen.length >= needed && !unfinished && !ageProblem
       : step === 1
         ? !!guardian ||
           (adult.firstName.trim() !== "" &&
@@ -637,6 +662,14 @@ export function Checkout({
                       Go back to your selection
                     </button>{" "}
                     and remove it.
+                  </p>
+                ) : null}
+                {ageProblem && !unfinished && chosen.length >= needed ? (
+                  <p role="alert" className="border-l-2 border-oxblood/50 pl-3 text-[0.88rem] text-oxblood">
+                    {ageProblem}{" "}
+                    <button onClick={onClose} className="underline underline-offset-4">
+                      Go back to your selection
+                    </button>
                   </p>
                 ) : null}
                 {unfinished ? (
