@@ -151,13 +151,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
     })),
     groupNoun: "age group",
     horizonDays: 56,
-    goodToKnow: [
-      {
-        label: "Every Flex day",
-        lines: ["Childcare for your child", "Coworking for you, steps away"],
-      },
-      questions,
-    ],
+    goodToKnow: [],
     after: <FlexRates />,
   },
 };
@@ -293,6 +287,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
       </section>
 
       {/* Good to know */}
+      {page.goodToKnow.length ? (
       <section className="py-16 lg:py-20">
         <div className="shell grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {page.goodToKnow.map((g) => (
@@ -307,6 +302,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
           ))}
         </div>
       </section>
+      ) : null}
 
       {p.kind === "drop_in" ? <ContextualFaq
           page="flex"
