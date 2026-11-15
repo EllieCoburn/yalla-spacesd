@@ -197,6 +197,13 @@
       "when": 1794682583214,
       "tag": "0027_flex_wildflowers_weekly",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794682643214,
+      "tag": "0028_camp_nov_27",
+      "breakpoints": true
     }
   ]
 }
