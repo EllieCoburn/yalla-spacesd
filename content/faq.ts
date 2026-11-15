@@ -410,7 +410,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "Can I drop my child off and leave?",
     answer:
-      "Yalla Flex requires parents and caregivers to remain onsite throughout their child’s session. You can work in our dedicated coworking space while your child plays and learns with their age-based cohort.",
+      "Yalla Flex brings dedicated coworking and thoughtful early childhood care together under one roof. Whether you’re working, tackling a project, studying, or catching up on your to-do list, enjoy space to focus while your child plays, explores, and connects with children of similar ages. Parents and caregivers must remain onsite throughout their child’s session, with coworking included as part of the experience.",
   },
   {
     id: "flex-early-late",
