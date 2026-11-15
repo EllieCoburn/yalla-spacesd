@@ -33,3 +33,15 @@ export const secondaryNav = [
   { href: "/book", label: "Book Care" },
   { href: "/portal", label: "Family Portal" },
 ] as const;
+
+/**
+ * The strip across the top of every page. Set `announcement` to null to turn it off; it also
+ * disappears by itself after `until` (a San Diego date).
+ */
+export const announcement: { text: string; short: string; linkLabel: string; href: string; until: string } | null = {
+  text: "Holiday camp is now booking for November & December",
+  short: "Holiday camp is now booking",
+  linkLabel: "Book camp days",
+  href: "/book?offering=camp",
+  until: "2026-12-30",
+};

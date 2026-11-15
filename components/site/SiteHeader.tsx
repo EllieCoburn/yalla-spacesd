@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { nav, secondaryNav } from "@/content/site";
 
-export function SiteHeader() {
+export function SiteHeader({ offset = false }: { offset?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +29,7 @@ export function SiteHeader() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-700 ease-[var(--ease-soft)] ${
+        className={`fixed inset-x-0 ${offset ? "top-10" : "top-0"} z-50 transition-all duration-700 ease-[var(--ease-soft)] ${
           scrolled ? "bg-chalk/85 shadow-[0_1px_0_var(--color-line)] backdrop-blur-xl" : "bg-transparent"
         }`}
       >
