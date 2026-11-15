@@ -369,7 +369,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What does a camp day look like?",
     answer:
-      "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering. Children spend the day with others close to their age, in three groups: 18 months to 4 years, 4 to 6 years, and 7 to 10 years.",
+      "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 6 years, and 7 to 10 years.",
   },
   {
     id: "what-are-happenings",

@@ -27,7 +27,7 @@ type Page = {
 };
 
 const AGE_GROUPS = (priceCents: number): DateGroup[] => [
-  { key: "a", label: "18 mo – 4 yrs", minAge: 18, maxAge: 47, priceCents },
+  { key: "a", label: "18 mo – 3 yrs", minAge: 18, maxAge: 47, priceCents },
   { key: "b", label: "4 – 6 yrs", minAge: 48, maxAge: 83, priceCents },
   { key: "c", label: "7 – 10 yrs", minAge: 84, maxAge: 131, priceCents },
 ];
@@ -90,7 +90,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
     goodToKnow: [
       {
         label: "Age groups",
-        lines: ["18 months – 4 years", "4 – 6 years", "7 – 10 years"],
+        lines: ["18 months – 3 years", "4 – 6 years", "7 – 10 years"],
       },
       questions,
     ],

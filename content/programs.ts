@@ -12,11 +12,11 @@ export interface FactBlock {
 }
 
 const groups = (middle = "4 – 6 years"): FactBlock[] => [
-  { rows: [{ label: "18 months – 4 years" }, { label: middle }, { label: "7 – 10 years" }] },
+  { rows: [{ label: "18 months – 3 years" }, { label: middle }, { label: "7 – 10 years" }] },
 ];
 
 /** Camp Yalla's confirmed 2026–27 camp days (the camp page shows live availability for these when it can). */
-export const CAMP_DAYS = ["2026-11-11", "2026-11-25", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15", "2027-07-05"];
+export const CAMP_DAYS = ["2026-11-11", "2026-11-25", "2026-11-27", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15", "2027-07-05"];
 
 export interface ProgramContent {
   slug: string;
@@ -75,12 +75,12 @@ export const programs: ProgramContent[] = [
       "Camp days for children 18 months to 10 years, planned with the same care as every Yalla day: unhurried, hands-on and full of discovery.",
     body: [
       "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering.",
-      "Book the days that suit your family. Children spend the day with others close to their age, in three groups: 18 months to 4 years, 4 to 6 years, and 7 to 10 years.",
+      "Book the days that suit your family. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 6 years, and 7 to 10 years.",
     ],
     image: "/photos/painting-table.jpg",
     imageAlt: "A toddler painting with brushes and bright colors outdoors",
     motif: "sprig",
-    ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
+    ages: "18 months – 10 years, in three age groups: 18 months – 3 years, 4 – 6 years, and 7 – 10 years",
     days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
     pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day. Siblings: 10% off each additional child on the same day, applied automatically.",
     facts: {

@@ -305,7 +305,9 @@ export function ProgramDates({
           : full
             ? "Closed"
             : few
-              ? "A few spots left"
+              ? kind === "camp"
+                ? "Almost full"
+                : "A few spots left"
               : null;
     const label = `${fmt(d, { weekday: "long", month: "long", day: "numeric", ...(flowTile ? { year: "numeric" } : {}) })}${status ? `, ${status.toLowerCase()}` : ""}`;
     const shape = `relative flex flex-col items-center justify-center rounded-xl border px-1 text-center transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${

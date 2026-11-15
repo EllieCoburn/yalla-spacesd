@@ -169,6 +169,13 @@
       "when": 1794682343214,
       "tag": "0023_enquiries",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794682403214,
+      "tag": "0024_camp_group_sizes",
+      "breakpoints": true
     }
   ]
 }
