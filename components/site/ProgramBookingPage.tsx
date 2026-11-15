@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ContextualFaq } from "@/components/faq/ContextualFaq";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 import { Mark } from "@/components/brand/Mark";
 import { FlexRates } from "@/components/site/FlexRates";
 import { ProgramDates, type DateGroup } from "@/components/site/ProgramDates";
@@ -265,6 +266,8 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
         </div>
       </section>
       )}
+
+      {page.hero ? <LoopDivider /> : null}
 
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
