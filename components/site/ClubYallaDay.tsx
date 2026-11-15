@@ -5,23 +5,23 @@ import { Reveal } from "@/components/ui/Reveal";
 const steps = [
   {
     mark: "arch" as const,
-    title: "You arrive together",
-    body: "Mornings begin side by side. Your child is welcomed into their cohort space by educarers and guides who know them well.",
+    title: "Start the day together",
+    body: "Arrive with your child and settle them into a welcoming play space, where caring staff help ease the transition into the day.",
   },
   {
     mark: "window" as const,
-    title: "You settle in to work",
-    body: "Head to the coworking space and have a proper workday, with desks, quiet and a community of parents who understand.",
+    title: "Make space for your work",
+    body: "Settle into our dedicated coworking space to work, study, or move a project forward, alongside other parents making time for their priorities.",
   },
   {
     mark: "sun" as const,
-    title: "They spend the day playing",
-    body: "Children play, explore, create and build friendships at their own pace, guided by educators who plan with intention.",
+    title: "Let play lead the way",
+    body: "Your child follows their curiosity through hands-on exploration, creative materials, and time with other children, supported by attentive staff.",
   },
   {
     mark: "palm" as const,
-    title: "You're close the whole time",
-    body: "You're never far away. At the end of the day you leave together, often with a story or two.",
+    title: "Stay connected, all under one roof",
+    body: "You remain onsite throughout the day, with space for your own pursuits and the comfort of being in the same place. When the day wraps up, head home together.",
   },
 ];
 
