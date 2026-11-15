@@ -45,7 +45,8 @@ export default function ProgramsPage() {
                       {p.short}
                     </p>
                     <h2 className="display mt-3 text-[clamp(2rem,1.5rem+1.8vw,3rem)] transition-colors group-hover:text-blue">{p.name}</h2>
-                    <p className="mt-4 max-w-xl text-ink-soft">{p.summary}</p>
+                    {p.summaryLead ? <p className="mt-4 max-w-xl font-serif text-[1.25rem] leading-snug text-ink">{p.summaryLead}</p> : null}
+                    <p className={`${p.summaryLead ? "mt-3" : "mt-4"} max-w-xl text-ink-soft`}>{p.summary}</p>
                   </div>
                   <span className="flex items-center gap-3 text-[0.85rem] whitespace-nowrap md:col-span-2 md:justify-end">
                     {p.bookingMode === "enroll" ? "Apply" : p.bookingMode === "inquire" ? "Enquire" : "Book online"}

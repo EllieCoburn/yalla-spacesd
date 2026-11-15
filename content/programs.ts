@@ -24,6 +24,8 @@ export interface ProgramContent {
   name: string;
   short: string;
   tagline: string;
+  /** An optional short line shown above the summary on the Programs page. */
+  summaryLead?: string;
   summary: string;
   body: string[];
   image: string;
@@ -48,8 +50,9 @@ export const programs: ProgramContent[] = [
     name: "Yalla Flex",
     short: "Drop-in childcare & coworking",
     tagline: "Childcare and coworking by the day, Monday to Friday",
+    summaryLead: "A day of play for your child. A productive day for you. All under one roof.",
     summary:
-      "Book individual weekdays, Monday through Friday, when a spot opens in one of our cohorts: a day of childcare for your child in one of our thoughtfully designed play environments and a day of coworking for you, all under one roof. Ideal for flexible schedules, families visiting San Diego, or simply getting to know Yalla.",
+      "Yalla Flex pairs childcare in thoughtfully designed play spaces with dedicated coworking for parents. Book individual sessions Monday through Friday, with full days from 8:30am–4:30pm or half days from 8:30am–12:00pm, subject to availability in our age-based groups. Ideal for flexible schedules, visits to San Diego, or getting to know Yalla.",
     body: [
       "Yalla Flex is drop-in childcare and coworking for families who need care here and there rather than a regular membership. On the days you book, your child spends the day in a play environment with similarly aged peers and attentive educarers and guides, while you settle into our coworking space a few steps away.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
