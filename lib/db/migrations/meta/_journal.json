@@ -183,6 +183,13 @@
       "when": 1794682463214,
       "tag": "0025_flex_vacancies",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794682523214,
+      "tag": "0026_cohort_closures",
+      "breakpoints": true
     }
   ]
 }

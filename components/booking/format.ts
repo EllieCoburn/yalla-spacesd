@@ -8,6 +8,7 @@ export function stateLabel(s: PublicSession): { text: string; tone: "ok" | "low"
   if (st.state === "available") return { text: s.kind === "drop_in" ? "Open" : "Available", tone: "ok", selectable: true };
   if (st.state === "limited") return { text: s.kind === "camp" ? "Almost full" : s.kind === "drop_in" ? "Open" : "A few spots left", tone: "low", selectable: true };
   if (st.state === "full") return { text: s.kind === "drop_in" ? "Full" : st.waitlist ? "Session full · join waitlist" : "Session full", tone: "muted", selectable: false };
-  if (st.state === "closed") return { text: st.reason, tone: "muted", selectable: false };
+  if (st.state === "closed")
+    return { text: s.closure ? "Yalla closed" : s.kind === "drop_in" ? "Full" : st.reason, tone: "muted", selectable: false };
   return { text: "Not offered", tone: "muted", selectable: false };
 }

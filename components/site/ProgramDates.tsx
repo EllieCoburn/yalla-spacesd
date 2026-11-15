@@ -192,6 +192,7 @@ export function ProgramDates({
   /** A date can be picked when at least one of the chosen groups has room (or availability is unknown). */
   const pickable = (day: string) => {
     if (waiting) return false;
+    if (closedDay(day)) return false;
     if (!known) return true;
     const coming = comingOn(day);
     return (coming.length ? coming : groups).some((g) =>
@@ -301,7 +302,41 @@ export function ProgramDates({
   };
 
   /** One date. Status is shown in words only: a few spots left, or full with the waitlist. */
+  /** One of Yalla's closure days: every group's session that day is closed for it. */
+  const closedDay = (day: string) => {
+    const list = groups.map((g) => sessionFor(day, g)).filter((x): x is PublicSession => !!x);
+    if (!list.length || !list.every((x) => x.closure)) return null;
+    return { reason: list[0].closure as string, camp: list.some((x) => x.campToday) };
+  };
+
   const tile = (d: string, flowTile: boolean) => {
+    const closed = closedDay(d);
+    if (closed) {
+      const size = flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]";
+      const date = (
+        <>
+          <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>
+          <span className={`font-serif leading-none ${flowTile ? "text-[1.6rem]" : "text-[1.45rem]"}`}>{fmt(d, { day: "numeric" })}</span>
+          <span className="mt-1 text-[0.58rem] leading-tight">Yalla closed</span>
+        </>
+      );
+      const label = `${fmt(d, { weekday: "long", month: "long", day: "numeric" })}: Yalla closed for ${closed.reason}`;
+      return closed.camp ? (
+        <a
+          href={`/book?offering=camp&date=${d}`}
+          aria-label={`${label}. Explore camp that day`}
+          title={`${closed.reason}: Yalla closed. Camp Yalla runs this day.`}
+          className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-blue/40 bg-blue/[0.04] px-1 text-center text-ink/45 transition-colors hover:border-blue hover:text-ink ${size}`}
+        >
+          {date}
+          <span className="mt-0.5 text-[0.58rem] leading-tight text-blue">Explore camp →</span>
+        </a>
+      ) : (
+        <span aria-label={label} title={`${closed.reason}: Yalla closed`} className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/15 bg-ink/[0.03] px-1 text-center text-ink/35 ${size}`}>
+          {date}
+        </span>
+      );
+    }
     if (waiting)
       return (
         <button
@@ -323,7 +358,9 @@ export function ProgramDates({
         : full === "full"
           ? "Session full"
           : full
-            ? "Closed"
+            ? kind === "drop_in"
+              ? "Session full"
+              : "Closed"
             : few
               ? kind === "camp"
                 ? "Almost full"

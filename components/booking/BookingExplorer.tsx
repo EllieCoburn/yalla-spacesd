@@ -182,10 +182,17 @@ export function BookingExplorer({
     () => Array.from({ length: DAYS }, (_, i) => addDaysISO(start, i)),
     [start],
   );
-  const visible = useMemo(
-    () => (day ? byKind.filter((s) => s.localDate === day) : byKind),
-    [byKind, day],
-  );
+  const visible = useMemo(() => {
+    const list = day ? byKind.filter((s) => s.localDate === day) : byKind;
+    // On a closure day, Flex shows a single "Yalla closed" line rather than one per age group.
+    const seen = new Set<string>();
+    return list.filter((s) => {
+      if (s.kind !== "drop_in" || !s.closure) return true;
+      if (seen.has(s.localDate)) return false;
+      seen.add(s.localDate);
+      return true;
+    });
+  }, [byKind, day]);
   const grouped = useMemo(() => {
     const m = new Map<string, PublicSession[]>();
     for (const s of visible)
@@ -590,12 +597,17 @@ function SessionRow({
             {s.cohort ? ` · ${s.cohort}` : ""}
           </span>
           <span className="display mt-1 block text-[1.35rem]">
-            {heading ?? s.title}
+            {s.kind === "drop_in" && s.closure ? `Yalla closed · ${s.closure}` : (heading ?? s.title)}
           </span>
+          {s.campToday ? (
+            <a href={`/book?offering=camp&date=${s.localDate}`} className="mt-1 inline-block text-[0.82rem] text-blue underline underline-offset-4">
+              Camp Yalla runs this day. Explore camp →
+            </a>
+          ) : null}
           <span className="mt-1 block text-[0.82rem] text-ink-soft sm:hidden">
             {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
           </span>
-          <span className="mt-1 block text-[0.82rem] text-ink-soft">
+          <span className={`mt-1 block text-[0.82rem] text-ink-soft ${s.kind === "drop_in" && s.closure ? "hidden" : ""}`}>
             {s.halfPriceCents != null ? `${usd(s.priceCents)} full day · ${usd(s.halfPriceCents)} half day` : usd(s.priceCents)}
             {s.priceCents != null
               ? s.bookingUnit === "per_family"
@@ -618,7 +630,7 @@ function SessionRow({
           <span className="hidden text-right text-[0.8rem] sm:block">
             {status}
           </span>
-          {s.state.state === "full" && s.state.waitlist && eligible ? (
+          {s.kind === "drop_in" && s.closure ? null : s.state.state === "full" && s.state.waitlist && eligible ? (
             <button
               onClick={onWaitlist}
               className="h-9 rounded-full border border-ink/25 px-4 text-[0.78rem] whitespace-nowrap transition-colors hover:border-ink"

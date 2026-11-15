@@ -6,7 +6,7 @@ import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
 import { adjustFlexSpots, ensureFlexDays, setWeeklyVacancies, weeklyVacancies } from "@/lib/ops/flex";
 import { listPublicSessions } from "@/lib/ops/public-booking";
 import { DEFAULT_WEEKLY } from "@/lib/booking/flex";
-import { addDaysISO, todayLA, weekdayOf } from "@/lib/time";
+import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
 import { db, family, owner, program, reset } from "./helpers";
 
 beforeEach(reset);
@@ -80,5 +80,32 @@ describe("Yalla Flex", () => {
     expect(lines).toHaveLength(1);
     expect(lines[0].description).toMatch(/half day.*8:30am–12:00pm/i);
     expect(lines[0].amountCents).toBe(7500);
+  });
+
+  it("closes booking at 8:00am, 30 minutes before the 8:30 start, even with a spot open", async () => {
+    const { monday, at } = await setup();
+    const toddlers = at(monday, 20);
+    const st = async (now: Date) => (await listPublicSessions(db(), { from: monday, to: monday, now })).find((x) => x.id === toddlers.id)!.state;
+    expect((await st(zonedDateTime(monday, "07:59"))).state).toBe("available");
+    expect(await st(zonedDateTime(monday, "08:00"))).toEqual({ state: "closed", reason: "Booking closed" });
+  });
+
+  it("creates closure days closed, and says whether camp runs that day", async () => {
+    const p = await program({ slug: "yalla-flex", kind: "drop_in", priceCents: 15000, minAgeMonths: 4, maxAgeMonths: 59 });
+    const camp = await program({ kind: "camp", priceCents: 16000 });
+    const monday = nextMonday();
+    const tuesday = addDaysISO(monday, 1);
+    await db().insert(s.blackoutDates).values([
+      { startsOn: monday, endsOn: monday, programId: p.id, reason: "Labor Day" },
+      { startsOn: tuesday, endsOn: tuesday, programId: p.id, reason: "Staff Development Day" },
+    ]);
+    await db().insert(s.sessions).values({ programId: camp.id, localDate: tuesday, startsAt: zonedDateTime(tuesday, "09:00"), endsAt: zonedDateTime(tuesday, "15:00"), capacity: 10 });
+    await ensureFlexDays(db(), { from: monday, days: 7 });
+    const list = await listPublicSessions(db(), { from: monday, to: addDaysISO(monday, 2), kinds: ["drop_in"] });
+    const mon = list.filter((x) => x.localDate === monday);
+    expect(mon).toHaveLength(4);
+    expect(mon.every((x) => x.closure === "Labor Day" && !x.campToday && x.state.state === "closed")).toBe(true);
+    expect(list.filter((x) => x.localDate === tuesday).every((x) => x.closure === "Staff Development Day" && x.campToday)).toBe(true);
+    expect(list.filter((x) => x.localDate === addDaysISO(monday, 2)).every((x) => x.closure === null)).toBe(true);
   });
 });

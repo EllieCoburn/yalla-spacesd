@@ -185,7 +185,7 @@ export function publicState(
   if (session.status === "closed") return { state: "closed", reason: "Closed" };
   if (program.status === "paused") return { state: "closed", reason: "Booking paused" };
   if (session.bookingOpensAt && now < session.bookingOpensAt) return { state: "closed", reason: "Booking not yet open" };
-  if (session.bookingClosesAt && now > session.bookingClosesAt) return { state: "closed", reason: "Booking closed" };
+  if (session.bookingClosesAt && now >= session.bookingClosesAt) return { state: "closed", reason: "Booking closed" };
   if (session.startsAt.getTime() - now.getTime() < program.minNoticeHours * 3600_000) return { state: "closed", reason: "Booking closed" };
   if (program.advanceBookingDays != null && session.startsAt.getTime() - now.getTime() > program.advanceBookingDays * 86400_000)
     return { state: "closed", reason: "Not yet open for booking" };

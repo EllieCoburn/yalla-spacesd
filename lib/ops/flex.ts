@@ -4,10 +4,10 @@
  * set the starting number for each new day; staff then add or remove spots for single days.
  * Spots are never set below what's already booked.
  */
-import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { bookingItems, programs, sessions, settings } from "@/lib/db/schema";
+import { blackoutDates, bookingItems, programs, sessions, settings } from "@/lib/db/schema";
 import { FLEX_GROUPS, FLEX_HOURS, FLEX_SLUG, flexGroupFor, flexTitle, parseWeekly, type WeeklyVacancies } from "@/lib/booking/flex";
 import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
 
@@ -37,6 +37,12 @@ export async function ensureFlexDays(db: Executor, opts: { from?: string; days?:
     .from(sessions)
     .where(and(eq(sessions.programId, p.id), gte(sessions.localDate, from), lte(sessions.localDate, to)));
   const have = new Set(existing.map((e) => `${e.localDate}|${e.minAge}`));
+  // Yalla's closure days (for Flex or for everything): the day exists but is closed.
+  const closures = await db
+    .select()
+    .from(blackoutDates)
+    .where(and(lte(blackoutDates.startsOn, to), gte(blackoutDates.endsOn, from), or(eq(blackoutDates.programId, p.id), isNull(blackoutDates.programId))));
+  const closedFor = (d: string) => closures.find((c) => c.startsOn <= d && c.endsOn >= d)?.reason ?? null;
   const rows: (typeof sessions.$inferInsert)[] = [];
   for (let d = from; d <= to; d = addDaysISO(d, 1)) {
     const dow = weekdayOf(d);
@@ -44,12 +50,15 @@ export async function ensureFlexDays(db: Executor, opts: { from?: string; days?:
     for (const g of FLEX_GROUPS) {
       if (have.has(`${d}|${g.minAge}`)) continue;
       const spots = weekly[g.key]?.[dow - 1] ?? 0;
+      const closed = closedFor(d);
       rows.push({
+        ...(closed ? { status: "closed", notes: `Closed: ${closed}` } : {}),
         programId: p.id,
         title: flexTitle(g),
         localDate: d,
         startsAt: zonedDateTime(d, FLEX_HOURS.start),
         endsAt: zonedDateTime(d, FLEX_HOURS.end),
+        bookingClosesAt: zonedDateTime(d, FLEX_HOURS.bookBy),
         capacity: spots,
         hardCapacity: null,
         locationId: p.locationId,

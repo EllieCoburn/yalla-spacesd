@@ -14,7 +14,8 @@ export const FLEX_GROUPS: FlexGroup[] = [
 ];
 
 export const FLEX_SLUG = "yalla-flex";
-export const FLEX_HOURS = { start: "08:30", end: "16:30", halfEnd: "12:00" };
+/** Cohorts need 30 minutes to prepare for a child, so booking closes at 8:00am (`bookBy`). */
+export const FLEX_HOURS = { start: "08:30", end: "16:30", halfEnd: "12:00", bookBy: "08:00" };
 /** The extra that turns a Flex booking into a half day. */
 export const HALF_DAY = "half";
 

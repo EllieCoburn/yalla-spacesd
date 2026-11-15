@@ -69,6 +69,10 @@ export type PublicSession = {
   priceCents: number | null;
   /** Yalla Flex: the half-day price (a full day is priceCents). */
   halfPriceCents: number | null;
+  /** Closed for one of Yalla's closure days (e.g. "Labor Day"). */
+  closure: string | null;
+  /** On a closure day: Camp Yalla runs that day, so families can be pointed there. */
+  campToday: boolean;
   ages: { min: number | null; max: number | null };
   eligible: boolean;
   seriesId: string | null;
@@ -134,8 +138,22 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
     .select()
     .from(programPrices)
     .where(inArray(programPrices.programId, [...new Set(rows.map((r) => r.p.id))]));
+  // Days with a camp running, to point families there when Yalla is otherwise closed.
+  const closureDates = [...new Set(rows.filter((r) => r.s.status === "closed" && r.s.notes?.startsWith("Closed: ")).map((r) => r.s.localDate))];
+  const campDays = new Set(
+    closureDates.length
+      ? (
+          await db
+            .select({ d: sessions.localDate })
+            .from(sessions)
+            .innerJoin(programs, eq(programs.id, sessions.programId))
+            .where(and(inArray(sessions.localDate, closureDates), eq(programs.kind, "camp"), eq(programs.status, "published"), eq(sessions.status, "scheduled")))
+        ).map((r) => r.d)
+      : [],
+  );
   return rows.map(({ s, p, c, series }) => {
     const remaining = avail.get(s.id)?.remaining ?? 0;
+    const closure = s.status === "closed" && s.notes?.startsWith("Closed: ") ? s.notes.slice("Closed: ".length) : null;
     const { min: minAge, max: maxAge } = sessionAges(s, p);
     const eligible = q.ageMonths == null || ((minAge == null || q.ageMonths >= minAge) && (maxAge == null || q.ageMonths <= maxAge));
     return {
@@ -152,6 +170,8 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       state: withoutCounts(publicState(s, p, remaining, now)),
       priceCents: pickPrice(s, p, table),
       halfPriceCents: p.kind === "drop_in" ? (flexGroupFor(s.minAgeMonths)?.halfCents ?? null) : null,
+      closure,
+      campToday: !!closure && campDays.has(s.localDate),
       ages: { min: minAge, max: maxAge },
       eligible,
       seriesId: s.seriesId,
