@@ -318,6 +318,17 @@ export const sessions = pgTable(
   ],
 );
 
+/**
+ * Yalla Flex, per day: how many Early Bird (8:00–8:30am) seats staff have opened. Null means staff
+ * haven't said yet (treated as none); 0 means no Early Bird that day.
+ */
+export const flexDays = pgTable("flex_days", {
+  localDate: date("local_date").primaryKey(),
+  earlyBirdSeats: integer("early_bird_seats"),
+  updatedAt: updatedAt(),
+  updatedBy: text("updated_by"),
+});
+
 export const blackoutDates = pgTable("blackout_dates", {
   id: id(),
   startsOn: date("starts_on").notNull(),

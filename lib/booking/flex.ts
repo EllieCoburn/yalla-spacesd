@@ -18,6 +18,9 @@ export const FLEX_SLUG = "yalla-flex";
 export const FLEX_HOURS = { start: "08:30", end: "16:30", halfEnd: "12:00", bookBy: "08:00" };
 /** The extra that turns a Flex booking into a half day. */
 export const HALF_DAY = "half";
+/** Early Bird care (8:00–8:30am), for children 12 months and older, on days staff open seats. */
+export const EARLY_BIRD = "early";
+export const EARLY_BIRD_MIN_AGE = 12;
 
 /** The age group a Flex session belongs to, by its youngest age. */
 export const flexGroupFor = (minAgeMonths: number | null | undefined) => FLEX_GROUPS.find((g) => g.minAge === minAgeMonths) ?? null;

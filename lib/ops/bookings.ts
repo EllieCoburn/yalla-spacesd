@@ -39,6 +39,7 @@ import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 import { addonsFor, validAddons } from "@/lib/booking/addons";
 import { flexGroupFor } from "@/lib/booking/flex";
+import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
@@ -149,6 +150,32 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
         problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${s.title ?? p.name}.` });
       if (s.cohortId && c.cohortId && c.cohortId !== s.cohortId && p.kind !== "drop_in")
         problems.push({ sessionId: s.id, childId: c.id, code: "cohort", message: `${name} is assigned to a different cohort than this session.` });
+      // Extras with an age limit (e.g. Yalla Flex Early Bird is for children 12 months and older).
+      for (const a of addonsFor(p.kind, p.slug).filter((x) => x.minAgeMonths != null && it.addons?.includes(x.key)))
+        if (age < a.minAgeMonths!) problems.push({ sessionId: s.id, childId: c.id, code: "addon_age", message: `${a.label} is for children ${a.minAgeMonths} months and older.` });
+    }
+  }
+
+  // Extras with limited seats per day (Yalla Flex Early Bird): only as many as staff have opened.
+  const limited = new Map<string, { label: string; wanted: number }>();
+  for (const it of items) {
+    const s = sessionsById.get(it.sessionId);
+    const p = s ? programsById.get(s.programId) : undefined;
+    if (!s || !p) continue;
+    for (const a of addonsFor(p.kind, p.slug).filter((x) => x.limitedSeats && it.addons?.includes(x.key))) {
+      const cur = limited.get(s.localDate) ?? { label: a.label, wanted: 0 };
+      limited.set(s.localDate, { label: a.label, wanted: cur.wanted + 1 });
+    }
+  }
+  if (limited.size) {
+    const seats = await earlyBirdByDate(db, [...limited.keys()], { excludeBookingId: opts.excludeBookingId });
+    for (const [d, w] of limited) {
+      const left = Math.max(0, (seats.get(d)?.seats ?? 0) - (seats.get(d)?.booked ?? 0));
+      if (w.wanted > left)
+        problems.push({
+          code: "addon_full",
+          message: left ? `Only ${left === 1 ? "one" : left} ${w.label} seat${left === 1 ? " is" : "s are"} open on ${fmtDate(d)}.` : `${w.label} isn’t available on ${fmtDate(d)}.`,
+        });
     }
   }
   return { sessionsById, programsById, childrenById, spotsBySession, problems };

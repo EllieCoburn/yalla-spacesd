@@ -65,6 +65,7 @@ export function Checkout({
   sibling = { percent: 0, withPass: false },
   spots = {},
   onSpots,
+  defaultExtras = {},
   onClose,
   onRefresh,
 }: {
@@ -83,6 +84,8 @@ export function Checkout({
   spots?: Record<string, number>;
   /** Change a session's spots from checkout (0 removes it from the selection). */
   onSpots?: (sessionId: string, n: number) => void;
+  /** Extras chosen per session before checkout (e.g. Yalla Flex half day, Early Bird). */
+  defaultExtras?: Record<string, string[]>;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -130,12 +133,27 @@ export function Checkout({
     Record<string, Record<string, string[]>>
   >({});
 
-  /** A child's extras for a session; per-family extras chosen earlier apply until changed. */
+  /** Whether an extra can be added for this child on this day (age limit, seats opened by staff). */
+  const addonOk = (s: PublicSession, a: ReturnType<typeof addonsFor>[number], key: string) => {
+    if (a.limitedSeats && !s.earlyBirdOpen) return false;
+    if (a.minAgeMonths != null) {
+      const k = kids.find((x) => x.key === key);
+      if (!k || !/^\d{4}-\d{2}-\d{2}$/.test(k.birthDate) || ageInMonths(k.birthDate, s.localDate) < a.minAgeMonths) return false;
+    }
+    return true;
+  };
+  /** A child's extras for a session; extras chosen before checkout apply until changed here. */
   const extrasOf = (e: typeof extras, s: PublicSession, key: string) =>
-    e[s.id]?.[key] ??
-    addonsFor(s.kind, s.programSlug)
-      .filter((a) => a.perFamily && includeExtras.includes(a.key))
-      .map((a) => a.key);
+    (
+      e[s.id]?.[key] ??
+      addonsFor(s.kind, s.programSlug)
+        .filter((a) => includeExtras.includes(a.key) || (defaultExtras[s.id] ?? []).includes(a.key))
+        .filter((a) => a.perFamily || a.dayLength || a.limitedSeats || a.minAgeMonths != null)
+        .map((a) => a.key)
+    ).filter((k) => {
+      const a = addonsFor(s.kind, s.programSlug).find((x) => x.key === k);
+      return !a || addonOk(s, a, key);
+    });
   const sorted = useMemo(
     () => [...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [sessions],
@@ -216,7 +234,9 @@ export function Checkout({
   }, 0);
   const toggleExtra = (sid: string, key: string, addon: string) =>
     setExtras((e) => {
-      const cur = e[sid]?.[key] ?? [];
+      // Start from what's shown (including choices carried over from the program page).
+      const sess = sorted.find((x) => x.id === sid);
+      const cur = e[sid]?.[key] ?? (sess ? extrasOf(e, sess, key) : []);
       return {
         ...e,
         [sid]: {
@@ -801,8 +821,8 @@ export function Checkout({
                                 <>
                                   <span className="text-ink-soft">{c.firstName}:</span>
                                   {[null, ...addonsFor(s.kind, s.programSlug).filter((a) => a.dayLength)].map((a) => {
-                                    const half = (extras[s.id]?.[c.key] ?? []).includes(a?.key ?? "__none");
-                                    const anyHalf = addonsFor(s.kind, s.programSlug).some((x) => x.dayLength && (extras[s.id]?.[c.key] ?? []).includes(x.key));
+                                    const half = extrasOf(extras, s, c.key).includes(a?.key ?? "__none");
+                                    const anyHalf = addonsFor(s.kind, s.programSlug).some((x) => x.dayLength && extrasOf(extras, s, c.key).includes(x.key));
                                     const on = a ? half : !anyHalf;
                                     return (
                                       <button
@@ -812,7 +832,7 @@ export function Checkout({
                                         onClick={() => {
                                           if (on) return;
                                           if (a) toggleExtra(s.id, c.key, a.key);
-                                          else for (const x of addonsFor(s.kind, s.programSlug).filter((y) => y.dayLength && (extras[s.id]?.[c.key] ?? []).includes(y.key))) toggleExtra(s.id, c.key, x.key);
+                                          else for (const x of addonsFor(s.kind, s.programSlug).filter((y) => y.dayLength && extrasOf(extras, s, c.key).includes(y.key))) toggleExtra(s.id, c.key, x.key);
                                         }}
                                         className={`rounded-full border px-3.5 py-1.5 transition-all ${on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink"}`}
                                       >
@@ -826,7 +846,7 @@ export function Checkout({
                                 Extras for {c.firstName}:
                               </span>
                               )}
-                              {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily && !a.dayLength).map((a) => (
+                              {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily && !a.dayLength && addonOk(s, a, c.key)).map((a) => (
                                 <label
                                   key={a.key}
                                   className="inline-flex cursor-pointer items-center gap-2"
@@ -834,7 +854,7 @@ export function Checkout({
                                   <input
                                     type="checkbox"
                                     checked={(
-                                      extras[s.id]?.[c.key] ?? []
+                                      extrasOf(extras, s, c.key)
                                     ).includes(a.key)}
                                     onChange={() =>
                                       toggleExtra(s.id, c.key, a.key)

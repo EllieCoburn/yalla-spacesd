@@ -7,8 +7,8 @@
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { blackoutDates, bookingItems, programs, sessions, settings } from "@/lib/db/schema";
-import { FLEX_GROUPS, FLEX_HOURS, FLEX_SLUG, flexGroupFor, flexTitle, parseWeekly, type WeeklyVacancies } from "@/lib/booking/flex";
+import { blackoutDates, bookingItems, flexDays, programs, sessions, settings } from "@/lib/db/schema";
+import { EARLY_BIRD, FLEX_GROUPS, FLEX_HOURS, FLEX_SLUG, flexGroupFor, flexTitle, parseWeekly, type WeeklyVacancies } from "@/lib/booking/flex";
 import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
 
 const WEEKLY_KEY = "flex.weeklyVacancies";
@@ -82,10 +82,54 @@ async function bookedBySession(db: Executor, ids: string[]) {
   return new Map(rows.map((r) => [r.id as string, r.n]));
 }
 
+/**
+ * Early Bird per Flex day: seats staff opened (null = not answered yet) and how many are booked.
+ * Pass `excludeBookingId` to leave out a booking being priced or changed.
+ */
+export async function earlyBirdByDate(db: Executor, dates: string[], opts: { excludeBookingId?: string } = {}) {
+  const out = new Map<string, { seats: number | null; booked: number }>();
+  if (!dates.length) return out;
+  const p = await flexProgram(db);
+  const rows = await db.select().from(flexDays).where(inArray(flexDays.localDate, dates));
+  for (const d of dates) out.set(d, { seats: rows.find((r) => r.localDate === d)?.earlyBirdSeats ?? null, booked: 0 });
+  if (!p) return out;
+  const booked = await db
+    .select({ d: sessions.localDate, n: sql<number>`count(*)::int` })
+    .from(bookingItems)
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .where(
+      and(
+        eq(sessions.programId, p.id),
+        inArray(sessions.localDate, dates),
+        inArray(bookingItems.status, ["held", "confirmed"]),
+        sql`${EARLY_BIRD} = ANY(${bookingItems.addons})`,
+        opts.excludeBookingId ? sql`${bookingItems.bookingId} <> ${opts.excludeBookingId}` : undefined,
+      ),
+    )
+    .groupBy(sessions.localDate);
+  for (const b of booked) out.get(b.d)!.booked = b.n;
+  return out;
+}
+
+/** Answer Early Bird for a day: "none", or one more / one fewer seat (never below what's booked). */
+export async function setEarlyBird(db: Executor, actor: Actor, date: string, op: "none" | "add" | "remove") {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new OpsError("invalid", "Choose a day.");
+  const cur = (await earlyBirdByDate(db, [date])).get(date)!;
+  const seats = cur.seats ?? 0;
+  const next = op === "none" ? 0 : op === "add" ? Math.min(30, seats + 1) : seats - 1;
+  if (next < cur.booked) throw new OpsError("booked", cur.booked ? `${cur.booked} Early Bird seat${cur.booked === 1 ? " is" : "s are"} already booked that day.` : "There are no Early Bird seats to remove.");
+  await db
+    .insert(flexDays)
+    .values({ localDate: date, earlyBirdSeats: next, updatedBy: actor.name })
+    .onConflictDoUpdate({ target: flexDays.localDate, set: { earlyBirdSeats: next, updatedAt: new Date(), updatedBy: actor.name } });
+  await audit(db, actor, { action: "flex.early_bird", entityType: "flex_day", entityId: date, summary: `Yalla Flex Early Bird on ${date}: ${cur.seats ?? "not set"} → ${next} seat${next === 1 ? "" : "s"}` });
+  return { seats: next, booked: cur.booked };
+}
+
 /** Upcoming Flex days with released and booked spots, for the admin grid. */
 export async function flexGrid(db: Executor, from: string, days: number) {
   const p = await flexProgram(db);
-  if (!p) return { program: null, days: [] as { date: string; groups: { key: string; sessionId: string; released: number; booked: number; closed: boolean }[] }[] };
+  if (!p) return { program: null, days: [] as { date: string; earlyBird: { seats: number | null; booked: number }; groups: { key: string; sessionId: string; released: number; booked: number; closed: boolean }[] }[] };
   const to = addDaysISO(from, days - 1);
   const rows = await db
     .select()
@@ -98,10 +142,12 @@ export async function flexGrid(db: Executor, from: string, days: number) {
   );
   const byDate = new Map<string, typeof rows>();
   for (const r of rows) byDate.set(r.localDate, [...(byDate.get(r.localDate) ?? []), r]);
+  const early = await earlyBirdByDate(db, [...byDate.keys()]);
   return {
     program: p,
     days: [...byDate.entries()].map(([date, list]) => ({
       date,
+      earlyBird: early.get(date) ?? { seats: null, booked: 0 },
       groups: FLEX_GROUPS.map((g) => {
         const s = list.find((x) => flexGroupFor(x.minAgeMonths)?.key === g.key);
         return s ? { key: g.key, sessionId: s.id, released: s.capacity, booked: booked.get(s.id) ?? 0, closed: s.status !== "scheduled" } : { key: g.key, sessionId: "", released: 0, booked: 0, closed: true };

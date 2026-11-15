@@ -16,12 +16,19 @@ export type Addon = {
   endsAfterStartMinutes?: number;
   /** A choice of day length rather than an extra: priced from the program's half-day rate, shown as Full day / Half day. */
   dayLength?: "half";
+  /** Only for children at least this old (months) on the day. */
+  minAgeMonths?: number;
+  /** Offered only on days staff open seats for it (Yalla Flex Early Bird). */
+  limitedSeats?: boolean;
 };
 
 export const ADDONS: Record<string, Addon[]> = {
   "immersive-play": [{ key: "cowork", label: "Coworking for you", time: "9:00am – 12:00pm", priceCents: 1500, perFamily: true }],
   // Yalla Flex: a released spot can be a full day (8:30am – 4:30pm) or a half day (8:30am – 12:00pm).
-  drop_in: [{ key: "half", label: "Half day", time: "8:30am – 12:00pm", priceCents: 0, endsAfterStartMinutes: 210, dayLength: "half" }],
+  drop_in: [
+    { key: "half", label: "Half day", time: "8:30am – 12:00pm", priceCents: 0, endsAfterStartMinutes: 210, dayLength: "half" },
+    { key: "early", label: "Early Bird", time: "8:00 – 8:30am", priceCents: 1600, minAgeMonths: 12, limitedSeats: true },
+  ],
   camp: [
     { key: "early", label: "Early Bird", time: "8:00 – 9:00am", priceCents: 2000 },
     { key: "late", label: "Late stay", time: "3:00 – 4:30pm", priceCents: 3000, extendsEndMinutes: 90 },

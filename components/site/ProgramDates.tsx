@@ -80,6 +80,11 @@ export function ProgramDates({
   /** Extras for the grown-up (e.g. coworking during Immersive Play), once per session. */
   const forFamily = addonsFor(kind, program).filter((a) => a.perFamily);
   const [stay, setStay] = useState<string[]>([]);
+  // Yalla Flex: full or half day, and Early Bird (on days staff open seats, children 12 months+).
+  const isFlex = kind === "drop_in";
+  const [half, setHalf] = useState(false);
+  const [early, setEarly] = useState(false);
+  const earlyOn = (day: string) => groups.some((g) => sessionFor(day, g)?.earlyBirdOpen);
   /** A signed-in family's children; null until known, empty for everyone else. */
   const [kids, setKids] = useState<Child[] | null>(null);
   const [chosenKids, setChosenKids] = useState<string[]>([]);
@@ -251,7 +256,9 @@ export function ProgramDates({
         lines.push(s);
         spotCount.set(s.id, c[g.key]);
         for (let i = 0; i < c[g.key]; i++)
-          prices.push(s.priceCents ?? g.priceCents);
+          prices.push(isFlex && half && s.halfPriceCents != null ? s.halfPriceCents : (s.priceCents ?? g.priceCents));
+        // Early Bird for children 12 months and older, on days it's offered.
+        if (isFlex && early && s.earlyBirdOpen && (g.minAge ?? 0) >= 12) total += 1600 * c[g.key];
       } else if (known)
         fullFor.push(
           `${g.label} on ${fmt(d, { month: "short", day: "numeric" })}`,
@@ -279,7 +286,8 @@ export function ProgramDates({
     const who = byName
       ? `&children=${pickedKids.map((k) => k.id).join(",")}`
       : "";
-    const extras = stay.length ? `&extras=${stay.join(",")}` : "";
+    const chosenExtras = [...stay, ...(isFlex && half ? ["half"] : []), ...(isFlex && early ? ["early"] : [])];
+    const extras = chosenExtras.length ? `&extras=${chosenExtras.join(",")}` : "";
     if (lines.length)
       router.push(
         `/book?offering=${kind}&select=${lines.map((s) => ((spotCount.get(s.id) ?? 1) > 1 ? `${s.id}*${spotCount.get(s.id)}` : s.id)).join(",")}&until=${picked[picked.length - 1]}${who}${extras}`,
@@ -389,6 +397,8 @@ export function ProgramDates({
           >
             {status}
           </span>
+        ) : isFlex && early && !full ? (
+          <span className={`mt-1 text-[0.58rem] leading-tight ${on ? "opacity-80" : "text-ink-soft"}`}>{earlyOn(d) ? "Early Bird open" : "No Early Bird"}</span>
         ) : flowTile ? (
           <span className="mt-0.5 text-[0.62rem] opacity-60">
             {fmt(d, { weekday: "short" })}
@@ -607,6 +617,36 @@ export function ProgramDates({
             />
           </label>
         ))}
+        {isFlex ? (
+          <div className="mt-6 space-y-3">
+            <p className="text-[0.85rem] text-ink-soft">How long?</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Day length">
+              {[
+                { on: !half, label: "Full day", time: "8:30am–4:30pm", set: () => setHalf(false) },
+                { on: half, label: "Half day", time: "8:30am–12:00pm", set: () => setHalf(true) },
+              ].map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  aria-pressed={o.on}
+                  onClick={o.set}
+                  className={`rounded-full border px-4 py-2 text-[0.88rem] transition-colors ${o.on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink"}`}
+                >
+                  {o.label} <span className={o.on ? "text-chalk/70" : "text-ink-soft"}>{o.time}</span>
+                </button>
+              ))}
+            </div>
+            <label
+              className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors sm:max-w-md ${early ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
+            >
+              <span>
+                <span className="block text-[0.95rem]">Add Early Bird +$16 per child</span>
+                <span className="text-[0.78rem] text-ink-soft">8:00–8:30am, for children 12 months and older, on days it’s offered</span>
+              </span>
+              <input type="checkbox" checked={early} onChange={(e) => setEarly(e.target.checked)} className="h-5 w-5 accent-[var(--color-blue)]" />
+            </label>
+          </div>
+        ) : null}
       </div>
 
       {/* Dates */}

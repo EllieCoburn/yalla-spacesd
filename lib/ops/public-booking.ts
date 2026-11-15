@@ -47,6 +47,7 @@ import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } 
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
 import { flexGroupFor } from "@/lib/booking/flex";
+import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 
 const PUBLIC: Actor = { type: "system", name: "Public booking" };
@@ -73,6 +74,8 @@ export type PublicSession = {
   closure: string | null;
   /** On a closure day: Camp Yalla runs that day, so families can be pointed there. */
   campToday: boolean;
+  /** Yalla Flex: staff have opened Early Bird seats this day and some are left. */
+  earlyBirdOpen: boolean;
   ages: { min: number | null; max: number | null };
   eligible: boolean;
   seriesId: string | null;
@@ -151,6 +154,9 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
         ).map((r) => r.d)
       : [],
   );
+  // Yalla Flex Early Bird seats left per day.
+  const flexDates = [...new Set(rows.filter((r) => r.p.kind === "drop_in").map((r) => r.s.localDate))];
+  const early = await earlyBirdByDate(db, flexDates);
   return rows.map(({ s, p, c, series }) => {
     const remaining = avail.get(s.id)?.remaining ?? 0;
     const closure = s.status === "closed" && s.notes?.startsWith("Closed: ") ? s.notes.slice("Closed: ".length) : null;
@@ -172,6 +178,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       halfPriceCents: p.kind === "drop_in" ? (flexGroupFor(s.minAgeMonths)?.halfCents ?? null) : null,
       closure,
       campToday: !!closure && campDays.has(s.localDate),
+      earlyBirdOpen: p.kind === "drop_in" && (early.get(s.localDate)?.seats ?? 0) > (early.get(s.localDate)?.booked ?? 0),
       ages: { min: minAge, max: maxAge },
       eligible,
       seriesId: s.seriesId,

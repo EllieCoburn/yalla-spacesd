@@ -204,6 +204,13 @@
       "when": 1794682643214,
       "tag": "0028_camp_nov_27",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794781724477,
+      "tag": "0029_flex_early_bird",
+      "breakpoints": true
     }
   ]
 }

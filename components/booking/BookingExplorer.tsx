@@ -56,6 +56,13 @@ export function BookingExplorer({
   const [spots, setSpots] = useState<Record<string, number>>({});
   /** Age groups of one Happening chosen together on the calendar: matched to children by age at checkout. */
   const [flexible, setFlexible] = useState<string[]>([]);
+  /** Extras chosen per session in Your selection (Yalla Flex half day, Early Bird). */
+  const [sessionExtras, setSessionExtras] = useState<Record<string, string[]>>({});
+  const toggleSessionExtra = (sessionId: string, key: string, on: boolean, exclusive?: string[]) =>
+    setSessionExtras((cur) => {
+      const list = (cur[sessionId] ?? []).filter((k) => k !== key && !(exclusive ?? []).includes(k));
+      return { ...cur, [sessionId]: on ? [...list, key] : list };
+    });
   const [sessions, setSessions] = useState<PublicSession[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -133,6 +140,10 @@ export function BookingExplorer({
         if (ok.length) {
           setSelected(ok);
           setSpots(Object.fromEntries(preselect.map((p) => [p.id, p.n])));
+          // Day length and Early Bird chosen on the Yalla Flex page carry into Your selection.
+          const flexExtras = comingExtras.filter((k) => k === "half" || k === "early");
+          if (flexExtras.length)
+            setSessionExtras(Object.fromEntries(found.filter((s) => ok.includes(s.id) && s.kind === "drop_in").map((s) => [s.id, flexExtras])));
           // Several age groups of the same Happening, chosen together: the right group is picked by age.
           const chosenNow = found.filter((s) => ok.includes(s.id));
           setFlexible(
@@ -428,6 +439,8 @@ export function BookingExplorer({
               onRemove={toggle}
               spots={spotsFor}
               onSpots={setSpotCount}
+              sessionExtras={sessionExtras}
+              onExtra={toggleSessionExtra}
               onContinue={() => setCheckoutOpen(true)}
               guardian={guardian}
               siblingPercent={sibling.percent}
@@ -449,6 +462,8 @@ export function BookingExplorer({
               onRemove={toggle}
               spots={spotsFor}
               onSpots={setSpotCount}
+              sessionExtras={sessionExtras}
+              onExtra={toggleSessionExtra}
               onContinue={() => setCheckoutOpen(true)}
               compact
               guardian={guardian}
@@ -488,6 +503,7 @@ export function BookingExplorer({
           sibling={sibling}
           spots={spotsFor}
           onSpots={setSpotCount}
+          defaultExtras={sessionExtras}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
         />
@@ -678,6 +694,34 @@ function SessionRow({
   );
 }
 
+/** Yalla Flex: full or half day, and Early Bird when staff have opened seats that day. */
+function FlexChoices({ s, chosen, onExtra }: { s: PublicSession; chosen: string[]; onExtra: (sessionId: string, key: string, on: boolean) => void }) {
+  const half = chosen.includes("half");
+  const pill = (on: boolean) => `rounded-full border px-2.5 py-1 text-[0.72rem] transition-colors ${on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink"}`;
+  return (
+    <span className="mt-2 block space-y-2">
+      <span className="flex flex-wrap gap-1.5" role="group" aria-label="Day length">
+        <button type="button" aria-pressed={!half} className={pill(!half)} onClick={() => onExtra(s.id, "half", false)}>
+          Full day · {usd(s.priceCents)}
+        </button>
+        <button type="button" aria-pressed={half} className={pill(half)} onClick={() => onExtra(s.id, "half", true)}>
+          Half day · {usd(s.halfPriceCents)}
+        </button>
+      </span>
+      {s.earlyBirdOpen ? (
+        <label className="flex cursor-pointer items-center gap-2 text-[0.75rem]">
+          <input type="checkbox" checked={chosen.includes("early")} onChange={(e) => onExtra(s.id, "early", e.target.checked)} className="h-3.5 w-3.5 accent-[var(--color-blue)]" />
+          <span>
+            Early Bird, 8:00–8:30am, +$16 <span className="text-ink-soft">(12 months and older)</span>
+          </span>
+        </label>
+      ) : (
+        <span className="block text-[0.72rem] text-ink-soft">No Early Bird this day</span>
+      )}
+    </span>
+  );
+}
+
 /** One spot is one child. Families add a spot for each child coming to the same session. */
 function SpotStepper({ s, n, onSpots }: { s: PublicSession; n: number; onSpots?: (sessionId: string, n: number) => void }) {
   if (!onSpots || s.bookingUnit !== "per_child") return null;
@@ -726,11 +770,15 @@ function Basket({
   siblingPercent = 0,
   spots = {},
   onSpots,
+  sessionExtras = {},
+  onExtra,
 }: {
   sessions: PublicSession[];
   /** Spots per session (one per child); 0 = age group matched at checkout. */
   spots?: Record<string, number>;
   onSpots?: (sessionId: string, n: number) => void;
+  sessionExtras?: Record<string, string[]>;
+  onExtra?: (sessionId: string, key: string, on: boolean) => void;
   onRemove: (s: PublicSession) => void;
   onContinue: () => void;
   compact?: boolean;
@@ -786,6 +834,9 @@ function Basket({
                   <span className="mt-2 block">
                     <SpotStepper s={row.session} n={n(row.session)} onSpots={onSpots} />
                   </span>
+                  {row.session.halfPriceCents != null && onExtra ? (
+                    <FlexChoices s={row.session} chosen={sessionExtras[row.session.id] ?? []} onExtra={onExtra} />
+                  ) : null}
                 </span>
                 <button
                   onClick={() => onRemove(row.session)}

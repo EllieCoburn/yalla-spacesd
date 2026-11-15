@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/forms";
+import { FlexEarlyBirdCell } from "@/components/admin/FlexEarlyBirdCell";
 import { FlexSpotCell } from "@/components/admin/FlexSpotCell";
 import { Card, Empty, Notice, PageHeader } from "@/components/admin/ui";
 import { requirePermission } from "@/lib/auth/session";
@@ -8,7 +9,7 @@ import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { getDb } from "@/lib/db";
 import { ensureFlexDays, flexGrid, weeklyVacancies } from "@/lib/ops/flex";
 import { addDaysISO, fmtDate, todayLA, weekdayOf } from "@/lib/time";
-import { flexSpotAction, flexWeeklyAction } from "./actions";
+import { flexEarlyBirdAction, flexSpotAction, flexWeeklyAction } from "./actions";
 
 export const metadata = { title: "Yalla Flex spots" };
 
@@ -104,7 +105,7 @@ export default async function FlexPage({ searchParams }: { searchParams: Promise
           >
             <div className="mb-4">
               <Notice tone="info" title="Releasing a spot for an absence?">
-                Tap + on that day and age group. It shows as open on the website straight away. Tap − to take it back (only while it isn’t booked).
+                Tap + on that day and age group. It shows as open on the website straight away. Tap − to take it back (only while it isn’t booked). Then answer Early Bird for that day: tap None, or + for each Early Bird seat (8:00–8:30am, children 12 months and older). Days with open spots and no Early Bird answer are highlighted.
               </Notice>
             </div>
             <div className="space-y-8">
@@ -113,13 +114,14 @@ export default async function FlexPage({ searchParams }: { searchParams: Promise
                   <div key={w}>
                     <p className="mb-2 text-[0.78rem] tracking-[0.08em] text-ink-soft uppercase">Week of {fmtDate(addDaysISO(monday, w * 7), "d MMMM")}</p>
                     <div className="overflow-x-auto">
-                      <div className="grid min-w-[44rem] grid-cols-[7rem_repeat(4,1fr)] gap-2">
+                      <div className="grid min-w-[54rem] grid-cols-[7rem_repeat(5,1fr)] gap-2">
                         <span />
                         {FLEX_GROUPS.map((g) => (
                           <span key={g.key} className="text-[0.75rem] font-medium">
                             {g.label}
                           </span>
                         ))}
+                        <span className="text-[0.75rem] font-medium">Early Bird</span>
                         {days.map((d) => (
                           <div key={d.date} className="contents">
                             <span className="self-center text-[0.84rem]">{fmtDate(d.date, "EEE d MMM")}</span>
@@ -141,6 +143,19 @@ export default async function FlexPage({ searchParams }: { searchParams: Promise
                                 </span>
                               );
                             })}
+                            {d.groups.every((c) => c.closed) ? (
+                              <span className="self-center text-[0.75rem] text-ink-soft">Closed</span>
+                            ) : (
+                              <FlexEarlyBirdCell
+                                action={flexEarlyBirdAction}
+                                date={d.date}
+                                seats={d.earlyBird.seats}
+                                booked={d.earlyBird.booked}
+                                needsAnswer={d.groups.some((c) => !c.closed && c.released > c.booked)}
+                                label={fmtDate(d.date, "EEE d MMM")}
+                                canEdit={canEdit}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>

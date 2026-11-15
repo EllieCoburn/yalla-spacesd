@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
-import { adjustFlexSpots, ensureFlexDays, setWeeklyVacancies, weeklyVacancies } from "@/lib/ops/flex";
+import { adjustFlexSpots, earlyBirdByDate, ensureFlexDays, setEarlyBird, setWeeklyVacancies, weeklyVacancies } from "@/lib/ops/flex";
 import { listPublicSessions } from "@/lib/ops/public-booking";
 import { DEFAULT_WEEKLY } from "@/lib/booking/flex";
 import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
@@ -107,5 +107,40 @@ describe("Yalla Flex", () => {
     expect(mon.every((x) => x.closure === "Labor Day" && !x.campToday && x.state.state === "closed")).toBe(true);
     expect(list.filter((x) => x.localDate === tuesday).every((x) => x.closure === "Staff Development Day" && x.campToday)).toBe(true);
     expect(list.filter((x) => x.localDate === addDaysISO(monday, 2)).every((x) => x.closure === null)).toBe(true);
+  });
+
+  it("offers Early Bird only on days staff open seats, for children 12 months and older", async () => {
+    const { monday, at } = await setup();
+    const toddlers = at(monday, 20);
+    await adjustFlexSpots(db(), owner, toddlers.id, 1); // two spots that day
+    const pub = async () => (await listPublicSessions(db(), { from: monday, to: monday })).find((x) => x.id === toddlers.id)!;
+    expect((await earlyBirdByDate(db(), [monday])).get(monday)).toEqual({ seats: null, booked: 0 });
+    expect((await pub()).earlyBirdOpen).toBe(false);
+
+    const { family: f, children } = await family("Early", [{ first: "Ro", birth: addDaysISO(monday, -365 * 2) }, { first: "Su", birth: addDaysISO(monday, -365 * 2 - 40) }]);
+    const hold = (childId: string) => createHold(db(), owner, { familyId: f.id, items: [{ sessionId: toddlers.id, childId, addons: ["early"] }], source: "admin", acknowledgePaperwork: true });
+    await expect(hold(children[0].id)).rejects.toThrow(/Early Bird isn’t available/);
+
+    await setEarlyBird(db(), owner, monday, "none");
+    expect((await earlyBirdByDate(db(), [monday])).get(monday)!.seats).toBe(0);
+    await setEarlyBird(db(), owner, monday, "add");
+    expect((await pub()).earlyBirdOpen).toBe(true);
+
+    const h = await hold(children[0].id);
+    await confirmAdminBooking(db(), owner, h.booking.id, { createInvoice: true, notify: false });
+    const [inv] = await db().select().from(s.invoices).where(eq(s.invoices.bookingId, h.booking.id));
+    const lines = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, inv.id));
+    expect(lines.find((l) => /Early Bird/.test(l.description))?.amountCents).toBe(1600);
+    // The one seat is taken: the next family can't add it, and staff can't remove the booked seat.
+    expect((await pub()).earlyBirdOpen).toBe(false);
+    await expect(hold(children[1].id)).rejects.toThrow(/Early Bird isn’t available/);
+    await expect(setEarlyBird(db(), owner, monday, "remove")).rejects.toThrow(/already booked/);
+
+    // Under 12 months can't have Early Bird.
+    const infants = at(monday, 4);
+    await adjustFlexSpots(db(), owner, infants.id, 1);
+    await setEarlyBird(db(), owner, monday, "add");
+    const { family: g, children: babies } = await family("Baby", [{ first: "Bo", birth: addDaysISO(monday, -240) }]);
+    await expect(createHold(db(), owner, { familyId: g.id, items: [{ sessionId: infants.id, childId: babies[0].id, addons: ["early"] }], source: "admin", acknowledgePaperwork: true })).rejects.toThrow(/12 months and older/);
   });
 });
