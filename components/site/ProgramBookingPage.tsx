@@ -275,10 +275,10 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
       {/* Dates */}
       <section id="dates" className="scroll-mt-24 bg-paper py-16 lg:py-24">
         <div className="shell">
-          <h2 className="display text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
+          <h2 className="display text-center text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
             {page.datesTitle}
           </h2>
-          <div className="mt-8 max-w-4xl">
+          <div className="mx-auto mt-8 max-w-4xl">
             <ProgramDates
               kind={p.kind}
               groups={page.groups}
