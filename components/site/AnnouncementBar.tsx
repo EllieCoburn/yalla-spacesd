@@ -14,7 +14,7 @@ export function AnnouncementBar() {
   return (
     <Link
       href={announcement.href}
-      className="group fixed inset-x-0 top-0 z-[60] flex h-10 items-center justify-center gap-3 bg-blue px-4 text-[0.8rem] tracking-[0.03em] text-chalk transition-colors duration-500 hover:bg-blue-deep"
+      className="group fixed inset-x-0 top-0 z-[45] flex h-10 items-center justify-center gap-3 bg-blue px-4 text-[0.8rem] tracking-[0.03em] text-chalk transition-colors duration-500 hover:bg-blue-deep"
     >
       <span className="hidden sm:inline">{announcement.text}</span>
       <span className="sm:hidden">{announcement.short}</span>

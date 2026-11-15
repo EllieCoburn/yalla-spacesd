@@ -51,6 +51,7 @@ export function Checkout({
   includeChildren = [],
   includeExtras = [],
   wallet = null,
+  sibling = { percent: 0, withPass: false },
   onClose,
   onRefresh,
 }: {
@@ -63,6 +64,8 @@ export function Checkout({
   includeExtras?: string[];
   /** The signed-in family's Yalla Wallet: Play Pass balance and Yalla credits (null when not signed in). */
   wallet?: { passCents: number; creditCents: number } | null;
+  /** The sibling discount (Settings → Billing), mirrored here so the total matches the invoice. */
+  sibling?: { percent: number; withPass: boolean };
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -214,7 +217,7 @@ export function Checkout({
       }
       return sum + (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : 1) + extrasCents;
     }, 0) + [...eligibleEvenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0);
-  const total =
+  const grossTotal =
     sorted.reduce((sum, s) => {
       const n = lines.find((l) => l.sessionId === s.id)?.childKeys.length ?? 0;
       if (s.kind === FAMILY_RATE.kind && s.bookingUnit === "per_child" && n) {
@@ -240,8 +243,29 @@ export function Checkout({
       sum + prices.reduce((a, b) => a + b, 0) - familyRateTotal(prices),
     0,
   );
+  // Sibling discount: each additional child at the same program on the same day (across age
+  // groups), the highest price paying in full. Mirrors the invoice; the server has the final say.
+  const siblingByDay = new Map<string, { prices: number[]; eligible: boolean }>();
+  if (sibling.percent > 0)
+    for (const s of sorted) {
+      const n = lines.find((l) => l.sessionId === s.id)?.childKeys.length ?? 0;
+      if (!n || s.bookingUnit !== "per_child" || s.kind === FAMILY_RATE.kind || !s.priceCents) continue;
+      if (!sibling.withPass && (wallet?.passCents ?? 0) > 0 && s.playPassEligible) continue;
+      const k = `${s.programId}|${s.localDate}`;
+      const g = siblingByDay.get(k) ?? { prices: [], eligible: !!s.playPassEligible };
+      g.prices.push(...Array<number>(n).fill(s.priceCents));
+      siblingByDay.set(k, g);
+    }
+  let siblingSaving = 0;
+  let siblingSavingEligible = 0;
+  for (const g of siblingByDay.values()) {
+    const off = [...g.prices].sort((a, b) => b - a).slice(1).reduce((sum, p) => sum + Math.round((p * sibling.percent) / 100), 0);
+    siblingSaving += off;
+    if (g.eligible) siblingSavingEligible += off;
+  }
+  const total = grossTotal - siblingSaving;
   // Play Pass balance covers eligible experiences; Yalla credits cover anything left.
-  const passUse = Math.min(wallet?.passCents ?? 0, eligibleTotal, total);
+  const passUse = Math.min(wallet?.passCents ?? 0, Math.max(0, eligibleTotal - siblingSavingEligible), total);
   const fromPass = passUse + Math.min(wallet?.creditCents ?? 0, total - passUse);
   const walletCents = wallet ? wallet.passCents + wallet.creditCents : null;
   const sigKey = (a: Agreement) => `${a.templateId}:${a.childKey ?? "family"}`;
@@ -675,6 +699,18 @@ export function Checkout({
                 ))}
               </ul>
 
+              {siblingSaving > 0 ? (
+                <dl className="mt-6 space-y-1.5 text-[0.95rem]">
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Before discount</dt>
+                    <dd>{usd(grossTotal)}</dd>
+                  </div>
+                  <div className="flex justify-between text-blue">
+                    <dt>Sibling discount ({sibling.percent}% off each additional child)</dt>
+                    <dd>−{usd(siblingSaving)}</dd>
+                  </div>
+                </dl>
+              ) : null}
               {fromPass > 0 ? (
                 <dl className="mt-6 space-y-1.5 text-[0.95rem]">
                   <div className="flex justify-between">

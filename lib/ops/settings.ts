@@ -125,8 +125,8 @@ export const POLICIES = {
   "billing.siblingDiscountPercent": {
     group: "Billing",
     label: "Sibling discount (%)",
-    help: "Applied to each additional child in the same booking or membership. 0 = none.",
-    default: 0,
+    help: "Taken off each additional child booked into the same program on the same day (camp, Yalla Flex, Happenings), across age groups. After Hours uses its family rate instead. 0 = none.",
+    default: 10,
     decision: true,
   } as PolicyDef<number>,
   "billing.taxPercent": {

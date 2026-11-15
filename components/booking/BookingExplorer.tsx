@@ -34,11 +34,14 @@ export function BookingExplorer({
   guardian,
   savedChildren,
   wallet = null,
+  sibling = { percent: 0, withPass: false },
 }: {
   guardian: SignedInGuardian | null;
   savedChildren: SavedChild[];
   /** The signed-in family's Yalla Wallet. */
   wallet?: { passCents: number; creditCents: number } | null;
+  /** The sibling discount (Settings → Billing). */
+  sibling?: { percent: number; withPass: boolean };
 }) {
   const params = useSearchParams();
   const router = useRouter();
@@ -376,6 +379,7 @@ export function BookingExplorer({
               onRemove={toggle}
               onContinue={() => setCheckoutOpen(true)}
               guardian={guardian}
+              siblingPercent={sibling.percent}
             />
           </div>
         </aside>
@@ -395,6 +399,7 @@ export function BookingExplorer({
               onContinue={() => setCheckoutOpen(true)}
               compact
               guardian={guardian}
+              siblingPercent={sibling.percent}
             />
           </div>
         ) : null}
@@ -428,6 +433,7 @@ export function BookingExplorer({
           includeChildren={comingKids}
           includeExtras={comingExtras}
           wallet={wallet}
+          sibling={sibling}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
         />
@@ -638,12 +644,14 @@ function Basket({
   onContinue,
   compact,
   guardian,
+  siblingPercent = 0,
 }: {
   sessions: PublicSession[];
   onRemove: (s: PublicSession) => void;
   onContinue: () => void;
   compact?: boolean;
   guardian: SignedInGuardian | null;
+  siblingPercent?: number;
 }) {
   const sorted = [...sessions].sort((a, b) =>
     a.startsAt.localeCompare(b.startsAt),
@@ -731,6 +739,11 @@ function Basket({
           )}
         </ul>
       )}
+      {siblingPercent > 0 && sorted.some((x) => x.bookingUnit === "per_child" && x.kind !== FAMILY_RATE.kind) ? (
+        <p className="mt-3 border-l-2 border-blue/40 pl-3 text-[0.78rem] leading-relaxed text-ink-soft">
+          <span className="text-blue">Booking for siblings?</span> Each additional child at the same program on the same day saves {siblingPercent}%, taken off automatically at checkout.
+        </p>
+      ) : null}
       {!compact ? (
         <>
           <button

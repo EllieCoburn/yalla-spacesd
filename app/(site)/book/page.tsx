@@ -9,6 +9,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { children } from "@/lib/db/schema";
 import { paymentsStatus } from "@/lib/payments/provider";
 import { walletSummary } from "@/lib/playpass/wallet";
+import { getPolicy } from "@/lib/ops/settings";
 import { getGuardian } from "../portal/session";
 
 export const metadata: Metadata = {
@@ -30,6 +31,9 @@ export default async function BookPage() {
     : [];
   const testPayments = configured && paymentsStatus().provider === "test";
   const wallet = guardian ? await walletSummary(getDb(), guardian.familyId) : null;
+  const sibling = configured
+    ? { percent: Number(await getPolicy(getDb(), "billing.siblingDiscountPercent")) || 0, withPass: !!(await getPolicy(getDb(), "playpass.siblingDiscountWithWallet")) }
+    : { percent: 0, withPass: false };
 
   return (
     <>
@@ -59,7 +63,7 @@ export default async function BookPage() {
       </section>
       {configured ? (
         <Suspense>
-          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null} savedChildren={saved} wallet={wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null} />
+          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null} savedChildren={saved} wallet={wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null} sibling={sibling} />
         </Suspense>
       ) : (
         <section className="pb-32">

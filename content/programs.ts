@@ -59,7 +59,7 @@ export const programs: ProgramContent[] = [
     motif: "waves",
     ages: "3 months – 5 years. See each age group with the day rates below.",
     days: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
-    pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s age. No registration fee. See day rates below.",
+    pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s age. No registration fee. Siblings: 10% off each additional child on the same day, applied automatically. See day rates below.",
     included: ["Childcare in a play environment with similarly aged peers and attentive educarers and guides", "Communal coworking for you"],
     parentOnsite: true,
     bookingMode: "instant",
@@ -82,7 +82,7 @@ export const programs: ProgramContent[] = [
     motif: "sprig",
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
     days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
-    pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day.",
+    pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day. Siblings: 10% off each additional child on the same day, applied automatically.",
     facts: {
       ages: groups(),
       days: [
@@ -111,6 +111,7 @@ export const programs: ProgramContent[] = [
             { label: "Camp day", value: "$160" },
             { label: "Early Bird (optional)", value: "$20" },
             { label: "Late stay (optional)", value: "$30" },
+            { label: "Siblings", value: "10% off each additional child" },
           ],
         },
       ],

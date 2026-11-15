@@ -347,10 +347,17 @@ async function siblingDiscountLines(db: Executor, rows: Awaited<ReturnType<typeo
     rows = rows.filter((r) => !eligible.has(r.session.id));
   }
   const out: LineInput[] = [];
-  const bySession = new Map<string, typeof rows>();
-  for (const r of rows) if (r.item.childId && r.program.bookingUnit === "per_child" && r.program.kind !== FAMILY_RATE.kind) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
-  for (const group of bySession.values()) {
-    for (const r of group.slice(1)) {
+  // Siblings at the same program on the same day, even in different age groups (separate sessions).
+  // The first child pays the full price (the highest, if prices differ); each additional child gets the discount.
+  const byDay = new Map<string, typeof rows>();
+  for (const r of rows)
+    if (r.item.childId && r.program.bookingUnit === "per_child" && r.program.kind !== FAMILY_RATE.kind) {
+      const k = `${r.program.id}|${r.session.localDate}`;
+      byDay.set(k, [...(byDay.get(k) ?? []), r]);
+    }
+  for (const group of byDay.values()) {
+    const ordered = [...group].sort((a, b) => (b.item.priceCents ?? 0) - (a.item.priceCents ?? 0));
+    for (const r of ordered.slice(1)) {
       if (r.item.priceCents) out.push({ kind: "discount", description: `Sibling discount (${percent}%) · ${r.child?.firstName}`, unitCents: -Math.round((r.item.priceCents * percent) / 100), bookingItemId: r.item.id });
     }
   }
