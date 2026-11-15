@@ -20,7 +20,7 @@ export function AgreementFields({ fields, answers, onAnswer }: { fields: FormFie
           .map((f) => {
             const v = answers[f.id] ?? "";
             if (f.type === "heading") return <p key={f.id} className="pt-2 font-serif text-[1.08rem] text-ink">{f.text}</p>;
-            if (f.type === "info") return <div key={f.id} className="space-y-2.5"><Markup text={f.text} /></div>;
+            if (f.type === "info") return <div key={f.id} className="space-y-2.5"><Markup text={f.text} newTab /></div>;
             if (f.type === "initials")
               return (
                 <div key={f.id} className={`rounded-lg border p-3 ${v ? "border-ink/15 bg-paper" : "border-blue/50 bg-blue/[0.04]"}`}>

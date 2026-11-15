@@ -37,7 +37,7 @@ export function OnlineForm({ templateId, childId, fields, intro, signerName, req
         if (f.type === "info")
           return (
             <div key={f.id} className="space-y-3 text-[0.98rem] text-ink-soft">
-              <Markup text={f.text} />
+              <Markup text={f.text} newTab />
             </div>
           );
         if (f.type === "choice")

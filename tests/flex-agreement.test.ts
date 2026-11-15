@@ -14,7 +14,7 @@ const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 
 /** Runs the real agreements migration, so the tests check the content families will sign. */
 async function loadAgreements() {
-  for (const file of ["0030_flex_admission_agreements.sql", "0031_flex_agreement_intro.sql", "0032_flex_agreement_one_name.sql", "0033_flex_agreement_cohort_change.sql"]) {
+  for (const file of ["0030_flex_admission_agreements.sql", "0031_flex_agreement_intro.sql", "0032_flex_agreement_one_name.sql", "0033_flex_agreement_cohort_change.sql", "0034_flex_agreement_illness_link.sql"]) {
     const text = readFileSync(`lib/db/migrations/${file}`, "utf8");
     for (const stmt of text.split("--> statement-breakpoint")) {
       const body = stmt.replace(/^--.*$/gm, "").trim();
@@ -66,6 +66,7 @@ describe("Yalla Flex admission agreement", () => {
     const text = JSON.stringify(a.fields);
     expect(text).toContain("when the Child moves to another Flex cohort or one year after signing, whichever comes first");
     expect(text).not.toContain("After one year, a new agreement");
+    expect(text).toContain("[Illness Policy](/portal/illness-policy)");
     expect(text).toContain("$150 per day");
     expect(text).toContain("$75 per day");
     expect(text).toContain("$10 is charged for each additional ten minutes");

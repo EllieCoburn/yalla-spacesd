@@ -6,7 +6,7 @@ import { policyById, policyHref } from "@/content/policies";
 const linkCls = "text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue hover:decoration-blue";
 
 /** [words](/link) and **bold** inside a line. */
-function inline(text: string, key: string): ReactNode[] {
+function inline(text: string, key: string, newTab = false): ReactNode[] {
   const out: ReactNode[] = [];
   const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
   let last = 0;
@@ -17,7 +17,7 @@ function inline(text: string, key: string): ReactNode[] {
     if (m[1]) {
       const href = m[2];
       out.push(
-        href.startsWith("/") || href.startsWith("#") ? (
+        (href.startsWith("/") || href.startsWith("#")) && !newTab ? (
           <Link key={`${key}-${i++}`} href={href} className={linkCls}>
             {m[1]}
           </Link>
@@ -40,8 +40,11 @@ function inline(text: string, key: string): ReactNode[] {
   return out;
 }
 
-/** Paragraphs (blank line between) and "- " lists. */
-export function Markup({ text }: { text: string }) {
+/**
+ * Paragraphs (blank line between) and "- " lists. `newTab` opens every link in a new tab, for text
+ * people are filling in or signing (an agreement), so following a link never loses their progress.
+ */
+export function Markup({ text, newTab = false }: { text: string; newTab?: boolean }) {
   const blocks = text.trim().split(/\n\s*\n/);
   return (
     <>
@@ -53,12 +56,12 @@ export function Markup({ text }: { text: string }) {
               {lines.map((l, li) => (
                 <li key={li} className="flex gap-3">
                   <span aria-hidden className="mt-[0.7em] h-1 w-1 shrink-0 rounded-full bg-blue/60" />
-                  <span>{inline(l.trim().slice(2), `${bi}-${li}`)}</span>
+                  <span>{inline(l.trim().slice(2), `${bi}-${li}`, newTab)}</span>
                 </li>
               ))}
             </ul>
           );
-        return <p key={bi}>{inline(lines.join(" "), String(bi))}</p>;
+        return <p key={bi}>{inline(lines.join(" "), String(bi), newTab)}</p>;
       })}
     </>
   );
