@@ -229,6 +229,8 @@ export function ProgramDates({
 
   // What will go in the basket, the total, and any chosen group that's full on a chosen date.
   const lines: PublicSession[] = [];
+  /** Children going to each session: one spot each. */
+  const spotCount = new Map<string, number>();
   const fullFor: string[] = [];
   let total = 0;
   for (const d of picked) {
@@ -238,6 +240,7 @@ export function ProgramDates({
       const s = sessionFor(d, g);
       if (open(s)) {
         lines.push(s);
+        spotCount.set(s.id, c[g.key]);
         for (let i = 0; i < c[g.key]; i++)
           prices.push(s.priceCents ?? g.priceCents);
       } else if (known)
@@ -270,7 +273,7 @@ export function ProgramDates({
     const extras = stay.length ? `&extras=${stay.join(",")}` : "";
     if (lines.length)
       router.push(
-        `/book?offering=${kind}&select=${lines.map((s) => s.id).join(",")}&until=${picked[picked.length - 1]}${who}${extras}`,
+        `/book?offering=${kind}&select=${lines.map((s) => ((spotCount.get(s.id) ?? 1) > 1 ? `${s.id}*${spotCount.get(s.id)}` : s.id)).join(",")}&until=${picked[picked.length - 1]}${who}${extras}`,
       );
     else router.push(`/book?offering=${kind}&date=${picked[0]}${who}`);
   };

@@ -52,6 +52,10 @@ export function BookingExplorer({
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));
   const [selected, setSelected] = useState<string[]>([]);
+  /** Spots per selected session: one spot is one child. */
+  const [spots, setSpots] = useState<Record<string, number>>({});
+  /** Age groups of one Happening chosen together on the calendar: matched to children by age at checkout. */
+  const [flexible, setFlexible] = useState<string[]>([]);
   const [sessions, setSessions] = useState<PublicSession[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -74,7 +78,15 @@ export function BookingExplorer({
   // Days chosen elsewhere (e.g. several camp days on the camp page) arrive as ?select=…&until=…
   // and go straight into the basket.
   const preselect = useMemo(
-    () => (params.get("select") ?? "").split(",").filter(Boolean).slice(0, 60),
+    () =>
+      (params.get("select") ?? "")
+        .split(",")
+        .filter(Boolean)
+        .slice(0, 60)
+        .map((x) => {
+          const [id, n] = x.split("*");
+          return { id, n: Math.min(8, Math.max(1, Number(n) || 1)) };
+        }),
     [],
   ); // eslint-disable-line react-hooks/exhaustive-deps
   const until = useMemo(() => {
@@ -116,10 +128,18 @@ export function BookingExplorer({
       if (preselect.length && !preselected.current) {
         preselected.current = true;
         const ok = found
-          .filter((s) => preselect.includes(s.id) && stateLabel(s).selectable)
+          .filter((s) => preselect.some((p) => p.id === s.id) && stateLabel(s).selectable)
           .map((s) => s.id);
         if (ok.length) {
           setSelected(ok);
+          setSpots(Object.fromEntries(preselect.map((p) => [p.id, p.n])));
+          // Several age groups of the same Happening, chosen together: the right group is picked by age.
+          const chosenNow = found.filter((s) => ok.includes(s.id));
+          setFlexible(
+            chosenNow
+              .filter((s) => chosenNow.filter((o) => o.programId === s.programId && o.startsAt === s.startsAt).length > 1)
+              .map((s) => s.id),
+          );
           setCheckoutOpen(true);
         }
         if (ok.length < preselect.length)
@@ -183,12 +203,34 @@ export function BookingExplorer({
 
   function toggle(s: PublicSession) {
     const ids = seriesOf(s).map((x) => x.id);
+    const removing = selected.includes(s.id);
     setSelected((cur) =>
-      cur.includes(s.id)
+      removing
         ? cur.filter((id) => !ids.includes(id))
         : [...cur, ...ids.filter((id) => !cur.includes(id))],
     );
+    setSpots((sp) => {
+      const next = { ...sp };
+      for (const id of ids) removing ? delete next[id] : (next[id] = 1);
+      return next;
+    });
+    if (removing) setFlexible((f) => f.filter((id) => !ids.includes(id)));
   }
+
+  /** Change how many spots (children) a session has; zero removes it. A series changes together. */
+  function setSpotCount(sessionId: string, n: number) {
+    const s = all.find((x) => x.id === sessionId);
+    if (!s) return;
+    if (n <= 0) {
+      if (selected.includes(sessionId)) toggle(s);
+      return;
+    }
+    const ids = seriesOf(s).map((x) => x.id);
+    setSpots((sp) => ({ ...sp, ...Object.fromEntries(ids.map((id) => [id, Math.min(8, n)])) }));
+    setFlexible((f) => f.filter((id) => !ids.includes(id)));
+  }
+  const spotsFor = Object.fromEntries(selected.map((id) => [id, flexible.includes(id) ? 0 : (spots[id] ?? 1)]));
+  const spotTotal = selected.reduce((t, id) => t + Math.max(1, spotsFor[id] ?? 1), 0);
 
   return (
     <div className="pb-32 lg:pb-24">
@@ -377,6 +419,8 @@ export function BookingExplorer({
             <Basket
               sessions={selectedSessions}
               onRemove={toggle}
+              spots={spotsFor}
+              onSpots={setSpotCount}
               onContinue={() => setCheckoutOpen(true)}
               guardian={guardian}
               siblingPercent={sibling.percent}
@@ -396,6 +440,8 @@ export function BookingExplorer({
             <Basket
               sessions={selectedSessions}
               onRemove={toggle}
+              spots={spotsFor}
+              onSpots={setSpotCount}
               onContinue={() => setCheckoutOpen(true)}
               compact
               guardian={guardian}
@@ -409,8 +455,7 @@ export function BookingExplorer({
             className="flex-1 text-left"
           >
             <span className="block text-[0.95rem]">
-              {selected.length} session{selected.length === 1 ? "" : "s"}{" "}
-              selected
+              {spotTotal} spot{spotTotal === 1 ? "" : "s"} selected
             </span>
             <span className="text-[0.75rem] text-ink-soft">
               {sheetOpen ? "Hide" : "Review selection"}
@@ -434,6 +479,8 @@ export function BookingExplorer({
           includeExtras={comingExtras}
           wallet={wallet}
           sibling={sibling}
+          spots={spotsFor}
+          onSpots={setSpotCount}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
         />
@@ -619,6 +666,26 @@ function SessionRow({
   );
 }
 
+/** One spot is one child. Families add a spot for each child coming to the same session. */
+function SpotStepper({ s, n, onSpots }: { s: PublicSession; n: number; onSpots?: (sessionId: string, n: number) => void }) {
+  if (!onSpots || s.bookingUnit !== "per_child") return null;
+  if (n === 0) return <span className="text-[0.72rem] text-ink-soft">Age group matched at checkout</span>;
+  const btn = "flex h-6 w-6 items-center justify-center rounded-full border border-ink/20 text-[0.85rem] leading-none transition-colors hover:border-ink";
+  return (
+    <span className="inline-flex items-center gap-2 text-[0.78rem]">
+      <button type="button" className={btn} aria-label={`One fewer spot for ${s.title}`} onClick={() => onSpots(s.id, n - 1)}>
+        −
+      </button>
+      <span className="min-w-[3.6rem] text-center">
+        {n} {n === 1 ? "child" : "children"}
+      </span>
+      <button type="button" className={btn} aria-label={`Add a spot for another child at ${s.title}`} onClick={() => onSpots(s.id, n + 1)} disabled={n >= 8}>
+        +
+      </button>
+    </span>
+  );
+}
+
 /** Basket rows: After Hours age groups on the same evening are shown together under the family rate. */
 function basketRows(sorted: PublicSession[]) {
   const rows: (
@@ -645,8 +712,13 @@ function Basket({
   compact,
   guardian,
   siblingPercent = 0,
+  spots = {},
+  onSpots,
 }: {
   sessions: PublicSession[];
+  /** Spots per session (one per child); 0 = age group matched at checkout. */
+  spots?: Record<string, number>;
+  onSpots?: (sessionId: string, n: number) => void;
   onRemove: (s: PublicSession) => void;
   onContinue: () => void;
   compact?: boolean;
@@ -658,13 +730,15 @@ function Basket({
   );
   // Two or more sessions of the same program on the same day (different age groups) are siblings:
   // show the discount here, matching checkout. Siblings in the same group are counted at checkout.
-  const perChild = sorted.filter((x) => x.bookingUnit === "per_child" && x.kind !== FAMILY_RATE.kind && x.priceCents);
+  const n = (x: PublicSession) => spots[x.id] ?? 1;
+  const perChild = sorted.filter((x) => x.bookingUnit === "per_child" && x.kind !== FAMILY_RATE.kind && x.priceCents && n(x) > 0);
   const byDay = new Map<string, number[]>();
-  for (const x of perChild) byDay.set(`${x.programId}|${x.localDate}`, [...(byDay.get(`${x.programId}|${x.localDate}`) ?? []), x.priceCents ?? 0]);
+  for (const x of perChild)
+    byDay.set(`${x.programId}|${x.localDate}`, [...(byDay.get(`${x.programId}|${x.localDate}`) ?? []), ...Array<number>(n(x)).fill(x.priceCents ?? 0)]);
   const siblingSaving = siblingPercent > 0
     ? [...byDay.values()].reduce((sum, prices) => sum + [...prices].sort((a, b) => b - a).slice(1).reduce((t, p) => t + Math.round((p * siblingPercent) / 100), 0), 0)
     : 0;
-  const subtotal = perChild.reduce((sum, x) => sum + (x.priceCents ?? 0), 0);
+  const subtotal = perChild.reduce((sum, x) => sum + (x.priceCents ?? 0) * n(x), 0);
   // A subtotal and total only when every item is a simple per-child price (extras and family rates are added at checkout).
   const simple = perChild.length === sorted.length;
   return (
@@ -695,6 +769,10 @@ function Basket({
                     {fmtDate(row.session.localDate, "EEE d MMM")} ·{" "}
                     {fmtTime(row.session.startsAt)} ·{" "}
                     {usd(row.session.priceCents)}
+                    {n(row.session) > 1 ? ` × ${n(row.session)}` : ""}
+                  </span>
+                  <span className="mt-2 block">
+                    <SpotStepper s={row.session} n={n(row.session)} onSpots={onSpots} />
                   </span>
                 </span>
                 <button
@@ -711,7 +789,7 @@ function Basket({
                     {row.sessions[0].programName}
                   </span>
                   <span className="font-serif text-[0.95rem] whitespace-nowrap">
-                    {row.sessions.length > 1
+                    {row.sessions.reduce((t, g) => t + Math.max(1, n(g)), 0) > 1
                       ? `${usd(FAMILY_RATE.familyCents)} family rate`
                       : `${usd(row.sessions[0].priceCents)} per child`}
                   </span>
@@ -729,6 +807,9 @@ function Basket({
                     >
                       <span className="text-ink-soft">
                         {g.title.replace(`${g.programName} · `, "")}
+                        <span className="ml-3 inline-block align-middle">
+                          <SpotStepper s={g} n={n(g)} onSpots={onSpots} />
+                        </span>
                       </span>
                       <button
                         onClick={() => onRemove(g)}

@@ -44,6 +44,17 @@ const steps = ["Children", "Your details", "Review & agree"] as const;
 const input =
   "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
+/** Two sessions that happen at the same time on the same day. */
+function overlaps(a: PublicSession, b: PublicSession) {
+  return a.localDate === b.localDate && a.startsAt < b.endsAt && b.startsAt < a.endsAt;
+}
+
+/** How many different children the chosen spots need: the most spots at any one time. */
+function childrenNeeded(sessions: PublicSession[], spots: Record<string, number>) {
+  const fixed = sessions.filter((s) => (spots[s.id] ?? 1) > 0);
+  return fixed.reduce((most, s) => Math.max(most, fixed.filter((o) => overlaps(o, s)).reduce((t, o) => t + (spots[o.id] ?? 1), 0)), 0);
+}
+
 export function Checkout({
   sessions,
   guardian,
@@ -52,6 +63,8 @@ export function Checkout({
   includeExtras = [],
   wallet = null,
   sibling = { percent: 0, withPass: false },
+  spots = {},
+  onSpots,
   onClose,
   onRefresh,
 }: {
@@ -66,6 +79,10 @@ export function Checkout({
   wallet?: { passCents: number; creditCents: number } | null;
   /** The sibling discount (Settings → Billing), mirrored here so the total matches the invoice. */
   sibling?: { percent: number; withPass: boolean };
+  /** Spots per session: one child each. 0 = an age group of a Happening, matched to children by age. */
+  spots?: Record<string, number>;
+  /** Change a session's spots from checkout (0 removes it from the selection). */
+  onSpots?: (sessionId: string, n: number) => void;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -81,18 +98,18 @@ export function Checkout({
           allergies: "",
           include: includeChildren.includes(c.id),
         }))
-      : [
-          {
-            key: "new-1",
-            existingId: null,
-            firstName: "",
-            lastName: "",
-            birthDate: "",
-            allergies: "",
-            include: true,
-          },
-        ],
+      : Array.from({ length: Math.max(1, childrenNeeded(sessions, spots)) }, (_, i) => ({
+          key: `new-${i + 1}`,
+          existingId: null,
+          firstName: "",
+          lastName: "",
+          birthDate: "",
+          allergies: "",
+          include: true,
+        })),
   );
+  /** Which child fills each spot, per session (fixed-spot sessions only). */
+  const [slots, setSlots] = useState<Record<string, string[]>>({});
   const [assign, setAssign] = useState<Record<string, string[]>>({});
   const [adult, setAdult] = useState({
     firstName: guardian?.firstName ?? "",
@@ -129,6 +146,13 @@ export function Checkout({
       k.firstName.trim() &&
       /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate),
   );
+  const spotsOf = (sid: string) => spots[sid] ?? 1;
+  const fixed = sorted.filter((s) => spotsOf(s.id) > 0);
+  const needed = childrenNeeded(sessions, spots);
+  // A new child's form that's been started must be finished (name and date of birth).
+  const unfinished = kids.some(
+    (k) => !k.existingId && k.include && (k.firstName.trim() || k.lastName.trim() || k.birthDate) && !(k.firstName.trim() && /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate)),
+  );
 
   useEffect(() => {
     document.documentElement.style.overflow = "hidden";
@@ -148,14 +172,17 @@ export function Checkout({
     );
   };
   const isOn = (sid: string, key: string) =>
-    (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
+    spotsOf(sid) > 0
+      ? (slots[sid] ?? []).includes(key)
+      : (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
   // A Happening with several age groups arrives as one session per group: show only the groups
   // a chosen child fits, and say which chosen sessions none of the children can attend.
   const fits = (s: PublicSession) => chosen.some((c) => eligible(s, c));
-  const shownSessions = sorted.filter(fits);
+  const shownSessions = sorted.filter((s) => spotsOf(s.id) > 0 || fits(s));
   const skipped = [
     ...new Map(
       sorted
+        .filter((s) => spotsOf(s.id) === 0)
         .filter((s) => !sorted.some((o) => o.programId === s.programId && o.startsAt === s.startsAt && fits(o)))
         .map((s) => [`${s.programId}|${s.startsAt}`, s]),
     ).values(),
@@ -291,15 +318,58 @@ export function Checkout({
     return s?.consent && (!a.requiresSignature || s.text.trim().length > 1);
   });
 
+  // Fill each spot with a child who fits its age group and isn't already somewhere else at that time.
+  useEffect(() => {
+    if (step !== 2) return;
+    setSlots((prev) => {
+      const next: Record<string, string[]> = {};
+      const busy = (key: string, s: PublicSession, self: number) =>
+        fixed.some((o) => overlaps(o, s) && (next[o.id] ?? []).some((k, i) => k === key && !(o.id === s.id && i === self)));
+      for (const s of fixed) {
+        const n = spotsOf(s.id);
+        const arr = (prev[s.id] ?? []).slice(0, n).map((k) => (chosen.some((c) => c.key === k && eligible(s, c)) ? k : ""));
+        while (arr.length < n) arr.push("");
+        next[s.id] = arr;
+      }
+      for (const s of fixed) {
+        const arr = next[s.id];
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i] && arr.indexOf(arr[i]) === i && !busy(arr[i], s, i)) continue;
+          arr[i] = "";
+          arr[i] = chosen.find((c) => eligible(s, c) && !arr.includes(c.key) && !busy(c.key, s, i))?.key ?? "";
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, JSON.stringify(spots), chosen.length]);
+
+  const slotProblem = (() => {
+    for (const s of fixed) {
+      const arr = slots[s.id] ?? [];
+      const label = `${s.title} on ${fmtDate(s.localDate, "EEE d MMM")}`;
+      if (!chosen.some((c) => eligible(s, c))) return `None of the children you added are in the age group for ${label}. Remove that spot, or go back and add the child it’s for.`;
+      if (arr.length < spotsOf(s.id) || arr.some((k) => !k)) return `Choose a child for each spot. ${label} still has an empty spot. Added one by mistake? Remove it.`;
+      if (new Set(arr).size !== arr.length) return `Each spot needs a different child (${label}).`;
+    }
+    for (const a of fixed)
+      for (const b of fixed)
+        if (a.id < b.id && overlaps(a, b)) {
+          const both = (slots[a.id] ?? []).find((k) => k && (slots[b.id] ?? []).includes(k));
+          if (both) return `${chosen.find((c) => c.key === both)?.firstName ?? "A child"} can’t be in two places at once on ${fmtDate(a.localDate, "EEE d MMM")}. Choose a different child for one of those spots.`;
+        }
+    return null;
+  })();
+
   const canNext =
     step === 0
-      ? chosen.length > 0
+      ? chosen.length > 0 && chosen.length >= needed && !unfinished
       : step === 1
         ? !!guardian ||
           (adult.firstName.trim() !== "" &&
             adult.lastName.trim() !== "" &&
             /\S+@\S+\.\S+/.test(adult.email))
-        : lines.length > 0 && agreements !== null && agreementsDone;
+        : lines.length > 0 && !slotProblem && agreements !== null && agreementsDone;
 
   function submit() {
     setError(null);
@@ -514,6 +584,19 @@ export function Checkout({
                 >
                   + Add {savedChildren.length ? "a new child" : "another child"}
                 </button>
+                {needed > 1 && chosen.length < needed ? (
+                  <p className="border-l-2 border-blue/40 pl-3 text-[0.88rem] text-ink-soft">
+                    You’ve chosen {needed} spots at the same time, so {savedChildren.length ? "choose or add" : "add the name and date of birth for"} {needed} children
+                    {chosen.length ? ` (${needed - chosen.length} more to go)` : ""}. Added a spot by mistake?{" "}
+                    <button onClick={onClose} className="text-blue underline underline-offset-4">
+                      Go back to your selection
+                    </button>{" "}
+                    and remove it.
+                  </p>
+                ) : null}
+                {unfinished ? (
+                  <p className="border-l-2 border-oxblood/40 pl-3 text-[0.88rem] text-oxblood">Add a first name and date of birth for each child, or remove the extra form.</p>
+                ) : null}
               </div>
             </div>
           ) : step === 1 ? (
@@ -572,7 +655,7 @@ export function Checkout({
             <div>
               <h2 className="display text-[2rem]">Review</h2>
               <p className="mt-2 text-ink-soft">
-                Choose who’s attending each session.
+                Choose which child each spot is for.
               </p>
               {skipped.length ? (
                 <p className="mt-4 border-l-2 border-oxblood/40 pl-3 text-[0.85rem] text-oxblood">
@@ -588,13 +671,54 @@ export function Checkout({
                       <span className="font-serif text-[0.95rem]">
                         {s.kind === FAMILY_RATE.kind
                           ? `${usd(s.priceCents)} per child · family rate applies`
-                          : usd(s.priceCents)}
+                          : `${usd(s.priceCents)}${spotsOf(s.id) > 1 ? ` × ${spotsOf(s.id)}` : ""}`}
                       </span>
                     </div>
                     <p className="text-[0.82rem] text-ink-soft">
                       {fmtDate(s.localDate, "EEEE d MMMM")} ·{" "}
                       {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
                     </p>
+                    {spotsOf(s.id) > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {Array.from({ length: spotsOf(s.id) }, (_, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <span className="w-14 shrink-0 text-[0.75rem] tracking-[0.12em] text-ink-soft uppercase">Spot {i + 1}</span>
+                            <select
+                              aria-label={`Child for spot ${i + 1}, ${s.title}`}
+                              value={slots[s.id]?.[i] ?? ""}
+                              onChange={(e) =>
+                                setSlots((sl) => {
+                                  const arr = [...(sl[s.id] ?? Array<string>(spotsOf(s.id)).fill(""))];
+                                  arr[i] = e.target.value;
+                                  return { ...sl, [s.id]: arr };
+                                })
+                              }
+                              className={`h-10 min-w-0 flex-1 rounded-full border bg-paper px-4 text-[0.88rem] ${slots[s.id]?.[i] ? "border-ink/25" : "border-oxblood/50"}`}
+                            >
+                              <option value="">Choose a child</option>
+                              {chosen
+                                .filter((c) => eligible(s, c))
+                                .map((c) => (
+                                  <option key={c.key} value={c.key}>
+                                    {c.firstName}
+                                  </option>
+                                ))}
+                            </select>
+                            {onSpots ? (
+                              <button
+                                onClick={() => {
+                                  setSlots((sl) => ({ ...sl, [s.id]: (sl[s.id] ?? []).filter((_, j) => j !== i) }));
+                                  onSpots(s.id, spotsOf(s.id) - 1);
+                                }}
+                                className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline"
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {chosen.map((c) => {
                         const ok = eligible(s, c);
@@ -623,6 +747,7 @@ export function Checkout({
                         );
                       })}
                     </div>
+                    )}
                     {(() => {
                       // Extras for the grown-up (e.g. coworking): one choice per session,
                       // kept on every child coming so it survives changes to who's coming.
@@ -699,6 +824,11 @@ export function Checkout({
                 ))}
               </ul>
 
+              {slotProblem ? (
+                <p role="alert" className="mt-5 border-l-2 border-oxblood/50 pl-3 text-[0.88rem] text-oxblood">
+                  {slotProblem}
+                </p>
+              ) : null}
               {siblingSaving > 0 ? (
                 <dl className="mt-6 space-y-1.5 text-[0.95rem]">
                   <div className="flex justify-between">
