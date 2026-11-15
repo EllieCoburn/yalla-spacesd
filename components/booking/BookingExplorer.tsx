@@ -656,6 +656,17 @@ function Basket({
   const sorted = [...sessions].sort((a, b) =>
     a.startsAt.localeCompare(b.startsAt),
   );
+  // Two or more sessions of the same program on the same day (different age groups) are siblings:
+  // show the discount here, matching checkout. Siblings in the same group are counted at checkout.
+  const perChild = sorted.filter((x) => x.bookingUnit === "per_child" && x.kind !== FAMILY_RATE.kind && x.priceCents);
+  const byDay = new Map<string, number[]>();
+  for (const x of perChild) byDay.set(`${x.programId}|${x.localDate}`, [...(byDay.get(`${x.programId}|${x.localDate}`) ?? []), x.priceCents ?? 0]);
+  const siblingSaving = siblingPercent > 0
+    ? [...byDay.values()].reduce((sum, prices) => sum + [...prices].sort((a, b) => b - a).slice(1).reduce((t, p) => t + Math.round((p * siblingPercent) / 100), 0), 0)
+    : 0;
+  const subtotal = perChild.reduce((sum, x) => sum + (x.priceCents ?? 0), 0);
+  // A subtotal and total only when every item is a simple per-child price (extras and family rates are added at checkout).
+  const simple = perChild.length === sorted.length;
   return (
     <div className={compact ? "" : "border border-line bg-paper p-7"}>
       {!compact ? (
@@ -739,10 +750,25 @@ function Basket({
           )}
         </ul>
       )}
-      {siblingPercent > 0 && sorted.some((x) => x.bookingUnit === "per_child" && x.kind !== FAMILY_RATE.kind) ? (
-        <p className="mt-3 border-l-2 border-blue/40 pl-3 text-[0.78rem] leading-relaxed text-ink-soft">
-          <span className="text-blue">Booking for siblings?</span> Each additional child at the same program on the same day saves {siblingPercent}%, taken off automatically at checkout.
-        </p>
+      {siblingSaving > 0 ? (
+        <dl className="mt-4 space-y-1.5 border-t border-line pt-4 text-[0.88rem]">
+          {simple ? (
+            <div className="flex justify-between text-ink-soft">
+              <dt>Subtotal</dt>
+              <dd>{usd(subtotal)}</dd>
+            </div>
+          ) : null}
+          <div className="flex justify-between text-blue">
+            <dt>Sibling discount ({siblingPercent}%)</dt>
+            <dd>−{usd(siblingSaving)}</dd>
+          </div>
+          {simple ? (
+            <div className="flex items-baseline justify-between pt-1">
+              <dt>Total</dt>
+              <dd className="font-serif text-[1.15rem]">{usd(subtotal - siblingSaving)}</dd>
+            </div>
+          ) : null}
+        </dl>
       ) : null}
       {!compact ? (
         <>
