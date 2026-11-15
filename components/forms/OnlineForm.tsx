@@ -19,13 +19,13 @@ function Submit() {
 }
 
 /** A form families complete and sign in the portal: choices, follow-ups, initials and a drawn signature. */
-export function OnlineForm({ templateId, childId, fields, intro, signerName, requiresSignature }: { templateId: string; childId: string | null; fields: FormField[]; intro: ReactNode; signerName: string; requiresSignature: boolean }) {
+export function OnlineForm({ templateId, childId, fields, intro, signerName, requiresSignature, preview = false }: { templateId: string; childId: string | null; fields: FormField[]; intro: ReactNode; signerName: string; requiresSignature: boolean; /** Staff preview: everything works except submitting. */ preview?: boolean }) {
   const [state, action] = useActionState<PortalState, FormData>(submitOnlineFormAction, undefined);
   const [answers, setAnswers] = useState<Answers>({});
   const set = (id: string, v: string) => setAnswers((a) => ({ ...a, [id]: v }));
 
   return (
-    <form action={action} className="space-y-10">
+    <form action={preview ? undefined : action} onSubmit={preview ? (e) => e.preventDefault() : undefined} className="space-y-10">
       <input type="hidden" name="templateId" value={templateId} />
       <input type="hidden" name="childId" value={childId ?? ""} />
       <input type="hidden" name="answers" value={JSON.stringify(answers)} />
@@ -116,7 +116,13 @@ export function OnlineForm({ templateId, childId, fields, intro, signerName, req
           {state.error}
         </p>
       ) : null}
-      <Submit />
+      {preview ? (
+        <button type="button" disabled className="inline-flex h-12 w-full cursor-not-allowed items-center justify-center rounded-full bg-ink/40 px-8 text-[0.95rem] text-chalk sm:w-auto">
+          Sign and submit (preview only)
+        </button>
+      ) : (
+        <Submit />
+      )}
     </form>
   );
 }

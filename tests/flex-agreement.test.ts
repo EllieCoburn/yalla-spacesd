@@ -14,10 +14,12 @@ const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 
 /** Runs the real agreements migration, so the tests check the content families will sign. */
 async function loadAgreements() {
-  const text = readFileSync("lib/db/migrations/0030_flex_admission_agreements.sql", "utf8");
-  for (const stmt of text.split("--> statement-breakpoint")) {
-    const body = stmt.replace(/^--.*$/gm, "").trim();
-    if (body) await db().execute(sql.raw(body));
+  for (const file of ["0030_flex_admission_agreements.sql", "0031_flex_agreement_intro.sql"]) {
+    const text = readFileSync(`lib/db/migrations/${file}`, "utf8");
+    for (const stmt of text.split("--> statement-breakpoint")) {
+      const body = stmt.replace(/^--.*$/gm, "").trim();
+      if (body) await db().execute(sql.raw(body));
+    }
   }
 }
 
@@ -65,6 +67,8 @@ describe("Yalla Flex admission agreement", () => {
     expect(text).toContain("$75 per day");
     expect(text).toContain("$10 is charged for each additional ten minutes");
     expect(text).not.toMatch(/Brightwheel|classroom|students|\$20 per/);
+    expect(a.body).toMatch(/^Please read this agreement carefully/);
+    expect(a.fields?.find((f) => f.id === "read-understood")).toMatchObject({ label: expect.stringContaining("agree to the Sprouts Flex admission agreement. This agreement applies to any Sprouts Flex sessions I book") });
 
     // A 4-month-old sees the Seedlings agreement and its rates; a 4-year-old sees Wildflowers.
     const seed = await previewAgreements(db(), { sessionIds: [at(monday, 4).id], children: [{ key: "a", firstName: "Bea", birthDate: addDaysISO(todayLA(), -150) }] });

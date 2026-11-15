@@ -77,7 +77,20 @@ export default async function FormDetailPage({ params, searchParams }: { params:
             {t.status === "archived" ? <Pill tone="muted" icon="x">Archived</Pill> : null}
           </span>
         }
-        actions={manage ? <Link href={`/admin/forms/${t.id}?record=1#record`} className={btn.secondary}>Record a submission</Link> : null}
+        actions={
+          <span className="flex flex-wrap gap-2">
+            {t.kind !== "upload" ? (
+              <Link href={`/admin/form-preview/${t.id}${viewing && viewing.id !== current?.id ? `?v=${viewing.version}` : ""}`} target="_blank" className={btn.primary}>
+                View as families see it
+              </Link>
+            ) : null}
+            {manage ? (
+              <Link href={`/admin/forms/${t.id}?record=1#record`} className={btn.secondary}>
+                Record a submission
+              </Link>
+            ) : null}
+          </span>
+        }
       />
       {sp.created ? (
         <div className="mb-5">
