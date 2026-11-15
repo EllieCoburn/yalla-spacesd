@@ -14,7 +14,7 @@ const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 
 /** Runs the real agreements migration, so the tests check the content families will sign. */
 async function loadAgreements() {
-  for (const file of ["0030_flex_admission_agreements.sql", "0031_flex_agreement_intro.sql"]) {
+  for (const file of ["0030_flex_admission_agreements.sql", "0031_flex_agreement_intro.sql", "0032_flex_agreement_one_name.sql"]) {
     const text = readFileSync(`lib/db/migrations/${file}`, "utf8");
     for (const stmt of text.split("--> statement-breakpoint")) {
       const body = stmt.replace(/^--.*$/gm, "").trim();
@@ -49,7 +49,7 @@ const signed = (templateId: string) => ({
   childKey: "a",
   signatureText: "Robin Flex",
   consent: true,
-  answers: { "init-rates": PNG, "init-onsite": PNG, "init-handbook": PNG, "parent-name": "Robin Flex", "read-understood": "yes", signature: PNG },
+  answers: { "init-rates": PNG, "init-onsite": PNG, "init-handbook": PNG, "read-understood": "yes", signature: PNG },
 });
 
 describe("Yalla Flex admission agreement", () => {
@@ -62,6 +62,7 @@ describe("Yalla Flex admission agreement", () => {
     expect(a.validForMonths).toBe(12);
     expect(a.fields?.filter((f) => f.type === "initials")).toHaveLength(3);
     expect(a.fields?.filter((f) => f.type === "signature")).toHaveLength(1);
+    expect(a.fields?.some((f) => f.id === "parent-name")).toBe(false);
     const text = JSON.stringify(a.fields);
     expect(text).toContain("$150 per day");
     expect(text).toContain("$75 per day");
@@ -99,7 +100,8 @@ describe("Yalla Flex admission agreement", () => {
     const [sub] = await db().select().from(s.formSubmissions).where(eq(s.formSubmissions.templateId, "flex-agreement-sprouts"));
     expect(sub.status).toBe("signed");
     expect(sub.expiresOn).toBe(addDaysISO(todayLA(), 365));
-    expect((sub.data as { answers: Record<string, string> }).answers["parent-name"]).toBe("Robin Flex");
+    expect((sub.data as { answers: Record<string, string> }).answers["read-understood"]).toBe("yes");
+    expect(sub.signatureText).toBe("Robin Flex");
 
     // Signed in, the same child isn't asked again.
     const [g] = await db().select().from(s.guardians);
