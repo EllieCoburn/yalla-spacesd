@@ -72,7 +72,7 @@ export const DEFAULT_FAQS: Faq[] = [
     id: "membership-needed",
     category: "getting-started",
     alsoIn: ["bookings"],
-    pages: { flex: 1, happenings: 4 },
+    pages: { happenings: 4 },
     order: 20,
     status: "published",
     question: "Do I need a membership to book?",
@@ -384,7 +384,7 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "ages-by-offering",
     category: "bookings",
-    pages: { flex: 2, camp: 1, happenings: 2 },
+    pages: { camp: 1, happenings: 2 },
     order: 50,
     status: "published",
     question: "What ages are eligible for each offering?",
@@ -394,17 +394,56 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "what-to-bring",
     category: "bookings",
-    pages: { flex: 4, camp: 4 },
+    pages: { camp: 4 },
     order: 60,
     status: "published",
     question: "What should my child bring?",
     answer:
       "Please send your child with a labeled water bottle, lunch box, light jacket, and one spare outfit. Label all belongings so we can help them find their way home.\n\nComfortable clothes that can get messy are encouraged: mud, water, paint, and other hands-on materials are often part of our play. Some programs include extra packing notes in their booking confirmation. Yalla is nut-free, so please don’t send foods containing peanuts or tree nuts.",
   },
+  // Yalla Flex page: "A few things to know".
+  {
+    id: "flex-stay-onsite",
+    category: "bookings",
+    pages: { flex: 1 },
+    order: 66,
+    status: "published",
+    question: "Can I drop my child off and leave?",
+    answer:
+      "Yalla Flex requires parents and caregivers to remain onsite throughout their child’s session. You can work in our dedicated coworking space while your child plays and learns with their age-based cohort.",
+  },
+  {
+    id: "flex-early-late",
+    category: "bookings",
+    pages: { flex: 2 },
+    order: 67,
+    status: "published",
+    question: "Can I arrive early or pick up after my session ends?",
+    answer:
+      "Early Bird Care is available from 8:00–8:30am for children over 12 months old for an additional $16 per day. Availability is limited and must be confirmed separately; an available Flex session does not guarantee an Early Bird space.\n\nPlease plan to pick up your child promptly at the end of your session. After a five-minute grace period, a late pickup fee of $10 for every ten minutes, or portion thereof, applies.",
+  },
+  {
+    id: "flex-what-to-bring",
+    category: "bookings",
+    pages: { flex: 3 },
+    order: 68,
+    status: "published",
+    question: "What should I bring for my child?",
+    answer: "Once your session is confirmed, we’ll email you a packing list so you know exactly what to bring.",
+  },
+  {
+    id: "flex-prepare",
+    category: "bookings",
+    pages: { flex: 4 },
+    order: 69,
+    status: "published",
+    question: "How can I prepare my child for their session?",
+    answer:
+      "Once your session is confirmed, we’ll email you our routines, expectations, and arrival procedures to help you and your child feel prepared for your day at Yalla.",
+  },
   {
     id: "flex-arrival",
     category: "bookings",
-    pages: { flex: 3 },
     order: 65,
     status: "published",
     question: "How do arrival and departure work on a Flex day?",
@@ -423,7 +462,7 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "change-cancel-reservation",
     category: "bookings",
-    pages: { flex: 5, camp: 5, happenings: 5 },
+    pages: { camp: 5, happenings: 5 },
     order: 70,
     status: "published",
     question: "How do I change or cancel a reservation?",

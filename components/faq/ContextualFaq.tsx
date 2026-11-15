@@ -5,7 +5,7 @@ import { FaqAccordion } from "./FaqAccordion";
 import { FaqAnswer } from "./FaqAnswer";
 
 /** "A few good questions." The FAQs chosen for a page, from the same entries as the FAQ page. */
-export async function ContextualFaq({ page, limit = 6, className = "py-20 lg:py-28", bare = false }: { page: FaqPage; limit?: number; className?: string; bare?: boolean }) {
+export async function ContextualFaq({ page, limit = 6, className = "py-20 lg:py-28", bare = false, title }: { page: FaqPage; limit?: number; className?: string; bare?: boolean; title?: React.ReactNode }) {
   const items = await faqsForPage(page, limit);
   if (!items.length) return null;
   const category = FAQ_PAGES.find((p) => p.key === page)!.category;
@@ -17,7 +17,11 @@ export async function ContextualFaq({ page, limit = 6, className = "py-20 lg:py-
         <div className="lg:col-span-4">
           <p className="eyebrow text-ink-soft">FAQ</p>
           <h2 id={`faq-${page}-title`} className="display mt-5 text-[clamp(2rem,1.6rem+1.4vw,2.8rem)]">
-            A few good <em>questions.</em>
+            {title ?? (
+              <>
+                A few good <em>questions.</em>
+              </>
+            )}
           </h2>
         </div>
         <div className="lg:col-span-8">
