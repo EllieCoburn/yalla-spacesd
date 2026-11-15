@@ -81,7 +81,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A toddler painting with brushes and bright colors outdoors",
     motif: "sprig",
     ages: "18 months – 10 years, in three age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years",
-    days: "9:00am – 3:00pm. 2026–27 camp days: November 11 and 25; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
+    days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
     pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day.",
     facts: {
       ages: groups(),
@@ -96,7 +96,7 @@ export const programs: ProgramContent[] = [
         {
           lead: "2026–27 camp days",
           rows: [
-            { label: "November", value: "11, 25" },
+            { label: "November", value: "11, 25, 27" },
             { label: "December", value: "21, 22, 23, 28, 29, 30" },
             { label: "January", value: "18" },
             { label: "February", value: "15" },
