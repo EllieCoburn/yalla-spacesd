@@ -49,7 +49,7 @@ export const programs: ProgramContent[] = [
     short: "Drop-in childcare & coworking",
     tagline: "Childcare and coworking by the day, Monday to Friday",
     summary:
-      "Book individual weekdays, Monday through Friday, when there’s space: a day of childcare for your child in one of our thoughtfully designed play environments and a day of coworking for you, all under one roof. Ideal for flexible schedules, families visiting San Diego, or simply getting to know Yalla.",
+      "Book individual weekdays, Monday through Friday, when a spot opens in one of our cohorts: a day of childcare for your child in one of our thoughtfully designed play environments and a day of coworking for you, all under one roof. Ideal for flexible schedules, families visiting San Diego, or simply getting to know Yalla.",
     body: [
       "Yalla Flex is drop-in childcare and coworking for families who need care here and there rather than a regular membership. On the days you book, your child spends the day in a play environment with similarly aged peers and attentive educarers and guides, while you settle into our coworking space a few steps away.",
       "See live availability, choose your days and reserve in a few taps. Your bookings stay in the Family Portal, where you can manage or change them.",
@@ -57,8 +57,8 @@ export const programs: ProgramContent[] = [
     image: "/photos/lemon-play.jpg",
     imageAlt: "A child's hand scooping lemon slices from a water table",
     motif: "waves",
-    ages: "3 months – 5 years. See each age group with the day rates below.",
-    days: "Monday – Friday. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm, when there’s space",
+    ages: "4 months – 4 years, in four age groups: 4 – 12 months, 12 – 20 months, 20 – 35 months and 3 – 4 years. See the day rates below.",
+    days: "Monday – Friday, when a spot opens for your child’s age group. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm",
     pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s age. No registration fee. Siblings: 10% off each additional child on the same day, applied automatically. See day rates below.",
     included: ["Childcare in a play environment with similarly aged peers and attentive educarers and guides", "Communal coworking for you"],
     parentOnsite: true,

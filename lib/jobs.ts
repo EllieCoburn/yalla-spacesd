@@ -14,6 +14,7 @@ import { autoOffer, expireOffers } from "@/lib/ops/waitlist";
 import { expireSpaceHolds } from "@/lib/spaces/engine";
 import { expireCredits } from "@/lib/playpass/wallet";
 import { applyPlayPassSchedules } from "@/lib/playpass/changes";
+import { ensureFlexDays } from "@/lib/ops/flex";
 import { fmtDate } from "@/lib/time";
 
 export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; membershipChanges: number; offers: number; reminders: number };
@@ -27,6 +28,8 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   await expireCredits(db);
   // Play Pass notice periods, downgrades and pauses.
   await applyPlayPassSchedules(db);
+  // Keep Yalla Flex days (full until staff release spots) set up for the coming weeks.
+  await ensureFlexDays(db);
 
   // Offer freed spots to waiting families (only programs with automatic offers enabled).
   const waiting = await db

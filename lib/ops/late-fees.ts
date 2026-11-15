@@ -25,9 +25,11 @@ async function reservedEnd(db: DB, rec: typeof attendanceRecords.$inferSelect, s
   let end = session.endsAt.getTime();
   if (rec.bookingItemId) {
     const [item] = await db.select().from(bookingItems).where(eq(bookingItems.id, rec.bookingItemId));
-    const extra = addonsFor(program.kind, program.slug)
-      .filter((a) => item?.addons.includes(a.key) && a.extendsEndMinutes)
-      .reduce((m, a) => Math.max(m, a.extendsEndMinutes!), 0);
+    const chosen = addonsFor(program.kind, program.slug).filter((a) => item?.addons.includes(a.key));
+    // A half day ends earlier (e.g. Yalla Flex at 12:00pm).
+    const short = chosen.find((a) => a.endsAfterStartMinutes);
+    if (short) end = session.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000;
+    const extra = chosen.filter((a) => a.extendsEndMinutes).reduce((m, a) => Math.max(m, a.extendsEndMinutes!), 0);
     end += extra * 60_000;
   }
   return new Date(end);

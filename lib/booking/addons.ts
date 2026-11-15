@@ -4,10 +4,24 @@
  * after it ends, per child, per day. Immersive Play Sessions offer coworking for the grown-up who
  * stays, charged once per family per session however many children come (perFamily).
  */
-export type Addon = { key: string; label: string; time: string; priceCents: number; perFamily?: boolean; /** Minutes this extra adds after the session ends (for late fees). */ extendsEndMinutes?: number };
+export type Addon = {
+  key: string;
+  label: string;
+  time: string;
+  priceCents: number;
+  perFamily?: boolean;
+  /** Minutes this extra adds after the session ends (for late fees). */
+  extendsEndMinutes?: number;
+  /** The child's day ends this many minutes after the session starts instead (a half day). */
+  endsAfterStartMinutes?: number;
+  /** A choice of day length rather than an extra: priced from the program's half-day rate, shown as Full day / Half day. */
+  dayLength?: "half";
+};
 
 export const ADDONS: Record<string, Addon[]> = {
   "immersive-play": [{ key: "cowork", label: "Coworking for you", time: "9:00am – 12:00pm", priceCents: 1500, perFamily: true }],
+  // Yalla Flex: a released spot can be a full day (8:30am – 4:30pm) or a half day (8:30am – 12:00pm).
+  drop_in: [{ key: "half", label: "Half day", time: "8:30am – 12:00pm", priceCents: 0, endsAfterStartMinutes: 210, dayLength: "half" }],
   camp: [
     { key: "early", label: "Early Bird", time: "8:00 – 9:00am", priceCents: 2000 },
     { key: "late", label: "Late stay", time: "3:00 – 4:30pm", priceCents: 3000, extendsEndMinutes: 90 },

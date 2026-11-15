@@ -176,6 +176,13 @@
       "when": 1794682403214,
       "tag": "0024_camp_group_sizes",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794682463214,
+      "tag": "0025_flex_vacancies",
+      "breakpoints": true
     }
   ]
 }

@@ -389,7 +389,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What ages are eligible for each offering?",
     answer:
-      "- **Club Yalla**: 4 months – 5 years\n- **Yalla Flex**: 3 months – 5 years\n- **Camp Yalla**: 18 months – 10 years\n- **Immersive Play Sessions**: 3 – 8 years\n- **Weekend Play Sessions**: 18 months – 10 years\n- **After Hours Evenings**: 18 months – 10 years\n\nOther Happenings list their ages with each event. When you book, we’ll only offer sessions that fit your child’s age.",
+      "- **Club Yalla**: 4 months – 5 years\n- **Yalla Flex**: 4 months – 4 years\n- **Camp Yalla**: 18 months – 10 years\n- **Immersive Play Sessions**: 3 – 8 years\n- **Weekend Play Sessions**: 18 months – 10 years\n- **After Hours Evenings**: 18 months – 10 years\n\nOther Happenings list their ages with each event. When you book, we’ll only offer sessions that fit your child’s age.",
   },
   {
     id: "what-to-bring",

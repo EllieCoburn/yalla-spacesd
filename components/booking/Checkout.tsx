@@ -227,6 +227,12 @@ export function Checkout({
         },
       };
     });
+  /** One child's price for a session: a Yalla Flex half day uses the half-day rate. */
+  const unitPrice = (s: PublicSession, key: string) =>
+    s.halfPriceCents != null && extrasOf(extras, s, key).some((k) => addonsFor(s.kind, s.programSlug).some((a) => a.key === k && a.dayLength === "half"))
+      ? s.halfPriceCents
+      : (s.priceCents ?? 0);
+  const childrenTotal = (s: PublicSession) => (lines.find((l) => l.sessionId === s.id)?.childKeys ?? []).reduce((t, k) => t + unitPrice(s, k), 0);
   // After Hours siblings on the same evening are capped at the family rate, matching the invoice.
   const evenings = new Map<string, number[]>();
   // The same sum over Play Pass–eligible sessions only (an estimate; the server decides the real amount).
@@ -242,7 +248,7 @@ export function Checkout({
         eligibleEvenings.set(k, [...(eligibleEvenings.get(k) ?? []), ...Array<number>(n).fill(s.priceCents ?? 0)]);
         return sum + extrasCents;
       }
-      return sum + (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : 1) + extrasCents;
+      return sum + (s.bookingUnit === "per_child" ? childrenTotal(s) : (s.priceCents ?? 0)) + extrasCents;
     }, 0) + [...eligibleEvenings.values()].reduce((sum, prices) => sum + familyRateTotal(prices), 0);
   const grossTotal =
     sorted.reduce((sum, s) => {
@@ -255,10 +261,7 @@ export function Checkout({
         ]);
         return sum;
       }
-      return (
-        sum +
-        (s.priceCents ?? 0) * (s.bookingUnit === "per_child" ? n : n ? 1 : 0)
-      );
+      return sum + (s.bookingUnit === "per_child" ? childrenTotal(s) : n ? (s.priceCents ?? 0) : 0);
     }, 0) +
     [...evenings.values()].reduce(
       (sum, prices) => sum + familyRateTotal(prices),
@@ -280,7 +283,7 @@ export function Checkout({
       if (!sibling.withPass && (wallet?.passCents ?? 0) > 0 && s.playPassEligible) continue;
       const k = `${s.programId}|${s.localDate}`;
       const g = siblingByDay.get(k) ?? { prices: [], eligible: !!s.playPassEligible };
-      g.prices.push(...Array<number>(n).fill(s.priceCents));
+      g.prices.push(...(lines.find((l) => l.sessionId === s.id)?.childKeys ?? []).map((k) => unitPrice(s, k)));
       siblingByDay.set(k, g);
     }
   let siblingSaving = 0;
@@ -671,7 +674,9 @@ export function Checkout({
                       <span className="font-serif text-[0.95rem]">
                         {s.kind === FAMILY_RATE.kind
                           ? `${usd(s.priceCents)} per child · family rate applies`
-                          : `${usd(s.priceCents)}${spotsOf(s.id) > 1 ? ` × ${spotsOf(s.id)}` : ""}`}
+                          : s.halfPriceCents != null
+                            ? `${usd(s.priceCents)} full day · ${usd(s.halfPriceCents)} half day`
+                            : `${usd(s.priceCents)}${spotsOf(s.id) > 1 ? ` × ${spotsOf(s.id)}` : ""}`}
                       </span>
                     </div>
                     <p className="text-[0.82rem] text-ink-soft">
@@ -792,10 +797,36 @@ export function Checkout({
                               key={c.key}
                               className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem]"
                             >
+                              {addonsFor(s.kind, s.programSlug).some((a) => a.dayLength) ? (
+                                <>
+                                  <span className="text-ink-soft">{c.firstName}:</span>
+                                  {[null, ...addonsFor(s.kind, s.programSlug).filter((a) => a.dayLength)].map((a) => {
+                                    const half = (extras[s.id]?.[c.key] ?? []).includes(a?.key ?? "__none");
+                                    const anyHalf = addonsFor(s.kind, s.programSlug).some((x) => x.dayLength && (extras[s.id]?.[c.key] ?? []).includes(x.key));
+                                    const on = a ? half : !anyHalf;
+                                    return (
+                                      <button
+                                        key={a?.key ?? "full"}
+                                        type="button"
+                                        aria-pressed={on}
+                                        onClick={() => {
+                                          if (on) return;
+                                          if (a) toggleExtra(s.id, c.key, a.key);
+                                          else for (const x of addonsFor(s.kind, s.programSlug).filter((y) => y.dayLength && (extras[s.id]?.[c.key] ?? []).includes(y.key))) toggleExtra(s.id, c.key, x.key);
+                                        }}
+                                        className={`rounded-full border px-3.5 py-1.5 transition-all ${on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink"}`}
+                                      >
+                                        {a ? a.label : "Full day"} <span className={on ? "text-chalk/70" : "text-ink-soft"}>{a ? a.time : "8:30am – 4:30pm"}</span> · {usd(a ? (s.halfPriceCents ?? s.priceCents) : s.priceCents)}
+                                      </button>
+                                    );
+                                  })}
+                                </>
+                              ) : (
                               <span className="text-ink-soft">
                                 Extras for {c.firstName}:
                               </span>
-                              {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily).map((a) => (
+                              )}
+                              {addonsFor(s.kind, s.programSlug).filter((a) => !a.perFamily && !a.dayLength).map((a) => (
                                 <label
                                   key={a.key}
                                   className="inline-flex cursor-pointer items-center gap-2"

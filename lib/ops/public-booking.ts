@@ -46,6 +46,7 @@ import { addChild, createFamily, findGuardianByEmail, updateChild } from "./fami
 import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
+import { flexGroupFor } from "@/lib/booking/flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 
 const PUBLIC: Actor = { type: "system", name: "Public booking" };
@@ -66,6 +67,8 @@ export type PublicSession = {
   endsAt: string;
   state: PublicState;
   priceCents: number | null;
+  /** Yalla Flex: the half-day price (a full day is priceCents). */
+  halfPriceCents: number | null;
   ages: { min: number | null; max: number | null };
   eligible: boolean;
   seriesId: string | null;
@@ -116,6 +119,8 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
         ne(programs.kind, "membership"),
         q.kinds?.length ? inArray(programs.kind, q.kinds) : undefined,
         gt(sessions.endsAt, now),
+        // Cancelled sessions aren't offered, so they aren't listed.
+        ne(sessions.status, "cancelled"),
       ),
     )
     .orderBy(asc(sessions.startsAt), asc(sessions.minAgeMonths));
@@ -146,6 +151,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       endsAt: s.endsAt.toISOString(),
       state: withoutCounts(publicState(s, p, remaining, now)),
       priceCents: pickPrice(s, p, table),
+      halfPriceCents: p.kind === "drop_in" ? (flexGroupFor(s.minAgeMonths)?.halfCents ?? null) : null,
       ages: { min: minAge, max: maxAge },
       eligible,
       seriesId: s.seriesId,

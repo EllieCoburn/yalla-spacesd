@@ -7,7 +7,8 @@ import { FlexRates } from "@/components/site/FlexRates";
 import { ProgramDates, type DateGroup } from "@/components/site/ProgramDates";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
 import { CAMP_DAYS, type ProgramContent } from "@/content/programs";
-import { cohorts, flexAges } from "@/content/tuition";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { cohorts } from "@/content/tuition";
 
 type Page = {
   title: ReactNode;
@@ -32,13 +33,6 @@ const AGE_GROUPS = (priceCents: number): DateGroup[] => [
   { key: "c", label: "7 – 10 yrs", minAge: 84, maxAge: 131, priceCents },
 ];
 
-/** Each Flex cohort's ages in months, to place a family's own children (see flexAges). */
-const FLEX_BANDS: Record<string, { minAge: number; maxAge: number }> = {
-  seedlings: { minAge: 3, maxAge: 11 },
-  saplings: { minAge: 12, maxAge: 23 },
-  sprouts: { minAge: 24, maxAge: 35 },
-  wildflowers: { minAge: 36, maxAge: 71 },
-};
 
 const questions = {
   label: "Questions?",
@@ -101,10 +95,10 @@ export const BOOKING_PAGES: Record<string, Page> = {
         Flex days, <em>when you need them.</em>
       </>
     ),
-    lede: "A day of childcare for your child and coworking for you, Monday to Friday, when there’s space.",
+    lede: "A day of childcare for your child and coworking for you, Monday to Friday, when a spot opens in your child’s age group. Each day shows which age groups are open.",
     facts: [
-      { label: "Hours", value: "8:30am – 4:30pm" },
-      { label: "Ages", value: "3 months – 5 years" },
+      { label: "Hours", value: "8:30am – 4:30pm, or a half day to 12:00pm" },
+      { label: "Ages", value: "4 months – 4 years" },
       {
         label: "Price",
         value: `From $${Math.min(...cohorts.map((c) => c.daily.full))} a day`,
@@ -128,13 +122,14 @@ export const BOOKING_PAGES: Record<string, Page> = {
       </>
     ),
     unit: "day",
-    groups: cohorts.map((c) => ({
-      key: c.id,
-      label: c.name,
-      sub: `${flexAges[c.id]} · $${c.daily.full}`,
-      cohort: c.name,
-      ...FLEX_BANDS[c.id],
-      priceCents: c.daily.full * 100,
+    // Each Flex day has a session per age group; a group is open only when staff release a spot.
+    groups: FLEX_GROUPS.map((g) => ({
+      key: g.key,
+      label: g.cohort,
+      sub: `${g.label} · $${g.fullCents / 100}`,
+      minAge: g.minAge,
+      maxAge: g.maxAge,
+      priceCents: g.fullCents,
     })),
     groupNoun: "age group",
     horizonDays: 56,

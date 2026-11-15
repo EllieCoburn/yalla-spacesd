@@ -38,6 +38,7 @@ import { getPolicy } from "./settings";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 import { addonsFor, validAddons } from "@/lib/booking/addons";
+import { flexGroupFor } from "@/lib/booking/flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
@@ -63,10 +64,14 @@ async function event(db: Executor, bookingId: string, actor: Actor, type: string
 type SessionRow = typeof sessions.$inferSelect;
 type ProgramRow = typeof programs.$inferSelect;
 
-export async function priceFor(db: Executor, session: SessionRow, program: ProgramRow, child: { cohortId: string | null } | null): Promise<{ cents: number | null; label: string }> {
-  if (session.priceCents != null) return { cents: session.priceCents, label: "Session price" };
+export async function priceFor(db: Executor, session: SessionRow, program: ProgramRow, child: { cohortId: string | null } | null, addons: string[] = []): Promise<{ cents: number | null; label: string }> {
+  // A Yalla Flex half day is priced from its age group's half-day rate.
+  const half = addonsFor(program.kind, program.slug).some((a) => a.dayLength === "half" && addons.includes(a.key));
+  const group = program.kind === "drop_in" ? flexGroupFor(session.minAgeMonths) : null;
+  if (group) return half ? { cents: group.halfCents, label: `${group.label} half day` } : { cents: session.priceCents ?? group.fullCents, label: `${group.label} full day` };
+  if (session.priceCents != null && !half) return { cents: session.priceCents, label: "Session price" };
   const hours = (session.endsAt.getTime() - session.startsAt.getTime()) / 3600_000;
-  const dayLength = hours > 5 ? "full" : "half";
+  const dayLength = half || hours <= 5 ? "half" : "full";
   const cohortId = child?.cohortId ?? session.cohortId;
   const table = await db
     .select()
@@ -295,7 +300,7 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
         spots = seenFamilySession.has(s.id) ? 0 : p.bookingUnit === "private_event" ? s.capacity : 1;
         seenFamilySession.add(s.id);
       }
-      const price = await priceFor(tx, s, p, child);
+      const price = await priceFor(tx, s, p, child, it.childId ? validAddons(p.kind, it.addons, p.slug) : []);
       const [row] = await tx
         .insert(bookingItems)
         .values({
@@ -382,8 +387,10 @@ function familyRateLines(rows: Awaited<ReturnType<typeof bookingLines>>): LineIn
   return out;
 }
 
-export function describeLine(r: { program: ProgramRow; session: SessionRow; child: { firstName: string; preferredName: string | null } | null }) {
-  return `${r.program.name} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(r.session.startsAt)}–${fmtTime(r.session.endsAt)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
+export function describeLine(r: { program: ProgramRow; session: SessionRow; child: { firstName: string; preferredName: string | null } | null; item?: { addons: string[] } | null }) {
+  const short = addonsFor(r.program.kind, r.program.slug).find((a) => a.endsAfterStartMinutes && r.item?.addons.includes(a.key));
+  const end = short ? new Date(r.session.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : r.session.endsAt;
+  return `${r.program.name}${short ? ` (${short.label.toLowerCase()})` : ""} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(r.session.startsAt)}–${fmtTime(end)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
 }
 
 /**
@@ -427,7 +434,7 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
   // Per-family extras (e.g. coworking during Immersive Play) are charged once per session.
   const familyExtras = new Set<string>();
   for (const r of rows)
-    for (const a of addonsFor(r.program.kind, r.program.slug).filter((x) => r.item.addons.includes(x.key))) {
+    for (const a of addonsFor(r.program.kind, r.program.slug).filter((x) => !x.dayLength && r.item.addons.includes(x.key))) {
       if (a.perFamily) {
         if (familyExtras.has(`${r.session.id}:${a.key}`)) continue;
         familyExtras.add(`${r.session.id}:${a.key}`);
@@ -716,7 +723,7 @@ export async function previewMove(db: Executor, itemId: string, targetSessionId:
   const prep = await prepare(db, row.booking.familyId, [{ sessionId: targetSessionId, childId: row.item.childId }], { source: "admin", now: new Date() });
   const cf = await conflicts(db, [{ sessionId: targetSessionId, childId: row.item.childId }], prep.sessionsById, row.booking.id, new Date());
   const avail = (await availabilityFor(db, [targetSessionId])).get(targetSessionId)!;
-  const price = await priceFor(db, target, program, child);
+  const price = await priceFor(db, target, program, child, row.item.addons);
   const current = row.item.priceCents ?? 0;
   const diff = (price.cents ?? current) - current;
   return {

@@ -27,7 +27,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     title: "Care when you need it",
     intro: "Book online, one session at a time.",
     items: [
-      { slug: "yalla-flex", how: "Childcare and coworking by the day, Monday to Friday, when there’s space." },
+      { slug: "yalla-flex", how: "Childcare and coworking by the day, Monday to Friday, when a spot opens in your child’s age group." },
       { slug: "camp-yalla", how: "Themed weeks, booked as a set so friends and educators stay the same." },
     ],
   },

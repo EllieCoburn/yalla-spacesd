@@ -596,7 +596,7 @@ function SessionRow({
             {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
           </span>
           <span className="mt-1 block text-[0.82rem] text-ink-soft">
-            {usd(s.priceCents)}
+            {s.halfPriceCents != null ? `${usd(s.priceCents)} full day · ${usd(s.halfPriceCents)} half day` : usd(s.priceCents)}
             {s.priceCents != null
               ? s.bookingUnit === "per_family"
                 ? " per family"
@@ -631,7 +631,7 @@ function SessionRow({
               disabled={disabled}
               aria-pressed={selected}
               aria-label={`${selected ? "Remove" : "Add"} ${s.title} on ${fmtDate(s.localDate)}`}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-25 ${
                 selected
                   ? "border-blue bg-blue text-chalk"
                   : "border-ink/20 hover:border-ink"
@@ -740,7 +740,7 @@ function Basket({
     : 0;
   const subtotal = perChild.reduce((sum, x) => sum + (x.priceCents ?? 0) * n(x), 0);
   // A subtotal and total only when every item is a simple per-child price (extras and family rates are added at checkout).
-  const simple = perChild.length === sorted.length;
+  const simple = perChild.length === sorted.length && !sorted.some((x) => x.halfPriceCents != null);
   return (
     <div className={compact ? "" : "border border-line bg-paper p-7"}>
       {!compact ? (
@@ -768,7 +768,7 @@ function Basket({
                   <span className="text-[0.78rem] text-ink-soft">
                     {fmtDate(row.session.localDate, "EEE d MMM")} ·{" "}
                     {fmtTime(row.session.startsAt)} ·{" "}
-                    {usd(row.session.priceCents)}
+                    {row.session.halfPriceCents != null ? `${usd(row.session.priceCents)} full · ${usd(row.session.halfPriceCents)} half` : usd(row.session.priceCents)}
                     {n(row.session) > 1 ? ` × ${n(row.session)}` : ""}
                   </span>
                   <span className="mt-2 block">
@@ -831,7 +831,7 @@ function Basket({
           )}
         </ul>
       )}
-      {siblingSaving > 0 ? (
+      {siblingSaving > 0 && simple ? (
         <dl className="mt-4 space-y-1.5 border-t border-line pt-4 text-[0.88rem]">
           {simple ? (
             <div className="flex justify-between text-ink-soft">
