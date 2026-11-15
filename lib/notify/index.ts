@@ -37,7 +37,9 @@ export type TemplateKey =
   | "enquiry_received"
   | "tour_received"
   | "application_received"
-  | "event_received";
+  | "event_received"
+  | "family_welcome"
+  | "staff_family_joined";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -107,6 +109,20 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "New website message (to staff)",
     subject: "New {{kind}} from {{name}}",
     body: "A new {{kind}} just came in through the website.\n\n{{details}}\n\nOpen it in the Inbox: {{link}}\n\nReply to the family directly at their email address above.",
+    essential: true,
+    audience: "staff",
+  },
+  family_welcome: {
+    name: "Welcome to the Family Portal (to families)",
+    subject: "Welcome to Yalla, {{guardian_first_name}}!",
+    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nThank you for creating your Yalla Family Portal account. We’re so glad you’re here.\n\nThe Family Portal is your home base for everything Yalla. Here’s how to get started:\n\n## Getting started\n\n• **Complete your onboarding packet.** Every child must have a completed onboarding packet, submitted through the Family Portal, before their first day. You’ll find it under Forms.\n• **Keep your children’s details up to date.** Allergies, care notes and the people allowed to pick up live under Children.\n• **Book care.** Browse available days, camps and Happenings, and reserve the experiences that work for your family.\n• **Manage your Yalla Wallet and Play Pass.** See your balance, credits and plan in one place.\n• **Find helpful resources.** Parking, our illness policy and more are in the Resource Hub at the bottom of the portal.\n\n{{portal_link}}\n\n## What to expect from Yalla\n\n• A confirmation and receipt by email whenever you book or pay\n• A reminder before each of your child’s sessions\n• A note from us if anything is still needed before your child’s first day\n• A team that’s always happy to help at hello@yallaspacesd.com or 619.775.4008\n\nWe can’t wait to welcome you in person.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  staff_family_joined: {
+    name: "A family joined the portal (to staff)",
+    subject: "The {{family_name}} family has joined the Yalla portal",
+    body: "A new family just created a Family Portal account.\n\n{{details}}\n\n{{link}}",
     essential: true,
     audience: "staff",
   },
@@ -342,6 +358,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_new_enquiry: ["kind", "kind_label", "name", "details", "link"],
   enquiry_received: ["name", "kind", "details"],
   tour_received: ["name", "details", "interests", "explore"],
+  family_welcome: ["guardian_first_name", "portal_link"],
+  staff_family_joined: ["family_name", "details", "link"],
   application_received: ["name", "details", "explore"],
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };
@@ -349,6 +367,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
 export const SAMPLE_VARIABLES: Record<string, string> = {
   plan: "Gather",
   interests: "Club Yalla, Yalla Flex",
+  family_name: "Smith",
+  portal_link: "https://www.yallaspacesd.com/portal/home",
   occasion: "Birthday party",
   for_occasion: " for your birthday party",
   preferred_date: "Sat 12 Dec",

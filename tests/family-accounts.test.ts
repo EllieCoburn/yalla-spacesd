@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import { registerFamilyAccount, resolveFamilySession, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
-import { db, family, reset } from "./helpers";
+import { setPolicy } from "@/lib/ops/settings";
+import { db, family, owner, reset } from "./helpers";
 
 beforeEach(reset);
 
@@ -33,6 +34,21 @@ describe("Family Portal accounts", () => {
     const [row] = await db().select().from(s.guardians).where(eq(s.guardians.id, g!.guardianId));
     expect(row.passwordHash).toMatch(/^scrypt\$/);
     expect(row.passwordHash).not.toContain("garden-swing-42");
+  });
+
+  it("sends the family a welcome email and tells the team who joined", async () => {
+    await setPolicy(db(), owner, "notifications.staffEmails", "hello@yalla.test");
+    await registerFamilyAccount(db(), account(), base);
+    const sent = await db().select().from(s.messages);
+    const welcome = sent.find((m) => m.templateKey === "family_welcome");
+    expect(welcome?.toAddress).toBe("maya@example.com");
+    expect(welcome?.subject).toBe("Welcome to Yalla, Maya!");
+    expect(welcome?.body).toContain("http://test/portal/home");
+    const notice = sent.find((m) => m.templateKey === "staff_family_joined");
+    expect(notice?.toAddress).toBe("hello@yalla.test");
+    expect(notice?.subject).toBe("The Rivera family has joined the Yalla portal");
+    expect(notice?.body).toContain("Child 1: Leo, born Mar 14, 2022");
+    expect(notice?.body).toMatch(/http:\/\/test\/admin\/families\/[\w-]+/);
   });
 
   it("signs in later with email and password, case-insensitively", async () => {

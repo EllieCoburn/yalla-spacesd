@@ -12,6 +12,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ key: strin
   const samples: Record<string, string> = Object.fromEntries(TEMPLATE_VARIABLES[key as TemplateKey].map((v) => [v, SAMPLE_VARIABLES[v] ?? v]));
   if (key.endsWith("_received") || key === "staff_new_enquiry")
     Object.assign(samples, { name: key === "staff_new_enquiry" ? "Jordan Rivera" : "Jordan", kind: "tour request", kind_label: "Tour request" });
+  if (key === "staff_family_joined") samples.details = "Parent: Jordan Smith\nEmail: jordan@example.com\nChild 1: Ava, born Mar 14, 2024\nChild 2: Leo, born Jul 2, 2025";
+  if (key === "family_welcome") samples.guardian_first_name = "Jordan";
   const subject = render(t.subject, samples);
   const html = emailHtml({ key, subject, body: render(t.body, samples), audience: t.audience });
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });

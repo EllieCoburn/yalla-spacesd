@@ -30,6 +30,7 @@ export function assetBase() {
 const HERO: Record<string, string> = {
   enquiry_received: "hero-space.jpg",
   tour_received: "hero-space.jpg",
+  family_welcome: "hero-rainbow.jpg",
   application_received: "hero-rainbow.jpg",
   event_received: "hero-sunflowers.jpg",
   playpass_welcome: "hero-rainbow.jpg",
@@ -44,6 +45,8 @@ const BUTTON: Record<string, string> = {
   waitlist_offer: "Claim this spot",
   staff_new_enquiry: "Open in the Inbox",
   staff_password_reset: "Choose a new password",
+  family_welcome: "Open the Family Portal",
+  staff_family_joined: "Open their family record",
   staff_invite: "Set your password",
 };
 
@@ -56,7 +59,7 @@ const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
-  return body.replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+  return body.replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** A template can start with "# Headline" to use a headline other than the subject. */
@@ -72,7 +75,9 @@ function inline(text: string) {
     links.push(`<a href="${esc(u)}" style="color:${C.blue};text-decoration:underline;">${esc(t)}</a>`);
     return `\u0000${links.length - 1}\u0000`;
   });
-  return linkify(esc(tokened)).replace(/\u0000(\d+)\u0000/g, (_, i) => links[Number(i)]);
+  return linkify(esc(tokened))
+    .replace(/\*\*(.+?)\*\*/g, `<strong style="font-weight:500;">$1</strong>`)
+    .replace(/\u0000(\d+)\u0000/g, (_, i) => links[Number(i)]);
 }
 
 function linkify(html: string) {

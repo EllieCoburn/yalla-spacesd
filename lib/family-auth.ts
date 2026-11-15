@@ -16,7 +16,9 @@ import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/cr
 import { addChild, createFamily } from "@/lib/ops/families";
 import type { DB, Executor } from "@/lib/db";
 import { families, familyAuthTokens, familySessions, guardians } from "@/lib/db/schema";
-import { notificationsMode, notifyFamily } from "@/lib/notify";
+import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
+import { staffRecipients } from "@/lib/ops/enquiries";
+import { fmtDate } from "@/lib/time";
 
 export const FAMILY_LINK_MS = 20 * 60 * 1000;
 export const FAMILY_SESSION_MS = 365 * 24 * 3600 * 1000;
@@ -159,7 +161,7 @@ export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: 
     return { emailed: true, devLink };
   }
 
-  return db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     const actor = { type: "system" as const, name: "Family Portal sign-up" };
     const { family, guardian } = await createFamily(tx, actor, { guardian: { firstName: input.firstName, lastName: input.lastName, email } });
     await tx.update(guardians).set({ passwordHash: hashPassword(input.password) }).where(eq(guardians.id, guardian.id));
@@ -170,8 +172,24 @@ export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: 
         birthDate: c.birthDate,
       });
     await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: family.id, summary: `Created a Family Portal account with ${kids.length} ${kids.length === 1 ? "child" : "children"}` });
-    return { session: await startSession(tx, guardian.id) };
+    return { session: await startSession(tx, guardian.id), familyId: family.id, guardianId: guardian.id, guardian };
   });
+
+  // Emails go out after the account is saved; a sending problem never blocks signing up.
+  const { guardian, familyId, guardianId } = created;
+  await notifyFamily(db, { key: "family_welcome", familyId, guardianIds: [guardianId], vars: { portal_link: `${baseUrl}/portal/home` }, related: { type: "guardian", id: guardianId } }).catch((e) =>
+    console.error("[welcome email failed]", (e as Error).message?.slice(0, 120)),
+  );
+  const details = [
+    `Parent: ${guardian.firstName} ${guardian.lastName}`,
+    `Email: ${email}`,
+    ...(kids.length ? kids.map((c, i) => `${kids.length > 1 ? `Child ${i + 1}` : "Child"}: ${c.firstName.trim()}, born ${fmtDate(c.birthDate, "MMM d, yyyy")}`) : ["Children: none added yet"]),
+  ].join("\n");
+  for (const to of await staffRecipients(db).catch(() => [] as string[]))
+    await notifyStaff(db, { key: "staff_family_joined", to, vars: { family_name: guardian.lastName.trim(), details, link: `${baseUrl}/admin/families/${familyId}` }, relatedId: familyId }).catch((e) =>
+      console.error("[family joined email failed]", (e as Error).message?.slice(0, 120)),
+    );
+  return { session: created.session };
 }
 
 /**
