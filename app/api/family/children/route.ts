@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
 import { getGuardian } from "@/app/(site)/portal/session";
-import { getDb } from "@/lib/db";
+import { getDb, isDbConfigured } from "@/lib/db";
 import { children } from "@/lib/db/schema";
+import { getPolicy } from "@/lib/ops/settings";
+import { walletSummary } from "@/lib/playpass/wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ export async function GET() {
         .select({
           id: children.id,
           firstName: children.firstName,
+          lastName: children.lastName,
           preferredName: children.preferredName,
           birthDate: children.birthDate,
         })
@@ -29,6 +32,11 @@ export async function GET() {
         )
         .orderBy(asc(children.birthDate))
     : [];
+  // What checkout needs to open right on the program page.
+  const wallet = guardian ? await walletSummary(getDb(), guardian.familyId) : null;
+  const sibling = isDbConfigured()
+    ? { percent: Number(await getPolicy(getDb(), "billing.siblingDiscountPercent")) || 0, withPass: !!(await getPolicy(getDb(), "playpass.siblingDiscountWithWallet")) }
+    : { percent: 0, withPass: false };
   return NextResponse.json(
     {
       children: list.map((c) => ({
@@ -36,6 +44,12 @@ export async function GET() {
         name: c.preferredName || c.firstName,
         birthDate: c.birthDate,
       })),
+      checkout: {
+        guardian: guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null,
+        savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate })),
+        wallet: wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null,
+        sibling,
+      },
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

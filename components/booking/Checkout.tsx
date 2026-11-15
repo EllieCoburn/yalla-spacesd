@@ -523,6 +523,18 @@ export function Checkout({
           ))}
         </div>
 
+        {/* What's being booked, so it stays in view through every step. */}
+        <div className="px-6 pt-4 sm:px-10">
+          <p className="text-[0.8rem] leading-relaxed text-ink-soft">
+            <span className="text-ink">Booking:</span>{" "}
+            {sorted
+              .slice(0, 3)
+              .map((x) => `${x.title} · ${fmtDate(x.localDate, "EEE d MMM")}${spotsOf(x.id) > 1 ? ` · ${spotsOf(x.id)} children` : ""}`)
+              .join("; ")}
+            {sorted.length > 3 ? `; and ${sorted.length - 3} more` : ""}
+          </p>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10">
           {error ? (
             <div

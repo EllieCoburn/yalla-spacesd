@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { familyRateTotal } from "@/lib/booking/family-rate";
 import type { PublicSession } from "@/lib/ops/public-booking";
+import { Checkout, type SavedChild, type SignedInGuardian } from "@/components/booking/Checkout";
 import { ageInMonths } from "@/lib/time";
 import { addonsFor } from "@/lib/booking/addons";
 
@@ -87,15 +88,23 @@ export function ProgramDates({
   const earlyOn = (day: string) => groups.some((g) => sessionFor(day, g)?.earlyBirdOpen);
   /** A signed-in family's children; null until known, empty for everyone else. */
   const [kids, setKids] = useState<Child[] | null>(null);
+  /** What checkout needs (signed-in guardian, saved children, wallet, sibling discount). */
+  type CheckoutCtx = { guardian: SignedInGuardian | null; savedChildren: SavedChild[]; wallet: { passCents: number; creditCents: number } | null; sibling: { percent: number; withPass: boolean } };
+  const [ctx, setCtx] = useState<CheckoutCtx>({ guardian: null, savedChildren: [], wallet: null, sibling: { percent: 0, withPass: false } });
+  /** Checkout opens right here, over the chosen days, rather than on another page. */
+  const [checkout, setCheckout] = useState<{ sessions: PublicSession[]; spots: Record<string, number>; extras: Record<string, string[]>; include: string[]; includeExtras: string[] } | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [chosenKids, setChosenKids] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/family/children", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { children: [] }))
-      .then(
-        (j: { children?: Child[] }) => !cancelled && setKids(j.children ?? []),
-      )
+      .then((j: { children?: Child[]; checkout?: CheckoutCtx }) => {
+        if (cancelled) return;
+        setKids(j.children ?? []);
+        if (j.checkout) setCtx(j.checkout);
+      })
       .catch(() => !cancelled && setKids([]));
     return () => {
       cancelled = true;
@@ -132,7 +141,7 @@ export function ProgramDates({
     return () => {
       cancelled = true;
     };
-  }, [days, today, horizonDays, kind, program]);
+  }, [days, today, horizonDays, kind, program, reloadKey]);
 
   const matches = (s: PublicSession, g: DateGroup) =>
     g.cohort ? s.cohort === g.cohort : s.ages.min === g.minAge;
@@ -287,6 +296,18 @@ export function ProgramDates({
       ? `&children=${pickedKids.map((k) => k.id).join(",")}`
       : "";
     const chosenExtras = [...stay, ...(isFlex && half ? ["half"] : []), ...(isFlex && early ? ["early"] : [])];
+    // Open checkout over this page, so the chosen days stay in view.
+    if (lines.length) {
+      const flexExtras = chosenExtras.filter((k) => k === "half" || k === "early");
+      setCheckout({
+        sessions: lines,
+        spots: Object.fromEntries(lines.map((s) => [s.id, spotCount.get(s.id) ?? 1])),
+        extras: flexExtras.length ? Object.fromEntries(lines.map((s) => [s.id, flexExtras])) : {},
+        include: byName ? pickedKids.map((k) => k.id) : [],
+        includeExtras: chosenExtras,
+      });
+      return;
+    }
     const extras = chosenExtras.length ? `&extras=${chosenExtras.join(",")}` : "";
     if (lines.length)
       router.push(
@@ -766,6 +787,32 @@ export function ProgramDates({
           </button>
         </div>
       </div>
+      {checkout ? (
+        <Checkout
+          sessions={checkout.sessions}
+          guardian={ctx.guardian}
+          savedChildren={ctx.savedChildren}
+          includeChildren={checkout.include}
+          includeExtras={checkout.includeExtras}
+          wallet={ctx.wallet}
+          sibling={ctx.sibling}
+          spots={checkout.spots}
+          onSpots={(sessionId, n) =>
+            setCheckout((c) =>
+              c
+                ? n > 0
+                  ? { ...c, spots: { ...c.spots, [sessionId]: Math.min(8, n) } }
+                  : c.sessions.length > 1
+                    ? { ...c, sessions: c.sessions.filter((x) => x.id !== sessionId), spots: Object.fromEntries(Object.entries(c.spots).filter(([k]) => k !== sessionId)) }
+                    : null
+                : c,
+            )
+          }
+          defaultExtras={checkout.extras}
+          onClose={() => setCheckout(null)}
+          onRefresh={() => setReloadKey((k) => k + 1)}
+        />
+      ) : null}
     </div>
   );
 }
