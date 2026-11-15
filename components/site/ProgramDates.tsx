@@ -182,8 +182,16 @@ export function ProgramDates({
     ? pickedKids.length
     : groups.reduce((n, g) => n + (counts[g.key] ?? 0), 0);
   const known = !!sessions?.length;
+  // Yalla Flex only opens an age group when there's a vacancy, so days stay greyed until the
+  // family says who's coming; then each day shows open or full for those children.
+  const waiting = kind === "drop_in" && children === 0;
+  const askWho = () => {
+    setHint(true);
+    document.getElementById(`${kind}-who`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   /** A date can be picked when at least one of the chosen groups has room (or availability is unknown). */
   const pickable = (day: string) => {
+    if (waiting) return false;
     if (!known) return true;
     const coming = comingOn(day);
     return (coming.length ? coming : groups).some((g) =>
@@ -294,6 +302,18 @@ export function ProgramDates({
 
   /** One date. Status is shown in words only: a few spots left, or full with the waitlist. */
   const tile = (d: string, flowTile: boolean) => {
+    if (waiting)
+      return (
+        <button
+          type="button"
+          onClick={askWho}
+          aria-label={`${fmt(d, { weekday: "long", month: "long", day: "numeric" })}: choose who’s coming first`}
+          className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/15 px-1 text-center text-ink/35 ${flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]"}`}
+        >
+          <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>
+          <span className={`font-serif leading-none ${flowTile ? "text-[1.6rem]" : "text-[1.45rem]"}`}>{fmt(d, { day: "numeric" })}</span>
+        </button>
+      );
     const on = picked.includes(d);
     const full = fullState(d);
     const few = !full && fewLeft(d);
@@ -557,6 +577,11 @@ export function ProgramDates({
         <p className="eyebrow text-[0.62rem] text-ink-soft">
           2 · Choose your {unit}s
         </p>
+        {waiting ? (
+          <p className="mt-2 text-[0.85rem] text-ink-soft">
+            Add who’s coming above to see which days have a spot open for your child’s age group.
+          </p>
+        ) : null}
         {!sessions && !days.length ? (
           <div className="mt-4 space-y-3" aria-busy="true">
             {[0, 1].map((i) => (
