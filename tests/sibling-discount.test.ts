@@ -59,3 +59,16 @@ describe("Sibling discount", () => {
     expect(off.some((l) => l.kind === "discount")).toBe(false);
   });
 });
+
+describe("Camp availability wording", () => {
+  it("shows a group as almost full at 5 or fewer places, without revealing a count", async () => {
+    const { listPublicSessions } = await import("@/lib/ops/public-booking");
+    const p = await program({ kind: "camp", priceCents: 16000, lowAvailabilityThreshold: 5, showRemaining: false });
+    const roomy = await session(p.id, { capacity: 16 }, 10);
+    const tight = await session(p.id, { capacity: 5, localDate: roomy.localDate }, 10);
+    const list = await listPublicSessions(db(), { from: roomy.localDate, to: roomy.localDate });
+    const st = (id: string) => list.find((s) => s.id === id)?.state;
+    expect(st(roomy.id)).toEqual({ state: "available", remaining: null });
+    expect(st(tight.id)).toEqual({ state: "limited", remaining: 0, showCount: false });
+  });
+});
