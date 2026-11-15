@@ -13,7 +13,7 @@ export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
   children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string }[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
-  signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean }[];
+  signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Record<string, string> }[];
 };
 
 function clip(s: unknown, n = 200) {
@@ -35,7 +35,14 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
         // Add-on keys are checked against the program's offer when the hold is created.
         addons: Object.fromEntries(Object.entries(l.addons ?? {}).slice(0, 8).map(([k, v]) => [clip(k, 60), (Array.isArray(v) ? v : []).slice(0, 4).map((x) => clip(x, 20))])),
       })),
-      signatures: payload.signatures.slice(0, 40).map((s) => ({ templateId: clip(s.templateId, 60), childKey: s.childKey ? clip(s.childKey, 60) : null, signatureText: clip(s.signatureText, 120), consent: !!s.consent })),
+      signatures: payload.signatures.slice(0, 40).map((s) => ({
+        templateId: clip(s.templateId, 60),
+        childKey: s.childKey ? clip(s.childKey, 60) : null,
+        signatureText: clip(s.signatureText, 120),
+        consent: !!s.consent,
+        // Answers to online agreements (initials and signatures are drawings, checked again on the server).
+        answers: s.answers && typeof s.answers === "object" ? Object.fromEntries(Object.entries(s.answers).slice(0, 80).map(([k, v]) => [clip(k, 60), String(v ?? "").slice(0, 200_100)])) : undefined,
+      })),
       meta: { ip: ctx.ip, userAgent: ctx.userAgent },
       baseUrl: ctx.baseUrl,
     });
@@ -45,10 +52,10 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
   }
 }
 
-export async function agreementsAction(input: { sessionIds: string[]; children: { key: string; existingId?: string | null; firstName: string }[] }): Promise<Agreement[]> {
+export async function agreementsAction(input: { sessionIds: string[]; children: { key: string; existingId?: string | null; firstName: string; birthDate?: string }[] }): Promise<Agreement[]> {
   if (!isDbConfigured()) return [];
   const signedIn = await getGuardian();
-  return previewAgreements(getDb(), { familyId: signedIn?.familyId ?? null, sessionIds: input.sessionIds.slice(0, 60), children: input.children.slice(0, 8) });
+  return previewAgreements(getDb(), { familyId: signedIn?.familyId ?? null, sessionIds: input.sessionIds.slice(0, 60), children: input.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), birthDate: c.birthDate ? clip(c.birthDate, 10) : undefined })) });
 }
 
 export async function joinWaitlistAction(input: { sessionId: string; guardian: { firstName: string; lastName: string; email: string }; child: { existingId?: string | null; firstName: string; birthDate: string } }) {

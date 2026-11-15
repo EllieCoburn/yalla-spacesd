@@ -211,6 +211,13 @@
       "when": 1794781724477,
       "tag": "0029_flex_early_bird",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794781784477,
+      "tag": "0030_flex_admission_agreements",
+      "breakpoints": true
     }
   ]
 }

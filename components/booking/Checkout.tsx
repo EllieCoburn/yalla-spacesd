@@ -7,6 +7,9 @@ import {
   submitBookingAction,
 } from "@/app/(site)/book/actions";
 import { Mark } from "@/components/brand/Mark";
+import { Markup } from "@/components/faq/FaqAnswer";
+import { SignaturePad } from "@/components/forms/SignaturePad";
+import { isShown, validateAnswers, type Answers } from "@/lib/forms/fields";
 import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { usd } from "./format";
@@ -323,6 +326,7 @@ export function Checkout({
   // Load the agreements that must be signed before booking.
   useEffect(() => {
     if (step !== 2) return;
+    let current = true;
     setAgreements(null);
     agreementsAction({
       sessionIds: lines.map((l) => l.sessionId),
@@ -330,16 +334,33 @@ export function Checkout({
         key: c.key,
         existingId: c.existingId,
         firstName: c.firstName,
+        birthDate: c.birthDate,
       })),
-    }).then(setAgreements);
+    }).then((list) => {
+      if (current) setAgreements(list);
+    });
+    return () => {
+      current = false;
+    };
+    // Refetch once each spot has its child (spots are filled just after this step opens).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, JSON.stringify(lines.map((l) => [l.sessionId, l.childKeys]))]);
 
+  // Online agreements (questions, initials, drawn signature): answers per agreement and child.
+  const [formAnswers, setFormAnswers] = useState<Record<string, Answers>>({});
+  const setAnswer = (k: string, id: string, v: string) => setFormAnswers((x) => ({ ...x, [k]: { ...(x[k] ?? {}), [id]: v } }));
   const agreementsDone = (agreements ?? []).every((a) => {
     if (!a.completableOnline) return false;
     const s = signatures[sigKey(a)];
+    if (a.fields && !validateAnswers(a.fields, formAnswers[sigKey(a)] ?? {}).ok) return false;
     return s?.consent && (!a.requiresSignature || s.text.trim().length > 1);
   });
+  /** The first thing still missing on an online agreement, worded for families. */
+  const agreementProblem = (a: Agreement) => {
+    if (!a.fields) return null;
+    const r = validateAnswers(a.fields, formAnswers[sigKey(a)] ?? {});
+    return r.ok ? null : r.error;
+  };
 
   // Fill each spot with a child who fits its age group and isn't already somewhere else at that time.
   useEffect(() => {
@@ -413,6 +434,7 @@ export function Checkout({
           childKey: a.childKey,
           signatureText: signatures[sigKey(a)]?.text,
           consent: !!signatures[sigKey(a)]?.consent,
+          answers: a.fields ? formAnswers[sigKey(a)] : undefined,
         })),
       });
       if (res.ok) {
@@ -949,8 +971,7 @@ export function Checkout({
                   <div className="space-y-6">
                     <h3 className="display text-[1.5rem]">Agreements</h3>
                     <p className="text-[0.82rem] text-ink-soft">
-                      These are required before booking. Your typed name is your
-                      electronic signature.
+                      These are required before booking. Once signed, they stay on file, so you won’t be asked again until they expire.
                     </p>
                     {agreements.map((a) => {
                       const k = sigKey(a);
@@ -975,7 +996,93 @@ export function Checkout({
                           <p className="eyebrow mt-1 text-[0.55rem] text-ink-soft">
                             Version {a.version}
                           </p>
-                          {a.completableOnline ? (
+                          {a.validForMonths ? (
+                            <p className="mt-1 text-[0.78rem] text-ink-soft">Signed once and kept on file for {a.validForMonths === 12 ? "one year" : `${a.validForMonths} months`}.</p>
+                          ) : null}
+                          {a.completableOnline && a.fields ? (
+                            <>
+                              <div className="mt-4 max-h-[32rem] space-y-4 overflow-y-auto border border-line bg-chalk p-4 text-[0.86rem] leading-relaxed text-ink-soft">
+                                {a.fields
+                                  .filter((f) => f.type !== "signature" && isShown(f, formAnswers[k] ?? {}))
+                                  .map((f) => {
+                                    const v = formAnswers[k]?.[f.id] ?? "";
+                                    if (f.type === "heading") return <p key={f.id} className="pt-2 font-serif text-[1.08rem] text-ink">{f.text}</p>;
+                                    if (f.type === "info") return <div key={f.id} className="space-y-2.5"><Markup text={f.text} /></div>;
+                                    if (f.type === "initials")
+                                      return (
+                                        <div key={f.id} className={`rounded-lg border p-3 ${v ? "border-ink/15 bg-paper" : "border-blue/50 bg-blue/[0.04]"}`}>
+                                          <p className="text-[0.86rem] text-ink">{f.label}</p>
+                                          <div className="mt-2">
+                                            <SignaturePad kind="initials" label="Your initials" value={v} onChange={(x) => setAnswer(k, f.id, x)} />
+                                          </div>
+                                        </div>
+                                      );
+                                    if (f.type === "text" || f.type === "textarea")
+                                      return (
+                                        <label key={f.id} className="block">
+                                          <span className="text-[0.86rem] text-ink">{f.label}</span>
+                                          <input value={v} onChange={(e) => setAnswer(k, f.id, e.target.value)} className={input} />
+                                        </label>
+                                      );
+                                    if (f.type === "agree")
+                                      return (
+                                        <label key={f.id} className="flex items-start gap-2.5 text-[0.86rem] text-ink">
+                                          <input type="checkbox" checked={v === "yes"} onChange={(e) => setAnswer(k, f.id, e.target.checked ? "yes" : "")} className="mt-1 h-4 w-4" />
+                                          <span>{f.label}</span>
+                                        </label>
+                                      );
+                                    if (f.type === "choice")
+                                      return (
+                                        <fieldset key={f.id}>
+                                          <legend className="text-[0.86rem] text-ink">{f.label}</legend>
+                                          <div className="mt-2 space-y-1.5">
+                                            {f.options.map((o) => (
+                                              <label key={o.value} className="flex items-start gap-2 text-[0.86rem]">
+                                                <input type="radio" checked={v === o.value} onChange={() => setAnswer(k, f.id, o.value)} className="mt-1" />
+                                                <span>{o.label}</span>
+                                              </label>
+                                            ))}
+                                          </div>
+                                        </fieldset>
+                                      );
+                                    return null;
+                                  })}
+                              </div>
+                              {a.fields
+                                .filter((f) => f.type === "signature")
+                                .map((f) => (
+                                  <div key={f.id} className="mt-4">
+                                    <SignaturePad label={f.type === "signature" ? f.label : "Signature"} value={formAnswers[k]?.[f.id] ?? ""} onChange={(x) => setAnswer(k, f.id, x)} />
+                                  </div>
+                                ))}
+                              <label className="mt-4 block">
+                                <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Type your full name to sign</span>
+                                <input
+                                  value={s.text}
+                                  onChange={(e) => {
+                                    const text = e.target.value;
+                                    setSignatures((x) => ({ ...x, [k]: { consent: x[k]?.consent ?? false, text } }));
+                                  }}
+                                  className={input}
+                                />
+                              </label>
+                              <label className="mt-3 flex items-start gap-2.5 text-[0.85rem]">
+                                <input
+                                  type="checkbox"
+                                  checked={s.consent}
+                                  onChange={(e) => {
+                                    const consent = e.target.checked;
+                                    setSignatures((x) => ({ ...x, [k]: { text: x[k]?.text ?? "", consent } }));
+                                  }}
+                                  className="mt-1 h-4 w-4"
+                                />
+                                I agree that my drawn signature, initials and typed name are my electronic signature on this agreement.
+                              </label>
+                              {agreementProblem(a) && (Object.keys(formAnswers[k] ?? {}).length > 0 || s.consent) ? (
+                                <p className="mt-2 text-[0.8rem] text-oxblood">{agreementProblem(a)}</p>
+                              ) : null}
+                            </>
+                          ) : a.completableOnline ? (
                             <>
                               <div className="mt-3 max-h-40 overflow-y-auto border border-line bg-chalk p-3 text-[0.82rem] whitespace-pre-wrap text-ink-soft">
                                 {a.body}

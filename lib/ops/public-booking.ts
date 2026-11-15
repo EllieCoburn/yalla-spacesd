@@ -43,7 +43,8 @@ import { itemValue, returnPaid } from "./credits";
 import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
-import { applicableTemplates, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
+import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
+import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
 import { flexGroupFor } from "@/lib/booking/flex";
@@ -204,9 +205,13 @@ export type Agreement = {
   childKey: string | null;
   /** Can this be completed online, or must the family contact Yalla (e.g. uploads)? */
   completableOnline: boolean;
+  /** Online forms with questions, initials and a drawn signature (e.g. the Yalla Flex admission agreement). */
+  fields: FormField[] | null;
+  /** How long a signature stays on file, if it expires. */
+  validForMonths: number | null;
 };
 
-type ChildRef = { key: string; existingId?: string | null; firstName: string };
+type ChildRef = { key: string; existingId?: string | null; firstName: string; birthDate?: string };
 
 async function expandSeries(db: Executor, sessionIds: string[]) {
   const rows = await db
@@ -237,6 +242,20 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
   const blockingTemplates = new Map<string, (typeof reqs)[number]["t"]>();
   for (const r of reqs) if (r.t.enforcement === "blocks_booking") blockingTemplates.set(r.t.id, r.t);
   if (!blockingTemplates.size) return [];
+  // Per-child forms narrowed by age (e.g. one Flex agreement per age group) apply only to children who
+  // fit. Saved children are checked against their record; new children by the birth date entered.
+  const today = new Date().toISOString().slice(0, 10);
+  const forChild = (templateId: string, c: ChildRef) =>
+    reqs
+      .filter((r) => r.t.id === templateId)
+      .some((r) => {
+        if (c.existingId) return r.appliesToChild(c.existingId);
+        if (r.r.scope === "child" || r.r.scope === "membership") return false;
+        if (r.r.minAgeMonths == null && r.r.maxAgeMonths == null) return true;
+        if (!c.birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) return false;
+        const age = ageInMonths(c.birthDate, today);
+        return (r.r.minAgeMonths == null || age >= r.r.minAgeMonths) && (r.r.maxAgeMonths == null || age <= r.r.maxAgeMonths);
+      });
 
   let done = new Set<string>();
   if (input.familyId) {
@@ -249,10 +268,12 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
   const out: Agreement[] = [];
   for (const t of blockingTemplates.values()) {
     const v = versions.find((x) => x.id === t.currentVersionId);
-    const base = { templateId: t.id, title: t.title, kind: t.kind, body: v?.body ?? "", version: v?.version ?? 1, requiresSignature: t.requiresSignature, perChild: t.perChild, completableOnline: t.kind !== "upload" };
+    const fields = v && Array.isArray(v.fields) && (v.fields as unknown[]).length ? effectiveFields(v, t.requiresSignature) : null;
+    const base = { templateId: t.id, title: t.title, kind: t.kind, body: v?.body ?? "", version: v?.version ?? 1, requiresSignature: t.requiresSignature, perChild: t.perChild, completableOnline: t.kind !== "upload", fields, validForMonths: t.validForMonths };
     if (t.perChild) {
       for (const c of input.children) {
         if (c.existingId && done.has(`${t.id}:${c.existingId}`)) continue;
+        if (!forChild(t.id, c)) continue;
         out.push({ ...base, childKey: c.key });
       }
     } else if (!done.has(`${t.id}:family`)) out.push({ ...base, childKey: null });
@@ -267,7 +288,7 @@ export type PublicBookingInput = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
   children: (ChildRef & { lastName: string; birthDate: string; allergies?: string })[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
-  signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean }[];
+  signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Answers }[];
   meta: { ip?: string; userAgent?: string };
   baseUrl: string;
 };
@@ -344,7 +365,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     }
 
     // 4. Blocking agreements: sign what was provided, report what's still needed.
-    const refs = input.children.filter((c) => childIdByKey.has(c.key)).map((c) => ({ key: c.key, existingId: childIdByKey.get(c.key)!, firstName: c.firstName }));
+    const refs = input.children.filter((c) => childIdByKey.has(c.key)).map((c) => ({ key: c.key, existingId: childIdByKey.get(c.key)!, firstName: c.firstName, birthDate: c.birthDate }));
     let needed = await previewAgreements(db, { familyId, sessionIds: items.map((i) => i.sessionId), children: refs });
     for (const a of needed) {
       const sig = input.signatures.find((s) => s.templateId === a.templateId && (s.childKey ?? null) === a.childKey);
@@ -356,7 +377,9 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         signerGuardianId: guardianId,
         signatureText: sig.signatureText ?? null,
         consent: sig.consent,
-        data: a.requiresSignature ? undefined : { confirmed: sig.consent },
+        data: a.requiresSignature || a.fields ? undefined : { confirmed: sig.consent },
+        // Online agreements carry their answers: initials, printed name and the drawn signature.
+        answers: a.fields ? (sig.answers ?? {}) : undefined,
         ip: input.meta.ip,
         userAgent: input.meta.userAgent,
       });
