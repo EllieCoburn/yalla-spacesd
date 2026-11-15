@@ -95,31 +95,24 @@ body,
     border-color: var(--color-line);
   }
 
-  /* A hand-drawn looping line in Yalla Blue, drawn on the page just above a colored band. */
+  /* A hand-drawn looping line in Yalla Blue, drawn on the page just above a colored band. The
+     drawing is one wide piece; on narrow screens its middle is shown at a readable size. */
   .roofline-edge {
+    --loop-h: clamp(3.75rem, 8.4vw, 7.5rem);
     position: relative;
-    margin-top: 5.5rem !important;
+    margin-top: calc(var(--loop-h) + 2.5rem) !important;
   }
   .roofline-edge::before {
     content: "";
     position: absolute;
     left: 0;
     right: 0;
-    top: -4.25rem;
-    height: 2.75rem;
+    top: calc(-1 * var(--loop-h) - 1.25rem);
+    height: var(--loop-h);
     background: var(--color-blue);
-    -webkit-mask: url("/brand/loop-line.svg") repeat-x left center / auto 100%;
-    mask: url("/brand/loop-line.svg") repeat-x left center / auto 100%;
+    -webkit-mask: url("/brand/loop-line.svg") center / cover no-repeat;
+    mask: url("/brand/loop-line.svg") center / cover no-repeat;
     pointer-events: none;
-  }
-  @media (min-width: 1024px) {
-    .roofline-edge {
-      margin-top: 7rem !important;
-    }
-    .roofline-edge::before {
-      top: -5.5rem;
-      height: 3.75rem;
-    }
   }
 
   .link-underline {
