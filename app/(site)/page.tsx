@@ -8,6 +8,7 @@ import { WindowField } from "@/components/brand/WindowField";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -117,6 +118,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <LoopDivider />
 
       {/* ───────── Programs ───────── */}
       <section className="bg-paper py-24 lg:py-36">

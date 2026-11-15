@@ -7,6 +7,7 @@ import { CtaBand, PageHero, Section, SectionTitle } from "@/components/site/Page
 import { Arrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { getProgram, programHref } from "@/content/programs";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "The Yalla Experience",
@@ -97,6 +98,8 @@ export default function ExperiencePage() {
           </div>
         </div>
       </Section>
+
+      <LoopDivider />
 
       {/* Ways to take part */}
       <Section>

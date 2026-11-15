@@ -95,19 +95,20 @@ body,
     border-color: var(--color-line);
   }
 
-  /* A hand-drawn looping line in Yalla Blue, drawn on the page just above a colored band. The
-     drawing is one wide piece; on narrow screens its middle is shown at a readable size. */
+  /* Colored bands keep a plain, flat top edge (the looping line divides cream sections instead). */
   .roofline-edge {
-    --loop-h: clamp(3.75rem, 8.4vw, 7.5rem);
     position: relative;
-    margin-top: calc(var(--loop-h) + 2.5rem) !important;
   }
-  .roofline-edge::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(-1 * var(--loop-h) - 1.25rem);
+
+  /* A hand-drawn looping line in Yalla Blue that divides cream sections from one another.
+     The drawing is one wide piece; on narrow screens its middle shows at a readable size. */
+  .loop-divider {
+    --loop-h: clamp(3.75rem, 8.4vw, 7.5rem);
+    display: block;
+    position: relative;
+    z-index: 1;
+    /* Sits on the seam between the two sections, so the line itself is the divide. */
+    margin-block: calc(-0.5 * var(--loop-h));
     height: var(--loop-h);
     background: var(--color-blue);
     -webkit-mask: url("/brand/loop-line.svg") center / cover no-repeat;

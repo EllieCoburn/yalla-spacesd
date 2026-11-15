@@ -9,6 +9,7 @@ import { TeamCard } from "@/components/site/TeamCard";
 import { Arrow, Button, Index } from "@/components/ui/primitives";
 import { leadership, TEAM_PUBLIC } from "@/content/team";
 import { Reveal } from "@/components/ui/Reveal";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "About Yalla",
@@ -52,6 +53,8 @@ export default function AboutPage() {
           </div>
         </div>
       </Section>
+
+      <LoopDivider />
 
       {/* Our space */}
       <section id="our-space" className="scroll-mt-24 bg-paper py-20 lg:py-28">

@@ -11,6 +11,7 @@ import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { membershipIncludes, publicCohorts } from "@/content/pricing-public";
 import { clubYalla as p } from "@/content/programs";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "Club Yalla",
@@ -59,6 +60,8 @@ export default function ClubYallaPage() {
           </Reveal>
         </div>
       </section>
+
+      <LoopDivider />
 
       {/* The details */}
       <section className="bg-paper py-20 lg:py-28">

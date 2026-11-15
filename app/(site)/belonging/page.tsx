@@ -6,6 +6,7 @@ import type { MarkName } from "@/components/brand/marks";
 import { CtaBand, PageHero } from "@/components/site/PageParts";
 import { Chevron } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "Belonging at Yalla",
@@ -144,6 +145,8 @@ export default function BelongingPage() {
           </Reveal>
         </div>
       </section>
+
+      <LoopDivider />
 
       {/* Our commitments */}
       <section className="py-20 lg:py-32">

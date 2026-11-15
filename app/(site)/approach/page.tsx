@@ -3,6 +3,7 @@ import Image from "next/image";
 import { CtaBand, PageHero, Section } from "@/components/site/PageParts";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
+import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "Our Approach",
@@ -78,6 +79,8 @@ export default function ApproachPage() {
           </div>
         </div>
       </Section>
+
+      <LoopDivider />
 
       {/* Reggio Emilia */}
       <Section>
