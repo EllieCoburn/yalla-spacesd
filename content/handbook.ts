@@ -1076,11 +1076,10 @@ If a child shows signs of choking, our team begins the age-appropriate emergency
       {
         id: "health-emergencies",
         title: "Public health emergencies",
-        summary: "We follow public health directives. If Club Yalla must close for 30 days or more, tuition isn’t charged for the closure.",
-        facts: [{value: "30 days+", label: "Club Yalla closure: no tuition charged"}],
+        summary: "We follow public health directives. If Club Yalla must close for an extended period of time, tuition isn’t charged for the closure.",
         body: `In a future pandemic, major outbreak or other public health crisis, Yalla follows every directive from local, state and federal public health authorities, using best practices to reduce risk and keeping families informed promptly and clearly.`,
         programs: {
-          club: "If an emergency requires Yalla to suspend in-person care for 30 consecutive days or more, families won’t be charged tuition for the closure period.",
+          club: "If an emergency requires Yalla to suspend in-person care for an extended period of time, families won’t be charged tuition for the closure period.",
           flex: "If Yalla has to cancel booked sessions, you choose between Yalla Wallet credit plus 5% or a full refund.",
           camp: "If Yalla has to cancel a camp day, you choose between Yalla Wallet credit plus 5% or a full refund.",
           happenings: "If Yalla has to cancel a Happening, you choose between Yalla Wallet credit plus 5% or a full refund.",
