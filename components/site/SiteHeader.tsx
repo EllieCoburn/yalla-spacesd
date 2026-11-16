@@ -54,14 +54,11 @@ export function SiteHeader({ offset = false }: { offset?: boolean }) {
 
           <div className="flex items-center gap-2 sm:gap-5">
             <SocialLinks className="hidden lg:flex" />
-            <Link href="/portal" className="hidden text-[0.84rem] text-ink/70 transition-colors hover:text-ink md:inline">
-              Family Portal
-            </Link>
             <Link
-              href="/book"
+              href="/portal"
               className="hidden h-10 items-center rounded-full bg-ink px-5 text-[0.82rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:inline-flex"
             >
-              Book care
+              Family Portal
             </Link>
             <button
               type="button"
