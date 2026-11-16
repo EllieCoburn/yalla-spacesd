@@ -89,7 +89,13 @@ export function SiteFooter() {
 
         <div className="shell">
           <div className="flex flex-col gap-4 border-t border-chalk/20 py-7 text-[0.78rem] text-chalk/60 sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} {site.fullName}.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+              <p>© {new Date().getFullYear()} {site.fullName}.</p>
+              <a href="https://loopdesignhouse.com" target="_blank" rel="noopener noreferrer" className="inline-flex self-start opacity-60 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100 sm:self-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/website-by-loop.svg" alt="Website by LOOP" width={93} height={15} className="h-[15px] w-auto" />
+              </a>
+            </div>
             <ul className="flex gap-3">
               <li>
                 <a href={site.instagram.value} target="_blank" rel="noopener noreferrer" aria-label="Yalla on Instagram" className={social}>
