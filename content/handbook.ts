@@ -1050,7 +1050,6 @@ If a child shows signs of choking, our team begins the age-appropriate emergency
         id: "lice",
         title: "Head lice",
         summary: "Yalla has a no-live-lice policy. Children can return once treated and free of live lice, after a recheck by our team.",
-        facts: [{value: "No live lice", label: "Recheck by our team before returning"}],
         body: `Yalla has a **no-live-lice** policy, to keep lice from spreading.
 
 1. If live lice are found during the day, we’ll call you for immediate collection.
