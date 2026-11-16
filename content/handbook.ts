@@ -1087,19 +1087,6 @@ If a child shows signs of choking, our team begins the age-appropriate emergency
         ask: ["covid", "pandemic", "outbreak", "closure tuition"],
       },
       {
-        id: "air-quality",
-        title: "Air quality",
-        summary: "We check outdoor air quality daily. Air purifiers run around the clock in every room.",
-        facts: [{value: "2 hours+", label: "Outdoors on green days"}, {value: "100+", label: "Air quality index: play moves inside"}],
-        body: `**Outdoors**: we check air quality with the IQAir AirVisual app every day.
-- **Green** (49 or lower): windows and doors open, and at least 2 hours outside.
-- **Yellow** (60 or higher): less time outside.
-- **Orange or red** (100 or higher): children stay in, and active play moves indoors.
-
-**Indoors**: every room has an Alen air purifier running around the clock, we maintain whole-building filtration regularly, and heating and air conditioning keep the temperature comfortable all year.`,
-        ask: ["air quality", "smoke", "air purifier", "outside time", "outdoor play"],
-      },
-      {
         id: "hygiene",
         title: "Handwashing and hygiene",
         summary: "Our team washes hands at every key moment, and children wash hands throughout the day as part of their rhythm.",
