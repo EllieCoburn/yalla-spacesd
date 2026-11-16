@@ -96,7 +96,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "How do I book a Yalla experience?",
     answer:
-      "Head to [Explore Yalla](/book), filter by offering, your child’s age and date, then choose your sessions and reserve. You’ll sign in to your Family Portal (or create an account) to check out, and everything you book appears there afterward.",
+      "Head to [Explore Yalla](/book), filter by offering, your child’s age and date, then choose your sessions and reserve. New to Yalla? Check out as a guest. Your Family Portal opens as soon as you pay, with your booking front and center. Already a Yalla family? Sign in to check out with your saved details.",
   },
   {
     id: "schedule-tour",
@@ -123,7 +123,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "How do I access my Family Portal?",
     answer:
-      "[Create your family account](/portal/join) with your name, email and a password, and add your children with their dates of birth. After that, [sign in](/portal) with your email and password whenever you like; you’ll stay signed in on that browser.\n\nForgot your password? Choose “Forgot your password” on the sign-in page and we’ll email you a link to set a new one.",
+      "Your Family Portal opens when you book care on our website, such as a Yalla Flex day or a Happening: right after checkout you can open it from your confirmation page, and we’ll email you a link to confirm your email and choose a password. Families exploring Yalla for later receive an invitation from our team when the time is right.\n\nAfter that, [sign in](/portal) with your email and password whenever you like; you’ll stay signed in on that browser.\n\nForgot your password? Choose “Forgot your password” on the sign-in page and we’ll email you a link to set a new one.",
   },
   {
     id: "hours",

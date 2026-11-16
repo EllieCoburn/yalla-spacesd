@@ -30,6 +30,7 @@ export type TemplateKey =
   | "staff_invite"
   | "family_sign_in"
   | "family_confirm_email"
+  | "family_invite"
   | "space_confirmation"
   | "playpass_welcome"
   | "playpass_renewal"
@@ -134,7 +135,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   staff_family_joined: {
     name: "A family joined the portal (to staff)",
     subject: "The {{family_name}} family has joined the Yalla portal",
-    body: "A new family just created a Family Portal account.\n\n{{details}}\n\n{{link}}",
+    body: "A new family just joined the Family Portal.\n\n{{details}}\n\n{{link}}",
     essential: true,
     audience: "staff",
   },
@@ -230,9 +231,16 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     audience: "staff",
   },
   family_confirm_email: {
-    name: "Confirm your email (new Family Portal account)",
-    subject: "Confirm your email to finish joining Yalla",
-    body: "# Confirm your email\n\nHi {{guardian_first_name}},\n\nThank you for creating a Yalla Family Portal account. To keep your family’s details safe, please confirm this is your email address. Your account is set up as soon as you do.\n\n{{link}}\n\nThis link works once, for 24 hours. If you didn’t sign up, you can ignore this email and nothing will be set up.\n\nWarmly,\nTeam Yalla",
+    name: "Welcome and confirm your email (after a first booking)",
+    subject: "Your Yalla Family Portal is ready",
+    body: "# Welcome to Yalla!\n\nHi {{guardian_first_name}},\n\nThank you for booking with us. Your booking is confirmed (your receipt is in a separate email), and your Family Portal is ready. In it you’ll find your bookings, any forms we still need before your child’s first day, and all of our family resources.\n\nPlease confirm this is your email address. The button below confirms it and opens your portal, where you can choose a password so you can sign in anytime.\n\n{{link}}\n\nThis link works once, for 7 days. Your booking doesn’t depend on it. After that, you can always sign in with a link from yallaspacesd.com/portal.\n\nIf you didn’t make this booking, please reply to let us know.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  family_invite: {
+    name: "Invitation to create a Family Portal account",
+    subject: "Your invitation to the Yalla Family Portal",
+    body: "# You’re invited to the Yalla Family Portal\n\nHi {{name}},\n\nWe’d love to welcome your family to Yalla. Use the button below to create your Family Portal account. You’ll add your children and choose a password, and then you’ll find booking, forms and all of our family resources in one place.\n\n{{link}}\n\nThis invitation is just for you and works once, for 14 days. If it expires, reply to this email and we’ll send a new one.\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -259,7 +267,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
  */
 export const REDACTED_LINK = "[private link removed]";
 export function redactSecrets(text: string) {
-  return text.replace(/https?:\/\/[^\s)\]]*[?&](?:token|key|k|signup)=[^\s)\]]*/gi, REDACTED_LINK);
+  return text.replace(/https?:\/\/[^\s)\]]*[?&](?:token|key|k|signup|invite)=[^\s)\]]*/gi, REDACTED_LINK);
 }
 
 export function notificationsMode(): "test" | "live" {
@@ -414,6 +422,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_invite: ["name", "invited_by", "role", "link"],
   family_sign_in: ["guardian_first_name", "link"],
   family_confirm_email: ["guardian_first_name", "link"],
+  family_invite: ["name", "link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
   playpass_welcome: ["guardian_first_name", "plan", "amount", "added", "balance", "monthly_price", "monthly_allocation", "next_renewal"],
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],

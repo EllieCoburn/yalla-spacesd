@@ -5,7 +5,7 @@
 import { and, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { SYSTEM } from "@/lib/audit";
 import type { DB } from "@/lib/db";
-import { authTokens, bookingItems, bookings, familyAuthTokens, familySignups, familySessions, messages, sessions, staffSessions, waitlistEntries } from "@/lib/db/schema";
+import { authTokens, bookingItems, bookings, familyAuthTokens, familyInvites, familySessions, messages, sessions, staffSessions, waitlistEntries } from "@/lib/db/schema";
 import { pruneRateEvents } from "@/lib/rate-limit";
 import { notifyFamily } from "@/lib/notify";
 import { bookingLines, describeLine, expireHolds } from "@/lib/ops/bookings";
@@ -105,7 +105,7 @@ export async function pruneSecurityRecords(db: DB, now = new Date()) {
   const week = new Date(now.getTime() - 7 * 24 * 3600_000);
   const month = new Date(now.getTime() - 30 * 24 * 3600_000);
   await pruneRateEvents(db);
-  await db.delete(familySignups).where(lt(familySignups.expiresAt, now));
+  await db.delete(familyInvites).where(lt(familyInvites.expiresAt, new Date(now.getTime() - 30 * 24 * 3600_000)));
   await db.delete(familyAuthTokens).where(or(lt(familyAuthTokens.expiresAt, week), lt(familyAuthTokens.usedAt, week)));
   await db.delete(authTokens).where(or(lt(authTokens.expiresAt, week), lt(authTokens.usedAt, week)));
   await db.delete(familySessions).where(or(lt(familySessions.expiresAt, month), lt(familySessions.revokedAt, month)));

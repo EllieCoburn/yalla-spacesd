@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string; signin?: string }> }) {
+export default async function PortalSignIn({ searchParams }: { searchParams: Promise<{ next?: string; expired?: string; signin?: string; claim?: string }> }) {
   const sp = await searchParams;
   const configured = isDbConfigured();
   if (configured && (await getGuardian())) redirect(safeNextPath(sp.next));
@@ -43,15 +43,16 @@ export default async function PortalSignIn({ searchParams }: { searchParams: Pro
             Sign in to your <em>Family Portal.</em>
           </h1>
           <p className="mt-5 text-ink-soft">Children’s profiles, forms, upcoming bookings and payments, all in one place. You’ll stay signed in on this device until you sign out.</p>
+          {sp.claim ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">Your Family Portal is set up. Use the link in your welcome email, or request a sign-in link below.</p> : null}
           {sp.expired ? <p className="mt-6 border-l-2 border-oxblood/40 pl-4 text-[0.88rem] text-oxblood">That link has expired or was already used. Sign in with your password, or request a new link below.</p> : null}
 
           {configured ? (
             <>
               <PasswordSignInForm next={sp.next} />
               <p className="mt-8 text-[0.95rem]">
-                Don’t have an account yet?{" "}
-                <Link href={`/portal/join${sp.next ? `?next=${encodeURIComponent(sp.next)}` : ""}`} className="text-blue underline underline-offset-4">
-                  Create your family account
+                New to Yalla?{" "}
+                <Link href="/portal/join" className="text-blue underline underline-offset-4">
+                  How to join the Family Portal
                 </Link>
               </p>
               <details className="mt-6 border-t border-line pt-5">

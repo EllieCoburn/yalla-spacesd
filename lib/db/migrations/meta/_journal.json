@@ -281,6 +281,20 @@
       "when": 1794851818464,
       "tag": "0039_family_signups",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794865782727,
+      "tag": "0040_portal_access_by_booking_or_invite",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794865783927,
+      "tag": "0041_drop_pending_signups",
+      "breakpoints": true
     }
   ]
 }

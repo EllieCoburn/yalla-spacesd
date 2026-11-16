@@ -41,7 +41,8 @@ const HERO: Record<string, string> = {
 
 const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
-  family_confirm_email: "Confirm my email",
+  family_confirm_email: "Confirm my email and open my portal",
+  family_invite: "Create your Family Portal account",
   payment_request: "Pay securely",
   waitlist_offer: "Claim this spot",
   staff_new_enquiry: "Open in the Inbox",

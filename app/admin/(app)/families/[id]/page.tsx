@@ -12,7 +12,8 @@ import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
 import { ageLabel, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
-import { addChildAction, addGuardianAction, archiveFamilyAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction } from "../actions";
+import { addChildAction, addGuardianAction, archiveFamilyAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
+import { portalStatusByEmail } from "@/lib/family-auth";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const staff = await requirePermission("families.view");
@@ -26,6 +27,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   const kidNames = new Map(d.children.map((c) => [c.id, c.preferredName || c.firstName]));
   const prefs = d.family.communicationPrefs as { email?: boolean; sms?: boolean };
   const allPaperwork = d.paperwork ? [...d.paperwork.values()].flat() : [];
+  const portal = await portalStatusByEmail(getDb(), d.guardians.map((g) => g.email));
   const primary = d.guardians.find((g) => g.isPrimary) ?? d.guardians[0];
 
   return (
@@ -86,6 +88,20 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       <Pill tone={g.canViewSensitive ? "positive" : "muted"} icon={g.canViewSensitive ? "check" : "x"}>Care info</Pill>
                     </div>
                   </div>
+                  {(() => {
+                    const st = portal.get(g.email.toLowerCase());
+                    if (st?.account) return null;
+                    return (
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[0.8rem] text-ink-soft">
+                        <span>{st?.invitedAt ? `Invited to the Family Portal ${fmtDateTime(st.invitedAt)}${st.inviteExpired ? " (expired)" : ""}` : "No Family Portal account yet"}</span>
+                        {manage ? (
+                          <ActionForm action={inviteGuardianAction} submit={{ label: st?.invitedAt ? "Send a new invitation" : "Send portal invitation", variant: "ghost" }} className="">
+                            <input type="hidden" name="guardianId" value={g.id} />
+                          </ActionForm>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                   {manage ? (
                     <div className="mt-2">
                       <Disclosure label={`Edit ${g.firstName}`}>

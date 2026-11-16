@@ -382,6 +382,10 @@ export const guardians = pgTable(
     passwordHash: text("password_hash"),
     failedLogins: integer("failed_logins").notNull().default(0),
     lockedUntil: ts("locked_until"),
+    /** When they confirmed their email (by an invitation or the confirmation email). */
+    emailVerifiedAt: ts("email_verified_at"),
+    /** When a new family first opened their portal straight from their booking confirmation (allowed once). */
+    portalClaimedAt: ts("portal_claimed_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1019,6 +1023,26 @@ export const familyAuthTokens = pgTable("family_auth_tokens", {
     .notNull()
     .references(() => guardians.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
+  /** sign_in (20 minutes) or confirm_email (7 days; also confirms the address). */
+  purpose: text("purpose").notNull().default("sign_in"),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  createdAt: createdAt(),
+});
+
+/**
+ * An invitation from Yalla to create a Family Portal account (e.g. after a tour request). Without an
+ * invitation, a family gets an account only by booking and paying. Single use; expires in 14 days.
+ */
+export const familyInvites = pgTable("family_invites", {
+  id: id(),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  name: text("name"),
+  /** Set when the invitation is for a guardian Yalla already has (e.g. added by staff). */
+  guardianId: text("guardian_id").references(() => guardians.id, { onDelete: "cascade" }),
+  enquiryId: text("enquiry_id"),
+  invitedBy: text("invited_by").notNull(),
   expiresAt: ts("expires_at").notNull(),
   usedAt: ts("used_at"),
   createdAt: createdAt(),
@@ -1389,17 +1413,3 @@ export const rateEvents = pgTable(
   },
   (t) => [index("rate_events_lookup_idx").on(t.bucket, t.keyHash, t.createdAt)],
 );
-
-/**
- * A Family Portal sign-up waiting for its email to be confirmed. Nothing else is created until the
- * link in the email is used; then this row is deleted. The password is already hashed. Rows that
- * are never confirmed expire after 24 hours and are removed by the nightly housekeeping job.
- */
-export const familySignups = pgTable("family_signups", {
-  id: id(),
-  tokenHash: text("token_hash").notNull().unique(),
-  email: text("email").notNull(),
-  data: jsonb("data").$type<{ firstName: string; lastName: string; passwordHash: string; children: { firstName: string; lastName?: string; birthDate: string }[] }>().notNull(),
-  expiresAt: ts("expires_at").notNull(),
-  createdAt: ts("created_at").notNull().defaultNow(),
-});

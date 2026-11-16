@@ -36,7 +36,7 @@ const ctx = (f: Awaited<ReturnType<typeof family>>): GuardianContext => ({
   email: f.guardian.email,
   canBook: true,
   canViewBilling: true,
-  canViewSensitive: true,
+  canViewSensitive: true, emailVerified: true, hasPassword: true,
 });
 
 const birthMonthsAgo = (m: number) => addDaysISO(todayLA(), -Math.round(m * 30.44) - 3);

@@ -26,7 +26,7 @@ export async function findGuardianByEmail(db: Executor, email: string) {
 export async function createFamily(
   db: Executor,
   actor: Actor,
-  input: { name?: string; guardian: { firstName: string; lastName: string; email: string; phone?: string; relationship?: string }; marketingOptIn?: boolean; isSample?: boolean },
+  input: { name?: string; guardian: { firstName: string; lastName: string; email: string; phone?: string; relationship?: string; portalAccess?: boolean }; marketingOptIn?: boolean; isSample?: boolean },
 ) {
   const g = input.guardian;
   if (!clean(g.firstName) || !clean(g.lastName)) throw new OpsError("invalid", "Enter the guardian’s first and last name.");
@@ -39,7 +39,7 @@ export async function createFamily(
     .returning();
   const [guardian] = await db
     .insert(guardians)
-    .values({ familyId: f.id, firstName: clean(g.firstName), lastName: clean(g.lastName), email: clean(g.email).toLowerCase(), phone: clean(g.phone) || null, relationship: clean(g.relationship) || "Parent", isPrimary: true, canViewBilling: true, canViewSensitive: true })
+    .values({ familyId: f.id, firstName: clean(g.firstName), lastName: clean(g.lastName), email: clean(g.email).toLowerCase(), phone: clean(g.phone) || null, relationship: clean(g.relationship) || "Parent", isPrimary: true, canViewBilling: true, canViewSensitive: true, portalAccess: g.portalAccess ?? true })
     .returning();
   await audit(db, actor, { action: "family.create", entityType: "family", entityId: f.id, summary: `Created ${f.name}` });
   return { family: f, guardian };

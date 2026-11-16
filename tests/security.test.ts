@@ -101,6 +101,7 @@ describe("Message log", () => {
     expect(redactSecrets("Visit https://yalla.test/portal/home today")).toBe("Visit https://yalla.test/portal/home today");
     expect(redactSecrets("Sign in: https://yalla.test/portal/verify?token=abc&next=%2Fbook")).toBe("Sign in: [private link removed]");
     expect(redactSecrets("Status: https://yalla.test/book/confirmation/YL-1?k=abc")).toBe("Status: [private link removed]");
+    expect(redactSecrets("Join: https://yalla.test/portal/join?invite=abc")).toBe("Join: [private link removed]");
   });
 });
 

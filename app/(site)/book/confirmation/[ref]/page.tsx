@@ -9,6 +9,9 @@ import { fmtDateTime } from "@/lib/time";
 import { retryPaymentAction } from "../../actions";
 import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
 import { mayViewStatus } from "@/lib/booking-access";
+import { portalClaimFor } from "@/lib/family-auth";
+import { claimPortalAction } from "../../../portal/actions";
+import { getGuardian } from "../../../portal/session";
 
 export const metadata: Metadata = { title: "Your booking", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -26,6 +29,9 @@ export default async function Confirmation({ params, searchParams }: { params: P
   if (!v || !(await mayViewStatus("booking", ref, sp.k, v.familyId))) return <PrivateLinkNotice />;
   const holdValid = !!v.holdExpiresAt && new Date(v.holdExpiresAt) > new Date();
   const paymentFailed = v.latestPayment?.status === "failed";
+  // A family's first booking opens their Family Portal straight away (no waiting on email).
+  const claim = v.status === "confirmed" ? await portalClaimFor(getDb(), ref, sp.k) : null;
+  const signedIn = v.status === "confirmed" && !claim ? !!(await getGuardian()) : false;
   const pending = !sp.cancelled && ((v.status === "pending_payment" && !paymentFailed) || (v.status === "held" && v.latestPayment?.status === "pending"));
 
   let mark: "mark" | "sun" | "window" = "mark";
@@ -99,6 +105,18 @@ export default async function Confirmation({ params, searchParams }: { params: P
           {sp.error ? <p className="mt-4 text-[0.88rem] text-oxblood">{sp.error}</p> : null}
           <p className="eyebrow mt-8 text-ink-soft">Reference {v.reference}</p>
         </div>
+        {claim ? (
+          <div className="mx-auto mt-10 max-w-xl rounded-3xl bg-blue p-7 text-chalk sm:p-9">
+            <p className="eyebrow text-chalk/70">Your Family Portal is ready</p>
+            <p className="display mt-3 text-[1.7rem] leading-tight">Welcome to Yalla, {claim.firstName}!</p>
+            <p className="mt-3 text-[0.95rem] text-chalk/85">See your booking, finish any forms we need before your child’s first day, and explore all of our family resources. We’ve also emailed you a link to confirm your email; you can do that anytime.</p>
+            <form action={claimPortalAction} className="mt-6">
+              <input type="hidden" name="ref" value={v.reference} />
+              <input type="hidden" name="k" value={sp.k ?? ""} />
+              <button className="h-12 rounded-full bg-chalk px-7 text-[0.92rem] text-ink transition-colors hover:bg-sand">Open my Family Portal</button>
+            </form>
+          </div>
+        ) : null}
         <div className="mx-auto mt-10 max-w-xl bg-paper p-7">
           <ul className="divide-y divide-line">
             {v.lines.map((l) => (
@@ -128,8 +146,8 @@ export default async function Confirmation({ params, searchParams }: { params: P
               <button className="h-12 rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">Try payment again</button>
             </form>
           ) : null}
-          {v.status === "confirmed" ? (
-            <Link href="/portal" className="inline-flex h-12 items-center rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">
+          {v.status === "confirmed" && !claim ? (
+            <Link href={signedIn ? "/portal/home" : "/portal"} className="inline-flex h-12 items-center rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">
               View in Family Portal
             </Link>
           ) : null}

@@ -113,13 +113,13 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
               ) : (
                 <div className="bg-paper p-7">
                   <p className="display text-[1.6rem]">Sign in to continue</p>
-                  <p className="mt-2 text-ink-soft">Your Play Pass belongs to your family account. New to Yalla? Creating an account takes a minute.</p>
+                  <p className="mt-2 text-ink-soft">Your Play Pass belongs to your Family Portal account. New to Yalla? Book a Flex day or a Happening to get started, or ask us for an invitation.</p>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Link href={`/portal?next=${encodeURIComponent(next)}`} className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
                       Sign in
                     </Link>
-                    <Link href={`/portal/join?next=${encodeURIComponent(next)}`} className="inline-flex h-11 items-center rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">
-                      Create your account
+                    <Link href="/portal/join" className="inline-flex h-11 items-center rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">
+                      New to Yalla?
                     </Link>
                   </div>
                 </div>

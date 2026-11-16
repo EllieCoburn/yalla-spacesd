@@ -317,7 +317,10 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false, code: "invalid", error: "Enter a valid email address." };
     if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) return { ok: false, code: "invalid", error: "Enter your first and last name." };
     const existing = await findGuardianByEmail(db, email);
-    if (existing) {
+    // Someone who started a booking before (or joined a waitlist) but never paid has no portal
+    // account to sign in to, so they simply continue as a guest on the same family record.
+    const unclaimed = existing && !existing.portalAccess && !existing.passwordHash ? existing : null;
+    if (existing && !unclaimed) {
       const { devLink } = await requestMagicLink(db, email, input.baseUrl);
       return {
         ok: false,
@@ -332,11 +335,18 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     // Validate capacity and ages before creating any records.
     const pre = await precheck(db, input);
     if (pre) return pre;
-    const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone } });
-    familyId = created.family.id;
-    guardianId = created.guardian.id;
-    actor = guardianActor({ guardianId, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
-    createdFamily = true;
+    if (unclaimed) {
+      familyId = unclaimed.familyId;
+      guardianId = unclaimed.id;
+      actor = guardianActor({ guardianId, firstName: unclaimed.firstName, lastName: unclaimed.lastName });
+    } else {
+      // No portal access until they pay: the payment is their way into the Family Portal.
+      const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone, portalAccess: false } });
+      familyId = created.family.id;
+      guardianId = created.guardian.id;
+      actor = guardianActor({ guardianId, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
+      createdFamily = true;
+    }
   }
 
   try {
@@ -572,13 +582,19 @@ export async function joinPublicWaitlist(
       actor = guardianActor(input.signedIn);
     } else {
       const email = input.guardian.email.trim().toLowerCase();
-      if (await findGuardianByEmail(db, email)) {
+      const existing = await findGuardianByEmail(db, email);
+      if (existing && !existing.portalAccess && !existing.passwordHash) {
+        familyId = existing.familyId;
+        actor = guardianActor({ guardianId: existing.id, firstName: existing.firstName, lastName: existing.lastName });
+      } else if (existing) {
         const { devLink } = await requestMagicLink(db, email, input.baseUrl);
         return { ok: false, code: "sign_in_required", error: "This email is already part of a Yalla family. We’ve sent a sign-in link — join the waitlist once you’re signed in.", devLink };
+      } else {
+        // Joining a waitlist doesn't open the Family Portal (only a paid booking or an invitation does).
+        const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, portalAccess: false } });
+        familyId = created.family.id;
+        actor = guardianActor({ guardianId: created.guardian.id, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
       }
-      const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email } });
-      familyId = created.family.id;
-      actor = guardianActor({ guardianId: created.guardian.id, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
     }
     let childId = input.child.existingId ?? null;
     if (childId) {

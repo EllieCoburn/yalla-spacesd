@@ -6,7 +6,9 @@ import { getDb } from "@/lib/db";
 import { ENQUIRY_KINDS, inboxList, newEnquiryCount, staffRecipients, type EnquiryKind } from "@/lib/ops/enquiries";
 import { membershipRecipients, notificationsMode } from "@/lib/notify";
 import { fmtDateTime } from "@/lib/time";
-import { enquiryStatusAction } from "./actions";
+import { enquiryStatusAction, inviteFromEnquiryAction } from "./actions";
+import { portalStatusByEmail } from "@/lib/family-auth";
+import { can } from "@/lib/auth/staff";
 
 export const metadata = { title: "Inbox" };
 
@@ -14,11 +16,13 @@ const TONE = { tour: "info", application: "positive", event: "warning", waitlist
 
 /** Everything families send through the website, in one place. */
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ status?: string; kind?: string; open?: string }> }) {
-  await requirePermission("families.view");
+  const staff = await requirePermission("families.view");
   const sp = await searchParams;
   const db = getDb();
   const status = sp.status ?? "new";
   const [list, count, recipients, membership] = await Promise.all([inboxList(db, { status, kind: sp.kind }), newEnquiryCount(db), staffRecipients(db), membershipRecipients(db)]);
+  const portal = await portalStatusByEmail(db, list.map((e) => e.email));
+  const canInvite = can(staff, "families.manage");
   const qs = (o: Record<string, string>) => `/admin/inbox?${new URLSearchParams({ ...(sp.kind ? { kind: sp.kind } : {}), status, ...o })}`;
 
   return (
@@ -107,6 +111,23 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     </>
                   ) : null}
                 </dl>
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ink/8 pt-4 text-[0.84rem]">
+                  <span className="text-ink-soft">Family Portal:</span>
+                  {(() => {
+                    const st = portal.get(e.email.toLowerCase());
+                    if (st?.account) return <span className="text-ink">Has an account</span>;
+                    return (
+                      <>
+                        <span className="text-ink">{st?.invitedAt ? `Invited ${fmtDateTime(st.invitedAt)}${st.inviteExpired ? " (expired)" : ""}` : "Not invited"}</span>
+                        {canInvite ? (
+                          <ActionForm action={inviteFromEnquiryAction} submit={{ label: st?.invitedAt ? "Send a new invitation" : "Invite to Family Portal", variant: "ghost" }} className="">
+                            <input type="hidden" name="id" value={e.id} />
+                          </ActionForm>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
                 <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-ink/8 pt-4">
                   {e.status !== "handled" ? (
                     <ActionForm action={enquiryStatusAction} submit={{ label: "Mark handled" }} className="flex flex-wrap items-end gap-2">

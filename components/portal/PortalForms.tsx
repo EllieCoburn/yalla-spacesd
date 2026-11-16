@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { cancelItemAction, createAccountAction, requestLinkAction, setPasswordAction, signOutOtherDevicesAction, signFormAction, signInAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
+import { cancelItemAction, createAccountAction,
+  resendConfirmationAction, requestLinkAction, setPasswordAction, signOutOtherDevicesAction, signFormAction, signInAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
 
 const field = "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -171,25 +172,26 @@ export function PasswordSignInForm({ next }: { next?: string }) {
 }
 
 /** A new family: the guardian, a password, and their children. */
-export function CreateAccountForm({ next }: { next?: string }) {
+export function CreateAccountForm({ invite, email, firstName, lastName, childrenRequired }: { invite: string; email: string; firstName?: string; lastName?: string; childrenRequired: boolean }) {
   const [state, action] = useActionState(createAccountAction, undefined);
   const [rows, setRows] = useState([0]);
   return (
     <form action={action} className="mt-10 space-y-6">
-      <input type="hidden" name="next" value={next ?? ""} />
+      <input type="hidden" name="invite" value={invite} />
       <div className="grid gap-6 sm:grid-cols-2">
         <label className="block">
           <span className={label}>First name</span>
-          <input name="firstName" required autoComplete="given-name" className={field} />
+          <input name="firstName" required autoComplete="given-name" defaultValue={firstName} className={field} />
         </label>
         <label className="block">
           <span className={label}>Last name</span>
-          <input name="lastName" required autoComplete="family-name" className={field} />
+          <input name="lastName" required autoComplete="family-name" defaultValue={lastName} className={field} />
         </label>
       </div>
       <label className="block">
         <span className={label}>Email</span>
-        <input type="email" name="email" required autoComplete="email" placeholder="you@example.com" className={`${field} placeholder:text-ink/25`} />
+        <input type="email" value={email} readOnly autoComplete="email" className={`${field} text-ink-soft`} />
+        <span className="mt-1 block text-[0.78rem] text-ink-soft">Your invitation was sent to this address, so it’s already confirmed.</span>
       </label>
       <label className="block">
         <span className={label}>Password</span>
@@ -198,24 +200,30 @@ export function CreateAccountForm({ next }: { next?: string }) {
 
       <fieldset className="border-t border-line pt-6">
         <legend className="display pr-3 text-[1.4rem]">Your children</legend>
-        <p className="mt-1 text-[0.85rem] text-ink-soft">You can add more children, and their care details, anytime in the portal.</p>
+        <p className="mt-1 text-[0.85rem] text-ink-soft">
+          {childrenRequired ? "Add at least one child. You can add more children, and their care details, anytime in the portal." : "We already have your children on file. Add anyone new here, or anytime in the portal."}
+        </p>
         <div className="mt-4 space-y-5">
           {rows.map((r, i) => (
-            <div key={r} className="grid grid-cols-[1fr_auto] items-end gap-4 sm:grid-cols-[1fr_11rem_auto]">
-              <label className="col-span-2 block sm:col-span-1">
+            <div key={r} className="grid grid-cols-2 items-end gap-4 sm:grid-cols-[1fr_1fr_10rem_auto]">
+              <label className="block">
                 <span className={label}>Child’s first name</span>
-                <input name="childFirstName" required={i === 0} autoComplete="off" className={field} />
+                <input name="childFirstName" required={childrenRequired && i === 0} autoComplete="off" className={field} />
+              </label>
+              <label className="block">
+                <span className={label}>Last name</span>
+                <input name="childLastName" required={childrenRequired && i === 0} autoComplete="off" defaultValue={i === 0 ? lastName : undefined} className={field} />
               </label>
               <label className="block">
                 <span className={label}>Date of birth</span>
-                <input type="date" name="childBirthDate" required={i === 0} max={new Date().toISOString().slice(0, 10)} className={field} />
+                <input type="date" name="childBirthDate" required={childrenRequired && i === 0} max={new Date().toISOString().slice(0, 10)} className={field} />
               </label>
               {rows.length > 1 ? (
-                <button type="button" onClick={() => setRows((x) => x.filter((k) => k !== r))} className="pb-3 text-[0.8rem] text-ink-soft hover:text-ink" aria-label="Remove this child">
+                <button type="button" onClick={() => setRows((x) => x.filter((k) => k !== r))} className="pb-3 text-left text-[0.8rem] text-ink-soft hover:text-ink" aria-label="Remove this child">
                   Remove
                 </button>
               ) : (
-                <span />
+                <span className="hidden sm:block" />
               )}
             </div>
           ))}
@@ -230,6 +238,17 @@ export function CreateAccountForm({ next }: { next?: string }) {
       <div className="flex justify-center">
         <Submit pending="Creating your account…">Create account</Submit>
       </div>
+      <Message state={state} />
+    </form>
+  );
+}
+
+/** "Didn't get it? Send it again" for the confirm-your-email banner. */
+export function ResendConfirmationForm() {
+  const [state, action] = useActionState(resendConfirmationAction, undefined);
+  return (
+    <form action={action} className="inline">
+      <button className="text-[0.88rem] text-ink underline underline-offset-4 hover:text-blue">Send the link again</button>
       <Message state={state} />
     </form>
   );

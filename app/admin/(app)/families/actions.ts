@@ -1,6 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { trustedBaseUrl } from "@/lib/base-url";
+import { guardians } from "@/lib/db/schema";
+import { inviteToPortal } from "@/lib/family-auth";
 import { adminAction, type ActionState } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
 import { can, staffActor } from "@/lib/auth/staff";
@@ -167,4 +172,12 @@ export const addNoteAction = adminAction("families.manage", async ({ db, actor, 
   if (visibility === "care" && !can(staff, "children.care")) throw new OpsError("forbidden", "You can’t add care notes.");
   await addFamilyNote(db, actor, { familyId: str("familyId"), childId: nullable(str("childId")), body: str("body"), visibility });
   return "Note added.";
+});
+
+/** Email a guardian an invitation to create their Family Portal account. */
+export const inviteGuardianAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const [g] = await db.select().from(guardians).where(eq(guardians.id, str("guardianId")));
+  if (!g) throw new OpsError("not_found", "Guardian not found.");
+  const r = await inviteToPortal(db, actor, { email: g.email, name: `${g.firstName} ${g.lastName}` }, trustedBaseUrl((await headers()).get("host")));
+  return `Invitation sent to ${r.email}. It works once, for 14 days.${r.devLink ? ` (Test mode link: ${r.devLink})` : ""}`;
 });

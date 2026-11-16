@@ -31,6 +31,8 @@ describe("public booking", () => {
     const first = await submitPublicBooking(db(), input(sess.id));
     expect(first.ok).toBe(true);
     if (first.ok) expect(first.url).toMatch(/\/pay\/test\/tcs_/);
+    // Once the family has a portal account, the email needs signing in.
+    await db().update(s.guardians).set({ portalAccess: true });
     const second = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Robin", lastName: "Newcomer", email: "ROBIN.NEW@example.com" } }));
     expect(second.ok).toBe(false);
     if (!second.ok) expect(second.code).toBe("sign_in_required");
@@ -38,7 +40,7 @@ describe("public booking", () => {
 
     // Signed in, the same child (first name + birth date) is matched, not duplicated.
     const [g] = await db().select().from(s.guardians);
-    const signedIn = { sessionId: "x", guardianId: g.id, familyId: g.familyId, familyName: "", firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: true, canViewBilling: true, canViewSensitive: true };
+    const signedIn = { sessionId: "x", guardianId: g.id, familyId: g.familyId, familyName: "", firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: true, hasPassword: false };
     const sess2 = await session(p.id, { capacity: 5 }, 9);
     const third = await submitPublicBooking(db(), input(sess2.id, { signedIn }));
     expect(third.ok).toBe(true);
@@ -129,7 +131,7 @@ describe("family portal access", () => {
       .insert(s.guardians)
       .values({ familyId: f.family.id, firstName: "Second", lastName: "Gate", email: "second.gate@example.com", canViewBilling: false, canViewSensitive: false })
       .returning();
-    const ctx = (g: typeof second) => ({ sessionId: "x", guardianId: g.id, familyId: f.family.id, familyName: "", firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: g.canBook, canViewBilling: g.canViewBilling, canViewSensitive: g.canViewSensitive });
+    const ctx = (g: typeof second) => ({ sessionId: "x", guardianId: g.id, familyId: f.family.id, familyName: "", firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: g.canBook, canViewBilling: g.canViewBilling, canViewSensitive: g.canViewSensitive, emailVerified: true, hasPassword: true });
     const primary = await familyPortalData(db(), ctx(f.guardian));
     const limited = await familyPortalData(db(), ctx(second));
     expect(primary.billing?.invoices).toHaveLength(1);

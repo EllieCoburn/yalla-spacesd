@@ -54,6 +54,8 @@ async function previewFamilyGuardian(db: ReturnType<typeof getDb>): Promise<Guar
     canBook: true,
     canViewBilling: true,
     canViewSensitive: false,
+    emailVerified: true,
+    hasPassword: true,
   };
 }
 

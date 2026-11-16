@@ -1,8 +1,10 @@
 /**
  * Family Portal accounts.
  *
- * - Families create an account with their name, email, a password and their children, and are
- *   signed in straight away. After that they sign in with email and password.
+ * - There's no open sign-up. A family gets in by booking and paying on the website (they can open
+ *   the portal straight from their confirmation page, and are emailed a link to confirm their email
+ *   and choose a password), or by an invitation from the Yalla team (which proves the email; they
+ *   add at least one child and a password, and are signed in straight away).
  * - Sessions last up to 30 days on that browser (7 days without use), and can be revoked.
  * - Emailed links (single use, 20 minutes, stored only as hashes) are used to set a password for
  *   an email Yalla already has (e.g. from an earlier booking) and to reset a forgotten password.
@@ -10,12 +12,13 @@
  * What a guardian can see follows their own flags (billing, sensitive care information).
  * Cookie handling lives in app/(site)/portal/session.ts.
  */
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { audit, OpsError } from "@/lib/audit";
+import { and, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { audit, OpsError, type Actor } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
 import { addChild, createFamily } from "@/lib/ops/families";
 import type { DB, Executor } from "@/lib/db";
-import { families, familyAuthTokens, familySessions, familySignups, guardians } from "@/lib/db/schema";
+import { bookings, children, families, familyAuthTokens, familyInvites, familySessions, guardians, messages } from "@/lib/db/schema";
+import { validLinkKey } from "@/lib/links";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { staffRecipients } from "@/lib/ops/enquiries";
 import { fmtDate } from "@/lib/time";
@@ -39,6 +42,9 @@ export type GuardianContext = {
   canBook: boolean;
   canViewBilling: boolean;
   canViewSensitive: boolean;
+  /** Has confirmed their email (by invitation or the confirmation email). */
+  emailVerified: boolean;
+  hasPassword: boolean;
 };
 
 /**
@@ -70,6 +76,11 @@ export async function requestMagicLink(db: Executor, email: string, baseUrl: str
 
 /** Exchanges a link for a session. Returns the session token, or null if invalid/expired/used. */
 export async function redeemMagicLink(db: Executor, token: string): Promise<string | null> {
+  return (await redeemFamilyLink(db, token))?.session ?? null;
+}
+
+/** Like redeemMagicLink, and says which kind of link it was (a confirmation link also confirms the email). */
+export async function redeemFamilyLink(db: Executor, token: string): Promise<{ session: string; purpose: string } | null> {
   const [t] = await db
     .update(familyAuthTokens)
     .set({ usedAt: new Date() })
@@ -78,10 +89,11 @@ export async function redeemMagicLink(db: Executor, token: string): Promise<stri
   if (!t) return null;
   const [g] = await db.select().from(guardians).where(eq(guardians.id, t.guardianId));
   if (!g?.portalAccess) return null;
+  if (t.purpose === "confirm_email" && !g.emailVerifiedAt) await db.update(guardians).set({ emailVerifiedAt: new Date() }).where(eq(guardians.id, g.id));
   const session = randomToken();
   await db.insert(familySessions).values({ guardianId: g.id, tokenHash: sha256(session), expiresAt: new Date(Date.now() + FAMILY_SESSION_MS) });
-  await audit(db, { type: "family", id: g.id, name: `${g.firstName} ${g.lastName}` }, { action: "family.sign_in", entityType: "family", entityId: g.familyId, summary: "Signed in to the Family Portal" });
-  return session;
+  await audit(db, { type: "family", id: g.id, name: `${g.firstName} ${g.lastName}` }, { action: "family.sign_in", entityType: "family", entityId: g.familyId, summary: t.purpose === "confirm_email" ? "Confirmed their email and signed in" : "Signed in to the Family Portal" });
+  return { session, purpose: t.purpose };
 }
 
 export async function resolveFamilySession(db: Executor, token: string | null | undefined): Promise<GuardianContext | null> {
@@ -108,6 +120,8 @@ export async function resolveFamilySession(db: Executor, token: string | null | 
     canBook: row.g.canBook,
     canViewBilling: row.g.canViewBilling,
     canViewSensitive: row.g.canViewSensitive,
+    emailVerified: !!row.g.emailVerifiedAt,
+    hasPassword: !!row.g.passwordHash,
   };
 }
 
@@ -144,96 +158,215 @@ export type NewAccount = {
   children: { firstName: string; lastName?: string; birthDate: string }[];
 };
 
-/** How long a sign-up confirmation link works. */
-export const FAMILY_SIGNUP_MS = 24 * 3600 * 1000;
+/** How long an invitation to create an account works. */
+export const FAMILY_INVITE_MS = 14 * 24 * 3600 * 1000;
+/** How long the "confirm your email" link (sent after a first booking) works. */
+export const FAMILY_CONFIRM_MS = 7 * 24 * 3600 * 1000;
+/** How long after booking a new family can open their portal straight from the confirmation page. */
+export const PORTAL_CLAIM_WINDOW_MS = 48 * 3600 * 1000;
 
 /**
- * Start a new family account. Nothing is created yet: the details wait (password already hashed)
- * until the family confirms their email with the link we send, so nobody can open an account, or
- * enter children's details, under someone else's address. If the email already belongs to a
- * guardian, nothing is stored: with a password they're asked to sign in; without one (an earlier
- * booking) a link to set a password is emailed.
+ * Who can have a Family Portal account: families who book and pay through the website (the payment
+ * is their way in), and families Yalla invites (e.g. after a tour request). There's no open sign-up.
  */
-export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: string): Promise<{ emailed: true; confirm?: boolean; devLink?: string }> {
-  const email = input.email.trim().toLowerCase();
-  if (!input.firstName.trim() || !input.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
-  if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "Enter a valid email address.");
-  const problem = familyPasswordProblem(input.password);
-  if (problem) throw new OpsError("invalid", problem);
-  const kids = input.children.filter((c) => c.firstName.trim() || c.birthDate);
-  const today = new Date().toISOString().slice(0, 10);
-  for (const c of kids) {
-    if (!c.firstName.trim() || !DATE.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name and date of birth.");
-    if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);
-  }
 
-  const [existing] = await db.select().from(guardians).where(sql`lower(${guardians.email}) = ${email}`);
-  if (existing) {
-    if (existing.passwordHash) throw new OpsError("exists", "There’s already an account with this email. Sign in instead, or reset your password.");
-    const { devLink } = await requestMagicLink(db, email, baseUrl, "/portal/account?welcome=1");
-    return { emailed: true, devLink };
-  }
+type Invite = typeof familyInvites.$inferSelect;
 
-  // Only the latest request for an email counts.
-  await db.delete(familySignups).where(eq(familySignups.email, email));
-  const token = randomToken();
-  await db.insert(familySignups).values({
-    tokenHash: sha256(token),
-    email,
-    data: {
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      passwordHash: hashPassword(input.password),
-      children: kids.map((c) => ({ firstName: c.firstName.trim(), lastName: c.lastName?.trim() || undefined, birthDate: c.birthDate })),
-    },
-    expiresAt: new Date(Date.now() + FAMILY_SIGNUP_MS),
-  });
-  const link = `${baseUrl}/portal/verify?signup=${token}`;
-  await notifyStaff(db, { key: "family_confirm_email", to: email, vars: { guardian_first_name: input.firstName.trim(), link }, relatedType: "signup" });
-  return { emailed: true, confirm: true, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+async function validInvite(db: Executor, token: string): Promise<Invite | null> {
+  if (!token) return null;
+  const [inv] = await db
+    .select()
+    .from(familyInvites)
+    .where(and(eq(familyInvites.tokenHash, sha256(token)), isNull(familyInvites.usedAt), gt(familyInvites.expiresAt, new Date())));
+  return inv ?? null;
+}
+
+/** What the join page shows for an invitation link (or null if it's invalid, used or expired). */
+export async function inviteDetails(db: Executor, token: string) {
+  const inv = await validInvite(db, token);
+  if (!inv) return null;
+  const [g] = inv.guardianId ? await db.select().from(guardians).where(eq(guardians.id, inv.guardianId)) : [];
+  const kids = g ? await db.select({ id: children.id }).from(children).where(eq(children.familyId, g.familyId)) : [];
+  const [first, ...rest] = (inv.name ?? "").trim().split(/\s+/);
+  return { email: inv.email, firstName: g?.firstName ?? first ?? "", lastName: g?.lastName ?? rest.join(" "), existing: !!g, hasChildren: kids.length > 0 };
 }
 
 /**
- * The family used the link in their confirmation email: create the family, guardian, password and
- * children, sign them in, and send the welcome email and the team's notice. Single use.
+ * Invite someone to create a Family Portal account (Admin → Inbox or a family's page). The email
+ * carries a link that works once, for 14 days. Inviting again replaces an earlier, unused invitation.
  */
-export async function completeFamilySignup(db: DB, token: string, baseUrl: string): Promise<{ session: string } | null> {
-  const created = await db.transaction(async (tx) => {
-    const [p] = await tx.delete(familySignups).where(and(eq(familySignups.tokenHash, sha256(token)), gt(familySignups.expiresAt, new Date()))).returning();
-    if (!p) return null;
-    // Someone else may have set up this email in the meantime; never attach to an existing family.
-    const [taken] = await tx.select({ id: guardians.id }).from(guardians).where(sql`lower(${guardians.email}) = ${p.email}`);
-    if (taken) return null;
-    const d = p.data;
-    const actor = { type: "system" as const, name: "Family Portal sign-up" };
-    const { family, guardian } = await createFamily(tx, actor, { guardian: { firstName: d.firstName, lastName: d.lastName, email: p.email } });
-    await tx.update(guardians).set({ passwordHash: d.passwordHash }).where(eq(guardians.id, guardian.id));
-    for (const c of d.children)
-      await addChild(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, family.id, {
-        firstName: c.firstName,
-        lastName: c.lastName || guardian.lastName,
-        birthDate: c.birthDate,
-      });
-    await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: family.id, summary: `Confirmed their email and created a Family Portal account with ${d.children.length} ${d.children.length === 1 ? "child" : "children"}` });
-    return { session: await startSession(tx, guardian.id), familyId: family.id, guardianId: guardian.id, guardian, kids: d.children, email: p.email };
-  });
-  if (!created) return null;
+export async function inviteToPortal(db: DB, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null }, baseUrl: string) {
+  const email = input.email.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "That email address doesn’t look right.");
+  const [existing] = await db.select().from(guardians).where(sql`lower(${guardians.email}) = ${email}`);
+  if (existing?.passwordHash && existing.portalAccess) throw new OpsError("exists", "This family already has a Family Portal account.");
+  await db.delete(familyInvites).where(and(eq(familyInvites.email, email), isNull(familyInvites.usedAt)));
+  const token = randomToken();
+  const name = input.name?.trim() || (existing ? `${existing.firstName} ${existing.lastName}` : "");
+  await db.insert(familyInvites).values({ tokenHash: sha256(token), email, name: name || null, guardianId: existing?.id ?? null, enquiryId: input.enquiryId ?? null, invitedBy: actor.name, expiresAt: new Date(Date.now() + FAMILY_INVITE_MS) });
+  const link = `${baseUrl}/portal/join?invite=${token}`;
+  await notifyStaff(db, { key: "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link }, relatedType: "invite", relatedId: existing?.familyId });
+  await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
+  return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+}
 
-  // Emails go out after the account is saved; a sending problem never blocks signing up.
-  const { guardian, familyId, guardianId, kids, email } = created;
-  await notifyFamily(db, { key: "family_welcome", familyId, guardianIds: [guardianId], vars: { portal_link: `${baseUrl}/portal/home` }, related: { type: "guardian", id: guardianId } }).catch((e) =>
+/** For Admin: whether each email already has a portal account, or an invitation out (and when). */
+export async function portalStatusByEmail(db: Executor, emails: string[]) {
+  const list = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const out = new Map<string, { account: boolean; invitedAt?: Date; inviteExpired?: boolean }>();
+  if (!list.length) return out;
+  const gs = await db
+    .select({ email: guardians.email, passwordHash: guardians.passwordHash, portalAccess: guardians.portalAccess, verified: guardians.emailVerifiedAt })
+    .from(guardians)
+    .where(inArray(sql`lower(${guardians.email})`, list));
+  for (const g of gs) if (g.portalAccess && (g.passwordHash || g.verified)) out.set(g.email.toLowerCase(), { account: true });
+  const invs = await db.select().from(familyInvites).where(inArray(familyInvites.email, list)).orderBy(desc(familyInvites.createdAt));
+  for (const i of invs) if (!out.has(i.email)) out.set(i.email, { account: !!i.usedAt, invitedAt: i.createdAt, inviteExpired: !i.usedAt && i.expiresAt < new Date() });
+  return out;
+}
+
+/**
+ * Create a Family Portal account from an invitation, and sign in straight away (the invitation link
+ * proves the email address). At least one child with first and last name and date of birth is
+ * required, unless the family is already on file with children.
+ */
+export async function registerFamilyAccount(db: DB, input: NewAccount & { inviteToken: string }, baseUrl: string): Promise<{ session: string }> {
+  const inv = await validInvite(db, input.inviteToken);
+  if (!inv) throw new OpsError("invite", "This invitation has expired or was already used. Please ask Yalla for a new one, or sign in if you already have an account.");
+  if (!input.firstName.trim() || !input.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
+  const problem = familyPasswordProblem(input.password);
+  if (problem) throw new OpsError("invalid", problem);
+  const kids = input.children.filter((c) => c.firstName.trim() || c.lastName?.trim() || c.birthDate);
+  const today = new Date().toISOString().slice(0, 10);
+  for (const c of kids) {
+    if (!c.firstName.trim() || !c.lastName?.trim() || !DATE.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
+    if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);
+  }
+
+  const created = await db.transaction(async (tx) => {
+    const [claimed] = await tx.update(familyInvites).set({ usedAt: new Date() }).where(and(eq(familyInvites.id, inv.id), isNull(familyInvites.usedAt))).returning();
+    if (!claimed) throw new OpsError("invite", "This invitation was already used.");
+    const actor = { type: "system" as const, name: "Family Portal invitation" };
+    let guardian: typeof guardians.$inferSelect;
+    let familyId: string;
+    let isNew = false;
+    const [existing] = inv.guardianId ? await tx.select().from(guardians).where(eq(guardians.id, inv.guardianId)) : await tx.select().from(guardians).where(sql`lower(${guardians.email}) = ${inv.email}`);
+    if (existing) {
+      if (existing.passwordHash && existing.portalAccess) throw new OpsError("exists", "There’s already an account with this email. Sign in instead, or reset your password.");
+      guardian = existing;
+      familyId = existing.familyId;
+      const [have] = await tx.select({ id: children.id }).from(children).where(eq(children.familyId, familyId)).limit(1);
+      if (!have && !kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
+    } else {
+      if (!kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
+      const made = await createFamily(tx, actor, { guardian: { firstName: input.firstName.trim(), lastName: input.lastName.trim(), email: inv.email } });
+      guardian = made.guardian;
+      familyId = made.family.id;
+      isNew = true;
+    }
+    await tx.update(guardians).set({ passwordHash: hashPassword(input.password), portalAccess: true, emailVerifiedAt: new Date(), failedLogins: 0, lockedUntil: null }).where(eq(guardians.id, guardian.id));
+    for (const c of kids)
+      await addChild(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, familyId, { firstName: c.firstName.trim(), lastName: c.lastName!.trim(), birthDate: c.birthDate });
+    await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: familyId, summary: `Created a Family Portal account from an invitation${kids.length ? ` with ${kids.length} ${kids.length === 1 ? "child" : "children"}` : ""}` });
+    return { session: await startSession(tx, guardian.id), familyId, guardianId: guardian.id, guardian, isNew };
+  });
+
+  await announceNewMember(db, { familyId: created.familyId, guardianId: created.guardianId, baseUrl, via: "Invitation from Yalla" });
+  return { session: created.session };
+}
+
+/** Welcome email to the family and "joined the portal" notice to the team. Never blocks anything. */
+async function announceNewMember(db: DB, input: { familyId: string; guardianId: string; baseUrl: string; welcome?: boolean; via: string }) {
+  const [g] = await db.select().from(guardians).where(eq(guardians.id, input.guardianId));
+  const kids = await db.select().from(children).where(eq(children.familyId, input.familyId));
+  if (input.welcome !== false)
+    await notifyFamily(db, { key: "family_welcome", familyId: input.familyId, guardianIds: [input.guardianId], vars: { portal_link: `${input.baseUrl}/portal/home` }, related: { type: "guardian", id: input.guardianId } }).catch((e) =>
     console.error("[welcome email failed]", (e as Error).message?.slice(0, 120)),
   );
   const details = [
-    `Parent: ${guardian.firstName} ${guardian.lastName}`,
-    `Email: ${email}`,
+    `Joined: ${input.via}`,
+    `Parent: ${g.firstName} ${g.lastName}`,
+    `Email: ${g.email}`,
     ...(kids.length ? kids.map((c, i) => `${kids.length > 1 ? `Child ${i + 1}` : "Child"}: ${c.firstName}, born ${fmtDate(c.birthDate, "MMM d, yyyy")}`) : ["Children: none added yet"]),
   ].join("\n");
   for (const to of await staffRecipients(db).catch(() => [] as string[]))
-    await notifyStaff(db, { key: "staff_family_joined", to, vars: { family_name: guardian.lastName.trim(), details, link: `${baseUrl}/admin/families/${familyId}` }, relatedId: familyId }).catch((e) =>
+    await notifyStaff(db, { key: "staff_family_joined", to, vars: { family_name: g.lastName.trim(), details, link: `${input.baseUrl}/admin/families/${input.familyId}` }, relatedId: input.familyId }).catch((e) =>
       console.error("[family joined email failed]", (e as Error).message?.slice(0, 120)),
     );
-  return { session: created.session };
+}
+
+/**
+ * After a booking is confirmed (paid, free or confirmed by staff): the family is now a client, so the
+ * primary guardian gets portal access. A family seeing this for the first time is welcomed and asked
+ * to confirm their email (which also lets them sign in anytime); nothing waits on them doing so.
+ */
+export async function welcomeBookingFamily(db: DB, familyId: string, baseUrl: string) {
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) return;
+  if (!g.portalAccess) await db.update(guardians).set({ portalAccess: true }).where(eq(guardians.id, g.id));
+  if (g.passwordHash || g.emailVerifiedAt) return;
+  const [sent] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(and(eq(messages.templateKey, "family_confirm_email"), eq(messages.relatedId, g.id)))
+    .limit(1);
+  if (sent) return;
+  await sendEmailConfirmation(db, g.id, baseUrl);
+  // The confirmation email doubles as their welcome, so no separate welcome email.
+  await announceNewMember(db, { familyId, guardianId: g.id, baseUrl, welcome: false, via: "First booking on the website" });
+}
+
+/** Sends (or re-sends) the "confirm your email" link; using it confirms the address and signs in. */
+export async function sendEmailConfirmation(db: DB, guardianId: string, baseUrl: string) {
+  const [g] = await db.select().from(guardians).where(eq(guardians.id, guardianId));
+  if (!g || g.emailVerifiedAt) return {};
+  const token = randomToken();
+  await db.insert(familyAuthTokens).values({ guardianId: g.id, tokenHash: sha256(token), purpose: "confirm_email", expiresAt: new Date(Date.now() + FAMILY_CONFIRM_MS) });
+  const link = `${baseUrl}/portal/verify?token=${token}&next=${encodeURIComponent("/portal/home?welcome=confirmed")}`;
+  await notifyFamily(db, { key: "family_confirm_email", familyId: g.familyId, guardianIds: [g.id], vars: { link }, related: { type: "guardian", id: g.id } });
+  return { devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+}
+
+/**
+ * Whether the person on a booking's confirmation page (holding its private link) can open their
+ * new Family Portal straight away: the booking is confirmed and recent, and the family hasn't set a
+ * password or opened the portal this way before.
+ */
+export async function portalClaimFor(db: Executor, reference: string, key: string | null | undefined) {
+  if (!validLinkKey("booking", reference, key)) return null;
+  const [b] = await db.select().from(bookings).where(eq(bookings.reference, reference));
+  if (!b || b.status !== "confirmed" || Date.now() - b.createdAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g || !g.portalAccess || g.passwordHash || g.portalClaimedAt) return null;
+  // Only a family that's new with this booking: a family already on file (an earlier booking or a
+  // waitlist entry) opens the portal from the confirmation email instead, which proves the email.
+  const [f] = await db.select().from(families).where(eq(families.id, b.familyId));
+  if (!f || b.createdAt.getTime() - f.createdAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
+  const [other] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.familyId, b.familyId), eq(bookings.status, "confirmed"), ne(bookings.id, b.id)))
+    .limit(1);
+  if (other) return null;
+  return { guardianId: g.id, firstName: g.firstName };
+}
+
+/** Opens a new family's portal from their booking confirmation (once), and signs them in. */
+export async function claimPortalFromBooking(db: DB, reference: string, key: string | null | undefined): Promise<string | null> {
+  const c = await portalClaimFor(db, reference, key);
+  if (!c) return null;
+  const [g] = await db.update(guardians).set({ portalClaimedAt: new Date() }).where(and(eq(guardians.id, c.guardianId), isNull(guardians.portalClaimedAt))).returning();
+  if (!g) return null;
+  await audit(db, { type: "family", id: g.id, name: `${g.firstName} ${g.lastName}` }, { action: "family.sign_in", entityType: "family", entityId: g.familyId, summary: "Opened their new Family Portal from their booking confirmation" });
+  return startSession(db, g.id);
 }
 
 /**

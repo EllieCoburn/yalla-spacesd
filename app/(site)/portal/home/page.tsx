@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
-import { CancelForm, CareForm, SignForm } from "@/components/portal/PortalForms";
+import { CancelForm, CareForm, ResendConfirmationForm, SignForm } from "@/components/portal/PortalForms";
 import { ResourceHub } from "@/components/portal/ResourceHub";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
@@ -19,7 +19,7 @@ const usd = (c: number) => `${c < 0 ? "−" : ""}$${(Math.abs(c) / 100).toFixed(
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const STATE_LABEL: Record<string, string> = { complete: "Complete", missing: "Needed", unsigned: "Needs signature", expired: "Expired — please renew", needs_resign: "Updated — please sign again" };
 
-export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string; signed?: string }> }) {
+export default async function PortalHome({ searchParams }: { searchParams: Promise<{ tab?: string; signed?: string; welcome?: string }> }) {
   const g = isDbConfigured() ? await getGuardian() : null;
   if (!g && !PORTAL_OPEN_PREVIEW) {
     // Signed-out visitors always go to sign-in (there is no sample portal once it's locked).
@@ -28,7 +28,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   // Open preview: no one is signed in, so show a made-up sample family instead of real records.
   const preview = !g;
   const who = g ?? previewGuardian;
-  const { tab = "overview", signed } = await searchParams;
+  const { tab = "overview", signed, welcome } = await searchParams;
   const data = g ? await familyPortalData(getDb(), g) : samplePortalData();
   const outstanding = data.forms.filter((f) => f.state !== "complete");
   const walletBalance = g ? (await walletSummary(getDb(), g.familyId)).availableCents : 0;
@@ -111,6 +111,52 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
           <p className="mt-8 max-w-2xl border-l-2 border-oxblood/40 pl-4 text-[0.82rem] text-oxblood">
             Preview with a made-up sample family, open to anyone while the portal is being built. Buttons here don’t change anything. Families who sign in see only their own details.
           </p>
+        ) : null}
+
+        {g && welcome ? (
+          <div className="mt-8 rounded-3xl bg-blue p-6 text-chalk sm:p-8">
+            <p className="display text-[1.6rem] leading-tight">{welcome === "confirmed" ? "Thank you, your email is confirmed." : "Welcome to your Family Portal!"}</p>
+            <p className="mt-2 max-w-2xl text-[0.95rem] text-chalk/85">
+              {welcome === "booking" ? "Your booking is below. " : ""}
+              {outstanding.length
+                ? `There ${outstanding.length === 1 ? "is 1 form" : `are ${outstanding.length} forms`} to finish before your child’s first day, and the Family Handbook and our resources are always here for you.`
+                : "Your bookings, forms, and the Family Handbook and resources are all here for you."}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {outstanding.length ? (
+                <Link href="/portal/home?tab=forms" className="inline-flex h-11 items-center rounded-full bg-chalk px-6 text-[0.88rem] text-ink hover:bg-sand">
+                  Finish my forms
+                </Link>
+              ) : null}
+              <Link href="/portal/handbook" className="inline-flex h-11 items-center rounded-full border border-chalk/40 px-6 text-[0.88rem] hover:border-chalk">
+                Family Handbook
+              </Link>
+            </div>
+          </div>
+        ) : null}
+        {g && (!g.emailVerified || !g.hasPassword) ? (
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {!g.emailVerified ? (
+              <div className="rounded-2xl border border-line bg-paper p-5">
+                <p className="text-[0.95rem]">
+                  <strong className="font-medium">Please confirm your email.</strong> We sent a link to {g.email}. Nothing here waits on it, but it lets you sign in again anytime.
+                </p>
+                <div className="mt-2">
+                  <ResendConfirmationForm />
+                </div>
+              </div>
+            ) : null}
+            {!g.hasPassword ? (
+              <div className="rounded-2xl border border-line bg-paper p-5">
+                <p className="text-[0.95rem]">
+                  <strong className="font-medium">Choose a password</strong> so you can sign in with your email and password next time.
+                </p>
+                <Link href="/portal/account" className="mt-2 inline-block text-[0.88rem] text-ink underline underline-offset-4 hover:text-blue">
+                  Set a password
+                </Link>
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <nav aria-label="Portal sections" className="no-scrollbar -mx-[clamp(1.25rem,4vw,3.5rem)] mt-10 flex gap-8 overflow-x-auto border-b border-line px-[clamp(1.25rem,4vw,3.5rem)] md:mx-0 md:px-0">

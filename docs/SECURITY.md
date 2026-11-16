@@ -16,8 +16,12 @@ Written after the November 2026 readiness review; see that review for evidence a
 - Sessions: 7 days at most, 12 hours idle. Disabling an account ends its sessions.
 
 **Family accounts**
-- A new account is created only after the family confirms their email (the link works once, for 24
-  hours). Until then nothing, including children's details, is saved except a short-lived pending row.
+- There is no open sign-up. Portal access comes from paying for a booking on the website, or from an
+  invitation staff send (Admin → Inbox or a family's page; single use, 14 days, proves the email).
+- Guests who haven't paid (an unpaid hold, a waitlist entry) have no portal access, not even by
+  sign-in link. Once paid, the confirmation page (with its private link) can open the new family's
+  portal once, within 48 hours, for a brand-new family only; they're also emailed a link that
+  confirms their email (single use, 7 days). Nothing waits on confirming.
 - Sessions: 30 days at most, 7 days idle. Changing the password, or "Sign out on every other device",
   ends other sessions. Turning off portal access, or archiving a family, ends theirs.
 - Every family action checks that the child, booking, form or offer belongs to the signed-in family.
@@ -47,7 +51,7 @@ Written after the November 2026 readiness review; see that review for evidence a
 - Accepted by their contents (PDF, JPEG, PNG, WebP, HEIC), 8 MB at most.
 
 **Housekeeping** (nightly cron): removes rate-limit records after a day, used or expired links after
-7 days, unconfirmed sign-ups after 24 hours, and ended sessions after 30 days.
+7 days, expired invitations after 30 days, and ended sessions after 30 days.
 
 ## Outside the app (must be set up and kept up)
 

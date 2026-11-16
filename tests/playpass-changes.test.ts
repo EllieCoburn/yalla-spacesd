@@ -45,7 +45,7 @@ const ctx = (f: Awaited<ReturnType<typeof family>>): GuardianContext => ({
   email: f.guardian.email,
   canBook: true,
   canViewBilling: true,
-  canViewSensitive: true,
+  canViewSensitive: true, emailVerified: true, hasPassword: true,
 });
 
 async function member(tier = "gather") {
