@@ -27,7 +27,7 @@ export const policyAction = adminAction("settings.manage", async ({ db, actor, s
     value = n;
   } else if (typeof def.default === "boolean") value = raw === "true";
   else if ("options" in def && def.options && !def.options.some((o) => o.value === raw)) throw new OpsError("invalid", "Choose one of the options.");
-  if (key === "notifications.staffEmails") {
+  if (key === "notifications.staffEmails" || key === "notifications.membershipEmails") {
     const list = raw.split(/[,;\s]+/).filter(Boolean);
     if (!list.length || list.some((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))) throw new OpsError("invalid", "Enter one or more email addresses, separated by commas.");
     value = list.join(", ");

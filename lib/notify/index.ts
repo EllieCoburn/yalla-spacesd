@@ -11,6 +11,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { guardians, messages, messageTemplates } from "@/lib/db/schema";
 import { emailHtml, plainText } from "./html";
+import { families } from "@/lib/db/schema";
+import { getPolicy } from "@/lib/ops/settings";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 export type TemplateKey =
   | "booking_confirmation"
@@ -32,6 +35,7 @@ export type TemplateKey =
   | "playpass_renewal"
   | "playpass_payment_failed"
   | "playpass_change"
+  | "staff_membership_update"
   | "yalla_cancellation"
   | "late_fee"
   | "staff_new_enquiry"
@@ -63,6 +67,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\nYour Play Pass payment of {{amount}} didn’t go through ({{reason}}). We’ll try again automatically over the next few days.\n\nTo update your card, open My Play Pass in the Family Portal and choose “Update payment method”. Your current balance is unaffected.\n\nTeam Yalla",
     essential: true,
     audience: "billing",
+  },
+  staff_membership_update: {
+    name: "Membership update (to the membership team)",
+    subject: "Play Pass: {{event}} · {{family_name}} family",
+    body: "{{event}} for the {{family_name}} family.\n\nWhat the family was told:\n\n{{details}}\n\n{{link}}",
+    essential: true,
+    audience: "staff",
   },
   playpass_change: {
     name: "Play Pass change",
@@ -269,12 +280,31 @@ export async function templateFor(db: Executor, key: TemplateKey) {
 }
 
 /** Sends one email through Postmark's transactional ("outbound") message stream. */
-export async function deliver(to: string, subject: string, body: string, html?: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
+/** Membership emails: families' replies go to the membership inbox, and the team gets a copy notice. */
+const MEMBERSHIP_REPLY_TO = new Set<string>(["playpass_welcome", "playpass_renewal", "playpass_payment_failed", "playpass_change", "application_received"]);
+const MEMBERSHIP_TEAM_COPY: Partial<Record<string, string>> = {
+  playpass_welcome: "New member",
+  playpass_change: "Membership change",
+  playpass_payment_failed: "Payment didn’t go through",
+};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Addresses for membership matters: Club Yalla applications and Play Pass (Settings → Notifications). */
+export async function membershipRecipients(db: Executor) {
+  const raw = String(await getPolicy(db, "notifications.membershipEmails"));
+  return [...new Set(raw.split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => EMAIL_RE.test(e)))];
+}
+
+async function replyToFor(db: Executor, key: string) {
+  return MEMBERSHIP_REPLY_TO.has(key) ? (await membershipRecipients(db))[0] : undefined;
+}
+
+export async function deliver(to: string, subject: string, body: string, html?: string, replyTo?: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
   try {
     const res = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
       headers: { "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN ?? "", Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ From: process.env.NOTIFICATIONS_FROM, To: to, Subject: subject, TextBody: body, ...(html ? { HtmlBody: html } : {}), MessageStream: "outbound" }),
+      body: JSON.stringify({ From: process.env.NOTIFICATIONS_FROM, To: to, Subject: subject, TextBody: body, ...(html ? { HtmlBody: html } : {}), ...(replyTo ? { ReplyTo: replyTo } : {}), MessageStream: "outbound" }),
     });
     const json = (await res.json().catch(() => ({}))) as { MessageID?: string; ErrorCode?: number; Message?: string };
     return res.ok && !json.ErrorCode ? { ok: true, ref: json.MessageID } : { ok: false, error: json.Message ?? `HTTP ${res.status}` };
@@ -303,6 +333,8 @@ export async function notifyFamily(
   recipients = recipients.filter((g) => (t.audience === "billing" ? g.canViewBilling || g.isPrimary : g.isPrimary || g.portalAccess));
   const mode = notificationsMode();
   const ids: string[] = [];
+  const replyTo = await replyToFor(db, input.key);
+  let firstBody: string | null = null;
   for (const g of recipients) {
     const vars = { guardian_first_name: g.firstName, ...input.vars };
     const subject = render(t.subject, vars);
@@ -324,18 +356,33 @@ export async function notifyFamily(
       })
       .returning({ id: messages.id });
     ids.push(m.id);
+    firstBody ??= body;
     if (mode === "live") {
-      const r = await deliver(g.email, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
+      const r = await deliver(g.email, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }), replyTo);
       await db
         .update(messages)
         .set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null })
         .where(eq(messages.id, m.id));
     }
   }
+  // The membership team hears about Play Pass sign-ups, changes and failed payments as they happen.
+  const event = MEMBERSHIP_TEAM_COPY[input.key];
+  if (event && firstBody) {
+    const [f] = await db.select({ name: families.name }).from(families).where(eq(families.id, input.familyId));
+    let link = "";
+    try {
+      link = `${trustedBaseUrl()}/admin/families/${input.familyId}`;
+    } catch {}
+    const familyName = (f?.name ?? "").replace(/ family$/i, "") || "A";
+    for (const to of await membershipRecipients(db))
+      await notifyStaff(db, { key: "staff_membership_update", to, vars: { event, family_name: familyName, details: redactSecrets(firstBody.replace(/^# .*$/m, "").trim()), link }, relatedId: input.familyId }).catch((e) =>
+        console.error("[membership notice failed]", (e as Error).message?.slice(0, 120)),
+      );
+  }
   return ids;
 }
 
-export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: string; vars: Record<string, string>; relatedId?: string; relatedType?: string }) {
+export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: string; vars: Record<string, string>; relatedId?: string; relatedType?: string; replyTo?: string }) {
   const t = await templateFor(db, input.key);
   const subject = render(t.subject, input.vars);
   const body = render(t.body, input.vars);
@@ -345,7 +392,7 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
     .values({ templateKey: input.key, toAddress: input.to, subject, body: redactSecrets(body), mode, status: mode === "test" ? "captured" : "queued", relatedType: input.relatedType ?? "staff", relatedId: input.relatedId })
     .returning({ id: messages.id });
   if (mode === "live") {
-    const r = await deliver(input.to, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
+    const r = await deliver(input.to, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }), input.replyTo ?? (await replyToFor(db, input.key)));
     await db.update(messages).set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null }).where(eq(messages.id, m.id));
   }
   return { id: m.id, mode, body: redactSecrets(body) };
@@ -372,6 +419,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
   playpass_payment_failed: ["guardian_first_name", "amount", "reason"],
   playpass_change: ["guardian_first_name", "change_summary"],
+  staff_membership_update: ["event", "family_name", "details", "link"],
   yalla_cancellation: ["guardian_first_name", "booking_details", "reason", "amount", "credit_amount", "bonus_percent"],
   late_fee: ["guardian_first_name", "child_name", "minutes_late", "date", "amount"],
   staff_new_enquiry: ["kind", "kind_label", "name", "details", "link"],

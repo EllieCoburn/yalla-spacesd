@@ -4,7 +4,7 @@ import { Card, Empty, Notice, PageHeader, Pill, Tabs } from "@/components/admin/
 import { requirePermission } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { ENQUIRY_KINDS, inboxList, newEnquiryCount, staffRecipients, type EnquiryKind } from "@/lib/ops/enquiries";
-import { notificationsMode } from "@/lib/notify";
+import { membershipRecipients, notificationsMode } from "@/lib/notify";
 import { fmtDateTime } from "@/lib/time";
 import { enquiryStatusAction } from "./actions";
 
@@ -18,14 +18,14 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const db = getDb();
   const status = sp.status ?? "new";
-  const [list, count, recipients] = await Promise.all([inboxList(db, { status, kind: sp.kind }), newEnquiryCount(db), staffRecipients(db)]);
+  const [list, count, recipients, membership] = await Promise.all([inboxList(db, { status, kind: sp.kind }), newEnquiryCount(db), staffRecipients(db), membershipRecipients(db)]);
   const qs = (o: Record<string, string>) => `/admin/inbox?${new URLSearchParams({ ...(sp.kind ? { kind: sp.kind } : {}), status, ...o })}`;
 
   return (
     <>
       <PageHeader title="Inbox" subtitle="Tour requests, Club Yalla applications, event enquiries and waitlist sign-ups from the website. Each one is also emailed to the team." />
       <div className="mb-5">
-        <Notice tone={notificationsMode() === "live" ? "info" : "warning"} title={`Emailed to ${recipients.join(", ") || "nobody yet"}`}>
+        <Notice tone={notificationsMode() === "live" ? "info" : "warning"} title={`Emailed to ${recipients.join(", ") || "nobody yet"} · Club Yalla applications to ${membership.join(", ") || "nobody yet"}`}>
           {notificationsMode() === "live" ? "New messages are emailed as they arrive." : "Email delivery isn’t switched on yet, so new messages are only here (and in Messages) for now."} Change the addresses in{" "}
           <Link href="/admin/settings" className="underline">
             Settings → Notifications

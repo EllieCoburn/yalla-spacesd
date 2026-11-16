@@ -21,8 +21,15 @@ export const POLICIES = {
   "notifications.staffEmails": {
     group: "Notifications",
     label: "Send website messages to",
-    help: "Tour requests, Club Yalla applications, event enquiries and waitlist sign-ups are emailed here (separate several addresses with commas). Everything is also kept in Admin → Inbox.",
+    help: "Tour requests, event enquiries, waitlist sign-ups, handbook questions and new Family Portal accounts are emailed here (separate several addresses with commas). Everything is also kept in Admin → Inbox.",
     default: "hello@yallaspacesd.com",
+    decision: false,
+  } as PolicyDef<string>,
+  "notifications.membershipEmails": {
+    group: "Notifications",
+    label: "Send membership messages to",
+    help: "Club Yalla applications and Play Pass activity (new members, plan changes, cancellations, pauses and failed payments) are emailed here, and families’ replies to Play Pass and application emails come here too.",
+    default: "membership@yallaspacesd.com",
     decision: false,
   } as PolicyDef<string>,
   "booking.failedPaymentHoldHours": {

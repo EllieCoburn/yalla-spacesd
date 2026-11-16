@@ -8,7 +8,7 @@ import { and, desc, eq, gte, inArray, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
 import { enquiries } from "@/lib/db/schema";
-import { notifyStaff } from "@/lib/notify";
+import { membershipRecipients, notifyStaff } from "@/lib/notify";
 import { getPolicy } from "./settings";
 
 export const ENQUIRY_KINDS = {
@@ -63,8 +63,11 @@ export async function submitEnquiry(
   const kind = ENQUIRY_KINDS[input.kind];
   const summary = [`Name: ${name}`, `Email: ${email}`, e.phone ? `Phone: ${e.phone}` : null, ...details.map((d) => `${d.label}: ${d.value}`)].filter(Boolean).join("\n");
   // Email problems are recorded in Admin → Messages; the message itself is already saved.
-  for (const to of await staffRecipients(db)) {
-    await notifyStaff(db, { key: "staff_new_enquiry", to, vars: { kind: kind.staffNoun, kind_label: kind.label, name, details: summary, link: `${input.baseUrl}/admin/inbox?open=${e.id}` }, relatedId: e.id }).catch((err) =>
+  // Club Yalla applications go to the membership inbox; everything else to the general one. Replying
+  // to the notice replies to the family.
+  const to_ = input.kind === "application" ? await membershipRecipients(db) : await staffRecipients(db);
+  for (const to of to_) {
+    await notifyStaff(db, { key: "staff_new_enquiry", to, vars: { kind: kind.staffNoun, kind_label: kind.label, name, details: summary, link: `${input.baseUrl}/admin/inbox?open=${e.id}` }, relatedId: e.id, replyTo: email }).catch((err) =>
       console.error("[enquiry email failed]", (err as Error).message?.slice(0, 120)),
     );
   }
