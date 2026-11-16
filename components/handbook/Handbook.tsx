@@ -586,13 +586,15 @@ function AskForm({ initial, searched, signedIn, email, program, section, dark = 
 
 function AskTeamCard({ signedIn, email, program }: { signedIn: boolean; email: string | null; program: HandbookProgram | null }) {
   return (
-    <section className="rounded-[1.75rem] bg-ink px-6 py-9 text-chalk sm:px-10 sm:py-12">
-      <p className="eyebrow text-chalk/60">Still wondering?</p>
-      <h2 className="display mt-3 text-[clamp(1.9rem,1.5rem+1.4vw,2.8rem)] text-chalk">
-        Ask <em>Team Yalla.</em>
-      </h2>
-      <p className="mt-3 max-w-lg text-chalk/75">If something isn’t covered here, send us your question and we’ll get back to you by email, usually within 72 hours.</p>
-      <div className="mt-2 max-w-xl">
+    <section className="grid gap-1 rounded-[1.75rem] bg-ink px-6 py-9 text-chalk sm:px-10 sm:py-11 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12">
+      <div>
+        <p className="eyebrow text-chalk/60">Still wondering?</p>
+        <h2 className="display mt-3 text-[clamp(1.9rem,1.5rem+1.4vw,2.8rem)] text-chalk">
+          Ask <em>Team Yalla.</em>
+        </h2>
+        <p className="mt-3 max-w-md text-chalk/75">If something isn’t covered here, send us your question and we’ll get back to you by email, usually within 72 hours.</p>
+      </div>
+      <div className="lg:[&>form]:mt-0 lg:[&>div]:mt-0">
         <AskForm initial="" signedIn={signedIn} email={email} program={program} dark />
       </div>
     </section>
