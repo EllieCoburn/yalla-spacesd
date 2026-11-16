@@ -87,15 +87,6 @@ export function SiteFooter() {
         <div className="shell">
           <div className="flex flex-col gap-4 border-t border-chalk/20 py-7 text-[0.78rem] text-chalk/60 sm:flex-row sm:items-center sm:justify-between">
             <p>© {new Date().getFullYear()} {site.fullName}.</p>
-            <a
-              href="https://loopdesignhouse.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="-mx-3 -my-2 inline-flex self-start rounded-full px-3 py-2.5 transition-colors duration-300 hover:bg-chalk/10 focus-visible:ring-2 focus-visible:ring-chalk/60 focus-visible:outline-none sm:self-auto"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/built-by-loop.svg" alt="Built by LOOP" width={105} height={20} className="h-5 w-auto" />
-            </a>
           </div>
         </div>
         <WindowField seed={11} height={150} className="block h-24 w-full lg:h-32" pane="var(--color-blue-deep)" ground="var(--color-blue)" />
