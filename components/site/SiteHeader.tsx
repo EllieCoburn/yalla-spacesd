@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { nav, secondaryNav } from "@/content/site";
+import { SocialLinks } from "./SocialLinks";
 
 export function SiteHeader({ offset = false }: { offset?: boolean }) {
   const pathname = usePathname();
@@ -52,6 +53,7 @@ export function SiteHeader({ offset = false }: { offset?: boolean }) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-5">
+            <SocialLinks className="hidden lg:flex" />
             <Link href="/portal" className="hidden text-[0.84rem] text-ink/70 transition-colors hover:text-ink md:inline">
               Family Portal
             </Link>
@@ -108,6 +110,7 @@ export function SiteHeader({ offset = false }: { offset?: boolean }) {
               </Link>
             ))}
           </div>
+          <SocialLinks className="mt-8" />
           <div className="mt-auto flex items-end justify-between gap-6 pt-12">
             <Link href="/book" className="inline-flex h-14 flex-1 items-center justify-center rounded-full bg-ink text-chalk">
               Book care
