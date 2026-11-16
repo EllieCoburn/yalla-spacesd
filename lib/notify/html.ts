@@ -195,10 +195,25 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
         [site.phone.value ? `<a href="tel:+1${site.phone.value.replace(/\D/g, "")}" style="color:${C.soft};text-decoration:none;">${esc(site.phone.value)}</a>` : "", `<a href="mailto:${site.email.value}" style="color:${C.soft};text-decoration:none;">${esc(site.email.value)}</a>`]
           .filter(Boolean)
           .join("&nbsp;&nbsp;·&nbsp;&nbsp;"),
-        site.instagram.value ? `<a href="${site.instagram.value}" style="color:${C.blue};text-decoration:none;">Instagram</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${base}/portal" style="color:${C.blue};text-decoration:none;">Family Portal</a>` : "",
+        `<a href="${base}/portal" style="color:${C.blue};text-decoration:none;">Family Portal</a>`,
       ]
         .filter(Boolean)
         .join("<br>");
+  // Round buttons for Instagram, Pinterest and the Amazon storefront, like the website's (images, so
+  // they look the same in every email app).
+  const socials = staff
+    ? ""
+    : [
+        { href: site.instagram.value, icon: "instagram", alt: "Yalla on Instagram" },
+        { href: site.pinterest.value, icon: "pinterest", alt: "Yalla on Pinterest" },
+        { href: site.amazon.value, icon: "amazon", alt: "Yalla’s Amazon storefront" },
+      ]
+        .filter((x) => x.href)
+        .map(
+          (x) =>
+            `<td style="padding:0 6px;"><a href="${x.href}" style="text-decoration:none;"><img src="${base}/email/social-${x.icon}.png" width="40" height="40" alt="${esc(x.alt)}" style="display:block;border:0;width:40px;height:40px;"></a></td>`,
+        )
+        .join("");
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
@@ -223,6 +238,7 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
     </td></tr></table>
   </td></tr>
   <tr><td align="center" style="padding:28px 24px 0;font-family:${SANS};font-size:13px;line-height:1.8;color:${C.soft};">${footer}</td></tr>
+  ${socials ? `<tr><td align="center" style="padding:16px 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>${socials}</tr></table></td></tr>` : ""}
 </table>
 </td></tr></table>
 </body></html>`;
