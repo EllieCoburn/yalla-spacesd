@@ -5,6 +5,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { submitEnquiry, type EnquiryKind } from "@/lib/ops/enquiries";
 import { programs } from "@/content/programs";
 import { requestContext } from "./portal/session";
+import { fmtDate } from "@/lib/time";
 
 export type EnquiryState = { ok?: boolean; error?: string; at?: number } | undefined;
 
@@ -18,7 +19,7 @@ function detailsFor(kind: EnquiryKind, f: FormData) {
   const v = (k: string) => String(f.get(k) ?? "").trim();
   if (kind === "tour")
     return [
-      { label: "Child’s age", value: v("childAge") },
+      { label: "Child’s date of birth or due date", value: /^\d{4}-\d{2}-\d{2}$/.test(v("childBirth")) ? fmtDate(v("childBirth"), "MMMM d, yyyy") : v("childBirth") || v("childAge") },
       { label: "Interested in", value: v("interests") },
       { label: "Days or times that suit them", value: v("when") },
       { label: "Message", value: v("message") },
@@ -48,6 +49,20 @@ function detailsFor(kind: EnquiryKind, f: FormData) {
     { label: "Day length", value: LENGTH[v("length")] ?? "" },
     { label: "Message", value: v("message") },
   ];
+}
+
+/** Tour requests need a phone number, the child's date of birth or due date, at least one program and some days or times. */
+function tourProblem(f: FormData): string | null {
+  const v = (k: string) => String(f.get(k) ?? "").trim();
+  if (v("phone").replace(/\D/g, "").length < 7) return "Please add a phone number we can reach you on.";
+  const d = v("childBirth");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(d))) return "Please add your child’s date of birth or due date.";
+  const year = Number(d.slice(0, 4));
+  const now = new Date().getFullYear();
+  if (year < now - 12 || year > now + 1) return "Please check your child’s date of birth or due date.";
+  if (!v("interests")) return "Choose at least one program you’re interested in.";
+  if (!v("when")) return "Let us know which days or times suit you.";
+  return null;
 }
 
 const programUrl = (base: string, slug: string) => `${base}${slug === "club-yalla" ? "/club-yalla" : `/programs/${slug}`}`;
@@ -85,6 +100,10 @@ export async function submitEnquiryAction(_: EnquiryState, form: FormData): Prom
   // the message is always saved, just flagged and without the automatic reply.
   const suspect = Boolean(String(form.get("yx_hp") ?? form.get("company") ?? "").trim());
   if (!isDbConfigured()) return { error: "We couldn’t send this right now. Please email hello@yallaspacesd.com or call 619.775.4008.", at: Date.now() };
+  if (kind === "tour") {
+    const missing = tourProblem(form);
+    if (missing) return { error: missing, at: Date.now() };
+  }
   try {
     const { baseUrl, ip } = await requestContext();
     await submitEnquiry(getDb(), {

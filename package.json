@@ -23,7 +23,7 @@
     "@vercel/speed-insights": "^2.1.0",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.4",
-    "next": "^16.4.3",
+    "next": "^16.4.6",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",

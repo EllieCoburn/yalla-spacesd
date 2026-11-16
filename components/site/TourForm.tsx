@@ -36,6 +36,7 @@ export function SendButton({ children, className }: { children: string; classNam
 export function TourForm() {
   const [state, action] = useActionState<EnquiryState, FormData>(submitEnquiryAction, undefined);
   const [interests, setInterests] = useState<string[]>([]);
+  const [needInterest, setNeedInterest] = useState(false);
 
   if (state?.ok) {
     return (
@@ -48,7 +49,17 @@ export function TourForm() {
   }
 
   return (
-    <form action={action} className="relative space-y-7">
+    <form
+      action={action}
+      onSubmit={(e) => {
+        // Choosing at least one program is required; the buttons aren't a regular form field.
+        if (!interests.length) {
+          e.preventDefault();
+          setNeedInterest(true);
+        }
+      }}
+      className="relative space-y-7"
+    >
       <input type="hidden" name="kind" value="tour" />
       <input type="hidden" name="interests" value={interests.map((s) => programs.find((p) => p.slug === s)?.name ?? s).join(", ")} />
       <input type="text" name="yx_hp" tabIndex={-1} autoComplete="new-password" data-1p-ignore data-lpignore="true" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
@@ -59,10 +70,12 @@ export function TourForm() {
         <Field name="email" type="email" required>
           Email
         </Field>
-        <Field name="phone" type="tel">
+        <Field name="phone" type="tel" required>
           Phone
         </Field>
-        <Field name="childAge">Child’s age or due date</Field>
+        <Field name="childBirth" type="date" required>
+          Child’s date of birth or due date
+        </Field>
       </div>
 
       <fieldset>
@@ -75,7 +88,10 @@ export function TourForm() {
                 type="button"
                 key={p.slug}
                 aria-pressed={on}
-                onClick={() => setInterests((xs) => (on ? xs.filter((x) => x !== p.slug) : [...xs, p.slug]))}
+                onClick={() => {
+                  setInterests((xs) => (on ? xs.filter((x) => x !== p.slug) : [...xs, p.slug]));
+                  setNeedInterest(false);
+                }}
                 className={`rounded-full border px-4 py-2 text-[0.85rem] transition-all duration-300 ${
                   on ? "border-ink bg-ink text-chalk" : "border-ink/20 hover:border-ink/60"
                 }`}
@@ -85,9 +101,16 @@ export function TourForm() {
             );
           })}
         </div>
+        {needInterest ? (
+          <p role="alert" className="mt-3 text-[0.85rem] text-oxblood">
+            Choose at least one program you’re interested in.
+          </p>
+        ) : null}
       </fieldset>
 
-      <Field name="when">Days or times that suit you</Field>
+      <Field name="when" required>
+        Days or times that suit you
+      </Field>
 
       <label className="relative block">
         <textarea name="message" rows={3} placeholder="Anything else" className={`${field} resize-none`} />
