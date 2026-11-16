@@ -117,3 +117,39 @@ describe("Private status links", () => {
     expect(linkKey("booking", "YL-ABC123")).not.toBe(linkKey("offer", "YL-ABC123"));
   });
 });
+
+describe("Link addresses", () => {
+  it("never take the host from the request on Vercel", async () => {
+    const { trustedBaseUrl } = await import("@/lib/base-url");
+    const keep = { ...process.env };
+    try {
+      process.env.VERCEL = "1";
+      process.env.VERCEL_ENV = "production";
+      process.env.VERCEL_PROJECT_PRODUCTION_URL = "www.yallaspacesd.com";
+      delete process.env.PUBLIC_BASE_URL;
+      expect(trustedBaseUrl("attacker.example")).toBe("https://www.yallaspacesd.com");
+      process.env.PUBLIC_BASE_URL = "https://www.yallaspacesd.com/";
+      expect(trustedBaseUrl("attacker.example")).toBe("https://www.yallaspacesd.com");
+      delete process.env.PUBLIC_BASE_URL;
+      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+      expect(() => trustedBaseUrl("attacker.example")).toThrow();
+    } finally {
+      process.env = keep;
+    }
+  });
+
+  it("the test checkout needs an explicit switch on any Vercel deployment", async () => {
+    const { testPaymentsAllowed } = await import("@/lib/payments/test-mode");
+    const keep = { ...process.env };
+    try {
+      process.env.VERCEL = "1";
+      for (const env of ["preview", "production"]) {
+        process.env.VERCEL_ENV = env;
+        delete process.env.ALLOW_TEST_PAYMENTS;
+        expect(testPaymentsAllowed()).toBe(false);
+      }
+    } finally {
+      process.env = keep;
+    }
+  });
+});

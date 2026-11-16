@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { families, guardians, spaceEntitlements } from "@/lib/db/schema";
 import { FAMILY_SESSION_MS, resolveFamilySession, type GuardianContext } from "@/lib/family-auth";
 import { PORTAL_OPEN_PREVIEW, previewGuardian } from "@/lib/portal-preview";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 export const FAMILY_COOKIE = "yalla_family";
 
@@ -72,10 +73,9 @@ export async function clearFamilyCookie() {
 
 export async function requestContext() {
   const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
   return {
-    baseUrl: process.env.PUBLIC_BASE_URL ?? `${proto}://${host}`,
+    // Never taken from forwarded headers: see lib/base-url.ts.
+    baseUrl: trustedBaseUrl(h.get("host")),
     ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined,
     userAgent: h.get("user-agent") ?? undefined,
   };

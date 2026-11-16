@@ -17,12 +17,10 @@ import {
   usd,
 } from "@/lib/ops/billing";
 import { todayLA } from "@/lib/time";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 async function baseUrl() {
-  const m = await requestMeta();
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-  const local = m.host?.startsWith("localhost") || m.host?.startsWith("127.");
-  return `${local ? "http" : "https"}://${m.host}`;
+  return trustedBaseUrl((await requestMeta()).host);
 }
 
 const required = (v: number | null, label: string) => {

@@ -6,12 +6,10 @@ import { requestMeta } from "@/lib/auth/session";
 import { resetStaffMfa } from "@/lib/auth/staff";
 import { POLICIES, saveCohort, saveLocation, savePool, setOperatingHours, setPolicy, type OperatingHours, type PolicyKey } from "@/lib/ops/settings";
 import { changeRole, createRole, inviteStaff, resendInvite, setStaffStatus, updateRolePermissions } from "@/lib/ops/staff-admin";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 async function baseUrl() {
-  const m = await requestMeta();
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-  const local = m.host?.startsWith("localhost") || m.host?.startsWith("127.");
-  return `${local ? "http" : "https"}://${m.host}`;
+  return trustedBaseUrl((await requestMeta()).host);
 }
 const showLink = (mode: string) => mode === "test" && process.env.NODE_ENV !== "production";
 

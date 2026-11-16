@@ -10,12 +10,12 @@ import { getDb } from "@/lib/db";
 import { staffUsers } from "@/lib/db/schema";
 import { notifyStaff } from "@/lib/notify";
 import { OpsError } from "@/lib/audit";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 export type AuthState = { error?: string; message?: string; email?: string; link?: string } | undefined;
 
 function baseUrl(meta: { host?: string }) {
-  const proto = meta.host?.startsWith("localhost") || meta.host?.startsWith("127.") ? "http" : "https";
-  return process.env.PUBLIC_BASE_URL ?? `${proto}://${meta.host}`;
+  return trustedBaseUrl(meta.host);
 }
 
 export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {

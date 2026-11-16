@@ -6,13 +6,10 @@ import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
 import { expireOffers, joinWaitlist, makeOffer, removeEntry } from "@/lib/ops/waitlist";
 import { fmtDateTime } from "@/lib/time";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 async function baseUrl() {
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
-  return `${proto}://${host}`;
+  return trustedBaseUrl((await headers()).get("host"));
 }
 
 export const offerAction = adminAction("waitlist.manage", async ({ db, actor, str, num }) => {

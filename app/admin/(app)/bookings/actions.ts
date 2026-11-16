@@ -22,11 +22,10 @@ import {
   type ItemRequest,
 } from "@/lib/ops/bookings";
 import { fmtDate } from "@/lib/time";
+import { trustedBaseUrl } from "@/lib/base-url";
 
 async function baseUrl() {
-  const meta = await requestMeta();
-  const proto = meta.host?.startsWith("localhost") || meta.host?.startsWith("127.") ? "http" : "https";
-  return process.env.PUBLIC_BASE_URL ?? `${proto}://${meta.host}`;
+  return trustedBaseUrl((await requestMeta()).host);
 }
 
 export const createBookingAction = adminAction("bookings.manage", async ({ db, actor, staff, str, all, bool }) => {
