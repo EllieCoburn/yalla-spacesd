@@ -31,7 +31,6 @@ export const nav = [
 export const secondaryNav = [
   { href: "/faq", label: "FAQ" },
   { href: "/book", label: "Book Care" },
-  { href: "/portal", label: "Family Portal" },
 ] as const;
 
 /**

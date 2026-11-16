@@ -109,8 +109,8 @@ export function SiteHeader({ offset = false }: { offset?: boolean }) {
           </div>
           <SocialLinks className="mt-8" />
           <div className="mt-auto flex items-end justify-between gap-6 pt-12">
-            <Link href="/book" className="inline-flex h-14 flex-1 items-center justify-center rounded-full bg-ink text-chalk">
-              Book care
+            <Link href="/portal" className="inline-flex h-14 flex-1 items-center justify-center rounded-full bg-ink text-chalk">
+              Family Portal
             </Link>
             <Mark name="palm" className="h-28 w-auto shrink-0 text-blue" />
           </div>
