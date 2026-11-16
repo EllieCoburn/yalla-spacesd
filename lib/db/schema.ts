@@ -1389,3 +1389,17 @@ export const rateEvents = pgTable(
   },
   (t) => [index("rate_events_lookup_idx").on(t.bucket, t.keyHash, t.createdAt)],
 );
+
+/**
+ * A Family Portal sign-up waiting for its email to be confirmed. Nothing else is created until the
+ * link in the email is used; then this row is deleted. The password is already hashed. Rows that
+ * are never confirmed expire after 24 hours and are removed by the nightly housekeeping job.
+ */
+export const familySignups = pgTable("family_signups", {
+  id: id(),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  data: jsonb("data").$type<{ firstName: string; lastName: string; passwordHash: string; children: { firstName: string; lastName?: string; birthDate: string }[] }>().notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});

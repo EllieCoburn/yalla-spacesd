@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { redeemMagicLink, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
+import { redeemMagicLink, completeFamilySignup, revokeOtherFamilySessions, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
 import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/public-booking";
 import { resolveOffer } from "@/lib/ops/yalla-cancellations";
 import { guardianActor } from "@/lib/family-auth";
@@ -83,20 +83,36 @@ export async function createAccountAction(_: PortalState, form: FormData): Promi
       },
       baseUrl,
     );
-    if ("emailed" in r)
-      return {
-        ok: true,
-        message: "Yalla already has this email from an earlier booking. To keep your family’s details safe, we’ve emailed you a link to finish setting up your account.",
-        devLink: r.devLink,
-        at: Date.now(),
-      };
-    session = r.session;
+    return {
+      ok: true,
+      message: r.confirm
+        ? "Almost there! We’ve emailed you a link to confirm your email address. Your account is set up as soon as you use it (it works for 24 hours)."
+        : "Yalla already has this email from an earlier booking. To keep your family’s details safe, we’ve emailed you a link to finish setting up your account.",
+      devLink: r.devLink,
+      at: Date.now(),
+    };
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, error: e.message, at: Date.now() };
     throw e;
   }
-  await setFamilyCookie(session);
-  redirect(next);
+}
+
+/** The link in a new family's confirmation email: create the account and sign in. */
+export async function completeSignupAction(form: FormData) {
+  const { baseUrl } = await requestContext();
+  const r = await completeFamilySignup(getDb(), String(form.get("signup") ?? ""), baseUrl);
+  if (!r) redirect("/portal?expired=1");
+  await setFamilyCookie(r.session);
+  redirect("/portal/home?welcome=1");
+}
+
+/** Signs this guardian out on every other device (a lost phone, a shared computer). */
+export async function signOutOtherDevicesAction(_: PortalState): Promise<PortalState> {
+  return run(async () => {
+    const g = await guardianOrFail();
+    await revokeOtherFamilySessions(getDb(), g.guardianId, g.sessionId);
+    return "Signed out on every other device.";
+  });
 }
 
 export async function setPasswordAction(_: PortalState, form: FormData): Promise<PortalState> {

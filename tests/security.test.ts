@@ -173,3 +173,30 @@ describe("Rate limits", () => {
     expect(sent).toHaveLength(5);
   });
 });
+
+describe("Family sessions and uploads", () => {
+  it("a password change signs out other devices, and a week unused signs out", async () => {
+    const { resolveFamilySession, setFamilyPassword, signInWithPassword } = await import("@/lib/family-auth");
+    const { hashPassword } = await import("@/lib/auth/crypto");
+    const f = await family("Alpha");
+    await db().update(s.guardians).set({ portalAccess: true, passwordHash: hashPassword("first-password-1") }).where(eq(s.guardians.id, f.guardian.id));
+    const a = await signInWithPassword(db(), { email: f.guardian.email, password: "first-password-1", baseUrl: "http://t" });
+    const b = await signInWithPassword(db(), { email: f.guardian.email, password: "first-password-1", baseUrl: "http://t" });
+    if (!("session" in a) || !("session" in b)) throw new Error("no session");
+    const ctxA = (await resolveFamilySession(db(), a.session))!;
+    await setFamilyPassword(db(), ctxA, "second-password-2");
+    expect(await resolveFamilySession(db(), a.session)).not.toBeNull(); // this device stays signed in
+    expect(await resolveFamilySession(db(), b.session)).toBeNull(); // the other is signed out
+    await db().update(s.familySessions).set({ lastSeenAt: new Date(Date.now() - 8 * 24 * 3600_000) });
+    expect(await resolveFamilySession(db(), a.session)).toBeNull();
+  });
+
+  it("uploads are checked by their contents, not their name or label", async () => {
+    const { storeDocument } = await import("@/lib/ops/forms");
+    const f = await family("Docs");
+    await expect(storeDocument(db(), owner, { familyId: f.family.id, filename: "x.pdf", mimeType: "application/pdf", data: Buffer.from("<html><script>alert(1)</script>") })).rejects.toThrow(/PDF or an image/);
+    const id = await storeDocument(db(), owner, { familyId: f.family.id, filename: "scan.jpg", mimeType: "application/octet-stream", data: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]) });
+    const [d] = await db().select().from(s.documents).where(eq(s.documents.id, id));
+    expect(d.mimeType).toBe("image/jpeg");
+  });
+});

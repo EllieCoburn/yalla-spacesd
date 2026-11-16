@@ -3,7 +3,7 @@
  *
  * - Families create an account with their name, email, a password and their children, and are
  *   signed in straight away. After that they sign in with email and password.
- * - Sessions last a year on that browser (until they sign out) and can be revoked.
+ * - Sessions last up to 30 days on that browser (7 days without use), and can be revoked.
  * - Emailed links (single use, 20 minutes, stored only as hashes) are used to set a password for
  *   an email Yalla already has (e.g. from an earlier booking) and to reset a forgotten password.
  * - Repeated wrong passwords lock that account for 15 minutes.
@@ -15,14 +15,16 @@ import { audit, OpsError } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
 import { addChild, createFamily } from "@/lib/ops/families";
 import type { DB, Executor } from "@/lib/db";
-import { families, familyAuthTokens, familySessions, guardians } from "@/lib/db/schema";
+import { families, familyAuthTokens, familySessions, familySignups, guardians } from "@/lib/db/schema";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { staffRecipients } from "@/lib/ops/enquiries";
 import { fmtDate } from "@/lib/time";
 import { allow } from "@/lib/rate-limit";
 
 export const FAMILY_LINK_MS = 20 * 60 * 1000;
-export const FAMILY_SESSION_MS = 365 * 24 * 3600 * 1000;
+/** A family stays signed in on a browser for up to 30 days, and is signed out after 7 days unused. */
+export const FAMILY_SESSION_MS = 30 * 24 * 3600 * 1000;
+export const FAMILY_IDLE_MS = 7 * 24 * 3600 * 1000;
 const LOCK_AFTER = 8;
 const LOCK_MS = 15 * 60 * 1000;
 
@@ -91,6 +93,7 @@ export async function resolveFamilySession(db: Executor, token: string | null | 
     .innerJoin(families, eq(families.id, guardians.familyId))
     .where(and(eq(familySessions.tokenHash, sha256(token)), isNull(familySessions.revokedAt), gt(familySessions.expiresAt, new Date())));
   if (!row || !row.g.portalAccess || row.f.status !== "active") return null;
+  if (Date.now() - row.s.lastSeenAt.getTime() > FAMILY_IDLE_MS) return null;
   if (Date.now() - row.s.lastSeenAt.getTime() > 60_000) await db.update(familySessions).set({ lastSeenAt: new Date() }).where(eq(familySessions.id, row.s.id));
   return {
     sessionId: row.s.id,
@@ -139,12 +142,17 @@ export type NewAccount = {
   children: { firstName: string; lastName?: string; birthDate: string }[];
 };
 
+/** How long a sign-up confirmation link works. */
+export const FAMILY_SIGNUP_MS = 24 * 3600 * 1000;
+
 /**
- * Create a family account and sign in. If the email already belongs to a guardian, nothing is
- * created: with a password they're asked to sign in; without one (an earlier booking) a link to
- * set a password is emailed, so nobody can take over an existing family by typing its email.
+ * Start a new family account. Nothing is created yet: the details wait (password already hashed)
+ * until the family confirms their email with the link we send, so nobody can open an account, or
+ * enter children's details, under someone else's address. If the email already belongs to a
+ * guardian, nothing is stored: with a password they're asked to sign in; without one (an earlier
+ * booking) a link to set a password is emailed.
  */
-export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: string): Promise<{ session: string } | { emailed: true; devLink?: string }> {
+export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: string): Promise<{ emailed: true; confirm?: boolean; devLink?: string }> {
   const email = input.email.trim().toLowerCase();
   if (!input.firstName.trim() || !input.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "Enter a valid email address.");
@@ -164,29 +172,60 @@ export async function registerFamilyAccount(db: DB, input: NewAccount, baseUrl: 
     return { emailed: true, devLink };
   }
 
+  // Only the latest request for an email counts.
+  await db.delete(familySignups).where(eq(familySignups.email, email));
+  const token = randomToken();
+  await db.insert(familySignups).values({
+    tokenHash: sha256(token),
+    email,
+    data: {
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      passwordHash: hashPassword(input.password),
+      children: kids.map((c) => ({ firstName: c.firstName.trim(), lastName: c.lastName?.trim() || undefined, birthDate: c.birthDate })),
+    },
+    expiresAt: new Date(Date.now() + FAMILY_SIGNUP_MS),
+  });
+  const link = `${baseUrl}/portal/verify?signup=${token}`;
+  await notifyStaff(db, { key: "family_confirm_email", to: email, vars: { guardian_first_name: input.firstName.trim(), link }, relatedType: "signup" });
+  return { emailed: true, confirm: true, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+}
+
+/**
+ * The family used the link in their confirmation email: create the family, guardian, password and
+ * children, sign them in, and send the welcome email and the team's notice. Single use.
+ */
+export async function completeFamilySignup(db: DB, token: string, baseUrl: string): Promise<{ session: string } | null> {
   const created = await db.transaction(async (tx) => {
+    const [p] = await tx.delete(familySignups).where(and(eq(familySignups.tokenHash, sha256(token)), gt(familySignups.expiresAt, new Date()))).returning();
+    if (!p) return null;
+    // Someone else may have set up this email in the meantime; never attach to an existing family.
+    const [taken] = await tx.select({ id: guardians.id }).from(guardians).where(sql`lower(${guardians.email}) = ${p.email}`);
+    if (taken) return null;
+    const d = p.data;
     const actor = { type: "system" as const, name: "Family Portal sign-up" };
-    const { family, guardian } = await createFamily(tx, actor, { guardian: { firstName: input.firstName, lastName: input.lastName, email } });
-    await tx.update(guardians).set({ passwordHash: hashPassword(input.password) }).where(eq(guardians.id, guardian.id));
-    for (const c of kids)
+    const { family, guardian } = await createFamily(tx, actor, { guardian: { firstName: d.firstName, lastName: d.lastName, email: p.email } });
+    await tx.update(guardians).set({ passwordHash: d.passwordHash }).where(eq(guardians.id, guardian.id));
+    for (const c of d.children)
       await addChild(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, family.id, {
-        firstName: c.firstName.trim(),
-        lastName: c.lastName?.trim() || guardian.lastName,
+        firstName: c.firstName,
+        lastName: c.lastName || guardian.lastName,
         birthDate: c.birthDate,
       });
-    await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: family.id, summary: `Created a Family Portal account with ${kids.length} ${kids.length === 1 ? "child" : "children"}` });
-    return { session: await startSession(tx, guardian.id), familyId: family.id, guardianId: guardian.id, guardian };
+    await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: family.id, summary: `Confirmed their email and created a Family Portal account with ${d.children.length} ${d.children.length === 1 ? "child" : "children"}` });
+    return { session: await startSession(tx, guardian.id), familyId: family.id, guardianId: guardian.id, guardian, kids: d.children, email: p.email };
   });
+  if (!created) return null;
 
   // Emails go out after the account is saved; a sending problem never blocks signing up.
-  const { guardian, familyId, guardianId } = created;
+  const { guardian, familyId, guardianId, kids, email } = created;
   await notifyFamily(db, { key: "family_welcome", familyId, guardianIds: [guardianId], vars: { portal_link: `${baseUrl}/portal/home` }, related: { type: "guardian", id: guardianId } }).catch((e) =>
     console.error("[welcome email failed]", (e as Error).message?.slice(0, 120)),
   );
   const details = [
     `Parent: ${guardian.firstName} ${guardian.lastName}`,
     `Email: ${email}`,
-    ...(kids.length ? kids.map((c, i) => `${kids.length > 1 ? `Child ${i + 1}` : "Child"}: ${c.firstName.trim()}, born ${fmtDate(c.birthDate, "MMM d, yyyy")}`) : ["Children: none added yet"]),
+    ...(kids.length ? kids.map((c, i) => `${kids.length > 1 ? `Child ${i + 1}` : "Child"}: ${c.firstName}, born ${fmtDate(c.birthDate, "MMM d, yyyy")}`) : ["Children: none added yet"]),
   ].join("\n");
   for (const to of await staffRecipients(db).catch(() => [] as string[]))
     await notifyStaff(db, { key: "staff_family_joined", to, vars: { family_name: guardian.lastName.trim(), details, link: `${baseUrl}/admin/families/${familyId}` }, relatedId: familyId }).catch((e) =>
@@ -233,7 +272,17 @@ export async function setFamilyPassword(db: Executor, g: GuardianContext, passwo
   const problem = familyPasswordProblem(password);
   if (problem) throw new OpsError("invalid", problem);
   await db.update(guardians).set({ passwordHash: hashPassword(password), failedLogins: 0, lockedUntil: null, updatedAt: new Date() }).where(eq(guardians.id, g.guardianId));
-  await audit(db, { type: "family", id: g.guardianId, name: `${g.firstName} ${g.lastName}` }, { action: "family.password_set", entityType: "family", entityId: g.familyId, summary: "Set a Family Portal password" });
+  // A new password signs out every other device.
+  await revokeOtherFamilySessions(db, g.guardianId, g.sessionId);
+  await audit(db, { type: "family", id: g.guardianId, name: `${g.firstName} ${g.lastName}` }, { action: "family.password_set", entityType: "family", entityId: g.familyId, summary: "Set a Family Portal password; other devices signed out" });
+}
+
+/** Signs a guardian out everywhere except (optionally) the current session. */
+export async function revokeOtherFamilySessions(db: Executor, guardianId: string, exceptSessionId?: string) {
+  await db
+    .update(familySessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(familySessions.guardianId, guardianId), isNull(familySessions.revokedAt), exceptSessionId ? sql`${familySessions.id} <> ${exceptSessionId}` : undefined));
 }
 
 export async function hasPassword(db: Executor, guardianId: string) {

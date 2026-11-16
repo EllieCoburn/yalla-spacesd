@@ -351,10 +351,26 @@ export async function submitForm(
   return s;
 }
 
+/**
+ * What a file really is, from its first bytes (never from its name or the browser's label), for the
+ * types Yalla accepts: PDF, PNG, JPEG, WebP and HEIC. Anything else is null.
+ */
+export function sniffDocumentType(data: Buffer): string | null {
+  const ascii = (from: number, to: number) => data.subarray(from, to).toString("latin1");
+  if (ascii(0, 5) === "%PDF-") return "application/pdf";
+  if (data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return "image/jpeg";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+  if (ascii(4, 8) === "ftyp" && ["heic", "heix", "hevc", "hevx", "mif1", "msf1", "heim", "heis"].includes(ascii(8, 12))) return "image/heic";
+  return null;
+}
+
 export async function storeDocument(db: Executor, actor: Actor, input: { familyId?: string | null; childId?: string | null; filename: string; mimeType: string; data: Buffer }) {
-  const allowed = ["application/pdf", "image/png", "image/jpeg", "image/heic", "image/webp"];
-  if (!allowed.includes(input.mimeType)) throw new OpsError("invalid", "Upload a PDF or an image.");
   if (input.data.length > 8 * 1024 * 1024) throw new OpsError("invalid", "Files must be 8 MB or smaller.");
+  // The stored type comes from the file's contents, so a renamed web page or program is refused.
+  const detected = sniffDocumentType(input.data);
+  if (!detected) throw new OpsError("invalid", "Upload a PDF or an image (JPEG, PNG, WebP or HEIC).");
+  input = { ...input, mimeType: detected };
   const [d] = await db
     .insert(documents)
     .values({ familyId: input.familyId ?? null, childId: input.childId ?? null, filename: input.filename.slice(0, 200), mimeType: input.mimeType, size: input.data.length, data: input.data, uploadedBy: actor.name })

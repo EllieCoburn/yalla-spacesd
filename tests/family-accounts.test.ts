@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
-import { registerFamilyAccount, resolveFamilySession, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
+import { completeFamilySignup, registerFamilyAccount, resolveFamilySession, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
 import { setPolicy } from "@/lib/ops/settings";
 import { db, family, owner, reset } from "./helpers";
 
@@ -20,11 +20,33 @@ const account = (over: Partial<Parameters<typeof registerFamilyAccount>[1]> = {}
   ...over,
 });
 
+/** Sign up and confirm the email with the link we send (in test mode the link comes back directly). */
+async function signUp(input = account()) {
+  const r = await registerFamilyAccount(db(), input, base);
+  const token = new URL(r.devLink!).searchParams.get("signup")!;
+  const done = await completeFamilySignup(db(), token, base);
+  if (!done) throw new Error("signup not completed");
+  return done;
+}
+
 describe("Family Portal accounts", () => {
-  it("creates the family, guardian, password and children, and signs in", async () => {
+  it("creates nothing until the email is confirmed, and the link works once", async () => {
     const r = await registerFamilyAccount(db(), account(), base);
-    expect("session" in r).toBe(true);
-    const g = await resolveFamilySession(db(), (r as { session: string }).session);
+    expect(r.confirm).toBe(true);
+    expect(await db().select().from(s.families)).toHaveLength(0);
+    expect(await db().select().from(s.children)).toHaveLength(0);
+    const [msg] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_confirm_email"));
+    expect(msg.toAddress).toBe("maya@example.com");
+    expect(msg.body).not.toContain("signup="); // the stored copy has no working link
+    const token = new URL(r.devLink!).searchParams.get("signup")!;
+    expect(await completeFamilySignup(db(), token, base)).not.toBeNull();
+    expect(await completeFamilySignup(db(), token, base)).toBeNull();
+    expect(await db().select().from(s.familySignups)).toHaveLength(0);
+  });
+
+  it("creates the family, guardian, password and children, and signs in", async () => {
+    const r = await signUp();
+    const g = await resolveFamilySession(db(), r.session);
     expect(g?.firstName).toBe("Maya");
     const kids = await db().select().from(s.children).where(eq(s.children.familyId, g!.familyId));
     expect(kids.map((k) => [k.firstName, k.lastName, k.birthDate]).sort()).toEqual([
@@ -38,7 +60,7 @@ describe("Family Portal accounts", () => {
 
   it("sends the family a welcome email and tells the team who joined", async () => {
     await setPolicy(db(), owner, "notifications.staffEmails", "hello@yalla.test");
-    await registerFamilyAccount(db(), account(), base);
+    await signUp();
     const sent = await db().select().from(s.messages);
     const welcome = sent.find((m) => m.templateKey === "family_welcome");
     expect(welcome?.toAddress).toBe("maya@example.com");
@@ -52,7 +74,7 @@ describe("Family Portal accounts", () => {
   });
 
   it("signs in later with email and password, case-insensitively", async () => {
-    await registerFamilyAccount(db(), account(), base);
+    await signUp();
     const r = await signInWithPassword(db(), { email: " Maya@Example.com ", password: "garden-swing-42", baseUrl: base });
     expect("session" in r).toBe(true);
     await expect(signInWithPassword(db(), { email: "maya@example.com", password: "wrong-password", baseUrl: base })).rejects.toThrow(/don’t match/);
@@ -60,13 +82,13 @@ describe("Family Portal accounts", () => {
   });
 
   it("pauses sign-in after repeated wrong passwords", async () => {
-    await registerFamilyAccount(db(), account(), base);
+    await signUp();
     for (let i = 0; i < 8; i++) await signInWithPassword(db(), { email: "maya@example.com", password: `nope-${i}-xxxx`, baseUrl: base }).catch(() => null);
     await expect(signInWithPassword(db(), { email: "maya@example.com", password: "garden-swing-42", baseUrl: base })).rejects.toThrow(/wait 15 minutes/);
   });
 
   it("won't create a second account for an email with a password", async () => {
-    await registerFamilyAccount(db(), account(), base);
+    await signUp();
     await expect(registerFamilyAccount(db(), account({ firstName: "Someone" }), base)).rejects.toThrow(/already an account/);
   });
 
@@ -91,8 +113,8 @@ describe("Family Portal accounts", () => {
   });
 
   it("a signed-in guardian can set a password", async () => {
-    const r = await registerFamilyAccount(db(), account(), base);
-    const g = (await resolveFamilySession(db(), (r as { session: string }).session))!;
+    const r = await signUp();
+    const g = (await resolveFamilySession(db(), r.session))!;
     await setFamilyPassword(db(), g, "new-swing-set-77");
     expect("session" in (await signInWithPassword(db(), { email: "maya@example.com", password: "new-swing-set-77", baseUrl: base }))).toBe(true);
   });

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SetPasswordForm } from "@/components/portal/PortalForms";
+import { SetPasswordForm, SignOutOthersForm } from "@/components/portal/PortalForms";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { hasPassword } from "@/lib/family-auth";
 import { signOutAction } from "../actions";
@@ -45,10 +45,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
           <div className="mt-12 border-t border-line pt-8">
             <p className="display text-[1.5rem]">Sign out</p>
-            <p className="mt-1 text-[0.9rem] text-ink-soft">You stay signed in on this device until you sign out.</p>
-            <form action={signOutAction} className="mt-5">
-              <button className="h-11 rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">Sign out</button>
-            </form>
+            <p className="mt-1 text-[0.9rem] text-ink-soft">You stay signed in on this device for up to 30 days, or until a week without visiting. Changing your password signs you out everywhere else.</p>
+            <div className="mt-5 flex flex-wrap items-start gap-3">
+              <form action={signOutAction}>
+                <button className="h-11 rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">Sign out</button>
+              </form>
+              <SignOutOthersForm />
+            </div>
           </div>
         </div>
       </div>

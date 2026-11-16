@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { cancelItemAction, createAccountAction, requestLinkAction, setPasswordAction, signFormAction, signInAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
+import { cancelItemAction, createAccountAction, requestLinkAction, setPasswordAction, signOutOtherDevicesAction, signFormAction, signInAction, updateCareAction, type PortalState } from "@/app/(site)/portal/actions";
 
 const field = "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -248,6 +248,17 @@ export function SetPasswordForm({ hasPassword }: { hasPassword: boolean }) {
         <PasswordInput name="confirm" autoComplete="new-password" />
       </label>
       <Submit pending="Saving…">{hasPassword ? "Change password" : "Set password"}</Submit>
+      <Message state={state} />
+    </form>
+  );
+}
+
+/** Signs out every other device (a lost phone, a shared computer). */
+export function SignOutOthersForm() {
+  const [state, action] = useActionState(signOutOtherDevicesAction, undefined);
+  return (
+    <form action={action} className="space-y-3">
+      <button className="h-11 rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">Sign out on every other device</button>
       <Message state={state} />
     </form>
   );

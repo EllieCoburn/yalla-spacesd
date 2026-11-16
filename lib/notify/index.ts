@@ -26,6 +26,7 @@ export type TemplateKey =
   | "staff_password_reset"
   | "staff_invite"
   | "family_sign_in"
+  | "family_confirm_email"
   | "space_confirmation"
   | "playpass_welcome"
   | "playpass_renewal"
@@ -217,6 +218,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     essential: true,
     audience: "staff",
   },
+  family_confirm_email: {
+    name: "Confirm your email (new Family Portal account)",
+    subject: "Confirm your email to finish joining Yalla",
+    body: "# Confirm your email\n\nHi {{guardian_first_name}},\n\nThank you for creating a Yalla Family Portal account. To keep your family’s details safe, please confirm this is your email address. Your account is set up as soon as you do.\n\n{{link}}\n\nThis link works once, for 24 hours. If you didn’t sign up, you can ignore this email and nothing will be set up.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
   family_sign_in: {
     name: "Family Portal sign-in link",
     subject: "Your Yalla Family Portal sign-in link",
@@ -240,7 +248,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
  */
 export const REDACTED_LINK = "[private link removed]";
 export function redactSecrets(text: string) {
-  return text.replace(/https?:\/\/[^\s)\]]*[?&](?:token|key|k)=[^\s)\]]*/gi, REDACTED_LINK);
+  return text.replace(/https?:\/\/[^\s)\]]*[?&](?:token|key|k|signup)=[^\s)\]]*/gi, REDACTED_LINK);
 }
 
 export function notificationsMode(): "test" | "live" {
@@ -327,14 +335,14 @@ export async function notifyFamily(
   return ids;
 }
 
-export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: string; vars: Record<string, string>; relatedId?: string }) {
+export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: string; vars: Record<string, string>; relatedId?: string; relatedType?: string }) {
   const t = await templateFor(db, input.key);
   const subject = render(t.subject, input.vars);
   const body = render(t.body, input.vars);
   const mode = notificationsMode();
   const [m] = await db
     .insert(messages)
-    .values({ templateKey: input.key, toAddress: input.to, subject, body: redactSecrets(body), mode, status: mode === "test" ? "captured" : "queued", relatedType: "staff", relatedId: input.relatedId })
+    .values({ templateKey: input.key, toAddress: input.to, subject, body: redactSecrets(body), mode, status: mode === "test" ? "captured" : "queued", relatedType: input.relatedType ?? "staff", relatedId: input.relatedId })
     .returning({ id: messages.id });
   if (mode === "live") {
     const r = await deliver(input.to, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
@@ -358,6 +366,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_password_reset: ["name", "link"],
   staff_invite: ["name", "invited_by", "role", "link"],
   family_sign_in: ["guardian_first_name", "link"],
+  family_confirm_email: ["guardian_first_name", "link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
   playpass_welcome: ["guardian_first_name", "plan", "amount", "added", "balance", "monthly_price", "monthly_allocation", "next_renewal"],
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
