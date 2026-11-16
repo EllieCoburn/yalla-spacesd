@@ -94,6 +94,8 @@ export async function resolveFamilySession(db: Executor, token: string | null | 
     .where(and(eq(familySessions.tokenHash, sha256(token)), isNull(familySessions.revokedAt), gt(familySessions.expiresAt, new Date())));
   if (!row || !row.g.portalAccess || row.f.status !== "active") return null;
   if (Date.now() - row.s.lastSeenAt.getTime() > FAMILY_IDLE_MS) return null;
+  // Also caps sessions issued before the 30-day limit (they were given a year).
+  if (Date.now() - row.s.createdAt.getTime() > FAMILY_SESSION_MS) return null;
   if (Date.now() - row.s.lastSeenAt.getTime() > 60_000) await db.update(familySessions).set({ lastSeenAt: new Date() }).where(eq(familySessions.id, row.s.id));
   return {
     sessionId: row.s.id,
