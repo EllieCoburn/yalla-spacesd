@@ -65,60 +65,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────── Ways to belong ───────── */}
-      <section className="pb-24 lg:pb-36">
-        <div className="shell">
-          <div className="grid gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-4">
-              <Index n="01">Ways to belong</Index>
-              <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-                There’s more than one <em>way to Yalla.</em>
-              </h2>
-              <p className="mt-6 text-ink-soft">
-                From flexible childcare and seasonal camps to family gatherings and a weekly rhythm with Club Yalla, there are plenty of
-                ways to make Yalla part of your family’s life.
-              </p>
-            </div>
-            <ol className="grid gap-px overflow-hidden bg-line sm:grid-cols-3 lg:col-span-8">
-              {[
-                {
-                  mark: "sprig" as const,
-                  title: "A weekly rhythm",
-                  body: "Club Yalla, our weekday membership: recurring childcare and coworking, with consistent days and a familiar cohort.",
-                  href: "/club-yalla",
-                  link: "Club Yalla",
-                },
-                {
-                  mark: "window" as const,
-                  title: "Care as you need it",
-                  body: "Yalla Flex drop-in days and Camp Yalla, all bookable in one calendar.",
-                  href: "/book",
-                  link: "Book care",
-                },
-                {
-                  mark: "sun" as const,
-                  title: "Come together",
-                  body: "Yalla Happenings bring immersive play, weekend play, evenings out, workshops and gatherings, all in one calendar.",
-                  href: "/programs/yalla-happenings",
-                  link: "Happenings",
-                },
-              ].map((s, i) => (
-                <Reveal as="li" key={s.title} delay={i * 120} className="flex flex-col bg-chalk p-8 lg:p-10">
-                  <Mark name={s.mark} className="h-14 w-auto self-start text-blue" />
-                  <p className="mt-10 font-serif text-sm text-ink-soft italic">0{i + 1}</p>
-                  <h3 className="display mt-2 text-[1.7rem]">{s.title}</h3>
-                  <p className="mt-3 flex-1 text-[0.95rem] text-ink-soft">{s.body}</p>
-                  <Link href={s.href} className="mt-6 inline-flex items-center gap-3 text-[0.85rem] hover:text-blue">
-                    <span className="link-underline">{s.link}</span>
-                    <Arrow className="h-3 w-5" />
-                  </Link>
-                </Reveal>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </section>
-
       <LoopDivider />
 
       {/* ───────── Programs ───────── */}
@@ -126,7 +72,7 @@ export default function Home() {
         <div className="shell">
           <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
             <div>
-              <Index n="02">Programs</Index>
+              <Index n="01">Programs</Index>
               <h2 className="display mt-6 max-w-2xl text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
                 Explore our <em>programs.</em>
               </h2>
@@ -174,7 +120,7 @@ export default function Home() {
             </div>
           </Reveal>
           <div className="lg:col-span-5 lg:col-start-8">
-            <Index n="03">Our spaces</Index>
+            <Index n="02">Our spaces</Index>
             <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
               A space to work. <em>A place to grow.</em>
             </h2>
