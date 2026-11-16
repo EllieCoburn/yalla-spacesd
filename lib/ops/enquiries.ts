@@ -1,6 +1,6 @@
 /**
  * Messages from the public website (tour requests, Club Yalla applications, event enquiries and
- * waitlist sign-ups). Each is saved to Admin → Inbox first, then emailed to the addresses in
+ * waitlist sign-ups), and questions families send from the Family Handbook. Each is saved to Admin → Inbox first, then emailed to the addresses in
  * Settings → Notifications, and the family gets a short note saying it arrived. Saving never
  * depends on email working.
  */
@@ -16,6 +16,7 @@ export const ENQUIRY_KINDS = {
   application: { label: "Club Yalla application", plural: "Club Yalla applications", staffNoun: "Club Yalla application", familyNoun: "Club Yalla application" },
   event: { label: "Event enquiry", plural: "Event enquiries", staffNoun: "event enquiry", familyNoun: "event enquiry" },
   waitlist: { label: "Waitlist sign-up", plural: "Waitlist sign-ups", staffNoun: "waitlist sign-up", familyNoun: "waitlist request" },
+  question: { label: "Handbook question", plural: "Handbook questions", staffNoun: "family question from the handbook", familyNoun: "question" },
 } as const;
 export type EnquiryKind = keyof typeof ENQUIRY_KINDS;
 

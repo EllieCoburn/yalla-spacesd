@@ -246,6 +246,13 @@
       "when": 1794781788477,
       "tag": "0034_flex_agreement_illness_link",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794781789477,
+      "tag": "0035_flex_agreement_handbook_link",
+      "breakpoints": true
     }
   ]
 }

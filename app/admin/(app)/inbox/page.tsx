@@ -10,7 +10,7 @@ import { enquiryStatusAction } from "./actions";
 
 export const metadata = { title: "Inbox" };
 
-const TONE = { tour: "info", application: "positive", event: "warning", waitlist: "neutral" } as const;
+const TONE = { tour: "info", application: "positive", event: "warning", waitlist: "neutral", question: "info" } as const;
 
 /** Everything families send through the website, in one place. */
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ status?: string; kind?: string; open?: string }> }) {

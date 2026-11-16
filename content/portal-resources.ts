@@ -8,6 +8,14 @@ export type PortalResource = { key: string; eyebrow: string; title: string; desc
 
 export const PORTAL_RESOURCES: PortalResource[] = [
   {
+    key: "handbook",
+    eyebrow: "Family Handbook",
+    title: "The Yalla Family Handbook",
+    description: "How days at Yalla work, what to bring, and our policies, for every program. Ask it a question.",
+    href: "/portal/handbook",
+    cta: "Open the handbook",
+  },
+  {
     key: "parking",
     eyebrow: "Getting here",
     title: "Parking guide",
