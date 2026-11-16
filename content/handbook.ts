@@ -1122,11 +1122,13 @@ Children wash their hands at set times each day, including after using the bathr
       },
       {
         id: "custody",
-        title: "Custody and foster care",
-        summary: "Please give us a copy of any custody or protection order. We can’t supervise visitation.",
-        body: `If there are custody or protection orders relating to your child, please give us a copy for your child’s file. This information is confidential and used only for your child’s safety. Please tell Ellie Coburn at ${HELLO} whenever orders change or expire. Our team can’t supervise visits between a non-custodial parent or caregiver and a child, so visitation isn’t permitted at Yalla.
+        title: "Custody and Foster Care",
+        summary: "Please share copies of any current custody or protective orders. Yalla does not provide supervised visitation.",
+        body: `Families must provide copies of any current custody or protective orders concerning their child. These documents will be kept confidential in the child’s file and used to support their safety and care. Please notify Team Yalla at ${HELLO} whenever an order is modified or expires, and provide updated documentation as applicable.
 
-For children in foster care, we need a copy of the placement paperwork before care begins. We’ll release the child only to the foster parents or the child’s caseworker, who must sign in and out and show identification. Any additions or changes must be confirmed by the caseworker in a signed letter.`,
+Yalla does not provide supervised visitation. Visits between a child and a noncustodial parent or caregiver may not take place on the premises.
+
+For children in foster care, placement documentation must be provided before care begins. Children will be released only to the foster parents or the child’s assigned caseworker, unless the caseworker authorizes another individual in a signed letter. All individuals dropping off or picking up the child must present identification and complete the required sign-in or sign-out procedures. Any changes to authorized pickup arrangements must be confirmed in writing by the caseworker.`,
         ask: ["custody", "court order", "restraining order", "foster", "divorce", "visitation"],
       },
       {
