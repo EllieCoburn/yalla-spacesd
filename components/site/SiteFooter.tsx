@@ -94,7 +94,7 @@ export function SiteFooter() {
               className="-mx-3 -my-2 inline-flex self-start rounded-full px-3 py-2.5 transition-colors duration-300 hover:bg-chalk/10 focus-visible:ring-2 focus-visible:ring-chalk/60 focus-visible:outline-none sm:self-auto"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/website-by-loop.svg" alt="Website by LOOP" width={124} height={20} className="h-5 w-auto" />
+              <img src="/brand/built-by-loop.svg" alt="Built by LOOP" width={105} height={20} className="h-5 w-auto" />
             </a>
           </div>
         </div>
