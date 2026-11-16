@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { askTeamYallaAction } from "@/app/(site)/portal/handbook/actions";
-import { Markup } from "@/components/faq/FaqAnswer";
+import { FactTiles, HandbookText, inline } from "@/components/handbook/HandbookText";
 import { HANDBOOK, HANDBOOK_PROGRAMS, HANDBOOK_SECTIONS, HANDBOOK_YEAR, type HandbookEntry, type HandbookProgram, type HandbookSection } from "@/content/handbook";
 import { answer as askHandbook, buildIndex, type HandbookAnswer } from "@/lib/handbook/search";
 
@@ -58,8 +58,14 @@ export function Handbook({ signedIn, firstName, email }: { signedIn: boolean; fi
 
   // Open a section from the address bar (#section-id), e.g. from a link in an agreement.
   useEffect(() => {
-    const id = decodeURIComponent(window.location.hash.slice(1));
-    if (id && HANDBOOK_SECTIONS.some((s) => s.id === id)) reveal(id, false);
+    const go = (smooth: boolean) => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (id && HANDBOOK_SECTIONS.some((s) => s.id === id)) reveal(id, smooth);
+    };
+    go(false);
+    const onHash = () => go(true);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -355,9 +361,7 @@ function SectionItem({ s, program, open, onToggle }: { s: HandbookSection; progr
           {notFor && !open ? (
             <span className="mt-2 block text-[0.9rem] text-ink-soft">Not part of {programName(program!)}. Open to read anyway.</span>
           ) : (
-            <span className="mt-2 block text-[0.98rem] leading-relaxed text-ink-soft">
-              <Markup text={s.summary} />
-            </span>
+            <span className="mt-2 block text-[0.98rem] leading-relaxed text-ink-soft">{inline(s.summary, `${s.id}-sum`)}</span>
           )}
         </span>
         <span aria-hidden className={`mt-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-ink-soft transition-transform duration-300 group-hover:border-ink/30 ${open ? "rotate-45" : ""}`}>
@@ -368,10 +372,13 @@ function SectionItem({ s, program, open, onToggle }: { s: HandbookSection; progr
       </button>
 
       {open ? (
-        <div id={`${s.id}-body`} className="mt-5 max-w-[46rem]">
-          <div className="space-y-4 text-[1rem] leading-relaxed text-ink-soft [&_strong]:text-ink">
-            <Markup text={s.body} />
-          </div>
+        <div id={`${s.id}-body`} className="mt-6 max-w-[46rem]">
+          {s.facts?.length ? (
+            <div className="mb-7">
+              <FactTiles facts={s.facts} />
+            </div>
+          ) : null}
+          <HandbookText text={s.body} />
 
           {notes.length ? (
             <div className="mt-7">
@@ -397,8 +404,8 @@ function SectionItem({ s, program, open, onToggle }: { s: HandbookSection; progr
                     <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${DOT[shownTab]}`} />
                     For {programName(shownTab)} families
                   </p>
-                  <div className="mt-2.5 space-y-3 text-[0.96rem] leading-relaxed text-ink [&_ul]:text-ink-soft">
-                    <Markup text={s.programs[shownTab]!} />
+                  <div className="mt-3">
+                    <HandbookText text={s.programs[shownTab]!} lead={false} compact />
                   </div>
                 </div>
               ) : null}
@@ -444,23 +451,29 @@ function AnswerPanel({
               From the handbook · {result.best.entry.chapterTitle}
             </p>
             <h3 className="display mt-2 text-[1.7rem]">{result.best.entry.title}</h3>
-            <div className="mt-3 text-[1.05rem] leading-relaxed text-ink">
-              <Markup text={result.best.entry.summary} />
-            </div>
+            <p className="mt-3 text-[1.08rem] leading-relaxed text-ink">{inline(result.best.entry.summary, "ans-sum")}</p>
+            {result.best.entry.facts?.length ? (
+              <div className="mt-5">
+                <FactTiles facts={result.best.entry.facts} />
+              </div>
+            ) : null}
             {result.excerpt.filter((p) => !sameText(p, result.best.entry.summary)).length ? (
-              <div className="mt-4 space-y-3 border-l-2 border-blue/40 pl-4 text-[0.95rem] leading-relaxed text-ink-soft [&_strong]:text-ink">
-                {result.excerpt
-                  .filter((p) => !sameText(p, result.best.entry.summary))
-                  .map((p, i) => (
-                    <Markup key={i} text={p.replace(/^\d+\.\s/, "- ")} />
-                  ))}
+              <div className="mt-5">
+                <HandbookText
+                  lead={false}
+                  compact
+                  text={result.excerpt
+                    .filter((p) => !sameText(p, result.best.entry.summary))
+                    .map((p) => p.replace(/^\d+\.\s/, "- "))
+                    .join("\n\n")}
+                />
               </div>
             ) : null}
             {program && result.best.entry.programs?.[program] && !result.excerpt.some((p) => result.best.entry.programs![program]!.includes(p)) ? (
               <div className={`mt-5 rounded-2xl border p-4 ${TINT[program]}`}>
                 <p className="eyebrow text-[0.6rem] text-ink-soft">For {programName(program)} families</p>
-                <div className="mt-2 space-y-2 text-[0.94rem] leading-relaxed text-ink">
-                  <Markup text={result.best.entry.programs[program]!} />
+                <div className="mt-2">
+                  <HandbookText text={result.best.entry.programs[program]!} lead={false} compact />
                 </div>
               </div>
             ) : null}

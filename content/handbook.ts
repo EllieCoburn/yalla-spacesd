@@ -25,6 +25,8 @@ export type HandbookSection = {
   title: string;
   /** One or two sentences: the short answer. */
   summary: string;
+  /** The numbers worth remembering (times, fees, limits), shown as boxes. */
+  facts?: { value: string; label: string }[];
   body: string;
   /** Extra detail for one program. */
   programs?: Partial<Record<HandbookProgram, string>>;
@@ -122,6 +124,7 @@ The handbook sits alongside our [Policies & Terms](/policies), the ${ILLNESS} an
         id: "contacting-yalla",
         title: "Contacting Yalla",
         summary: `Call ${PHONE} or email ${HELLO}. We’re at 408 Nutmeg Street, San Diego, CA 92103.`,
+        facts: [{value: "619.775.4008", label: "Call us"}, {value: "72 hours", label: "We reply to every email within"}],
         body: `**Yalla Coworking & Childcare**
 408 Nutmeg Street, San Diego, CA 92103
 
@@ -173,6 +176,7 @@ Our educarers care for Seedlings and Saplings, our youngest children; our guides
         id: "communication",
         title: "How we communicate",
         summary: "Messages for anything that needs attention today; email for everything else. We reply to emails within 72 hours.",
+        facts: [{value: "Today?", label: "Message or call for anything time-sensitive"}, {value: "72 hours", label: "Email reply time, at most"}],
         body: `Close collaboration between families and the people caring for your child makes children’s days better, so communication matters deeply to us.
 
 - **For anything time-sensitive** (a change to departure time, a feeding or diapering update, an absence today or tomorrow), message or call us so the team knows right away.
@@ -201,6 +205,7 @@ We share upcoming closures and community news by email and with signs in our lob
         id: "hours",
         title: "Hours by program",
         summary: "Weekday care runs 8:30am–4:30pm (half days to 12:00pm). Camp runs 9:00am–3:00pm. Each Happening lists its own times.",
+        facts: [{value: "8:30–4:30", label: "Full days · Club Yalla & Flex"}, {value: "8:30–12:00", label: "Half days · Club Yalla & Flex"}, {value: "9:00–3:00", label: "Camp days"}, {value: "8:00am", label: "Early Bird, where offered"}],
         body: `Yalla is open Monday to Friday, except for holidays and family breaks. Hours depend on what you’ve booked:
 
 - **Club Yalla and Yalla Flex**: full days 8:30am – 4:30pm; half days 8:30am – 12:00pm. Early Bird care from 8:00am where offered.
@@ -220,6 +225,7 @@ We share upcoming closures and community news by email and with signs in our lob
         id: "closures",
         title: "2026–2027 calendar and closures",
         summary: "The 2026–2027 cohort year runs August 3, 2026 to July 21, 2027. We close for federal holidays and a few family breaks.",
+        facts: [{value: "Aug 3", label: "First day of 2026–27"}, {value: "Nov 25–27", label: "Fall Family Break"}, {value: "Dec 21–Jan 1", label: "Winter Family Break"}, {value: "Jul 21", label: "Last day · half day"}],
         body: `Our 2026–2027 cohort year runs from **Monday, August 3, 2026** to **Wednesday, July 21, 2027**. We’ll remind families of upcoming closures by email and with signs in our lobby.
 
 - **August 3, 2026**: first day of the cohort year
@@ -249,6 +255,7 @@ We share upcoming closures and community news by email and with signs in our lob
         id: "quiet-hours",
         title: "Quiet hours",
         summary: "While children rest, please don’t knock on doors. Saplings 11:45am–2:30pm; Sprouts and Wildflowers 12:15–3:00pm.",
+        facts: [{value: "11:45–2:30", label: "Saplings"}, {value: "12:15–3:00", label: "Sprouts & Wildflowers"}, {value: "Anytime", label: "Seedlings families may drop in"}],
         body: `Rest time is precious. During each group’s quiet hours, please don’t knock on doors, so we don’t wake resting children or disturb those settling in or waking up. If you need to collect your child during quiet hours, a team member will bring your child and their belongings to the front door.
 
 - **Seedlings**: quiet hours don’t apply, because families may drop in at any time. Please follow the sign on the rest-room door and use the main entrance whenever it’s displayed.
@@ -276,6 +283,7 @@ We share upcoming closures and community news by email and with signs in our lob
         id: "booking",
         title: "Booking with Yalla",
         summary: "Flex days, camp days and Happenings are booked and paid for in the Family Portal. Club Yalla is a membership you apply for.",
+        facts: [{value: "10% off", label: "Each additional sibling, same day"}, {value: "12 hours", label: "Your place is held if a payment fails"}, {value: "8:00am", label: "Flex booking closes that morning"}],
         body: `Yalla programming and coworking are available by reservation. Before you book, please check the dates, times, age requirements, parent-presence requirements and what’s included.
 
 A reservation is confirmed once you receive your booking confirmation and any payment is complete. Each child attending must be included in the reservation; a spot is for one child.
@@ -295,6 +303,7 @@ A reservation is confirmed once you receive your booking confirmation and any pa
         id: "club-enrollment",
         title: "Enrolling in Club Yalla",
         summary: "Children can join from 4 months. Enrollment is year-round from our waitlist; offers are held for 3 business days.",
+        facts: [{value: "4 months", label: "Youngest age to start"}, {value: "3 business days", label: "To accept an offer"}],
         appliesTo: ["club"],
         body: `Children are eligible for Club Yalla from 4 months of age. Enrollment is year-round: families may apply at any time, and children are admitted on a rolling basis as space opens.
 
@@ -314,8 +323,12 @@ All enrolled children must be able to benefit from an inclusive group care setti
         id: "club-paperwork",
         title: "Club Yalla paperwork",
         summary: "Within 7 days of an offer: the enrollment questionnaire, admissions agreement and $125 registration fee. Within 30 days of starting: a health assessment and immunization record.",
+        facts: [{value: "7 days", label: "To complete enrollment after an offer"}, {value: "$125", label: "Registration fee, non-refundable"}, {value: "30 days", label: "To send health and immunization records"}],
         appliesTo: ["club"],
-        body: `Within **seven days** of a formal offer, please complete the Enrollment Questionnaire, sign the Digital Admissions Agreement and Onboarding Packet (sent by DocuSign) and pay the **$125 non-refundable registration fee** (sent through Brightwheel).
+        body: `**Within 7 days of an offer**:
+- Complete the Enrollment Questionnaire
+- Sign the Digital Admissions Agreement and Onboarding Packet (sent by DocuSign)
+- Pay the **$125 non-refundable registration fee** (sent through Brightwheel)
 
 **Before your child’s first day**, we must have on file:
 - A completed Enrollment Questionnaire
@@ -326,33 +339,38 @@ All enrolled children must be able to benefit from an inclusive group care setti
 - A health assessment completed by a licensed physician
 - A record of immunization, or a complete and valid exemption form (these are rare and must be verified)
 
-Yalla keeps a complete, current file for every enrolled child. Under state law, a child whose file is incomplete must be excluded from care until the required documents are received. This is strictly enforced, and we appreciate your help keeping your child’s records current.`,
+> Under state law, a child whose file is incomplete must be excluded from care until the missing documents arrive. This is strictly enforced, so thank you for keeping your child’s records current.`,
         ask: ["registration fee", "forms needed", "immunization", "vaccines", "health assessment", "doctor form", "paperwork"],
       },
       {
         id: "club-tuition",
         title: "Club Yalla tuition",
         summary: "Tuition is due on the 1st of each month, invoiced through Brightwheel. Biweekly or weekly plans are available (+3%), and prepaying 3 or 6 months saves 3% or 6%.",
+        facts: [{value: "The 1st", label: "Tuition due each month"}, {value: "+3%", label: "Biweekly or weekly plans"}, {value: "3% · 6%", label: "Off when you prepay 3 or 6 months"}, {value: "$20/day", label: "Late tuition fee"}],
         appliesTo: ["club"],
-        body: `Tuition is due in full on or before the **1st of each month**. Invoices are sent in advance through Brightwheel. See [Membership rates](/membership) for tuition by cohort and schedule.
+        body: `Tuition is due in full on or before the **1st of each month**, invoiced in advance through Brightwheel. See [Membership rates](/membership) for tuition by cohort and schedule.
 
-**Starting mid-month**: the first month is prorated. We divide the monthly tuition by the number of care days in that month and multiply by the days your child will attend. For example, $2,400 tuition with 20 care days is $120 a day; starting on the 15th with 10 care days left, the first month is $1,200.
+**Starting mid-month**: the first month is prorated. For example, $2,400 tuition with 20 care days is $120 a day, so starting on the 15th with 10 care days left, your first month is $1,200.
 
-**Flexible payment plans** (3% courtesy fee), chosen in your Admission Agreement:
+**Payment plans** (chosen in your Admission Agreement; monthly if you don’t choose):
+- **Monthly**: one payment, due on the 1st.
 - **Biweekly**: two equal payments a month, on the first and third Friday, plus 3%.
 - **Weekly**: four equal payments, each Friday, plus 3%.
 
-If you don’t choose a plan, billing is monthly. To change your plan later, email ${HELLO}; we’ll send an updated agreement and the change starts with the next billing cycle.
+**Prepay and save**:
+- **3 months**: 3% off, paid in full by the first day of the period.
+- **6 months**: 6% off, paid in full by the first day of the period.
 
-**Prepay discounts**: pay three months in advance for 3% off, or six months for 6% off. Full payment is due on or before the first day of the prepaid period.
+**Changing your plan**: email [hello@yallaspacesd.com](mailto:hello@yallaspacesd.com). We’ll send an updated agreement, and the change starts with the next billing cycle.
 
-**Late tuition**: tuition not paid by the due date incurs a $20 late fee per day unless arrangements have been made. If tuition stays unpaid for two weeks or more without communication, enrollment may be suspended or ended. We’re always glad to work with you, so please reach out if you need support with your billing plan.`,
+> Tuition not paid by the due date incurs a $20 late fee per day unless we’ve made arrangements together. After two weeks unpaid without communication, enrollment may be suspended or ended. We’re always glad to help, so please reach out.`,
         ask: ["tuition due", "monthly payment", "payment plan", "prepay discount", "late tuition fee", "proration", "how is tuition charged"],
       },
       {
         id: "club-withdrawal",
         title: "Continuity of care and leaving Club Yalla",
         summary: `Club Yalla needs 30 days’ written notice to ${MEMBERSHIP}. Memberships can’t be paused.`,
+        facts: [{value: "30 days", label: "Written notice to leave"}, {value: "No pauses", label: "Club Yalla memberships can’t be paused"}],
         appliesTo: ["club"],
         body: `We strongly encourage continuity of care. When children grow through the program with familiar peers and educarers, they enjoy more secure attachment, emotional stability and stronger developmental outcomes. Consistency of care is one of the most valuable gifts we can offer young children.
 
@@ -367,14 +385,17 @@ See [canceling a membership](/policies#canceling-a-membership) for how final pay
         id: "cancellations",
         title: "Cancellations and your Yalla Wallet",
         summary: "Cancel at least 24 hours ahead and the amount paid goes to your Yalla Wallet as credit, valid for 24 months. No-shows aren’t eligible.",
+        facts: [{value: "24 hours", label: "Notice for a Wallet credit"}, {value: "24 months", label: "How long credits last"}, {value: "+5%", label: "Extra credit if Yalla cancels"}],
         appliesTo: ["flex", "camp", "happenings"],
-        body: `When you cancel a reservation at least **24 hours before it begins**, the amount paid is returned to your family’s **Yalla Wallet** as a credit. Credits can be used toward future Yalla bookings for up to 24 months from the date they’re issued. Cancellations made less than 24 hours ahead, and no-shows, aren’t eligible for credit. Yalla doesn’t give cash refunds for family cancellations, except where required by law.
+        body: `**Cancel at least 24 hours ahead**: the amount paid goes back to your family’s **Yalla Wallet** as a credit, to use on any future Yalla booking for up to 24 months. Later cancellations and no-shows aren’t eligible for credit, and Yalla doesn’t give cash refunds for family cancellations, except where required by law.
 
-We would always rather a child stay home and rest than come to Yalla unwell. **Illness and other extenuating circumstances may be exempt** from the 24-hour requirement; just contact us as soon as you can.
+> We would always rather a child stay home and rest than come to Yalla unwell. Illness and other extenuating circumstances may be exempt from the 24-hour rule, so just contact us as soon as you can.
 
-**How to cancel**: in the [Family Portal](/portal/home), by phone at ${PHONE}, or by email to ${HELLO}.
+**How to cancel**: in the [Family Portal](/portal/home), by phone at 619.775.4008, or by email to [hello@yallaspacesd.com](mailto:hello@yallaspacesd.com).
 
-**If Yalla cancels or changes your reservation**, you choose: the full value as Yalla Wallet credit plus an extra 5%, or a full refund to your original payment method (processed within 7 business days).`,
+**If Yalla cancels or changes your reservation**, you choose:
+- **Wallet credit plus 5%**: the full value of your booking, plus a thank-you for your flexibility.
+- **A full refund**: back to your original payment method, processed within 7 business days.`,
         programs: {
           flex: "Repeated no-shows or cancellations without timely communication may lead to a temporary pause on Flex booking.",
         },
@@ -384,6 +405,7 @@ We would always rather a child stay home and rest than come to Yalla unwell. **I
         id: "flex-agreement",
         title: "The Flex admission agreement",
         summary: "Signed online before your first Flex day; it stays on file for a year, or until your child moves to another Flex age group.",
+        facts: [{value: "1 year", label: "Stays on file"}, {value: "Once", label: "Per Flex age group"}],
         appliesTo: ["flex"],
         body: `Before your child’s first Flex day, you’ll sign the Yalla Flex admission agreement for their age group (Seedlings, Saplings, Sprouts or Wildflowers) as part of checkout. It includes your initials on a few key sections and a drawn signature.
 
@@ -404,6 +426,7 @@ The agreement covers any Flex sessions you book for that age group and doesn’t
         id: "cohorts",
         title: "Cohorts and age groups",
         summary: "Children spend their time at Yalla with others close to their age. Weekday care has four groups: Seedlings, Saplings, Sprouts and Wildflowers.",
+        facts: [{value: "4", label: "Weekday age groups"}, {value: "August", label: "When Club Yalla cohorts move up"}],
         body: `At Yalla, children play and learn alongside others close to their own age, cared for by educarers and guides who know that stage of development well.
 
 Our weekday care has four groups: **Seedlings** (our youngest), **Saplings**, **Sprouts** and **Wildflowers** (our oldest). Camp and some Happenings use their own age groups, described below.`,
@@ -433,6 +456,7 @@ Flex fills vacancies, so availability depends on openings in your child’s grou
         id: "ratios",
         title: "Ratios",
         summary: "Low adult-to-child ratios: 1:4 for Seedlings and Saplings, 1:6 for Sprouts and 1:8 for Wildflowers.",
+        facts: [{value: "1:4", label: "Seedlings & Saplings"}, {value: "1:6", label: "Sprouts"}, {value: "1:8", label: "Wildflowers"}],
         body: `Young children thrive where they are seen, supported and known. We keep low adult-to-child ratios to support safe, responsive, relationship-based care:
 
 - **Seedlings**: 1 adult for every 4 children
@@ -471,11 +495,10 @@ Staffing decisions are based on availability, credentials and the group’s need
         id: "arrival",
         title: "Arrival",
         summary: "Use the front door code, close the door behind you, and sign your child in. Arriving after 9:15am? Send us a quick note.",
-        body: `**Building entry**: for everyone’s safety, families enter with the front door code. Please don’t share it, and make sure the door is closed and locked behind you each time.
-
-**Sign-in**: every child must be brought by an approved adult and signed in when they arrive.
-
-**Rooms**: in Seedlings and Saplings, many little hands explore the floor, so please help your child take off their outdoor shoes at the door. You’re warmly welcome inside; just remove your shoes or use our complimentary shoe covers.`,
+        facts: [{value: "Door code", label: "Close it behind you, every time"}, {value: "9:15am", label: "Arriving later? Send a quick note"}],
+        body: `- **Building entry**: everyone enters with the front door code. Please don’t share it, and make sure the door closes and locks behind you every time.
+- **Sign-in**: every child is brought by an approved adult and signed in on arrival.
+- **Shoes off for little ones**: in Seedlings and Saplings, many little hands explore the floor, so help your child take off outdoor shoes at the door. You’re warmly welcome inside; just remove your shoes or use our complimentary shoe covers.`,
         programs: {
           club: "Your front door code comes in your welcome packet, and your room code from your child’s care team on their first day. Sign in with Brightwheel at the kiosk or on your phone. We have an open-door policy on arrival times: a consistent time each day helps your child, but we’re here when you arrive. If you’ll be later than 9:15am, please send a courtesy message with your expected arrival time.",
           flex: "Check in at the lobby kiosk. A team member will welcome you and walk you to your child’s group. Your booking starts at 8:30am (8:00am with Early Bird); a late arrival doesn’t extend the session.",
@@ -488,11 +511,14 @@ Staffing decisions are based on availability, credentials and the group’s need
         id: "staying-onsite",
         title: "Staying onsite",
         summary: "For Club Yalla and Yalla Flex, a parent or designated caregiver stays onsite all day. For camp and most Happenings, you’re free to go, as long as you stay reachable.",
+        facts: [{value: "All day", label: "Onsite · Club Yalla & Flex"}, {value: "Reachable", label: "By phone · Camp & most Happenings"}],
         body: `Each program notes whether a parent or caregiver stays onsite.
 
-Yalla Coworking & Childcare is a license-exempt program operating under California Health and Safety Code §1596.792. For our weekday care, that exemption depends on each child’s parent or designated guardian being on the premises and immediately available whenever their child is in care. It isn’t optional: leaving the premises during weekday care may end a family’s participation immediately and puts the program’s exemption at risk.
+**Why we ask you to stay**: Yalla is a license-exempt program under California Health and Safety Code §1596.792. For weekday care, that exemption depends on each child’s parent or designated guardian being on the premises, and immediately available, whenever their child is in care.
 
-For programs where you may leave, an authorized adult must stay reachable throughout the session and be able to collect the child if needed.`,
+> It isn’t optional: leaving the premises during weekday care may end a family’s participation immediately, and puts the program’s exemption at risk.
+
+**When you’re free to go**: for programs where you may leave, an authorized adult must stay reachable throughout the session and be able to collect the child if needed.`,
         programs: {
           club: "A parent or designated caregiver stays onsite during your child’s care, typically working from our coworking space.",
           flex: "A parent or designated caregiver stays onsite for the whole Flex session; coworking is included. You agree to this in Section 10 of your Flex admission agreement.",
@@ -505,11 +531,16 @@ For programs where you may leave, an authorized adult must stay reachable throug
         id: "departure",
         title: "Departure and running late",
         summary: "Sign your child out at departure. After a 5-minute grace period, a late fee of $10 is charged for each additional 10 minutes.",
+        facts: [{value: "5 min", label: "Grace period"}, {value: "$10", label: "For each additional 10 minutes"}, {value: "20 min", label: "Before we call emergency contacts"}],
         body: `Please sign your child out when you collect them, and plan to collect them by the end of their session.
 
-**Late fees**: after a five-minute grace period, a late fee of **$10 is charged for each additional 10 minutes**. The late fee isn’t an agreement to provide extra care. If you expect to be late, please call ${PHONE} as soon as possible so our team can plan; letting us know doesn’t waive the fee.
+**Late fees**: after a 5-minute grace period, a late fee of **$10 is charged for each additional 10 minutes**. The late fee isn’t an agreement to provide extra care.
 
-**If we can’t reach you**: if a child hasn’t been collected and we haven’t heard from you within 20 minutes of the end of their session, we’ll start calling the emergency contacts on file. If neither you nor any emergency contact can be reached within 90 minutes, we’ll contact local authorities for help locating you, which may include a welfare check.
+> Running late? Call 619.775.4008 as soon as you know, so our team can plan. Letting us know doesn’t waive the fee.
+
+**If we can’t reach you**:
+1. 20 minutes after the session ends without word from you, we start calling the emergency contacts on file.
+2. If no one can be reached within 90 minutes, we contact local authorities for help locating you, which may include a welfare check.
 
 **Authorized adults only**: we release children only to parents or caregivers, or to adults you’ve authorized in advance. See “Who can collect your child”.`,
         programs: {
@@ -539,14 +570,21 @@ A steady rhythm lets children feel secure and supported, so they can thrive in a
         id: "rest",
         title: "Rest time",
         summary: "Infants rest on their own rhythm in cribs. Children 18 months and older have a quiet rest time on mats around 12:00–2:00pm.",
+        facts: [{value: "12:00–2:00", label: "Rest time, 18 months and up"}, {value: "~20 min", label: "Then quiet activities if awake"}],
         appliesTo: ["club", "flex"],
-        body: `**4 – 18 months**: we don’t hold infants to a fixed napping schedule. Infants nap when they need to, or on the schedule you’ve established at home. Between 12 and 18 months, we work with families to support the move to a single nap between 12:00 and 2:00pm, preparing children to rest on a floor mat with their group by 18 – 24 months. Every child moves from several naps to one at their own pace, and we let that happen naturally.
+        body: `**4 – 18 months**: no fixed schedule. Infants nap when they need to, or on the rhythm you’ve set at home. Between 12 and 18 months, we work with you on the move to one nap, 12:00 – 2:00pm, so children are ready to rest on a mat with their group by 18 – 24 months. Every child gets there at their own pace.
 
-Each infant has a crib with a breathable mattress and a tight-fitted organic sheet, in a clean, quiet, darkened area. Infants are monitored by sight and sound at all times and physically checked every few minutes. Infants under 12 months who can’t yet roll from front to back unassisted sleep on their backs and are gently returned to that position if they move.
+- **Cribs**: a breathable mattress and tight-fitted organic sheet, in a clean, quiet, darkened space.
+- **Watched over**: monitored by sight and sound at all times, and physically checked every few minutes.
+- **Safe sleep**: infants under 12 months who can’t yet roll from front to back unassisted sleep on their backs, and are gently returned to that position if they move.
 
-**18 months – 4 years**: children have a quiet rest time from about 12:00 to 2:00pm. Familiar cues (mats laid out after lunch, curtains closed, white noise on) tell children rest time has begun. Most children sleep. Those who don’t after about 20 minutes rest quietly on their mat with books or quiet activities. There’s always a familiar adult in the rest space.
+**18 months – 4 years**: a quiet rest time from about 12:00 to 2:00pm, signaled by familiar cues: mats laid out after lunch, curtains closed, white noise on.
 
-Yalla provides each child’s mat and organic sheet. Please send a light blanket and, if your child uses one, a child-size pillow; we wash them regularly.`,
+- **Most children sleep**: busy mornings make for easy rest.
+- **Still awake?**: after about 20 minutes, children rest quietly on their mat with books or quiet activities.
+- **Always close by**: a familiar adult stays in the rest space throughout.
+
+**What to send**: Yalla provides each child’s mat and organic sheet. Please send a light blanket and, if your child uses one, a child-size pillow; we wash them regularly.`,
         ask: ["nap", "sleep", "nap schedule", "crib", "nap mat", "does my child have to sleep", "blanket"],
       },
     ],
@@ -563,6 +601,7 @@ Yalla provides each child’s mat and organic sheet. Please send a light blanket
         id: "meals-snacks",
         title: "Meals and snacks",
         summary: "Families pack lunch every day. Yalla is nut-free, and only water is allowed to drink.",
+        facts: [{value: "Nut-free", label: "All of Yalla"}, {value: "Water only", label: "To drink"}],
         body: `Please send your child with a nutritious, fully prepared lunch each day. Yalla is a **nut-free** environment, and water is the only drink allowed.
 
 Snack and mealtimes vary by group and follow each group’s daily rhythm. Even when children eat only a little, we keep consistent mealtime routines to build comfort and healthy habits.`,
@@ -578,28 +617,30 @@ Snack and mealtimes vary by group and follow each group’s daily rhythm. Even w
         id: "lunch-guidelines",
         title: "Packing a safe lunch",
         summary: "Send meals ready to eat: no nuts, sweets, sugary drinks, glass or choking hazards, and everything cut for your child’s age.",
-        body: `Meals must arrive **ready to serve**, with no chopping, peeling or seasoning needed. Our team doesn’t cook or modify food.
+        body: `Meals must arrive **ready to serve**: no chopping, peeling or seasoning needed. Our team doesn’t cook or change food.
 
 **Not permitted in any lunch**:
 - Nut products of any kind (peanut butter, almond butter, Nutella, trail mix and so on)
 - Candy, chocolate, gum or dessert-style sweets
 - Sugary drinks, including juice, soda, flavored milk and sports drinks (water only)
-- Choking hazards, including whole grapes, whole cherry tomatoes, whole hot dogs, large chunks of meat or cheese, popcorn and raw carrots (unless finely shredded or thinly sliced for older children)
+- Choking hazards: whole grapes, whole cherry tomatoes, whole hot dogs, large chunks of meat or cheese, popcorn, and raw carrots unless finely shredded or thinly sliced
 - Glass containers or anything breakable
 
-**Infants (4 – 18 months)**: soft, safe, developmentally appropriate food; finger foods that can be mashed with gums or minimal teeth; anything eaten with utensils pre-cut for infant-sized forks and spoons; small, clearly labeled containers rather than large portions. No honey, added salt or choking hazards.
+**Preparing food by age**:
+- **Infants, 4 – 18 months**: soft, safe and mashable with gums or minimal teeth; pre-cut for infant-sized utensils; small, labeled containers. No honey, added salt or choking hazards.
+- **Toddlers, 1 – 3 years**: bite-sized, pre-cut and soft enough to chew safely; nothing hard, sticky or crunchy; grapes and tomatoes quartered; hot dogs sliced lengthwise, then into small pieces.
+- **Children, 2½ years and up**: more texture is fine, still cut into child-sized pieces; grapes and tomatoes halved or quartered; hot dogs and sausages sliced lengthwise; nothing that needs adult help to eat.
 
-**Toddlers (1 – 3 years)**: bite-sized, pre-cut food, soft enough to chew safely; avoid hard, sticky or crunchy textures; hot dogs sliced lengthwise and then into small pieces; grapes and tomatoes quartered.
+> If a child arrives without lunch or with food that isn’t safe, we may ask you to bring something suitable, and a child may be sent home without adequate food.
 
-**Children (2½ – 5 years and older)**: more texture is fine, still cut into child-sized pieces; grapes, tomatoes and similar foods halved or quartered; hot dogs and sausages sliced lengthwise; nothing that would need adult help to eat safely.
-
-If a child arrives without lunch or with unsafe food, we may ask you to bring something suitable, and we may send a child home if they don’t have adequate food. We recommend the free features of the **Solid Starts** app for age-by-age guidance on preparing food safely.`,
+**A helpful tool**: the free features of the **Solid Starts** app give age-by-age guidance on preparing food safely.`,
         ask: ["what food is not allowed", "grapes", "nuts", "peanut butter", "choking", "candy", "cut food", "honey"],
       },
       {
         id: "storage-reheating",
         title: "Storage and reheating",
         summary: "Pack food in an insulated lunchbox with ice packs. Each space has a microwave; tell us in writing if you’d like meals reheated.",
+        facts: [{value: "Ice packs", label: "Insulated lunchbox"}, {value: "Opt in", label: "Tell us in writing to reheat meals"}],
         body: `Pack food in an insulated lunchbox with ice packs, or in a thermos as needed.
 
 Each space has a microwave, and you can choose whether your child’s meals are reheated. If you opt in, pack food in microwave-safe containers labeled with your child’s name, and let your child’s educarers or guides know your preference in writing.`,
@@ -609,25 +650,30 @@ Each space has a microwave, and you can choose whether your child’s meals are 
         id: "water",
         title: "Water",
         summary: "Children have filtered water all day: bottles refilled from 6 months, cups at eye level from 12 months.",
-        body: `Healthy hydration matters, so children have clean, filtered water throughout the day.
+        facts: [{value: "6 mo+", label: "Bottles refilled all day"}, {value: "12 mo+", label: "Cups at eye level"}],
+        body: `Healthy hydration matters, so children have clean, filtered water all day.
 
-- **6 months and older**: water bottles are continually refilled with filtered water.
-- **12 months and older**: water cups sit at eye level to encourage independent drinking, and our team reminds children to sip regularly. Cups are checked often so children are never without fresh water.
+- **6 months and up**: water bottles are refilled with filtered water throughout the day.
+- **12 months and up**: cups sit at eye level to encourage independent drinking; our team reminds children to sip, and checks cups often so they’re never empty.
 
-Please send a labeled water bottle.`,
+**What to send**: a labeled water bottle.`,
         ask: ["water bottle", "drinks", "hydration"],
       },
       {
         id: "breast-milk",
         title: "Breast milk",
         summary: "Bring breast milk chilled, in sealed bottles labeled with your child’s name and the date. We can store up to 25 ounces per child.",
-        body: `Breast milk must arrive in clean, sealed containers labeled with your child’s name and the date it was expressed. We can’t accept breast milk in plastic bags or glass, in unsealed or unlabeled containers, or milk that has reached room temperature in transit, so please bring it on ice or in a cooler.
+        facts: [{value: "25 oz", label: "Most we can store per child"}, {value: "48 hours", label: "Refrigerated, at most"}, {value: "39°F", label: "Fridge temperature or below"}],
+        body: `**Bringing it in**: clean, sealed containers labeled with your child’s name and the date it was expressed, kept cold on the way (on ice or in a cooler).
 
-On arrival it goes straight into our refrigerator, kept at 39°F (4°C) or below, in a bin labeled for your child. Refrigerated breast milk is kept for up to 48 hours. Frozen breast milk must be labeled with the date it was frozen and is kept at 0°F (-18°C) or below.
+> We can’t accept breast milk in plastic bags or glass, in unsealed or unlabeled containers, or milk that has warmed to room temperature on the way.
 
-At feeding time, we warm milk in a bottle warmer (never a microwave, which creates hot spots and destroys nutrients) and swirl it gently to mix. Any milk left after a feeding is discarded.
+**How we store it**:
+- **Refrigerated**: at 39°F (4°C) or below, in a bin labeled for your child, for up to 48 hours.
+- **Frozen**: labeled with the date it was frozen, at 0°F (-18°C) or below.
+- **Space**: up to 25 ounces per child at a time.
 
-Because of storage limits, we can keep **up to 25 ounces** per child at a time.`,
+**At feeding time**: we warm milk in a bottle warmer, never a microwave (which creates hot spots and destroys nutrients), and swirl it gently to mix. Anything left after a feeding is discarded.`,
         appliesTo: ["club", "flex"],
         ask: ["breastmilk", "bottles", "pumped milk", "frozen milk", "how much milk"],
       },
@@ -653,13 +699,16 @@ Formula is stored in a designated area, and refrigerated at 39°F (4°C) or belo
         id: "breastfeeding",
         title: "Breastfeeding",
         summary: "Nursing is welcome anywhere at Yalla, at any time and at any age, covered or uncovered. We also have private nursing quarters.",
-        body: `Yalla fully supports breastfeeding, including extended breastfeeding, as developmentally appropriate and biologically normal.
+        body: `Yalla fully supports breastfeeding, including extended breastfeeding, as developmentally appropriate and biologically normal. There’s no age limit.
 
-You’re welcome to nurse your child at any time, covered or uncovered, in any shared area, including the lobby and play spaces. We only ask that you choose a seat where you won’t appear in the background of another parent’s video call. You may also nurse in your child’s space when it’s calm, or use our private nursing quarters, available all day, including during quiet hours.
+**Where you can nurse**:
+- **Anywhere in our shared spaces**: covered or uncovered, including the lobby and play spaces. Just choose a seat outside the background of anyone’s video call.
+- **In your child’s space**: whenever it’s calm.
+- **Our nursing quarters**: private, and open all day, including quiet hours.
 
-We don’t set an age limit on breastfeeding. If you plan to nurse regularly during the day, please share your general schedule with your child’s caregivers so we can support you and the group’s rhythm.
+**Nursing regularly?**: share your general schedule with your child’s caregivers so we can support you and the group’s rhythm.
 
-Breastfeeding is a legally protected right in California. No member of our community (staff, parent or visitor) may express disapproval or discomfort toward a nursing parent in any way. Doing so is a serious breach of our community standards and, if not promptly resolved, may end a family’s participation.`,
+> Breastfeeding is a legally protected right in California. No one in our community (team, parent or visitor) may express disapproval or discomfort toward a nursing parent in any way. Doing so is a serious breach of our community standards and may end a family’s participation.`,
         appliesTo: ["club", "flex"],
         ask: ["nursing", "breastfeed", "nursing room", "where can i nurse", "extended breastfeeding"],
       },
@@ -688,6 +737,7 @@ For children with special feeding needs, we keep a daily record of what they eat
         id: "families-provide",
         title: "What families provide",
         summary: "Yalla provides everything else, but please bring diapering supplies, clothing and comfort items, and food and drink.",
+        facts: [{value: "2", label: "Complete spare outfits, always"}, {value: "Label", label: "Everything, especially outerwear"}],
         body: `Yalla provides what your child needs each day, apart from the items below and anything our team asks for ahead of a special event or project.
 
 **Diapering** (as needed): diapers or pull-ups, wipes and diaper rash ointment.
@@ -715,24 +765,24 @@ Please **label everything** with your child’s name, especially outerwear.`,
         id: "belongings",
         title: "Toys and belongings from home",
         summary: "Please leave toys and treasures at home. Lost items are kept for 60 days.",
-        body: `Please leave toys and other belongings at home. Treasured objects can cause tension between children, and stress for everyone if something goes missing. Anything brought from home is kept in your child’s cubby until departure.
+        facts: [{value: "60 days", label: "Lost items are kept"}],
+        body: `Please leave toys and treasures at home. Special objects can cause tension between children, and heartache if something goes missing. Anything brought from home waits in your child’s cubby until departure.
 
-Personal electronics (other than augmentative communication devices) are stored switched off in your child’s cubby and are never used during the day.
+**Electronics**: kept switched off in your child’s cubby and never used during the day (augmentative communication devices excepted).
 
-We do our best to keep your child’s things safe, but can’t be responsible for lost or damaged belongings. Please think carefully before sending a beloved stuffed animal or blanket. **Lost items are kept for up to 60 days**; just ask a team member. After that, unclaimed items may be donated or added to Yalla’s collection for community use.`,
+**Lost items**: we do our best, but can’t be responsible for lost or damaged belongings, so think twice before sending a beloved stuffed animal or blanket. Lost items are kept for up to 60 days; just ask. After that, they may be donated or added to Yalla’s collection.`,
         ask: ["toys from home", "lost and found", "lost item", "bring a toy", "tablet", "phone"],
       },
       {
         id: "clothing",
         title: "Clothing",
         summary: "Comfortable play clothes that can get messy, dressed in layers for the weather.",
-        body: `Children climb, crawl, run, jump and swing, so please dress them in comfortable clothes that allow their full range of motion.
+        facts: [{value: "2", label: "Spare outfits, always"}, {value: "3 a day", label: "While potty training"}, {value: "72°F", label: "Indoors, year-round"}],
+        body: `Children climb, crawl, run, jump and swing, so dress them in comfortable clothes that let them move freely.
 
-**Play clothes**: we strongly recommend clothes that can get dirty or stained. Paint, mud, water and natural materials are all part of our play.
-
-**Weather**: dress your child for the day’s forecast, ideally in layers they can adjust. Indoors stays around 72°F.
-
-Every child should have **at least two complete changes of clothes** with them. Children who are potty training need at least three extra outfits a day.`,
+- **Play clothes**: paint, mud, water and natural materials are all part of our days, so choose clothes that can get messy.
+- **Layers**: dress for the forecast, in layers your child can adjust. Indoors stays around 72°F.
+- **Spares**: at least 2 complete changes of clothes, always; at least 3 extra outfits a day while potty training.`,
         ask: ["what should my child wear", "clothes", "spare clothes", "messy play", "dress code"],
       },
       {
@@ -750,6 +800,7 @@ If you’d like your child to enjoy the benefits of going barefoot outdoors, loo
         id: "diapering",
         title: "Diapers, pull-ups and wipes",
         summary: "Bring an as-needed supply of diapers or pull-ups and wipes. Children over 30 months who aren’t potty trained use pull-ups.",
+        facts: [{value: "30 months", label: "Pull-ups from here if not yet trained"}, {value: "Same day", label: "Soiled cloth diapers go home"}],
         body: `**Disposable diapers**: please supply diapers as needed. Bringing a sleeve at the start of each week works well for many families.
 
 **Cloth diapers** are welcome, as long as the absorbent inner lining is completely contained within a waterproof outer cover, and both are changed as one unit. Soiled cloth diapers and clothing are placed in a plastic bag, without rinsing, and sent home that day for laundering.
@@ -836,6 +887,7 @@ If a child’s behavior repeatedly puts themselves or others in imminent danger,
         id: "peer-conflict",
         title: "Peer conflict",
         summary: "Conflict is a normal part of growing up. We coach children through it, never punish it, and tell you about anything that causes an injury.",
+        facts: [{value: "4 hours", label: "Incident report if a child is hurt"}],
         body: `For young children, learning to share space, communicate needs and manage big feelings is core to growing up. We see conflict as a developmental opportunity, not misbehavior. The part of the brain responsible for impulse control and empathy is still developing rapidly, so children often act (grabbing, pushing, biting) before they can find words. With skilled adult support, working through conflict builds resilience, empathy and the knowledge that relationships can be repaired.
 
 **How we respond**:
@@ -862,6 +914,7 @@ It’s developmentally typical for young children to take toys without asking, p
         id: "biting",
         title: "Biting",
         summary: "Biting is common in infants and toddlers. We comfort, redirect, look for the cause and tell both families the same day.",
+        facts: [{value: "Same day", label: "Both families told, confidentially"}],
         body: `Biting is developmentally typical for infants and toddlers, especially during teething, rapid language growth or big emotions. We approach it through a restorative, developmentally informed lens while keeping every child safe.
 
 **Our response**:
@@ -902,11 +955,16 @@ When Yalla ends a child’s participation, we refund the full remaining value of
         id: "illness",
         title: "Illness",
         summary: `Keep your child home when they’re unwell. If they become ill at Yalla, we’ll separate them from the group and ask you to collect them within 20 minutes. Read the full ${ILLNESS}.`,
-        body: `For the health of our whole community, every family follows Yalla’s ${ILLNESS} in full. It explains which symptoms mean staying home, when children can return, and how we communicate. Children should be symptom-free for 24 hours before returning.
+        facts: [{value: "20 min", label: "To collect a child who becomes ill"}, {value: "24 hours", label: "Symptom-free before returning"}],
+        body: `For the health of our whole community, every family follows Yalla’s [Illness Policy](/portal/illness-policy) in full. It explains which symptoms mean staying home, when children can return, and how we communicate.
 
-If your child is sick or may have something contagious, please let us know as soon as possible, so we can take extra sanitation precautions and tell other families about possible exposure.
+**Before returning**: children should be symptom-free for 24 hours.
 
-If your child becomes ill at Yalla, they’ll be separated from the group and cared for by a team member until you or another authorized adult collects them, **within 20 minutes** of being contacted. Repeatedly not following the illness policy may lead to a pause or end to care, to protect other children, families and our team.`,
+**Tell us early**: if your child is sick or may have something contagious, let us know as soon as possible, so we can take extra sanitation precautions and tell other families about possible exposure.
+
+> If your child becomes ill at Yalla, they’ll be cared for away from the group, and you (or another authorized adult) need to collect them **within 20 minutes** of our call.
+
+Repeatedly not following the illness policy may lead to a pause or end to care, to protect other children, families and our team.`,
         programs: {
           club: "Message your child’s care team in Brightwheel if your child will be absent or may be contagious.",
           flex: "If your child is unwell on a booked day, cancel in the Family Portal or call us; illness may be exempt from the 24-hour notice for credit. If your child is sent home, the rest of that session is treated as an absence.",
@@ -919,11 +977,17 @@ If your child becomes ill at Yalla, they’ll be separated from the group and ca
         id: "medication",
         title: "Medication and topical products",
         summary: "We don’t give medication, except emergency medication (like an EpiPen) and authorized topical products (like sunscreen or diaper cream).",
-        body: `Yalla doesn’t give medication, with two exceptions: **emergency medication**, such as an EpiPen, and **authorized over-the-counter topical products**, such as diaper rash cream, sunscreen and ointments.
+        facts: [{value: "2 exceptions", label: "Emergency medication · topical products"}, {value: "Form first", label: "Authorization on file before any use"}],
+        body: `Yalla doesn’t give medication, with two exceptions:
 
-A completed authorization form must be on file before our team gives any emergency medication or applies any topical product. Products must be in their original packaging, labeled with your child’s name, with instructions that match the form. Please hand them directly to a team member rather than leaving them in your child’s bag.
+- **Emergency medication**: such as an EpiPen.
+- **Authorized topical products**: over-the-counter creams like diaper rash cream, sunscreen and ointments.
 
-EpiPens are the only medication we keep onsite; please provide them in a container labeled with your child’s name, with the authorization and emergency care instructions on file. Other authorized products come with your child each day and go home with them.`,
+> A completed authorization form must be on file before our team gives any emergency medication or applies any topical product.
+
+**Packaging**: original packaging, labeled with your child’s name, with instructions that match the form. Please hand products directly to a team member rather than leaving them in your child’s bag.
+
+**What stays and what goes home**: EpiPens are the only medication we keep onsite, in a container labeled with your child’s name, with the authorization and emergency care instructions on file. Other authorized products come with your child each day and go home with them.`,
         programs: {
           club: "You can complete authorization forms, including sunscreen permission, in the [Family Portal](/portal/home).",
           flex: "Bring any authorized topical products, like sunscreen, each Flex day; they go home with you.",
@@ -949,14 +1013,18 @@ Please keep your contact details and emergency contacts current so we can always
         id: "falls",
         title: "Falls, bumps and scrapes",
         summary: "Minor bumps are a normal part of active play. You’ll get a report within 4 hours, or within 30 minutes (plus a call if needed) for anything involving the head or face.",
-        body: `As children learn to run, climb, balance and jump, occasional falls and minor injuries are a natural part of learning. These moments help children assess risk, build resilience and develop coordination and body awareness: their balance, motor planning and sense of where their body is in space are all still maturing.
+        facts: [{value: "4 hours", label: "Report for a minor bump or scrape"}, {value: "30 min", label: "Report for head or face injuries"}],
+        body: `As children learn to run, climb, balance and jump, occasional falls are a natural part of learning. Their balance, motor planning and sense of where their body is in space are all still maturing, and small tumbles help them judge risk, build resilience and grow more coordinated.
 
-Families should expect occasional scrapes, bumps and bruises. They’re signs of active, healthy play, not neglect. Our team supervises actively, models safe behavior and prepares spaces thoughtfully, removing unnecessary hazards while keeping meaningful challenge.
+> Expect the occasional scrape, bump or bruise. They’re signs of active, healthy play, not of neglect.
 
+**How we keep play safe**: active supervision, safe behavior modeled, and spaces prepared thoughtfully, removing unnecessary hazards while keeping meaningful challenge.
+
+**How we’ll tell you**:
 - **Mild injuries** (a scrape, bruise or bump not involving the head or face): an incident report with details and a photo within 4 hours.
-- **More serious injuries, or any injury to the head, face, eyes, mouth or neck**: a report within 30 minutes, plus a phone call if immediate attention or medical care may be needed.
+- **Head, face, eyes, mouth or neck, or anything more serious**: a report within 30 minutes, plus a phone call if your child may need attention or medical care.
 
-Every report includes what happened, how we responded and any first aid given. We’ll also tell you about any later change in your child’s behavior or condition.`,
+Every report covers what happened, how we responded and any first aid. We’ll also tell you about any later change in your child’s behavior or condition.`,
         programs: {
           club: "Incident reports are sent through Brightwheel.",
           flex: "Since you’re onsite, we’ll come and find you for anything more than a minor bump.",
@@ -982,29 +1050,35 @@ If a child shows signs of choking, our team begins the age-appropriate emergency
         id: "lice",
         title: "Head lice",
         summary: "Yalla has a no-live-lice policy. Children can return once treated and free of live lice, after a recheck by our team.",
-        body: `To prevent lice spreading, Yalla has a **no-live-lice** policy. If live lice are found during the day, we’ll contact you for immediate collection. Your child can return once treated and free of live lice; nits may still be present, but must be significantly reduced and non-viable. A team member will recheck your child before they rejoin their group.
+        facts: [{value: "No live lice", label: "Recheck by our team before returning"}],
+        body: `Yalla has a **no-live-lice** policy, to keep lice from spreading.
 
-Please check your child’s hair regularly and tell us promptly about any known or suspected exposure. We strongly recommend professional lice removal for a child with lice, and a professional head check for everyone in the household. Hair Fairies in Rancho Peñasquitos, about 20 minutes north of Yalla, is a reliable option.`,
+1. If live lice are found during the day, we’ll call you for immediate collection.
+2. Your child can return once treated and free of live lice; nits may still be present but must be significantly reduced and non-viable.
+3. A team member rechecks your child before they rejoin their group.
+
+**Help us catch it early**: check your child’s hair regularly and tell us promptly about any known or suspected exposure. We strongly recommend professional removal for a child with lice, and a professional head check for everyone at home. Hair Fairies in Rancho Peñasquitos, about 20 minutes north of Yalla, is a reliable option.`,
         ask: ["lice", "nits", "head lice"],
       },
       {
         id: "disasters",
         title: "Earthquakes, wildfires and severe weather",
         summary: "We have an emergency plan and practice drills. In severe weather, children stay safely with us; please don’t travel through flooding to reach them.",
-        body: `Yalla has a comprehensive emergency preparedness plan, and we practice earthquake and fire drills regularly so children know what to do.
+        body: `Yalla has a comprehensive emergency plan, and we practice earthquake and fire drills regularly so children know what to do.
 
-**Earthquakes**: our team follows “Drop, Cover and Hold On”. Infants and toddlers who can’t do this themselves are moved quickly to a safe spot, under a sturdy table or against an interior wall away from windows and heavy furniture. If we need to evacuate to a designated safe area, we’ll contact families as soon as possible.
+- **Earthquakes**: our team follows “Drop, Cover and Hold On”. Infants and toddlers are moved quickly to a safe spot, under a sturdy table or against an interior wall away from windows and heavy furniture. If we evacuate to a designated safe area, we’ll contact you as soon as possible.
+- **Wildfires** (low risk here): we follow local authorities and are ready to evacuate to a designated shelter if instructed, telling families our location immediately. We use the Watch Duty app for current information.
+- **Severe weather** (moderate risk): during heavy rain or flooding, children stay indoors, safe and cared for, for as long as needed.
 
-**Wildfires** (low risk at our location): we follow local authorities’ guidance and are prepared to evacuate to a designated emergency shelter if instructed, telling families our location immediately. We use the Watch Duty app for current wildfire and evacuation information.
-
-**Severe weather** (moderate risk): during heavy rain or flooding, children stay indoors, safe and cared for, for as long as necessary. Please don’t travel through flooded areas to reach your child; your child is safe inside with us, and the risk to you on the road is greater. Come when conditions improve, and call us anytime for updates.`,
+> Please don’t travel through flooded areas to reach your child. Your child is safe inside with us, and the risk to you on the road is greater. Come when conditions improve, and call us anytime for updates.`,
         ask: ["earthquake", "fire", "wildfire", "flood", "rain", "emergency plan", "evacuation", "drills"],
       },
       {
         id: "health-emergencies",
         title: "Public health emergencies",
         summary: "We follow public health directives. If Club Yalla must close for 30 days or more, tuition isn’t charged for the closure.",
-        body: `In a future pandemic, major outbreak or other public health crisis, Yalla will follow all directives from local, state and federal public health authorities, using best practices to reduce risk and keeping families informed promptly and clearly.`,
+        facts: [{value: "30 days+", label: "Club Yalla closure: no tuition charged"}],
+        body: `In a future pandemic, major outbreak or other public health crisis, Yalla follows every directive from local, state and federal public health authorities, using best practices to reduce risk and keeping families informed promptly and clearly.`,
         programs: {
           club: "If an emergency requires Yalla to suspend in-person care for 30 consecutive days or more, families won’t be charged tuition for the closure period.",
           flex: "If Yalla has to cancel booked sessions, you choose between Yalla Wallet credit plus 5% or a full refund.",
@@ -1017,9 +1091,13 @@ Please check your child’s hair regularly and tell us promptly about any known 
         id: "air-quality",
         title: "Air quality",
         summary: "We check outdoor air quality daily. Air purifiers run around the clock in every room.",
-        body: `**Outdoors**: we monitor air quality with the IQAir AirVisual app. On green days (49 or lower), windows and doors stay open and children spend at least two hours outside. On yellow days (60 or higher), outdoor time is reduced. On orange or red days (100 or higher), children stay inside and active play moves indoors.
+        facts: [{value: "2 hours+", label: "Outdoors on green days"}, {value: "100+", label: "Air quality index: play moves inside"}],
+        body: `**Outdoors**: we check air quality with the IQAir AirVisual app every day.
+- **Green** (49 or lower): windows and doors open, and at least 2 hours outside.
+- **Yellow** (60 or higher): less time outside.
+- **Orange or red** (100 or higher): children stay in, and active play moves indoors.
 
-**Indoors**: every room has an Alen air purifier running 24/7, and we maintain our whole-building filtration regularly. Heating and air conditioning keep the temperature comfortable and consistent all year.`,
+**Indoors**: every room has an Alen air purifier running around the clock, we maintain whole-building filtration regularly, and heating and air conditioning keep the temperature comfortable all year.`,
         ask: ["air quality", "smoke", "air purifier", "outside time", "outdoor play"],
       },
       {
@@ -1045,9 +1123,10 @@ Children wash their hands at set times each day, including after using the bathr
         id: "pickup-authorization",
         title: "Who can collect your child",
         summary: "We release children only to parents or caregivers and adults you’ve authorized in advance, and we’ll ask anyone we don’t recognize for photo ID.",
-        body: `Your child’s safety comes first. We release children only to their parents or caregivers, or to adults you’ve authorized in advance. Please let us know whenever someone else will be collecting your child, and keep your list of authorized adults and emergency contacts up to date.
+        facts: [{value: "Photo ID", label: "If we don’t recognize them · no copies"}],
+        body: `Your child’s safety comes first. We release children only to their parents or caregivers, or to adults you’ve authorized in advance. Please tell us whenever someone else will be collecting your child, and keep your list of authorized adults and emergency contacts current.
 
-If our team doesn’t recognize the person collecting your child, we’ll ask for a **current, government-issued photo ID** and check it against your authorized list. Photos or copies of ID aren’t accepted, and we can’t release your child without it, so please plan ahead.`,
+> If we don’t recognize the person collecting your child, we’ll ask for a **current, government-issued photo ID** and check it against your list. Photos or copies of ID aren’t accepted, and we can’t release your child without it.`,
         programs: {
           club: `To authorize a new adult, email ${HELLO} **and** add them in Brightwheel.`,
           flex: "Add authorized adults and emergency contacts in your Family Portal profile.",
