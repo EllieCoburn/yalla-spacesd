@@ -1016,7 +1016,7 @@ Please keep your contact details and emergency contacts current so we can always
         facts: [{value: "4 hours", label: "Report for a minor bump or scrape"}, {value: "30 min", label: "Report for head or face injuries"}],
         body: `As children learn to run, climb, balance and jump, occasional falls are a natural part of learning. Their balance, motor planning and sense of where their body is in space are all still maturing, and small tumbles help them judge risk, build resilience and grow more coordinated.
 
-> Expect the occasional scrape, bump or bruise. They’re signs of active, healthy play, not of neglect.
+> Expect the occasional scrape, bump or bruise. They’re signs of active, healthy play.
 
 **How we keep play safe**: active supervision, safe behavior modeled, and spaces prepared thoughtfully, removing unnecessary hazards while keeping meaningful challenge.
 
