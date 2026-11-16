@@ -14,8 +14,8 @@ import type { ReactNode } from "react";
 // Times and time ranges, money, durations, percentages, temperatures and ratios.
 const NUM = new RegExp(
   [
-    String.raw`~?\d{1,2}(?::\d{2})?\s?(?:am|pm)?\s?(?:[–-]|to)\s?\d{1,2}(?::\d{2})?\s?(?:am|pm)`,
-    String.raw`\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b`,
+    String.raw`~?\d{1,2}(?::\d{2})?\s?(?:am|pm)?\s?(?:[–-]|to)\s?\d{1,2}(?::\d{2})?\s?(?:[ap]\.m\.|am\b|pm\b)`,
+    String.raw`\b\d{1,2}(?::\d{2})?\s?(?:[ap]\.m\.|am\b|pm\b)`,
     String.raw`\$\d[\d,]*(?:\.\d+)?(?:\s(?:a|per)\s(?:day|month))?`,
     String.raw`(?:~|\b)\d+(?:\.\d+)?\s?(?:–\s?\d+\s)?(?:business days|consecutive days|minutes|hours|days|weeks|months|years|ounces)\b`,
     String.raw`\+?\d+%`,

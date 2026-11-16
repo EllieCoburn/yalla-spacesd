@@ -567,19 +567,26 @@ A steady rhythm lets children feel secure and supported, so they can thrive in a
         summary: "Infants rest on their own rhythm in cribs. Children 18 months and older have a quiet rest time on mats around 12:00–2:00pm.",
         facts: [{value: "12:00–2:00", label: "Rest time, 18 months and up"}, {value: "~20 min", label: "Then quiet activities if awake"}],
         appliesTo: ["club", "flex"],
-        body: `**4 – 18 months**: no fixed schedule. Infants nap when they need to, or on the rhythm you’ve set at home. Between 12 and 18 months, we work with you on the move to one nap, 12:00 – 2:00pm, so children are ready to rest on a mat with their group by 18 – 24 months. Every child gets there at their own pace.
+        body: `**Infants: 4–18 Months**: Infants sleep according to their individual needs and familiar home routines rather than a fixed nap schedule.
 
-- **Cribs**: a breathable mattress and tight-fitted organic sheet, in a clean, quiet, darkened space.
-- **Watched over**: monitored by sight and sound at all times, and physically checked every few minutes.
-- **Safe sleep**: infants under 12 months who can’t yet roll from front to back unassisted sleep on their backs, and are gently returned to that position if they move.
+Between 12 and 18 months, we partner with families to gradually introduce one midday nap, typically from 12:00–2:00 p.m. This helps children prepare to rest on a mat with their group between 18 and 24 months. We support each child through this transition at their own pace.
 
-**18 months – 4 years**: a quiet rest time from about 12:00 to 2:00pm, signaled by familiar cues: mats laid out after lunch, curtains closed, white noise on.
+- **A comfortable sleep space**: Infants sleep in individual cribs with a firm, flat mattress and a snugly fitted sheet, in a clean, quiet space with dimmed lighting.
+- **Attentive supervision**: Staff monitor sleeping infants by sight and sound at all times and physically check on them at least once every fifteen minutes. Sleep checks for children under 24 months are always logged.
+- **Safe sleep**: Infants under 12 months are placed on their backs for every nap. Once an infant can roll independently in both directions, they may remain in the position they move into on their own. Cribs remain free of blankets, pillows, toys, and other loose items.
 
-- **Most children sleep**: busy mornings make for easy rest.
-- **Still awake?**: after about 20 minutes, children rest quietly on their mat with books or quiet activities.
-- **Always close by**: a familiar adult stays in the rest space throughout.
+**Toddlers and Preschoolers: 18 Months–4 Years**: Our daily rest period is approximately 12:00–2:00 p.m. After lunch, familiar routines—including setting out mats, closing curtains, and turning on white noise—help children settle into a calm, restful environment.
 
-**What to send**: Yalla provides each child’s mat and organic sheet. Please send a light blanket and, if your child uses one, a child-size pillow; we wash them regularly.`,
+- **Time to rest**: Children have an opportunity to sleep, with gentle support from staff as needed. Children are not required to fall asleep.
+- **Quiet options for children who remain awake**: Children who are still awake after approximately 20 minutes may look at books or enjoy quiet activities on their mats while others sleep.
+- **A familiar adult nearby**: A familiar staff member remains in the rest area throughout the rest period to provide supervision, reassurance, and support.
+
+**What to Bring**: Yalla provides each child’s rest mat. Families must provide:
+- A sheet that fits the mat.
+- A light blanket.
+- An optional small pillow for children 24 months and older. Pillows are not permitted for children under 24 months.
+
+Families are responsible for taking bedding home for washing and returning it clean for their child’s next day of care.`,
         ask: ["nap", "sleep", "nap schedule", "crib", "nap mat", "does my child have to sleep", "blanket"],
       },
     ],
@@ -743,7 +750,7 @@ For children with special feeding needs, we keep a daily record of what they eat
 - At least two complete changes of clothes
 - Indoor and outdoor shoes
 - A sleep sack (under 18 months)
-- A light blanket, lovey and/or small child-size pillow (for children who rest on mats); comfort items must be safe-sleep approved
+- For children who rest on mats: a sheet that fits the mat, a light blanket and, for children 24 months and older, an optional small pillow (see “Rest time”). Bedding goes home for washing and comes back clean.
 
 **Food and drink** (as applicable): a water bottle, lunch, clean and sterilized bottles, and breast milk or formula (in bottles).
 
