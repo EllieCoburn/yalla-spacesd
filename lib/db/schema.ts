@@ -58,6 +58,12 @@ export const staffUsers = pgTable("staff_users", {
   status: text("status").notNull().default("active"), // active | disabled
   mfaSecretEnc: text("mfa_secret_enc"),
   mfaEnabled: boolean("mfa_enabled").notNull().default(false),
+  /** A new authenticator being set up; it only replaces the current one once a code from it is confirmed. */
+  mfaPendingSecretEnc: text("mfa_pending_secret_enc"),
+  /** Wrong two-step codes in a row; five locks the account for 15 minutes. */
+  mfaFailedAttempts: integer("mfa_failed_attempts").notNull().default(0),
+  /** The 30-second time step of the last accepted code, so a code can't be used twice. */
+  mfaLastStep: integer("mfa_last_step"),
   failedLogins: integer("failed_logins").notNull().default(0),
   lockedUntil: ts("locked_until"),
   lastLoginAt: ts("last_login_at"),

@@ -6,7 +6,7 @@ import "server-only";
  */
 import { and, asc, desc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import type { StaffContext } from "@/lib/auth/staff";
-import { can, staffActor } from "@/lib/auth/staff";
+import { can, staffActor, staffReady } from "@/lib/auth/staff";
 import { audit } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
 import {
@@ -433,7 +433,7 @@ export async function submissionDetail(db: Executor, id: string) {
 
 /** Private document access: only staff with forms.documents; every download is audited. */
 export async function openDocument(db: Executor, staff: StaffContext | null, documentId: string) {
-  if (!staff || (staff.mfaEnabled && !staff.mfaVerified)) return { status: 401 as const };
+  if (!staffReady(staff)) return { status: 401 as const };
   if (!can(staff, "forms.documents")) return { status: 403 as const };
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
   if (!doc) return { status: 404 as const };

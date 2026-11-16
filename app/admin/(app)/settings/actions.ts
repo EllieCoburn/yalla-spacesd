@@ -3,6 +3,7 @@
 import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
 import { requestMeta } from "@/lib/auth/session";
+import { resetStaffMfa } from "@/lib/auth/staff";
 import { POLICIES, saveCohort, saveLocation, savePool, setOperatingHours, setPolicy, type OperatingHours, type PolicyKey } from "@/lib/ops/settings";
 import { changeRole, createRole, inviteStaff, resendInvite, setStaffStatus, updateRolePermissions } from "@/lib/ops/staff-admin";
 
@@ -91,6 +92,13 @@ export const statusAction = adminAction("staff.manage", async ({ db, actor, str 
   const status = str("status") === "disabled" ? "disabled" : "active";
   await setStaffStatus(db, actor, str("staffId"), status);
   return status === "disabled" ? "Account disabled and signed out everywhere." : "Account re-enabled.";
+});
+
+/** For a lost phone: they'll set up two-step verification again the next time they sign in. */
+export const resetMfaAction = adminAction("staff.manage", async ({ db, actor, staff, str }) => {
+  if (str("staffId") === staff.id) throw new OpsError("invalid", "To move to a new phone, use Account & security.");
+  await resetStaffMfa(db, actor, str("staffId"));
+  return "Two-step verification reset. They’ve been signed out and will set it up again at their next sign-in.";
 });
 
 export const permissionsAction = adminAction("staff.manage", async ({ db, actor, str, all }) => {

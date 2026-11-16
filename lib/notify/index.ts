@@ -233,6 +233,16 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
 };
 
+/**
+ * The copy of an email kept in the message log never includes working sign-in, password-reset or
+ * invitation links: anyone who can read the log (staff with communications access, or anyone with
+ * database access) could otherwise use them to take over an account. Only the email itself carries them.
+ */
+export const REDACTED_LINK = "[private link removed]";
+export function redactSecrets(text: string) {
+  return text.replace(/https?:\/\/[^\s)\]]*[?&](?:token|key|k)=[^\s)\]]*/gi, REDACTED_LINK);
+}
+
 export function notificationsMode(): "test" | "live" {
   return process.env.NOTIFICATIONS_MODE === "live" && process.env.POSTMARK_SERVER_TOKEN && process.env.NOTIFICATIONS_FROM ? "live" : "test";
 }
@@ -297,7 +307,7 @@ export async function notifyFamily(
         guardianId: g.id,
         toAddress: g.email,
         subject,
-        body,
+        body: redactSecrets(body),
         mode,
         status: mode === "test" ? "captured" : "queued",
         relatedType: input.related?.type,
@@ -324,13 +334,13 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
   const mode = notificationsMode();
   const [m] = await db
     .insert(messages)
-    .values({ templateKey: input.key, toAddress: input.to, subject, body, mode, status: mode === "test" ? "captured" : "queued", relatedType: "staff", relatedId: input.relatedId })
+    .values({ templateKey: input.key, toAddress: input.to, subject, body: redactSecrets(body), mode, status: mode === "test" ? "captured" : "queued", relatedType: "staff", relatedId: input.relatedId })
     .returning({ id: messages.id });
   if (mode === "live") {
     const r = await deliver(input.to, subject, plainText(body), emailHtml({ key: input.key, subject, body, audience: t.audience }));
     await db.update(messages).set({ status: r.ok ? "sent" : "failed", providerRef: r.ref, error: r.error, sentAt: r.ok ? new Date() : null }).where(eq(messages.id, m.id));
   }
-  return { id: m.id, mode, body };
+  return { id: m.id, mode, body: redactSecrets(body) };
 }
 
 /** Variables each template can use, with sample values for previews. */

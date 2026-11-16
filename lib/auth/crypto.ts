@@ -110,9 +110,18 @@ export function totp(secret: string, at = Date.now(), step = 30): string {
 }
 
 export function verifyTotp(secret: string, code: string, at = Date.now()): boolean {
+  return totpStep(secret, code, at) !== null;
+}
+
+/** The 30-second time step a valid code belongs to (allowing one step of clock drift), or null. */
+export function totpStep(secret: string, code: string, at = Date.now()): number | null {
   const clean = code.replace(/\s/g, "");
-  if (!/^\d{6}$/.test(clean)) return false;
-  return [-1, 0, 1].some((w) => safeEqual(totp(secret, at + w * 30_000), clean));
+  if (!/^\d{6}$/.test(clean)) return null;
+  for (const w of [-1, 0, 1]) {
+    const t = at + w * 30_000;
+    if (safeEqual(totp(secret, t), clean)) return Math.floor(t / 1000 / 30);
+  }
+  return null;
 }
 
 export function otpauthUrl(secret: string, account: string) {

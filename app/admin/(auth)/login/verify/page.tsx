@@ -8,7 +8,8 @@ export const metadata: Metadata = { title: "Two-step verification" };
 export default async function VerifyPage() {
   const staff = await getStaff();
   if (!staff) redirect("/admin/login");
-  if (!staff.mfaEnabled || staff.mfaVerified) redirect("/admin");
+  if (!staff.mfaEnabled) redirect("/admin/login/setup-mfa");
+  if (staff.mfaVerified) redirect("/admin");
   return (
     <>
       <h1 className="mt-8 font-serif text-[2rem] text-ink lg:mt-0">Two-step verification</h1>

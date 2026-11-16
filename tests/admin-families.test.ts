@@ -18,7 +18,7 @@ const asRole = (key: string): StaffContext => ({
   roleKey: key,
   roleName: key,
   permissions: DEFAULT_ROLES.find((r) => r.key === key)!.permissions as Permission[],
-  mfaEnabled: false,
+  mfaEnabled: true,
   sessionId: "s",
   mfaVerified: true,
 });

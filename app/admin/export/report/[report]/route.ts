@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
 import { getStaff } from "@/lib/auth/session";
-import { can, staffActor } from "@/lib/auth/staff";
+import { can, staffActor, staffReady } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { reportById, toCsv } from "@/lib/ops/reports";
 import { addDaysISO, todayLA } from "@/lib/time";
 
 export async function GET(req: Request, { params }: { params: Promise<{ report: string }> }) {
   const staff = await getStaff();
-  if (!staff || (staff.mfaEnabled && !staff.mfaVerified)) return new NextResponse("Sign in required", { status: 401 });
+  if (!staffReady(staff)) return new NextResponse("Sign in required", { status: 401 });
   const { report: id } = await params;
   const report = reportById(id);
   if (!report) return new NextResponse("Not found", { status: 404 });

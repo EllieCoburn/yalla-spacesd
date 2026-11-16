@@ -20,7 +20,7 @@ export default async function AccountPage() {
     .from(staffSessions)
     .where(and(eq(staffSessions.staffId, staff.id), isNull(staffSessions.revokedAt), gt(staffSessions.expiresAt, new Date())))
     .orderBy(desc(staffSessions.lastSeenAt));
-  const pendingSecret = !u.mfaEnabled && u.mfaSecretEnc ? decryptSecret(u.mfaSecretEnc) : null;
+  const pendingSecret = u.mfaPendingSecretEnc ? decryptSecret(u.mfaPendingSecretEnc) : null;
   const qr = pendingSecret ? await QRCode.toString(otpauthUrl(pendingSecret, u.email), { type: "svg", margin: 1, width: 180 }) : null;
 
   return (
@@ -28,10 +28,19 @@ export default async function AccountPage() {
       <PageHeader title="Account & security" subtitle={`${staff.name} · ${staff.roleName}`} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Two-step verification">
-          {u.mfaEnabled ? (
+          {u.mfaEnabled && !pendingSecret ? (
             <div className="space-y-3">
               <Pill tone="positive" icon="check">On</Pill>
               <p className="text-[0.88rem] text-ink-soft">You’ll be asked for a code from your authenticator app when you sign in.</p>
+              <details className="text-[0.86rem]">
+                <summary className="cursor-pointer text-ink-soft hover:text-ink">New phone? Move to a new authenticator app</summary>
+                <div className="mt-3">
+                  <ActionForm action={startMfa} submit={{ label: "Set up a new app" }}>
+                    <TextField name="current" label="Current password" type="password" autoComplete="current-password" required />
+                  </ActionForm>
+                  <p className="mt-2 text-[0.8rem] text-ink-soft">Your current app keeps working until you confirm a code from the new one.</p>
+                </div>
+              </details>
             </div>
           ) : pendingSecret ? (
             <div className="space-y-4">

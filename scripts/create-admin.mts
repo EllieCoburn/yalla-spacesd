@@ -4,7 +4,7 @@
  *   ADMIN_EMAIL=you@yalla.example ADMIN_NAME="Your Name" ADMIN_PASSWORD="a long passphrase" npm run admin:create
  *   npm run admin:create -- --email you@yalla.example --name "Your Name" --password "a long passphrase"
  *
- * The password must be at least 12 characters. Turn on two-step verification after signing in.
+ * The password must be at least 12 characters. Two-step verification is set up at first sign-in.
  */
 import { SYSTEM } from "@/lib/audit";
 import { createStaff, ensureDefaultRoles } from "@/lib/auth/staff";

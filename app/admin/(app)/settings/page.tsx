@@ -9,7 +9,7 @@ import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { getOperatingHours, listPolicies, poolUsage } from "@/lib/ops/settings";
 import { fmtDateTime } from "@/lib/time";
-import { cohortAction, createRoleAction, hoursAction, inviteAction, locationAction, permissionsAction, policyAction, poolAction, resendInviteAction, roleAction, statusAction } from "./actions";
+import { cohortAction, createRoleAction, hoursAction, inviteAction, locationAction, permissionsAction, policyAction, poolAction, resendInviteAction, resetMfaAction, roleAction, statusAction } from "./actions";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Settings" };
@@ -336,7 +336,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     </Pill>
                   )}
                 </td>
-                <td>{u.mfaEnabled ? <Pill tone="positive" icon="check">On</Pill> : <Pill tone={r.key === "owner" ? "warning" : "muted"} icon="minus">Off</Pill>}</td>
+                <td>{u.mfaEnabled ? <Pill tone="positive" icon="check">On</Pill> : <Pill tone="warning" icon="clock">Set up at next sign-in</Pill>}</td>
                 <td className="whitespace-nowrap text-ink-soft">{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : "Never"}</td>
                 <td>
                   <div className="flex flex-wrap gap-2">
@@ -348,6 +348,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       )
                     ) : null}
                     {!u.passwordHash && u.status === "active" ? <SmallAction action={resendInviteAction} fields={{ staffId: u.id }} label="Resend invite" /> : null}
+                    {u.id !== meId && u.mfaEnabled ? (
+                      <SmallAction action={resetMfaAction} fields={{ staffId: u.id }} label="Reset two-step" variant="ghost" confirmText={`Reset two-step verification for ${u.name}? Use this if they lost their phone. They’ll be signed out and set it up again at their next sign-in.`} />
+                    ) : null}
                   </div>
                 </td>
               </tr>

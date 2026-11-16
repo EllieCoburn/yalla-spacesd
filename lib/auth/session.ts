@@ -14,11 +14,15 @@ export const getStaff = cache(async (): Promise<StaffContext | null> => {
   return resolveSession(getDb(), token);
 });
 
-/** For admin pages: signed in, MFA satisfied. */
-export async function requireStaff(): Promise<StaffContext> {
+/**
+ * For admin pages: signed in, with two-step verification set up and entered for this session.
+ * Anyone who hasn't set it up yet is sent to set it up before they can see anything else.
+ */
+export async function requireStaff(opts: { mfaEnrollment?: boolean } = {}): Promise<StaffContext> {
   const staff = await getStaff();
   if (!staff) redirect("/admin/login");
   if (staff.mfaEnabled && !staff.mfaVerified) redirect("/admin/login/verify");
+  if (!staff.mfaEnabled && !opts.mfaEnrollment) redirect("/admin/login/setup-mfa");
   return staff;
 }
 

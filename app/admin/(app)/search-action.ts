@@ -3,14 +3,14 @@
 import { ilike, or, sql } from "drizzle-orm";
 import type { SearchResult } from "@/components/admin/Shell";
 import { getStaff } from "@/lib/auth/session";
-import { can } from "@/lib/auth/staff";
+import { can, staffReady } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { bookings, children, families, guardians } from "@/lib/db/schema";
 
 /** Global search, limited to what the signed-in staff member may see. */
 export async function searchAll(q: string): Promise<SearchResult[]> {
   const staff = await getStaff();
-  if (!staff || (staff.mfaEnabled && !staff.mfaVerified)) return [];
+  if (!staffReady(staff)) return [];
   const term = `%${q.trim().slice(0, 80)}%`;
   const db = getDb();
   const out: SearchResult[] = [];

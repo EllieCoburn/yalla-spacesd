@@ -1,21 +1,39 @@
 "use server";
 
 import { and, eq, isNull } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { adminAction } from "@/lib/admin/action";
 import { audit, OpsError } from "@/lib/audit";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/auth/crypto";
 import { beginMfaSetup, confirmMfaSetup, revokeAllSessions, revokeSession } from "@/lib/auth/staff";
 import { staffSessions, staffUsers } from "@/lib/db/schema";
 
-export const startMfa = adminAction(null, async ({ db, staff }) => {
-  await beginMfaSetup(db, staff.id);
-  return "Scan the code with your authenticator app, then enter the 6-digit code to finish.";
-});
+/**
+ * Set up (or replace) the authenticator app. Replacing one that's already on needs the current
+ * password, so a session left open somewhere can't quietly swap it.
+ */
+export const startMfa = adminAction(
+  null,
+  async ({ db, staff, str }) => {
+    if (staff.mfaEnabled) {
+      const [u] = await db.select().from(staffUsers).where(eq(staffUsers.id, staff.id));
+      if (!verifyPassword(str("current"), u.passwordHash)) throw new OpsError("invalid", "Your current password isn’t correct.");
+    }
+    await beginMfaSetup(db, staff.id);
+    return "Scan the code with your authenticator app, then enter the 6-digit code to finish.";
+  },
+  { mfaEnrollment: true },
+);
 
-export const finishMfa = adminAction(null, async ({ db, staff, str }) => {
-  await confirmMfaSetup(db, staff, str("code"));
-  return "Two-step verification is on.";
-});
+export const finishMfa = adminAction(
+  null,
+  async ({ db, staff, str }) => {
+    await confirmMfaSetup(db, staff, str("code"));
+    if (str("then") === "admin") redirect("/admin");
+    return "Two-step verification is on.";
+  },
+  { mfaEnrollment: true },
+);
 
 export const changePassword = adminAction(null, async ({ db, staff, actor, str }) => {
   const [u] = await db.select().from(staffUsers).where(eq(staffUsers.id, staff.id));

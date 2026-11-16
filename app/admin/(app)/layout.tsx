@@ -39,11 +39,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {pay.provider === "test" ? <span>● Test payments — no real charges</span> : pay.live ? <span className="text-[#8a2333]">● LIVE payments</span> : <span>● Stripe test mode</span>}
       {mail === "test" ? <span>● Emails captured, not sent</span> : <span className="text-[#8a2333]">● Emails are being delivered</span>}
       {pay.problem ? <span className="text-[#8a5212]">{pay.problem}</span> : null}
-      {staff.roleKey === "owner" && !staff.mfaEnabled ? (
-        <a href="/admin/account" className="font-medium underline">
-          Turn on two-step verification
-        </a>
-      ) : null}
     </div>
   );
   return (

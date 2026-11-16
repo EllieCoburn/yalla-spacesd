@@ -4,7 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import type { Permission } from "@/lib/auth/permissions";
 import { getStaff } from "@/lib/auth/session";
-import { assertCan, staffActor, type StaffContext } from "@/lib/auth/staff";
+import { assertCan, staffActor, staffReady, type StaffContext } from "@/lib/auth/staff";
 import { getDb, type DB } from "@/lib/db";
 import type { Actor } from "@/lib/audit";
 
@@ -27,13 +27,19 @@ type Ctx = { staff: StaffContext; actor: Actor; db: DB; form: FormData; str: (k:
  * handling and form-value preservation. Expected failures (OpsError) show their message; anything
  * else shows a generic message and is logged without personal data.
  */
-export function adminAction(perm: Permission | Permission[] | null, fn: (ctx: Ctx) => Promise<string | void | { message?: string; data?: unknown }>) {
+export function adminAction(
+  perm: Permission | Permission[] | null,
+  fn: (ctx: Ctx) => Promise<string | void | { message?: string; data?: unknown }>,
+  /** Lets someone who hasn't set up two-step verification yet run this (only the setup itself). */
+  opts: { mfaEnrollment?: boolean } = {},
+) {
   return async (_prev: ActionState, form: FormData): Promise<ActionState> => {
     const values: Record<string, string> = {};
     for (const [k, v] of form.entries()) if (typeof v === "string" && !k.startsWith("$ACTION")) values[k] = v;
     try {
       const staff = await getStaff();
-      if (!staff || (staff.mfaEnabled && !staff.mfaVerified)) return { ok: false, error: "Your session has ended. Sign in again — what you entered is still here.", values };
+      const enrolling = !!opts.mfaEnrollment && !!staff && !staff.mfaEnabled;
+      if (!staff || (!staffReady(staff) && !enrolling)) return { ok: false, error: "Your session has ended. Sign in again — what you entered is still here.", values };
       for (const p of perm == null ? [] : Array.isArray(perm) ? perm : [perm]) assertCan(staff, p);
       const str = (k: string) => String(form.get(k) ?? "").trim();
       const num = (k: string) => (str(k) === "" ? null : Number(str(k)));

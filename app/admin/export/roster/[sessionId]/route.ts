@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
 import { getStaff } from "@/lib/auth/session";
-import { can, staffActor } from "@/lib/auth/staff";
+import { can, staffActor, staffReady } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { roster } from "@/lib/ops/attendance";
 import { toCsv } from "@/lib/ops/reports";
@@ -10,7 +10,7 @@ import { fmtTime } from "@/lib/time";
 /** Roster CSV: operational fields only. Allergy alerts appear only for staff with care access; never contacts or billing. */
 export async function GET(_req: Request, { params }: { params: Promise<{ sessionId: string }> }) {
   const staff = await getStaff();
-  if (!staff || (staff.mfaEnabled && !staff.mfaVerified)) return new NextResponse("Sign in required", { status: 401 });
+  if (!staffReady(staff)) return new NextResponse("Sign in required", { status: 401 });
   if (!can(staff, "roster.view")) return new NextResponse("Forbidden", { status: 403 });
   const { sessionId } = await params;
   const db = getDb();

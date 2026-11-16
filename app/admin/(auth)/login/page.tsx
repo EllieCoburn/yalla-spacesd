@@ -11,7 +11,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   if ((await staffCount(getDb())) === 0) redirect("/admin/setup");
   const staff = await getStaff();
-  if (staff && (!staff.mfaEnabled || staff.mfaVerified)) redirect("/admin");
+  if (staff && staff.mfaEnabled && staff.mfaVerified) redirect("/admin");
+  if (staff && !staff.mfaEnabled) redirect("/admin/login/setup-mfa");
   return (
     <>
       <h1 className="mt-8 font-serif text-[2rem] text-ink lg:mt-0">Staff sign in</h1>

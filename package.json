@@ -12,7 +12,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "db:seed": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/seed.mts",
     "admin:create": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/create-admin.mts",
-    "jobs:run": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/jobs.mts"
+    "jobs:run": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/jobs.mts",
+    "admin:reset-mfa": "NODE_OPTIONS=--conditions=react-server tsx --env-file-if-exists=.env.local scripts/reset-mfa.mts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

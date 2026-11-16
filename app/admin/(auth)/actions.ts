@@ -27,14 +27,19 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
   if (res.status === "disabled") return { email, error: "This account has been disabled. Ask an administrator." };
   if (res.status !== "ok") return { email, error: "That email and password don’t match." };
   await setSessionCookie(res.token);
-  redirect(res.mfaRequired ? "/admin/login/verify" : String(form.get("next") || "/admin"));
+  // Everyone enters a two-step code; anyone without it set up is taken to set it up first.
+  redirect(res.mfaRequired ? "/admin/login/verify" : "/admin/login/setup-mfa");
 }
 
 export async function verifyMfa(_: AuthState, form: FormData): Promise<AuthState> {
   const token = await sessionToken();
   if (!token) redirect("/admin/login");
-  const ok = await verifyMfaForSession(getDb(), token, String(form.get("code") ?? ""));
-  if (!ok) return { error: "That code didn’t work. Use the current 6-digit code from your authenticator app." };
+  const res = await verifyMfaForSession(getDb(), token, String(form.get("code") ?? ""));
+  if (res === "locked") {
+    await clearSessionCookie();
+    return { error: "Too many wrong codes. For your security this account is locked for 15 minutes." };
+  }
+  if (res !== "ok") return { error: "That code didn’t work. Use the current 6-digit code from your authenticator app (each code works once)." };
   redirect("/admin");
 }
 
