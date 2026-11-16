@@ -2,10 +2,11 @@
  * Housekeeping. Correctness never depends on these running (availability already ignores lapsed
  * holds and offers), but they keep records tidy and send time-based messages.
  */
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { SYSTEM } from "@/lib/audit";
 import type { DB } from "@/lib/db";
-import { bookingItems, bookings, messages, sessions, waitlistEntries } from "@/lib/db/schema";
+import { authTokens, bookingItems, bookings, familyAuthTokens, familySessions, messages, sessions, staffSessions, waitlistEntries } from "@/lib/db/schema";
+import { pruneRateEvents } from "@/lib/rate-limit";
 import { notifyFamily } from "@/lib/notify";
 import { bookingLines, describeLine, expireHolds } from "@/lib/ops/bookings";
 import { availabilityFor } from "@/lib/ops/capacity";
@@ -30,6 +31,8 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   await applyPlayPassSchedules(db);
   // Keep Yalla Flex days (full until staff release spots) set up for the coming weeks.
   await ensureFlexDays(db);
+  // Security housekeeping: rate-limit records, used or expired sign-in and reset links, and ended sessions.
+  await pruneSecurityRecords(db, now);
 
   // Offer freed spots to waiting families (only programs with automatic offers enabled).
   const waiting = await db
@@ -91,4 +94,19 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
     }
   }
   return { expiredHolds, expiredOffers, membershipChanges, offers, reminders };
+}
+
+
+/**
+ * Removes records only needed for a short time: rate-limit attempts (after a day), sign-in, reset
+ * and invitation links once used or expired (after 7 days), and sessions that ended over 30 days ago.
+ */
+export async function pruneSecurityRecords(db: DB, now = new Date()) {
+  const week = new Date(now.getTime() - 7 * 24 * 3600_000);
+  const month = new Date(now.getTime() - 30 * 24 * 3600_000);
+  await pruneRateEvents(db);
+  await db.delete(familyAuthTokens).where(or(lt(familyAuthTokens.expiresAt, week), lt(familyAuthTokens.usedAt, week)));
+  await db.delete(authTokens).where(or(lt(authTokens.expiresAt, week), lt(authTokens.usedAt, week)));
+  await db.delete(familySessions).where(or(lt(familySessions.expiresAt, month), lt(familySessions.revokedAt, month)));
+  await db.delete(staffSessions).where(or(lt(staffSessions.expiresAt, month), lt(staffSessions.revokedAt, month)));
 }

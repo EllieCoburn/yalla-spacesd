@@ -19,6 +19,7 @@ import { families, familyAuthTokens, familySessions, guardians } from "@/lib/db/
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { staffRecipients } from "@/lib/ops/enquiries";
 import { fmtDate } from "@/lib/time";
+import { allow } from "@/lib/rate-limit";
 
 export const FAMILY_LINK_MS = 20 * 60 * 1000;
 export const FAMILY_SESSION_MS = 365 * 24 * 3600 * 1000;
@@ -49,6 +50,8 @@ export const safeNextPath = (n: unknown, fallback = "/portal/home") => (typeof n
 export async function requestMagicLink(db: Executor, email: string, baseUrl: string, next?: string): Promise<{ devLink?: string }> {
   const clean = email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(clean)) return {};
+  // A few links an hour per email at most, so nobody can flood a family's inbox.
+  if (!(await allow(db, "signInLinkEmail", clean))) return {};
   const [g] = await db
     .select()
     .from(guardians)

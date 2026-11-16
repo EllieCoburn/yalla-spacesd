@@ -153,3 +153,23 @@ describe("Link addresses", () => {
     }
   });
 });
+
+describe("Rate limits", () => {
+  it("refuse a key once it reaches its limit, without storing the key itself", async () => {
+    const { allow, LIMITS } = await import("@/lib/rate-limit");
+    const n = LIMITS.signInLinkEmail.limit;
+    for (let i = 0; i < n; i++) expect(await allow(db(), "signInLinkEmail", "parent@example.com")).toBe(true);
+    expect(await allow(db(), "signInLinkEmail", "parent@example.com")).toBe(false);
+    expect(await allow(db(), "signInLinkEmail", "other@example.com")).toBe(true); // other keys unaffected
+    const rows = await db().select().from(s.rateEvents);
+    expect(JSON.stringify(rows)).not.toContain("parent@example.com");
+  });
+
+  it("stop sending sign-in links to one email after a handful in an hour", async () => {
+    const f = await family("Alpha");
+    await db().update(s.guardians).set({ portalAccess: true }).where(eq(s.guardians.id, f.guardian.id));
+    for (let i = 0; i < 8; i++) await requestMagicLink(db(), f.guardian.email, "https://yalla.test");
+    const sent = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_sign_in"));
+    expect(sent).toHaveLength(5);
+  });
+});

@@ -9,6 +9,7 @@ import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/pu
 import { resolveOffer } from "@/lib/ops/yalla-cancellations";
 import { guardianActor } from "@/lib/family-auth";
 import { clearFamilyCookie, getGuardian, requestContext, setFamilyCookie } from "./session";
+import { allow, throttle } from "@/lib/rate-limit";
 
 export type PortalState = { ok?: boolean; error?: string; message?: string; devLink?: string; at?: number } | undefined;
 
@@ -17,8 +18,9 @@ const safeNext = (n: unknown) => safeNextPath(n);
 export async function requestLinkAction(_: PortalState, form: FormData): Promise<PortalState> {
   const email = String(form.get("email") ?? "").slice(0, 200);
   const next = safeNext(form.get("next"));
-  const { baseUrl } = await requestContext();
-  const { devLink } = await requestMagicLink(getDb(), email, baseUrl, next);
+  const { baseUrl, ip } = await requestContext();
+  // Over the limit, nothing is sent, but the reply is the same (it never reveals whether an email is known).
+  const { devLink } = (await allow(getDb(), "signInLinkIp", ip)) ? await requestMagicLink(getDb(), email, baseUrl, next) : { devLink: undefined };
   return {
     ok: true,
     message: "If that email belongs to a Yalla family, a sign-in link is on its way. It works once, for 20 minutes.",
@@ -42,6 +44,8 @@ export async function signInAction(_: PortalState, form: FormData): Promise<Port
   const { baseUrl, ip } = await requestContext();
   let session: string;
   try {
+    await throttle(getDb(), "familySignInIp", ip, "Too many sign-in attempts from this connection. Please wait 15 minutes and try again.");
+    await throttle(getDb(), "familySignInEmail", String(form.get("email") ?? ""), "Too many sign-in attempts for this email. Please wait 15 minutes, or reset your password.");
     const r = await signInWithPassword(getDb(), { email: String(form.get("email") ?? "").slice(0, 200), password: String(form.get("password") ?? ""), baseUrl, ip });
     if ("emailed" in r)
       return {
@@ -62,11 +66,12 @@ export async function signInAction(_: PortalState, form: FormData): Promise<Port
 /** Create a family account (guardian, password and children) and sign in. */
 export async function createAccountAction(_: PortalState, form: FormData): Promise<PortalState> {
   const next = safeNext(form.get("next"));
-  const { baseUrl } = await requestContext();
+  const { baseUrl, ip } = await requestContext();
   const names = form.getAll("childFirstName").map(String);
   const births = form.getAll("childBirthDate").map(String);
   let session: string;
   try {
+    await throttle(getDb(), "signUpIp", ip, "Too many new accounts from this connection. Please try again in an hour, or call us at 619.775.4008.");
     const r = await registerFamilyAccount(
       getDb(),
       {

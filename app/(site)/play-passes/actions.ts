@@ -7,6 +7,7 @@ import { billingPortalUrl, startSignup } from "@/lib/playpass/membership";
 import { changeTier, requestCancel, requestPause, withdrawCancel, withdrawPause } from "@/lib/playpass/changes";
 import { revalidatePath } from "next/cache";
 import { getGuardian, requestContext } from "../portal/session";
+import { throttle } from "@/lib/rate-limit";
 
 export type PassState = { error?: string; message?: string; devLink?: string; at?: number } | undefined;
 
@@ -14,9 +15,10 @@ export type PassState = { error?: string; message?: string; devLink?: string; at
 export async function startPlayPassAction(_: PassState, form: FormData): Promise<PassState> {
   const g = await getGuardian();
   if (!g) return { error: "Please sign in to continue.", at: Date.now() };
-  const { baseUrl } = await requestContext();
+  const { baseUrl, ip } = await requestContext();
   let url: string;
   try {
+    await throttle(getDb(), "playPassIp", ip);
     ({ url } = await startSignup(getDb(), g, { tier: String(form.get("tier") ?? ""), acceptTerms: form.get("accept") === "on", baseUrl }));
   } catch (e) {
     if (e instanceof OpsError) return { error: e.message, at: Date.now() };

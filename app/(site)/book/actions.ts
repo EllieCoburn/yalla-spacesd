@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { bookings } from "@/lib/db/schema";
 import { bookingStatusPath, offerPath } from "@/lib/links";
 import { mayViewStatus } from "@/lib/booking-access";
+import { allow } from "@/lib/rate-limit";
 
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
@@ -26,6 +27,10 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
   if (!isDbConfigured()) return { ok: false, code: "unavailable", error: "Online booking isn’t open yet." };
   const ctx = await requestContext();
   const signedIn = await getGuardian();
+  // Holds take real places off sale for a while, so repeated unpaid holds are limited.
+  const tooMany = "That’s a lot of bookings in a short time. Please wait a little while, or call us at 619.775.4008.";
+  if (!(await allow(getDb(), "bookingIp", ctx.ip))) return { ok: false, code: "throttled", error: tooMany };
+  if (!(await allow(getDb(), "bookingEmail", signedIn?.email ?? payload.guardian?.email))) return { ok: false, code: "throttled", error: tooMany };
   try {
     return await submitPublicBooking(getDb(), {
       signedIn,
@@ -63,6 +68,7 @@ export async function agreementsAction(input: { sessionIds: string[]; children: 
 export async function joinWaitlistAction(input: { sessionId: string; guardian: { firstName: string; lastName: string; email: string }; child: { existingId?: string | null; firstName: string; birthDate: string } }) {
   if (!isDbConfigured()) return { ok: false as const, code: "unavailable", error: "The waitlist isn’t open yet." };
   const ctx = await requestContext();
+  if (!(await allow(getDb(), "waitlistIp", ctx.ip))) return { ok: false as const, code: "throttled", error: "That’s a lot of waitlist requests in a short time. Please try again later." };
   return joinPublicWaitlist(getDb(), { signedIn: await getGuardian(), guardian: input.guardian, child: input.child, sessionId: clip(input.sessionId, 60), baseUrl: ctx.baseUrl });
 }
 

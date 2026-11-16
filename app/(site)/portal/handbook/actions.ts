@@ -3,6 +3,7 @@
 import { getDb } from "@/lib/db";
 import { submitEnquiry } from "@/lib/ops/enquiries";
 import { getGuardian, requestContext } from "../session";
+import { allow } from "@/lib/rate-limit";
 
 export type AskTeamState = { ok: true; email: string } | { ok: false; error: string } | null;
 
@@ -17,6 +18,7 @@ export async function askTeamYallaAction(input: { question: string; searched?: s
   const question = String(input.question ?? "").trim().slice(0, 2000);
   if (question.length < 3) return { ok: false, error: "Please write your question first." };
   const { baseUrl, ip } = await requestContext();
+  if (!(await allow(getDb(), "questionIp", ip ?? g.guardianId))) return { ok: false, error: "You’ve sent several questions recently. Please wait a little while, or email hello@yallaspacesd.com." };
   const details = [
     { label: "Question", value: question },
     ...(input.searched && input.searched.trim() !== question ? [{ label: "What they searched for", value: String(input.searched).slice(0, 300) }] : []),

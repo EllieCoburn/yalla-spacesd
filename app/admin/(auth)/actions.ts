@@ -11,6 +11,7 @@ import { staffUsers } from "@/lib/db/schema";
 import { notifyStaff } from "@/lib/notify";
 import { OpsError } from "@/lib/audit";
 import { trustedBaseUrl } from "@/lib/base-url";
+import { allow } from "@/lib/rate-limit";
 
 export type AuthState = { error?: string; message?: string; email?: string; link?: string } | undefined;
 
@@ -22,6 +23,7 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
   const email = String(form.get("email") ?? "");
   const password = String(form.get("password") ?? "");
   const meta = await requestMeta();
+  if (!(await allow(getDb(), "staffSignInIp", meta.ip))) return { email, error: "Too many sign-in attempts from this connection. Please wait 15 minutes." };
   const res = await login(getDb(), email, password, meta);
   if (res.status === "locked") return { email, error: "Too many attempts. This account is locked for 15 minutes, or reset your password." };
   if (res.status === "disabled") return { email, error: "This account has been disabled. Ask an administrator." };
@@ -55,7 +57,9 @@ export async function requestReset(_: AuthState, form: FormData): Promise<AuthSt
   const db = getDb();
   const [user] = await db.select().from(staffUsers).where(eq(staffUsers.email, email));
   let link: string | undefined;
-  if (user && user.status === "active") {
+  // Over the limit nothing is sent, but the reply is the same.
+  const allowed = (await allow(db, "staffResetIp", (await requestMeta()).ip)) && (await allow(db, "staffResetEmail", email));
+  if (allowed && user && user.status === "active") {
     const token = await createAuthToken(db, user.id, "password_reset");
     const url = `${baseUrl(await requestMeta())}/admin/reset?token=${token}`;
     const sent = await notifyStaff(db, { key: "staff_password_reset", to: user.email, vars: { name: user.name, link: url }, relatedId: user.id });

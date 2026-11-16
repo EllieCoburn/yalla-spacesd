@@ -267,6 +267,13 @@
       "when": 1794850770464,
       "tag": "0037_staff_mfa_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794851647503,
+      "tag": "0038_rate_limits",
+      "breakpoints": true
     }
   ]
 }

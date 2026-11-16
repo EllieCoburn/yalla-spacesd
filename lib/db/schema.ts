@@ -1373,3 +1373,19 @@ export const playPassCharges = pgTable(
   },
   (t) => [index("play_pass_charges_sub_idx").on(t.subscriptionId)],
 );
+
+/**
+ * Rate limiting: one row per attempt (sign-in, sign-in link, sign-up, booking hold…), keyed by a
+ * one-way hash of the email or IP address, so no readable personal data is kept. Rows older than a
+ * day are removed by the nightly housekeeping job.
+ */
+export const rateEvents = pgTable(
+  "rate_events",
+  {
+    id: id(),
+    bucket: text("bucket").notNull(),
+    keyHash: text("key_hash").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("rate_events_lookup_idx").on(t.bucket, t.keyHash, t.createdAt)],
+);
