@@ -128,7 +128,7 @@ export default function Home() {
             <div>
               <Index n="02">Programs</Index>
               <h2 className="display mt-6 max-w-2xl text-[clamp(2.2rem,1.6rem+2vw,3.4rem)]">
-                Find your <em>way in.</em>
+                Explore our <em>programs.</em>
               </h2>
             </div>
             <Button href="/programs" variant="outline">
