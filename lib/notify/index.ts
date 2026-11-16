@@ -31,6 +31,8 @@ export type TemplateKey =
   | "family_sign_in"
   | "family_confirm_email"
   | "family_invite"
+  | "booking_welcome_team"
+  | "booking_confirmed_team"
   | "space_confirmation"
   | "playpass_welcome"
   | "playpass_renewal"
@@ -233,7 +235,21 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   family_confirm_email: {
     name: "Welcome and confirm your email (after a first booking)",
     subject: "Your Yalla Family Portal is ready",
-    body: "# Welcome to Yalla!\n\nHi {{guardian_first_name}},\n\nThank you for booking with us. Your booking is confirmed (your receipt is in a separate email), and your Family Portal is ready. In it you’ll find your bookings, any forms we still need before your child’s first day, and all of our family resources.\n\nPlease confirm this is your email address. The button below confirms it and opens your portal, where you can choose a password so you can sign in anytime.\n\n{{link}}\n\nThis link works once, for 7 days. Your booking doesn’t depend on it. After that, you can always sign in with a link from yallaspacesd.com/portal.\n\nIf you didn’t make this booking, please reply to let us know.\n\nWarmly,\nTeam Yalla",
+    body: "# Welcome to Yalla!\n\nHi {{guardian_first_name}},\n\nThank you for choosing Yalla! {{purchase_summary}} (your receipt is in a separate email), and your Family Portal is ready. In it you’ll find your bookings, any forms we still need before your child’s first day, and all of our family resources.\n\nPlease confirm this is your email address. The button below confirms it and opens your portal, where you can choose a password so you can sign in anytime.\n\n{{link}}\n\nThis link works once, for 7 days. Nothing you’ve purchased depends on it. After that, you can always sign in with a link from yallaspacesd.com/portal.\n\nIf this wasn’t you, please reply to let us know.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  booking_welcome_team: {
+    name: "Booking made by the team (family new to the portal)",
+    subject: "Welcome to Yalla! Your booking is confirmed",
+    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nTeam Yalla has confirmed your booking:\n\n{{booking_details}}\n\nLocation: {{location}}\n{{arrival_instructions}}\n\nYour Family Portal is ready for you. Set up your account to see your upcoming bookings, complete the forms we need before your child’s first day, and explore our Family Handbook and family resources.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWe can’t wait to welcome you.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  booking_confirmed_team: {
+    name: "Booking made by the team (family already in the portal)",
+    subject: "You’re booked: {{program}} on {{date}}",
+    body: "Hi {{guardian_first_name}},\n\nGood news: Team Yalla has booked this for you, and it’s confirmed.\n\n{{booking_details}}\n\nLocation: {{location}}\n{{arrival_instructions}}\n\nIt’s in your Family Portal with your other bookings whenever you’d like to take a look.\n\n{{portal_link}}\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -421,8 +437,10 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_password_reset: ["name", "link"],
   staff_invite: ["name", "invited_by", "role", "link"],
   family_sign_in: ["guardian_first_name", "link"],
-  family_confirm_email: ["guardian_first_name", "link"],
+  family_confirm_email: ["guardian_first_name", "purchase_summary", "link"],
   family_invite: ["name", "link"],
+  booking_welcome_team: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions", "link"],
+  booking_confirmed_team: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions", "portal_link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
   playpass_welcome: ["guardian_first_name", "plan", "amount", "added", "balance", "monthly_price", "monthly_allocation", "next_renewal"],
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
@@ -441,6 +459,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
+  purchase_summary: "Your booking is confirmed",
   plan: "Gather",
   interests: "Club Yalla, Yalla Flex",
   family_name: "Smith",

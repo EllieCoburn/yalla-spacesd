@@ -8,7 +8,7 @@ import { bookings, invoices, payments, playPassSubscriptions, spaceReservationGr
 import { paymentsStatus, signTestPayload } from "@/lib/payments/provider";
 import { testPaymentsAllowed } from "@/lib/payments/test-mode";
 import { requestContext } from "../../../portal/session";
-import { bookingStatusPath, invoiceStatusPath } from "@/lib/links";
+import { bookingStatusPath, invoiceStatusPath, linkKey } from "@/lib/links";
 
 /**
  * The sandbox checkout sends a signed event to our own webhook endpoint over HTTP, so the same
@@ -66,5 +66,5 @@ export async function simulateMembership(form: FormData) {
   await send(completed);
   await send(paid);
   if (outcome === "duplicate" && process.env.NODE_ENV !== "production") await send(paid);
-  redirect(`/play-passes/welcome?ref=${sub.id}`);
+  redirect(`/play-passes/welcome?ref=${sub.id}&k=${linkKey("playpass", sub.id)}`);
 }

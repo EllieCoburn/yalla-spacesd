@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { Mark } from "@/components/brand/Mark";
-import { ConfirmPass } from "@/components/playpass/PassForms";
+import { ConfirmPass, GuestPass } from "@/components/playpass/PassForms";
 import { Arrow } from "@/components/ui/primitives";
 import { billingTerms, PLAN_LOOK } from "@/content/playpass";
 import { getDb, isDbConfigured } from "@/lib/db";
@@ -112,16 +112,20 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
                 </div>
               ) : (
                 <div className="bg-paper p-7">
-                  <p className="display text-[1.6rem]">Sign in to continue</p>
-                  <p className="mt-2 text-ink-soft">Your Play Pass belongs to your Family Portal account. New to Yalla? Book a Flex day or a Happening to get started, or ask us for an invitation.</p>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Link href={`/portal?next=${encodeURIComponent(next)}`} className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-[0.88rem] text-chalk hover:bg-blue">
+                  <p className="text-[0.92rem] text-ink-soft">
+                    Already a Yalla family?{" "}
+                    <Link href={`/portal?next=${encodeURIComponent(next)}`} className="text-ink underline underline-offset-4">
                       Sign in
-                    </Link>
-                    <Link href="/portal/join" className="inline-flex h-11 items-center rounded-full border border-ink/25 px-6 text-[0.88rem] hover:border-ink">
-                      New to Yalla?
-                    </Link>
-                  </div>
+                    </Link>{" "}
+                    to add your Play Pass.
+                  </p>
+                  <p className="display mt-6 text-[1.6rem]">New to Yalla? Welcome.</p>
+                  <p className="mt-2 mb-6 text-ink-soft">Tell us who’s joining. Your Family Portal opens as soon as your first payment goes through.</p>
+                  <GuestPass
+                    tier={plan.tier}
+                    label={`Continue to payment · ${usd(p.chargeCents)}`}
+                    terms={billingTerms({ name: plan.name, price: usd(plan.priceCents), allocation: usd(plan.allocationCents), today: usd(p.chargeCents), firstBalance: usd(p.allocationCents), renewal })}
+                  />
                 </div>
               )}
             </div>

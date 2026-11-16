@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { cancelPassAction, changeTierAction, pausePassAction, startPlayPassAction, undoCancelAction, undoPauseAction, type PassState } from "@/app/(site)/play-passes/actions";
+import { cancelPassAction, changeTierAction, pausePassAction, startGuestPlayPassAction, startPlayPassAction, undoCancelAction, undoPauseAction, type PassState } from "@/app/(site)/play-passes/actions";
 
 const field = "mt-1.5 w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5 text-[1rem] focus:border-blue focus:ring-0 focus:outline-none";
 
@@ -60,6 +60,89 @@ export function ConfirmPass({ tier, terms, label }: { tier: string; terms: strin
         </Submit>
       </div>
       <p className="mt-3 text-center text-[0.78rem] text-ink-soft">Payment is handled securely by Stripe. Yalla never sees or stores your card number.</p>
+      <Note state={state} />
+    </form>
+  );
+}
+
+/** New to Yalla: who's joining, then the billing terms, then secure payment. */
+export function GuestPass({ tier, terms, label }: { tier: string; terms: string[]; label: string }) {
+  const [state, action] = useActionState(startGuestPlayPassAction, undefined);
+  const [ok, setOk] = useState(false);
+  const [rows, setRows] = useState([0]);
+  const lab = "eyebrow text-[0.6rem] text-ink-soft";
+  return (
+    <form action={action} className="space-y-6">
+      <input type="hidden" name="tier" value={tier} />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="block">
+          <span className={lab}>Your first name</span>
+          <input name="firstName" required autoComplete="given-name" className={field} />
+        </label>
+        <label className="block">
+          <span className={lab}>Last name</span>
+          <input name="lastName" required autoComplete="family-name" className={field} />
+        </label>
+        <label className="block">
+          <span className={lab}>Email</span>
+          <input type="email" name="email" required autoComplete="email" className={field} />
+        </label>
+        <label className="block">
+          <span className={lab}>Mobile</span>
+          <input type="tel" name="phone" autoComplete="tel" className={field} />
+        </label>
+      </div>
+      <fieldset className="border-t border-line pt-5">
+        <legend className="display pr-3 text-[1.3rem]">Your children</legend>
+        <div className="mt-3 space-y-4">
+          {rows.map((r, i) => (
+            <div key={r} className="grid grid-cols-2 items-end gap-4 sm:grid-cols-[1fr_1fr_9.5rem_auto]">
+              <label className="block">
+                <span className={lab}>Child’s first name</span>
+                <input name="childFirstName" required={i === 0} autoComplete="off" className={field} />
+              </label>
+              <label className="block">
+                <span className={lab}>Last name</span>
+                <input name="childLastName" required={i === 0} autoComplete="off" className={field} />
+              </label>
+              <label className="block">
+                <span className={lab}>Date of birth</span>
+                <input type="date" name="childBirthDate" required={i === 0} max={new Date().toISOString().slice(0, 10)} className={field} />
+              </label>
+              {rows.length > 1 ? (
+                <button type="button" onClick={() => setRows((x) => x.filter((k) => k !== r))} className="pb-3 text-left text-[0.8rem] text-ink-soft hover:text-ink">
+                  Remove
+                </button>
+              ) : (
+                <span className="hidden sm:block" />
+              )}
+            </div>
+          ))}
+        </div>
+        {rows.length < 6 ? (
+          <button type="button" onClick={() => setRows((x) => [...x, Math.max(...x) + 1])} className="mt-3 text-[0.88rem] text-blue underline-offset-4 hover:underline">
+            + Add another child
+          </button>
+        ) : null}
+      </fieldset>
+      <div className="border-t border-line pt-5">
+        <ul className="space-y-2 text-[0.92rem]">
+          {terms.map((t) => (
+            <li key={t} className="flex gap-3">
+              <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink/50" aria-hidden />
+              {t}
+            </li>
+          ))}
+        </ul>
+        <label className="mt-6 flex cursor-pointer items-start gap-3 text-[0.92rem]">
+          <input type="checkbox" name="accept" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
+          <span>I agree to these monthly billing terms and authorize Yalla to charge my saved card on the 1st of each month until my membership ends (30 days’ notice to cancel).</span>
+        </label>
+      </div>
+      <Submit pending="Opening secure payment…" disabled={!ok}>
+        {label}
+      </Submit>
+      <p className="text-center text-[0.78rem] text-ink-soft">Your Family Portal opens as soon as your payment goes through. Payment is handled securely by Stripe.</p>
       <Note state={state} />
     </form>
   );

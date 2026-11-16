@@ -39,10 +39,12 @@ export async function createFamilyAction(_prev: ActionState, form: FormData): Pr
   try {
     const res = await createFamily(getDb(), staffActor(staff), {
       name: values.name,
-      guardian: { firstName: values.firstName ?? "", lastName: values.lastName ?? "", email: values.email ?? "", phone: values.phone, relationship: values.relationship },
+      // Portal access comes from an invitation (or a booking the team confirms), never just from being added.
+      guardian: { firstName: values.firstName ?? "", lastName: values.lastName ?? "", email: values.email ?? "", phone: values.phone, relationship: values.relationship, portalAccess: false },
       marketingOptIn: values.marketingOptIn === "on",
     });
     familyId = res.family.id;
+    if (values.invite === "on") await inviteToPortal(getDb(), staffActor(staff), { email: res.guardian.email, name: `${res.guardian.firstName} ${res.guardian.lastName}` }, trustedBaseUrl((await headers()).get("host")));
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, error: e.message, values, data: e.details, at: Date.now() };
     return { ok: false, error: "Something went wrong and nothing was saved.", values, at: Date.now() };

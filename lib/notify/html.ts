@@ -35,6 +35,7 @@ const HERO: Record<string, string> = {
   event_received: "hero-sunflowers.jpg",
   playpass_welcome: "hero-rainbow.jpg",
   booking_confirmation: "hero-rainbow.jpg",
+  booking_welcome_team: "hero-rainbow.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",
 };
@@ -43,6 +44,8 @@ const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
   family_confirm_email: "Confirm my email and open my portal",
   family_invite: "Create your Family Portal account",
+  booking_welcome_team: "Set up my Family Portal",
+  booking_confirmed_team: "View my bookings",
   payment_request: "Pay securely",
   waitlist_offer: "Claim this spot",
   staff_new_enquiry: "Open in the Inbox",

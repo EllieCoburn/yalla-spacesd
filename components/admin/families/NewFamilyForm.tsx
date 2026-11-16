@@ -48,6 +48,13 @@ export function NewFamilyForm({ action }: { action: (prev: ActionState, form: Fo
           <span className="block text-[0.75rem] text-ink-soft">Service messages (confirmations, receipts, reminders) are sent regardless.</span>
         </span>
       </label>
+      <label className="flex items-start gap-2.5 text-[0.85rem]">
+        <input type="checkbox" name="invite" defaultChecked={v.invite === "on"} className="mt-0.5 h-4 w-4 rounded border-ink/30" />
+        <span>
+          Email them an invitation to the Family Portal now
+          <span className="block text-[0.75rem] text-ink-soft">Otherwise they’re invited when you confirm a booking for them, or anytime from their family page.</span>
+        </span>
+      </label>
       <p className="rounded-lg bg-mist/50 px-3 py-2 text-[0.8rem] text-ink-soft">
         The first guardian becomes the primary contact with billing and sensitive-information access. Add more guardians on the family page — each gets their own login and their own access settings.
       </p>

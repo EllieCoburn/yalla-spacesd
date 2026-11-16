@@ -17,7 +17,7 @@ import { audit, OpsError, type Actor } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
 import { addChild, createFamily } from "@/lib/ops/families";
 import type { DB, Executor } from "@/lib/db";
-import { bookings, children, families, familyAuthTokens, familyInvites, familySessions, guardians, messages } from "@/lib/db/schema";
+import { bookings, children, families, familyAuthTokens, familyInvites, familySessions, guardians, messages, playPassSubscriptions } from "@/lib/db/schema";
 import { validLinkKey } from "@/lib/links";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { staffRecipients } from "@/lib/ops/enquiries";
@@ -196,6 +196,14 @@ export async function inviteDetails(db: Executor, token: string) {
  * carries a link that works once, for 14 days. Inviting again replaces an earlier, unused invitation.
  */
 export async function inviteToPortal(db: DB, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null }, baseUrl: string) {
+  const { email, name, existing, link } = await createInvite(db, actor, input, baseUrl);
+  await notifyStaff(db, { key: "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link }, relatedType: "invite", relatedId: existing?.familyId });
+  await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
+  return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+}
+
+/** Makes a single-use invitation link (replacing any unused one for that email); doesn't send it. */
+async function createInvite(db: Executor, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null; ttlMs?: number }, baseUrl: string) {
   const email = input.email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "That email address doesn’t look right.");
   const [existing] = await db.select().from(guardians).where(sql`lower(${guardians.email}) = ${email}`);
@@ -203,11 +211,32 @@ export async function inviteToPortal(db: DB, actor: Actor, input: { email: strin
   await db.delete(familyInvites).where(and(eq(familyInvites.email, email), isNull(familyInvites.usedAt)));
   const token = randomToken();
   const name = input.name?.trim() || (existing ? `${existing.firstName} ${existing.lastName}` : "");
-  await db.insert(familyInvites).values({ tokenHash: sha256(token), email, name: name || null, guardianId: existing?.id ?? null, enquiryId: input.enquiryId ?? null, invitedBy: actor.name, expiresAt: new Date(Date.now() + FAMILY_INVITE_MS) });
-  const link = `${baseUrl}/portal/join?invite=${token}`;
-  await notifyStaff(db, { key: "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link }, relatedType: "invite", relatedId: existing?.familyId });
-  await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
-  return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+  await db.insert(familyInvites).values({ tokenHash: sha256(token), email, name: name || null, guardianId: existing?.id ?? null, enquiryId: input.enquiryId ?? null, invitedBy: actor.name, expiresAt: new Date(Date.now() + (input.ttlMs ?? FAMILY_INVITE_MS)) });
+  return { email, name, existing, link: `${baseUrl}/portal/join?invite=${token}` };
+}
+
+/**
+ * The email for a booking the team made for a family (by email or in person). A family already in
+ * the Family Portal gets a short confirmation pointing to it; a family new to the portal gets a
+ * welcome with a link to set up their account (it works once, for 30 days). The portal doesn't
+ * open by itself: they set up their account from the link.
+ */
+export async function sendTeamBookingEmail(db: DB, actor: Actor, input: { familyId: string; bookingId: string; vars: Record<string, string> }, baseUrl: string) {
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, input.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) return;
+  const related = { type: "booking", id: input.bookingId };
+  if (g.portalAccess || g.passwordHash) {
+    await notifyFamily(db, { key: "booking_confirmed_team", familyId: input.familyId, vars: { ...input.vars, portal_link: `${baseUrl}/portal/home?tab=bookings` }, related });
+    return;
+  }
+  const inv = await createInvite(db, actor, { email: g.email, name: `${g.firstName} ${g.lastName}`, ttlMs: 30 * 24 * 3600 * 1000 }, baseUrl);
+  await notifyFamily(db, { key: "booking_welcome_team", familyId: input.familyId, guardianIds: [g.id], vars: { ...input.vars, link: inv.link }, related });
+  await audit(db, actor, { action: "family.invited", entityType: "family", entityId: input.familyId, summary: `Sent ${g.email} a welcome with a link to set up their Family Portal (booking made by the team)` });
+  return { devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? inv.link : undefined };
 }
 
 /** For Admin: whether each email already has a portal account, or an invitation out (and when). */
@@ -296,11 +325,11 @@ async function announceNewMember(db: DB, input: { familyId: string; guardianId: 
 }
 
 /**
- * After a booking is confirmed (paid, free or confirmed by staff): the family is now a client, so the
- * primary guardian gets portal access. A family seeing this for the first time is welcomed and asked
- * to confirm their email (which also lets them sign in anytime); nothing waits on them doing so.
+ * After a family's purchase on the website goes through (a booking, or a Play Pass), they're a client,
+ * so the primary guardian gets portal access. A family seeing this for the first time is welcomed and
+ * asked to confirm their email (which also lets them sign in anytime); nothing waits on them doing so.
  */
-export async function welcomeBookingFamily(db: DB, familyId: string, baseUrl: string) {
+export async function welcomeNewClient(db: DB, familyId: string, baseUrl: string, via: "booking" | "playpass" = "booking") {
   const [g] = await db
     .select()
     .from(guardians)
@@ -315,59 +344,80 @@ export async function welcomeBookingFamily(db: DB, familyId: string, baseUrl: st
     .where(and(eq(messages.templateKey, "family_confirm_email"), eq(messages.relatedId, g.id)))
     .limit(1);
   if (sent) return;
-  await sendEmailConfirmation(db, g.id, baseUrl);
+  await sendEmailConfirmation(db, g.id, baseUrl, via === "playpass" ? "Your Play Pass is active" : "Your booking is confirmed");
   // The confirmation email doubles as their welcome, so no separate welcome email.
-  await announceNewMember(db, { familyId, guardianId: g.id, baseUrl, welcome: false, via: "First booking on the website" });
+  await announceNewMember(db, { familyId, guardianId: g.id, baseUrl, welcome: false, via: via === "playpass" ? "Play Pass bought on the website" : "First booking on the website" });
 }
 
 /** Sends (or re-sends) the "confirm your email" link; using it confirms the address and signs in. */
-export async function sendEmailConfirmation(db: DB, guardianId: string, baseUrl: string) {
+export async function sendEmailConfirmation(db: DB, guardianId: string, baseUrl: string, purchaseSummary = "Your booking is confirmed") {
   const [g] = await db.select().from(guardians).where(eq(guardians.id, guardianId));
   if (!g || g.emailVerifiedAt) return {};
   const token = randomToken();
   await db.insert(familyAuthTokens).values({ guardianId: g.id, tokenHash: sha256(token), purpose: "confirm_email", expiresAt: new Date(Date.now() + FAMILY_CONFIRM_MS) });
   const link = `${baseUrl}/portal/verify?token=${token}&next=${encodeURIComponent("/portal/home?welcome=confirmed")}`;
-  await notifyFamily(db, { key: "family_confirm_email", familyId: g.familyId, guardianIds: [g.id], vars: { link }, related: { type: "guardian", id: g.id } });
+  await notifyFamily(db, { key: "family_confirm_email", familyId: g.familyId, guardianIds: [g.id], vars: { link, purchase_summary: purchaseSummary }, related: { type: "guardian", id: g.id } });
   return { devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
 }
 
 /**
- * Whether the person on a booking's confirmation page (holding its private link) can open their
- * new Family Portal straight away: the booking is confirmed and recent, and the family hasn't set a
- * password or opened the portal this way before.
+ * Whether the primary guardian of a family that's brand new with this purchase can open their portal
+ * straight from the purchase's confirmation page: they haven't set a password or opened it this way
+ * before, and the family has no earlier confirmed booking or Play Pass. A family already on file
+ * opens the portal from the confirmation email instead, which proves the email.
  */
-export async function portalClaimFor(db: Executor, reference: string, key: string | null | undefined) {
-  if (!validLinkKey("booking", reference, key)) return null;
-  const [b] = await db.select().from(bookings).where(eq(bookings.reference, reference));
-  if (!b || b.status !== "confirmed" || Date.now() - b.createdAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
+async function newClientGuardian(db: Executor, familyId: string, purchasedAt: Date, except: { bookingId?: string; subscriptionId?: string }) {
+  if (Date.now() - purchasedAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
   const [g] = await db
     .select()
     .from(guardians)
-    .where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)))
+    .where(and(eq(guardians.familyId, familyId), eq(guardians.isPrimary, true)))
     .limit(1);
   if (!g || !g.portalAccess || g.passwordHash || g.portalClaimedAt) return null;
-  // Only a family that's new with this booking: a family already on file (an earlier booking or a
-  // waitlist entry) opens the portal from the confirmation email instead, which proves the email.
-  const [f] = await db.select().from(families).where(eq(families.id, b.familyId));
-  if (!f || b.createdAt.getTime() - f.createdAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
-  const [other] = await db
+  const [f] = await db.select().from(families).where(eq(families.id, familyId));
+  if (!f || purchasedAt.getTime() - f.createdAt.getTime() > PORTAL_CLAIM_WINDOW_MS) return null;
+  const [otherBooking] = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .where(and(eq(bookings.familyId, b.familyId), eq(bookings.status, "confirmed"), ne(bookings.id, b.id)))
+    .where(and(eq(bookings.familyId, familyId), eq(bookings.status, "confirmed"), except.bookingId ? ne(bookings.id, except.bookingId) : undefined))
     .limit(1);
-  if (other) return null;
+  if (otherBooking) return null;
+  const [otherPass] = await db
+    .select({ id: playPassSubscriptions.id })
+    .from(playPassSubscriptions)
+    .where(and(eq(playPassSubscriptions.familyId, familyId), ne(playPassSubscriptions.status, "pending"), ne(playPassSubscriptions.status, "abandoned"), except.subscriptionId ? ne(playPassSubscriptions.id, except.subscriptionId) : undefined))
+    .limit(1);
+  if (otherPass) return null;
   return { guardianId: g.id, firstName: g.firstName };
 }
 
-/** Opens a new family's portal from their booking confirmation (once), and signs them in. */
-export async function claimPortalFromBooking(db: DB, reference: string, key: string | null | undefined): Promise<string | null> {
-  const c = await portalClaimFor(db, reference, key);
+/** For a booking's confirmation page (holding its private link): can a new family open their portal? */
+export async function portalClaimFor(db: Executor, reference: string, key: string | null | undefined) {
+  if (!validLinkKey("booking", reference, key)) return null;
+  const [b] = await db.select().from(bookings).where(eq(bookings.reference, reference));
+  if (!b || b.status !== "confirmed" || b.source === "admin") return null;
+  return newClientGuardian(db, b.familyId, b.createdAt, { bookingId: b.id });
+}
+
+/** For the Play Pass welcome page (holding its private link): can a new member open their portal? */
+export async function portalClaimForPass(db: Executor, subscriptionId: string, key: string | null | undefined) {
+  if (!validLinkKey("playpass", subscriptionId, key)) return null;
+  const [sub] = await db.select().from(playPassSubscriptions).where(eq(playPassSubscriptions.id, subscriptionId));
+  if (!sub || sub.status !== "active") return null;
+  return newClientGuardian(db, sub.familyId, sub.createdAt, { subscriptionId: sub.id });
+}
+
+/** Opens a new family's portal from their purchase confirmation (once), and signs them in. */
+export async function claimPortal(db: DB, what: { booking?: string; playPass?: string }, key: string | null | undefined): Promise<string | null> {
+  const c = what.booking ? await portalClaimFor(db, what.booking, key) : what.playPass ? await portalClaimForPass(db, what.playPass, key) : null;
   if (!c) return null;
   const [g] = await db.update(guardians).set({ portalClaimedAt: new Date() }).where(and(eq(guardians.id, c.guardianId), isNull(guardians.portalClaimedAt))).returning();
   if (!g) return null;
-  await audit(db, { type: "family", id: g.id, name: `${g.firstName} ${g.lastName}` }, { action: "family.sign_in", entityType: "family", entityId: g.familyId, summary: "Opened their new Family Portal from their booking confirmation" });
+  await audit(db, { type: "family", id: g.id, name: `${g.firstName} ${g.lastName}` }, { action: "family.sign_in", entityType: "family", entityId: g.familyId, summary: `Opened their new Family Portal from their ${what.booking ? "booking confirmation" : "Play Pass welcome page"}` });
   return startSession(db, g.id);
 }
+
+export const claimPortalFromBooking = (db: DB, reference: string, key: string | null | undefined) => claimPortal(db, { booking: reference }, key);
 
 /**
  * Sign in with email and password. A guardian who has never set a password is emailed a link to

@@ -8,6 +8,9 @@ import { playPassPlans, playPassSubscriptions } from "@/lib/db/schema";
 import { walletSummary } from "@/lib/playpass/wallet";
 import { fmtDate } from "@/lib/time";
 import { getGuardian } from "../../portal/session";
+import { claimPortalAction } from "../../portal/actions";
+import { portalClaimForPass } from "@/lib/family-auth";
+import { validLinkKey } from "@/lib/links";
 
 export const metadata: Metadata = { title: "Welcome to your Play Pass", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -18,13 +21,14 @@ const usd = (c: number) => `$${(c / 100).toLocaleString("en-US", { minimumFracti
  * Shown after checkout. It only reports what the verified payment webhook has recorded; arriving
  * here never activates anything.
  */
-export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
-  const { ref } = await searchParams;
+export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ ref?: string; k?: string }> }) {
+  const { ref, k } = await searchParams;
   const g = isDbConfigured() ? await getGuardian() : null;
   const db = isDbConfigured() ? getDb() : null;
   const [sub] = db && ref ? await db.select().from(playPassSubscriptions).where(eq(playPassSubscriptions.id, ref)) : [];
-  // Only the family's own signed-in guardians see the details.
-  const mine = sub && g && sub.familyId === g.familyId ? sub : null;
+  // Only the family's own signed-in guardians, or someone holding the private link from checkout, see the details.
+  const mine = sub && ((g && sub.familyId === g.familyId) || validLinkKey("playpass", sub.id, k)) ? sub : null;
+  const claim = mine?.status === "active" && !g ? await portalClaimForPass(db!, mine.id, k) : null;
   const [plan] = mine ? await db!.select().from(playPassPlans).where(eq(playPassPlans.id, mine.planId)) : [];
   const wallet = mine ? await walletSummary(db!, mine.familyId) : null;
   const active = mine?.status === "active";
@@ -52,6 +56,18 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
                   </div>
                 ))}
               </dl>
+              {claim ? (
+                <div className="mt-10 rounded-3xl bg-blue p-7 text-left text-chalk sm:p-9">
+                  <p className="eyebrow text-chalk/70">Your Family Portal is ready</p>
+                  <p className="display mt-3 text-[1.7rem] leading-tight">Welcome to Yalla, {claim.firstName}!</p>
+                  <p className="mt-3 text-[0.95rem] text-chalk/85">Book with your Play Pass, finish the forms we need before your child’s first day, and explore all of our family resources. We’ve also emailed you a link to confirm your email; you can do that anytime.</p>
+                  <form action={claimPortalAction} className="mt-6">
+                    <input type="hidden" name="pass" value={mine.id} />
+                    <input type="hidden" name="k" value={k ?? ""} />
+                    <button className="h-12 rounded-full bg-chalk px-7 text-[0.92rem] text-ink transition-colors hover:bg-sand">Open my Family Portal</button>
+                  </form>
+                </div>
+              ) : null}
               <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Link href="/programs/yalla-happenings#calendar" className="inline-flex h-12 items-center rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">
                   Browse experiences

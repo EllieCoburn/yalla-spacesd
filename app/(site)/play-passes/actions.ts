@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { billingPortalUrl, startSignup } from "@/lib/playpass/membership";
+import { billingPortalUrl, startGuestSignup, startSignup } from "@/lib/playpass/membership";
 import { changeTier, requestCancel, requestPause, withdrawCancel, withdrawPause } from "@/lib/playpass/changes";
 import { revalidatePath } from "next/cache";
 import { getGuardian, requestContext } from "../portal/session";
@@ -20,6 +20,31 @@ export async function startPlayPassAction(_: PassState, form: FormData): Promise
   try {
     await throttle(getDb(), "playPassIp", ip);
     ({ url } = await startSignup(getDb(), g, { tier: String(form.get("tier") ?? ""), acceptTerms: form.get("accept") === "on", baseUrl }));
+  } catch (e) {
+    if (e instanceof OpsError) return { error: e.message, at: Date.now() };
+    throw e;
+  }
+  redirect(url);
+}
+
+/** A family new to Yalla buys a Play Pass; their Family Portal opens once the payment goes through. */
+export async function startGuestPlayPassAction(_: PassState, form: FormData): Promise<PassState> {
+  if (await getGuardian()) return startPlayPassAction(_, form);
+  const { baseUrl, ip } = await requestContext();
+  const f = (k: string, n = 80) => String(form.get(k) ?? "").slice(0, n);
+  const firsts = form.getAll("childFirstName").map(String);
+  const lasts = form.getAll("childLastName").map(String);
+  const births = form.getAll("childBirthDate").map(String);
+  let url: string;
+  try {
+    await throttle(getDb(), "playPassIp", ip);
+    ({ url } = await startGuestSignup(getDb(), {
+      tier: f("tier"),
+      acceptTerms: form.get("accept") === "on",
+      baseUrl,
+      guardian: { firstName: f("firstName"), lastName: f("lastName"), email: f("email", 200), phone: f("phone", 40) },
+      children: firsts.slice(0, 8).map((n, i) => ({ firstName: n.slice(0, 80), lastName: (lasts[i] ?? "").slice(0, 80), birthDate: births[i] ?? "" })),
+    }));
   } catch (e) {
     if (e instanceof OpsError) return { error: e.message, at: Date.now() };
     throw e;

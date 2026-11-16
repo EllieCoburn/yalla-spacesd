@@ -117,7 +117,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
           <div className="mt-8 rounded-3xl bg-blue p-6 text-chalk sm:p-8">
             <p className="display text-[1.6rem] leading-tight">{welcome === "confirmed" ? "Thank you, your email is confirmed." : "Welcome to your Family Portal!"}</p>
             <p className="mt-2 max-w-2xl text-[0.95rem] text-chalk/85">
-              {welcome === "booking" ? "Your booking is below. " : ""}
+              {welcome === "booking" ? "Your booking is below. " : welcome === "playpass" ? "Your Play Pass is active and ready to spend. " : ""}
               {outstanding.length
                 ? `There ${outstanding.length === 1 ? "is 1 form" : `are ${outstanding.length} forms`} to finish before your child’s first day, and the Family Handbook and our resources are always here for you.`
                 : "Your bookings, forms, and the Family Handbook and resources are all here for you."}

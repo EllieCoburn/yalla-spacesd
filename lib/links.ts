@@ -7,7 +7,7 @@
 import { createHmac } from "node:crypto";
 import { safeEqual } from "@/lib/auth/crypto";
 
-type Kind = "booking" | "offer" | "invoice";
+type Kind = "booking" | "offer" | "invoice" | "playpass";
 
 function secret() {
   const s = process.env.AUTH_SECRET;

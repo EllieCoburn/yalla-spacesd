@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
       { source: "/admin/reset", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/book/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/pay/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/play-passes/welcome", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/portal/join", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
     ];
   },
   // Pricing is now public on the Membership page; old portal links land there.

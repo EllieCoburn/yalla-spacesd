@@ -15,6 +15,8 @@ import type { DB, Executor } from "@/lib/db";
 import { families, guardians, playPassCharges, playPassPlans, playPassSubscriptions, walletAllocations, walletEntries } from "@/lib/db/schema";
 import { guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { notifyFamily } from "@/lib/notify";
+import { linkKey } from "@/lib/links";
+import { addChild, createFamily, findGuardianByEmail } from "@/lib/ops/families";
 import type { NormalizedEvent } from "@/lib/payments/provider";
 import { fmtDate, todayLA, zonedDateTime } from "@/lib/time";
 import { activeMembershipBilling, membershipBillingFor } from "./provider";
@@ -152,13 +154,48 @@ export async function startSignup(db: DB, g: GuardianContext, input: { tier: str
     anchor: p.full ? null : Math.floor(zonedDateTime(p.nextRenewalOn, "00:00").getTime() / 1000),
     customerEmail: g.email,
     customerRef: prev?.customerRef ?? null,
-    successUrl: `${input.baseUrl}/play-passes/welcome?ref=${sub.id}`,
+    successUrl: `${input.baseUrl}/play-passes/welcome?ref=${sub.id}&k=${linkKey("playpass", sub.id)}`,
     cancelUrl: `${input.baseUrl}/play-passes/join?plan=${plan.tier}&cancelled=1`,
     idempotencyKey: `playpass-checkout:${sub.id}`,
   });
   await db.update(playPassSubscriptions).set({ checkoutRef: checkout.checkoutRef, updatedAt: new Date() }).where(eq(playPassSubscriptions.id, sub.id));
   await audit(db, guardianActor(g), { action: "playpass.signup_started", entityType: "family", entityId: g.familyId, summary: `Started a ${plan.name} Play Pass (${usd(p.chargeCents)} today)` });
   return { url: billing.name === "test" ? `${input.baseUrl}${checkout.url}` : checkout.url, subscriptionId: sub.id };
+}
+
+/**
+ * A family new to Yalla buying a Play Pass on the website. Their Family Portal opens once the first
+ * payment goes through (the purchase is their way in), so until then the family record has no portal
+ * access. Someone already in the portal is asked to sign in instead.
+ */
+export async function startGuestSignup(
+  db: DB,
+  input: { tier: string; acceptTerms: boolean; baseUrl: string; guardian: { firstName: string; lastName: string; email: string; phone?: string }; children: { firstName: string; lastName: string; birthDate: string }[] },
+) {
+  const email = input.guardian.email.trim().toLowerCase();
+  if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
+  if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "Enter a valid email address.");
+  const today = todayLA();
+  const kids = input.children.filter((c) => c.firstName.trim() || c.lastName.trim() || c.birthDate);
+  if (!kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
+  for (const c of kids) {
+    if (!c.firstName.trim() || !c.lastName.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
+    if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);
+  }
+  if (!input.acceptTerms) throw new OpsError("terms", "Please confirm you agree to the monthly billing terms.");
+  const existing = await findGuardianByEmail(db, email);
+  if (existing && (existing.portalAccess || existing.passwordHash)) throw new OpsError("sign_in", "This email is already part of a Yalla family. Please sign in to continue.");
+  const actor = { type: "system" as const, name: "Play Pass sign-up (website)" };
+  let g: typeof guardians.$inferSelect;
+  if (existing) g = existing;
+  else {
+    const made = await createFamily(db, actor, { guardian: { firstName: input.guardian.firstName.trim(), lastName: input.guardian.lastName.trim(), email, phone: input.guardian.phone, portalAccess: false } });
+    g = made.guardian;
+  }
+  for (const c of kids) await addChild(db, actor, g.familyId, { firstName: c.firstName.trim(), lastName: c.lastName.trim(), birthDate: c.birthDate }).catch((e) => { if (!(e instanceof OpsError && e.code === "duplicate")) throw e; });
+  const [f] = await db.select().from(families).where(eq(families.id, g.familyId));
+  const ctx: GuardianContext = { sessionId: "guest", guardianId: g.id, familyId: g.familyId, familyName: f.name, firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: false, hasPassword: false };
+  return startSignup(db, ctx, { tier: input.tier, acceptTerms: input.acceptTerms, baseUrl: input.baseUrl });
 }
 
 /* ── Member changes (all take effect from the next renewal) ── */
@@ -378,6 +415,16 @@ export async function applyMembershipEvent(db: DB, evt: MembershipEvent): Promis
         },
         related: { type: "family", id: res.sub.familyId },
       });
+      // A first Play Pass payment is a new family's way into the Family Portal.
+      if (res.initial) {
+        try {
+          const { welcomeNewClient } = await import("@/lib/family-auth");
+          const { trustedBaseUrl } = await import("@/lib/base-url");
+          await welcomeNewClient(db, res.sub.familyId, trustedBaseUrl(), "playpass");
+        } catch (e) {
+          console.error("[portal welcome failed]", (e as Error).message?.slice(0, 160));
+        }
+      }
       return "membership payment recorded";
     }
 

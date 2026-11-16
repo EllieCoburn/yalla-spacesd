@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { OpsError } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { claimPortalFromBooking, redeemFamilyLink, revokeOtherFamilySessions, sendEmailConfirmation, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
+import { claimPortal, redeemFamilyLink, revokeOtherFamilySessions, sendEmailConfirmation, registerFamilyAccount, requestMagicLink, revokeFamilySession, safeNextPath, setFamilyPassword, signInWithPassword } from "@/lib/family-auth";
 import { familyCancelItem, familySignForm, familyUpdateCare } from "@/lib/ops/public-booking";
 import { resolveOffer } from "@/lib/ops/yalla-cancellations";
 import { guardianActor } from "@/lib/family-auth";
@@ -97,10 +97,11 @@ export async function createAccountAction(_: PortalState, form: FormData): Promi
 export async function claimPortalAction(form: FormData) {
   const ref = String(form.get("ref") ?? "").slice(0, 40);
   const k = String(form.get("k") ?? "").slice(0, 80);
-  const session = await claimPortalFromBooking(getDb(), ref, k);
+  const pass = String(form.get("pass") ?? "").slice(0, 80);
+  const session = await claimPortal(getDb(), pass ? { playPass: pass } : { booking: ref }, k);
   if (!session) redirect("/portal?claim=expired");
   await setFamilyCookie(session);
-  redirect("/portal/home?welcome=booking");
+  redirect(pass ? "/portal/home?welcome=playpass" : "/portal/home?welcome=booking");
 }
 
 /** Re-sends the "confirm your email" link to the signed-in guardian. */

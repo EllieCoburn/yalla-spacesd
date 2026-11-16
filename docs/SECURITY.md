@@ -16,8 +16,10 @@ Written after the November 2026 readiness review; see that review for evidence a
 - Sessions: 7 days at most, 12 hours idle. Disabling an account ends its sessions.
 
 **Family accounts**
-- There is no open sign-up. Portal access comes from paying for a booking on the website, or from an
-  invitation staff send (Admin → Inbox or a family's page; single use, 14 days, proves the email).
+- There is no open sign-up. Portal access comes from paying for a booking or a Play Pass on the
+  website, or from an invitation (Admin → Inbox or a family's page; single use, 14 days, proves the
+  email). A booking the team makes emails a family new to the portal a set-up link (an invitation,
+  30 days); families added in Admin have no portal access until they use one.
 - Guests who haven't paid (an unpaid hold, a waitlist entry) have no portal access, not even by
   sign-in link. Once paid, the confirmation page (with its private link) can open the new family's
   portal once, within 48 hours, for a brand-new family only; they're also emailed a link that

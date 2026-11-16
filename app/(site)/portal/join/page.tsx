@@ -40,7 +40,7 @@ export default async function JoinPortal({ searchParams }: { searchParams: Promi
               {sp.invite ? (
                 <p className="mt-5 rounded-2xl bg-sand/60 px-5 py-4 text-[0.95rem]">This invitation link has expired or was already used. Reply to your invitation email and we’ll gladly send a new one, or sign in below if you’ve already set up your account.</p>
               ) : null}
-              <p className="mt-5 text-ink-soft">The Family Portal is home base for Yalla families. There are two ways in:</p>
+              <p className="mt-5 text-ink-soft">The Family Portal is home base for Yalla families. There are a few ways in:</p>
               <ul className="mt-6 space-y-4">
                 <li className="rounded-2xl border border-line p-5">
                   <p className="display text-[1.3rem]">Book care</p>
@@ -50,8 +50,15 @@ export default async function JoinPortal({ searchParams }: { searchParams: Promi
                   </Link>
                 </li>
                 <li className="rounded-2xl border border-line p-5">
+                  <p className="display text-[1.3rem]">Join with a Play Pass</p>
+                  <p className="mt-1 text-[0.95rem] text-ink-soft">A monthly membership to spend on Yalla experiences. Your Family Portal opens as soon as your first payment goes through.</p>
+                  <Link href="/play-passes" className="mt-3 inline-block text-[0.95rem] text-blue underline-offset-4 hover:underline">
+                    Explore Play Passes
+                  </Link>
+                </li>
+                <li className="rounded-2xl border border-line p-5">
                   <p className="display text-[1.3rem]">Get an invitation</p>
-                  <p className="mt-1 text-[0.95rem] text-ink-soft">Exploring Yalla for later? Book a tour or send us a note, and our team will email you an invitation when the time is right.</p>
+                  <p className="mt-1 text-[0.95rem] text-ink-soft">Exploring Yalla, or have questions first? Book a tour or send us a note, and our team will email you an invitation when the time is right.</p>
                   <Link href="/book-a-tour" className="mt-3 inline-block text-[0.95rem] text-blue underline-offset-4 hover:underline">
                     Book a tour
                   </Link>

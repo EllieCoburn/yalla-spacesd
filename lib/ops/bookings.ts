@@ -619,14 +619,18 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
   });
   if (result.status === "confirmed" && result.changed && opts.notify !== false) {
     const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-    await notifyFamily(db, { key: "booking_confirmation", familyId: b.familyId, vars: await confirmationVars(db, bookingId), related: { type: "booking", id: bookingId } });
-    // A booking made and paid on the website is a family's way into the Family Portal. (Bookings
-    // staff make don't open it automatically; staff can send an invitation instead.)
-    if (actor.type !== "staff") {
+    const vars = await confirmationVars(db, bookingId);
+    const { sendTeamBookingEmail, welcomeNewClient } = await import("@/lib/family-auth");
+    const { trustedBaseUrl } = await import("@/lib/base-url");
+    if (b.source === "admin") {
+      // Booked by the team (by email, or in person): one email, worded for whether the family is
+      // already in the Family Portal. The portal doesn't open by itself for a family new to it.
+      await sendTeamBookingEmail(db, actor, { familyId: b.familyId, bookingId, vars }, trustedBaseUrl());
+    } else {
+      await notifyFamily(db, { key: "booking_confirmation", familyId: b.familyId, vars, related: { type: "booking", id: bookingId } });
+      // A booking made and paid on the website is a family's way into the Family Portal.
       try {
-        const { welcomeBookingFamily } = await import("@/lib/family-auth");
-        const { trustedBaseUrl } = await import("@/lib/base-url");
-        await welcomeBookingFamily(db, b.familyId, trustedBaseUrl());
+        await welcomeNewClient(db, b.familyId, trustedBaseUrl(), "booking");
       } catch (e) {
         console.error("[portal welcome failed]", (e as Error).message?.slice(0, 160));
       }

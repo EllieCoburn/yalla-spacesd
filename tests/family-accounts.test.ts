@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import {
+  claimPortal,
   claimPortalFromBooking,
+  portalClaimForPass,
   inviteDetails,
   inviteToPortal,
   portalClaimFor,
@@ -18,6 +20,9 @@ import {
   signInWithPassword,
 } from "@/lib/family-auth";
 import { linkKey } from "@/lib/links";
+import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
+import { createFamily } from "@/lib/ops/families";
+import { startGuestSignup } from "@/lib/playpass/membership";
 import { processEvent } from "@/lib/payments/webhooks";
 import { submitPublicBooking, type PublicBookingInput } from "@/lib/ops/public-booking";
 import { setPolicy } from "@/lib/ops/settings";
@@ -219,5 +224,98 @@ describe("Joining by booking", () => {
     const [, b2] = await db().select().from(s.bookings).orderBy(s.bookings.createdAt);
     await pay(b2.id);
     expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_confirm_email"))).toHaveLength(1);
+  });
+});
+
+describe("Bookings the team makes", () => {
+  async function teamBooking(familyId: string, childId: string) {
+    const p = await program();
+    const sess = await session(p.id, { capacity: 5 });
+    const hold = await createHold(db(), owner, { familyId, items: [{ sessionId: sess.id, childId }], source: "admin" });
+    await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: true });
+    return hold.booking;
+  }
+
+  it("a family new to the portal gets a welcome with a link to set up their account (the portal doesn't open by itself)", async () => {
+    const { family: f, guardian: g } = await createFamily(db(), owner, { guardian: { firstName: "Tess", lastName: "Walkin", email: "tess@example.com", portalAccess: false } });
+    const { addChild } = await import("@/lib/ops/families");
+    const { child } = await addChild(db(), owner, f.id, { firstName: "Bo", lastName: "Walkin", birthDate: "2022-06-01" });
+    const b = await teamBooking(f.id, child.id);
+    const sent = await db().select().from(s.messages);
+    expect(sent.some((m) => m.templateKey === "booking_confirmation")).toBe(false);
+    const welcome = sent.find((m) => m.templateKey === "booking_welcome_team")!;
+    expect(welcome.subject).toBe("Welcome to Yalla! Your booking is confirmed");
+    expect(welcome.body).toContain("Team Yalla has confirmed your booking");
+    expect(welcome.body).toContain("[private link removed]");
+    // No portal yet: no sign-in link, no "open my portal" on the confirmation page.
+    await requestMagicLink(db(), "tess@example.com", base);
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_sign_in"))).toHaveLength(0);
+    expect(await portalClaimFor(db(), b.reference, linkKey("booking", b.reference))).toBeNull();
+    // The link in the email is an invitation for their existing family (children already on file).
+    const [inv] = await db().select().from(s.familyInvites);
+    expect(inv.guardianId).toBe(g.id);
+    expect(inv.expiresAt.getTime() - Date.now()).toBeGreaterThan(29 * 24 * 3600_000);
+  });
+
+  it("a family already in the portal gets a short confirmation pointing to it", async () => {
+    const f = await family("Regular");
+    await db().update(s.guardians).set({ portalAccess: true }).where(eq(s.guardians.id, f.guardian.id));
+    await teamBooking(f.family.id, f.children[0].id);
+    const sent = await db().select().from(s.messages);
+    const msg = sent.find((m) => m.templateKey === "booking_confirmed_team")!;
+    expect(msg.body).toContain("Team Yalla has booked this for you");
+    expect(msg.body).toContain("/portal/home?tab=bookings");
+    expect(sent.some((m) => m.templateKey === "booking_welcome_team" || m.templateKey === "family_confirm_email")).toBe(false);
+  });
+});
+
+describe("Joining with a Play Pass", () => {
+  async function plan() {
+    await db().insert(s.playPassPlans).values({ tier: "gather", name: "Gather", priceCents: 18000, allocationCents: 20000, minExperiences: 3, sortOrder: 1 });
+  }
+  const guest = (over: Partial<Parameters<typeof startGuestSignup>[1]> = {}) => ({
+    tier: "gather",
+    acceptTerms: true,
+    baseUrl: base,
+    guardian: { firstName: "Pat", lastName: "Member", email: "pat@example.com" },
+    children: [{ firstName: "Lu", lastName: "Member", birthDate: "2021-09-09" }],
+    ...over,
+  });
+  async function pay(subId: string) {
+    const [sub] = await db().select().from(s.playPassSubscriptions).where(eq(s.playPassSubscriptions.id, subId));
+    await processEvent(db(), "test", { id: `evt_c_${subId}`, type: "membership.checkout_completed", checkoutRef: sub.checkoutRef!, customerRef: "tcus_1", subscriptionRef: `tsubref_${sub.id}`, localId: sub.id });
+    await processEvent(db(), "test", { id: `evt_p_${subId}`, type: "membership.invoice_paid", invoiceRef: `tin_init_${sub.id}`, subscriptionRef: `tsubref_${sub.id}`, localId: sub.id, amountCents: sub.initialChargeCents, reason: "initial", chargeRef: `tpi_${sub.id}` });
+  }
+
+  it("needs a child's first name, last name and date of birth", async () => {
+    await plan();
+    await expect(startGuestSignup(db(), guest({ children: [] }))).rejects.toThrow(/at least one child/);
+    await expect(startGuestSignup(db(), guest({ children: [{ firstName: "Lu", lastName: "", birthDate: "2021-09-09" }] }))).rejects.toThrow(/last name/);
+  });
+
+  it("the portal opens only once the first payment goes through", async () => {
+    await plan();
+    const { subscriptionId, url } = await startGuestSignup(db(), guest());
+    expect(url).toContain("/pay/test/");
+    const k = linkKey("playpass", subscriptionId);
+    expect(await portalClaimForPass(db(), subscriptionId, k)).toBeNull(); // not paid yet
+    await requestMagicLink(db(), "pat@example.com", base);
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_sign_in"))).toHaveLength(0);
+
+    await pay(subscriptionId);
+    expect(await portalClaimForPass(db(), subscriptionId, "nope")).toBeNull();
+    const session = await claimPortal(db(), { playPass: subscriptionId }, k);
+    expect((await resolveFamilySession(db(), session!))?.email).toBe("pat@example.com");
+    expect(await claimPortal(db(), { playPass: subscriptionId }, k)).toBeNull();
+    const [confirm] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_confirm_email"));
+    expect(confirm.body).toContain("Your Play Pass is active");
+    const kids = await db().select().from(s.children);
+    expect(kids.map((c) => [c.firstName, c.lastName])).toEqual([["Lu", "Member"]]);
+  });
+
+  it("someone already in the portal is asked to sign in", async () => {
+    await plan();
+    await join();
+    await expect(startGuestSignup(db(), guest({ guardian: { firstName: "M", lastName: "R", email: "maya@example.com" } }))).rejects.toThrow(/sign in/);
   });
 });

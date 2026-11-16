@@ -123,7 +123,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "How do I access my Family Portal?",
     answer:
-      "Your Family Portal opens when you book care on our website, such as a Yalla Flex day or a Happening: right after checkout you can open it from your confirmation page, and we’ll email you a link to confirm your email and choose a password. Families exploring Yalla for later receive an invitation from our team when the time is right.\n\nAfter that, [sign in](/portal) with your email and password whenever you like; you’ll stay signed in on that browser.\n\nForgot your password? Choose “Forgot your password” on the sign-in page and we’ll email you a link to set a new one.",
+      "Your Family Portal opens when you book care on our website (such as a Yalla Flex day or a Happening) or buy a Play Pass: as soon as your payment goes through you can open it from your confirmation page, and we’ll email you a link to confirm your email and choose a password. If our team books care for you, we’ll email you a link to set up your account. Families exploring Yalla for later receive an invitation from our team when the time is right.\n\nAfter that, [sign in](/portal) with your email and password whenever you like; you’ll stay signed in on that browser.\n\nForgot your password? Choose “Forgot your password” on the sign-in page and we’ll email you a link to set a new one.",
   },
   {
     id: "hours",
