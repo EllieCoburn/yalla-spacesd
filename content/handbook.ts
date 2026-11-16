@@ -153,19 +153,14 @@ Our [Parking guide](/parking) has everything you need: free park-and-walk lots, 
       {
         id: "who-to-ask",
         title: "Who to ask",
-        summary: "Your child’s educarers and guides for day-to-day care; Ellie Coburn for bigger questions and concerns; Emma Duenas for operations.",
-        body: `- **Ellie Coburn**, Owner & Executive Director: program questions, concerns, dietary accommodations, custody paperwork and anything you’d like to talk through. ${HELLO}
-- **Emma Duenas**, Director of Operations: bookings, billing and the practical side of your time at Yalla. ${ADMIN}
-- **Mariia Sineokova**, Creative Director: our environments, documentation and the ideas behind them.
-- **Your child’s educarers and guides**: the people who know your child’s day best.
+        summary: "Your child’s educarers and guides for day-to-day care; our leadership team for bigger questions and concerns; our operations team for bookings and billing.",
+        body: `- **Your child’s educarers and guides**: the people who know your child’s day best.
+- **Our leadership team**: program questions, concerns, dietary accommodations, custody paperwork and anything you’d like to talk through. ${HELLO}
+- **Our operations team**: bookings, billing and the practical side of your time at Yalla. ${ADMIN}
 
 Our educarers care for Seedlings and Saplings, our youngest children; our guides care for Sprouts and Wildflowers.`,
         programs: {
-          club: `Your care team for 2026–2027:
-- **Seedlings**: Angela Chavez and Emma Munoz-McCue
-- **Saplings**: Kaeley Kaufold and Karishma Ali
-- **Sprouts**: Gisell Oropeza and Brenda Puentes
-- **Wildflowers**: Gloria Hernandez and Natalie Kowal`,
+          club: "Your child’s cohort has its own care team for the year, and you can message them anytime in Brightwheel.",
           flex: "On Flex days your child joins the group for their age, cared for by that group’s educarers or guides. A team member will introduce you when you arrive.",
           camp: "Each camp age group has its own guides. You’ll meet them at arrival.",
           happenings: "Each Happening is led by Yalla guides, who’ll greet you at arrival.",
@@ -720,7 +715,7 @@ Formula is stored in a designated area, and refrigerated at 39°F (4°C) or belo
 
 If your child has a documented food allergy or intolerance, please provide both lunch and snacks from home. With written documentation from a licensed medical provider, Yalla can offer alternative snacks as a reasonable accommodation; please send it before your child’s first day so we can plan.
 
-For children with special feeding needs, we keep a daily record of what they eat and share it with you as appropriate. Questions about accommodations? Email Ellie Coburn at ${HELLO}.`,
+For children with special feeding needs, we keep a daily record of what they eat and share it with you as appropriate. Questions about accommodations? Email our leadership team at ${HELLO}.`,
         ask: ["allergy", "allergies", "gluten free", "dairy free", "vegan", "dietary restrictions", "epipen"],
       },
     ],
@@ -1178,14 +1173,14 @@ We encourage screen-free time at home too: reading, arts and crafts, outdoor pla
       {
         id: "concerns",
         title: "Raising a concern",
-        summary: "Start with a private conversation with your child’s educarer or guide. If that doesn’t resolve it, Ellie Coburn will facilitate a meeting.",
+        summary: "Start with a private conversation with your child’s educarer or guide. If that doesn’t resolve it, our leadership team will arrange a meeting.",
         body: `We believe most concerns can be resolved through direct, compassionate conversation, and we can only help with a concern we know about. Here’s our process:
 
 1. **Talk directly**: start with your child’s educarer or guide. Let them know in advance what you’d like to discuss so you can both come prepared, and meet somewhere private, never in front of children or other families.
-2. **Involve leadership**: if the concern continues, contact Ellie Coburn in person during office hours or at ${HELLO}. She’ll arrange a private, confidential meeting with everyone involved.
+2. **Involve leadership**: if the concern continues, contact our leadership team at ${HELLO}. They’ll arrange a private, confidential meeting with everyone involved.
 3. **Solve it together**: everyone shares observations, listens openly, and agrees on the issue, a shared goal, actions for each person, a timeline and a follow-up date.
 4. **Document**: a short summary of the meeting is shared with you and kept on file.
-5. **Follow up**: at the follow-up, if the concern is resolved, it’s closed. If not, our leadership decides next steps, which may include mediation, outside support (including our Program Ombudsman, Madeline Chiba Thorliefson) or further involvement from leadership.
+5. **Follow up**: at the follow-up, if the concern is resolved, it’s closed. If not, our leadership decides next steps, which may include mediation, outside support (including our Program Ombudsman) or further involvement from leadership.
 
 Our aim is always to protect the relationship between children, families and our team, through a respectful, transparent process.`,
         programs: {
@@ -1203,7 +1198,7 @@ Our aim is always to protect the relationship between children, families and our
 
 This applies to everything we do: admissions and enrollment; access to services, spaces and experiences; guidance and support; family engagement and communication; and employment.
 
-Yalla is an affirming, identity-conscious space. We strive to uplift historically marginalized voices, honor cultural traditions and remove barriers to participation. Please raise any concern about discrimination or bias with Ellie Coburn at ${HELLO}; it will be handled with seriousness, care and confidentiality.`,
+Yalla is an affirming, identity-conscious space. We strive to uplift historically marginalized voices, honor cultural traditions and remove barriers to participation. Please raise any concern about discrimination or bias with our leadership team at ${HELLO}; it will be handled with seriousness, care and confidentiality.`,
         ask: ["discrimination", "inclusion", "diversity", "bias"],
       },
       {

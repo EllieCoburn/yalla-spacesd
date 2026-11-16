@@ -25,6 +25,8 @@ describe("Family Handbook content", () => {
     expect(all).not.toMatch(/\$20 for each additional ten minutes/);
     expect(all).toContain("619.775.4008");
     expect(all).not.toContain("876-1089");
+    // No one is named: roles change, and the leadership team handles concerns.
+    expect(all).not.toMatch(/Ellie|Coburn|Duenas|Sineokova|Madeline|Thorliefson|Munoz|Chavez|Kaufold|Karishma|Oropeza|Puentes|Hernandez|Kowal/);
   });
 
   it("only uses known programs, and every chapter has sections", () => {
