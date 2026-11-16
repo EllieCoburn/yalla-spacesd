@@ -18,8 +18,7 @@ describe("Family Handbook content", () => {
     expect(new Set(ids).size).toBe(ids.length);
     // What families read (the hidden "ask" hints may use everyday words like "teacher", to help search).
     const all = JSON.stringify(HANDBOOK_SECTIONS.map(({ ask: _ask, ...rest }) => rest).concat(HANDBOOK.map((c) => ({ title: c.title, blurb: c.blurb })) as never));
-    // "The environment as the third teacher" is a Reggio Emilia term, kept as Yalla wrote it.
-    expect(all.replace(/third teacher/gi, "")).not.toMatch(/classroom|daycare|\bschool\b|students|\bteachers?\b/i);
+    expect(JSON.stringify(HANDBOOK)).not.toMatch(/classroom|daycare|(?<![-\w])day ?care\b|school|students|teacher/i);
     // Website policies win over the PDF where they disagree.
     expect(all).toContain("$10 is charged for each additional 10 minutes");
     expect(all).not.toMatch(/\$20 for each additional ten minutes/);

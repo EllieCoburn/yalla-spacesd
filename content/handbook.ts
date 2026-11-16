@@ -84,7 +84,7 @@ Team Yalla`,
         body: `- **Reciprocal relationships**: learning flourishes through strong, respectful connections between children, educarers and guides, families and the wider community.
 - **Play as the work of the child**: play is the natural medium of growth and discovery, a chance to explore, imagine, problem-solve and create.
 - **Diversity, equity and inclusion**: we are fundamentally committed to a community where every child and family feels valued, respected and celebrated.
-- **The environment as the third teacher**: our play spaces and outdoor areas are intentionally designed to invite exploration, creativity and collaboration.
+- **The environment as a partner in learning**: our play spaces and outdoor areas are intentionally designed to invite exploration, creativity and collaboration.
 - **Documentation as reflection**: we make children’s learning visible through careful observation and documentation, supporting growth, dialogue and shared understanding with families.
 - **The image of the child**: we honor every child as capable, curious and full of potential, approaching their ideas with respect and care.
 - **Continuity of care and attachment**: secure, consistent relationships are the foundation for trust, belonging and healthy development.
@@ -165,7 +165,7 @@ Our educarers care for Seedlings and Saplings, our youngest children; our guides
           camp: "Each camp age group has its own guides. You’ll meet them at arrival.",
           happenings: "Each Happening is led by Yalla guides, who’ll greet you at arrival.",
         },
-        ask: ["who is the director", "who do i talk to", "staff", "teachers", "educarers", "guides", "care team"],
+        ask: ["who is the director", "who do i talk to", "staff", "educarers", "guides", "care team"],
       },
       {
         id: "communication",
@@ -184,7 +184,7 @@ We share upcoming closures and community news by email and with signs in our lob
           camp: `Your camp bookings live in the [Family Portal](/portal/home). On camp days, call ${PHONE} for anything urgent.`,
           happenings: `Your bookings live in the [Family Portal](/portal/home). During a Happening, call ${PHONE} if you need to reach us.`,
         },
-        ask: ["brightwheel", "message the teacher", "how long to reply", "response time", "email response"],
+        ask: ["brightwheel", "message the care team", "how long to reply", "response time", "email response"],
       },
     ],
   },
@@ -460,7 +460,7 @@ Flex fills vacancies, so availability depends on openings in your child’s grou
 - **Wildflowers**: 1 adult for every 8 children
 
 Our ratios reflect both regulatory best practice and our own standards for high-quality care.`,
-        ask: ["ratio", "how many children per teacher", "group size", "how many kids"],
+        ask: ["ratio", "how many children per adult", "group size", "how many kids"],
       },
       {
         id: "substitutes",
@@ -474,7 +474,7 @@ Our ratios reflect both regulatory best practice and our own standards for high-
 - **Continuity**: routines, rhythms and established practices continue as closely as possible, and substitutes can see each child’s care notes and important health information.
 
 Staffing decisions are based on availability, credentials and the group’s needs, so families can’t request or decline particular substitutes. Substitutes may not always pass on updates directly, but the team will make every effort to share anything important.`,
-        ask: ["substitute", "teacher absent", "teacher sick", "who covers"],
+        ask: ["substitute", "educarer absent", "guide sick", "who covers"],
       },
     ],
   },
@@ -567,7 +567,7 @@ A steady rhythm lets children feel secure and supported, so they can thrive in a
         summary: "Infants rest on their own rhythm in cribs. Children 18 months and older have a quiet rest time on mats around 12:00–2:00pm.",
         facts: [{value: "12:00–2:00", label: "Rest time, 18 months and up"}, {value: "~20 min", label: "Then quiet activities if awake"}],
         appliesTo: ["club", "flex"],
-        body: `**Infants: 4–18 Months**: Infants sleep according to their individual needs and familiar home routines rather than a fixed nap schedule.
+        body: `**4–18 Months**: Infants sleep according to their individual needs and familiar home routines rather than a fixed nap schedule.
 
 Between 12 and 18 months, we partner with families to gradually introduce one midday nap, typically from 12:00–2:00 p.m. This helps children prepare to rest on a mat with their group between 18 and 24 months. We support each child through this transition at their own pace.
 
@@ -575,7 +575,7 @@ Between 12 and 18 months, we partner with families to gradually introduce one mi
 - **Attentive supervision**: Staff monitor sleeping infants by sight and sound at all times and physically check on them at least once every fifteen minutes. Sleep checks for children under 24 months are always logged.
 - **Safe sleep**: Infants under 12 months are placed on their backs for every nap. Once an infant can roll independently in both directions, they may remain in the position they move into on their own. Cribs remain free of blankets, pillows, toys, and other loose items.
 
-**Toddlers and Preschoolers: 18 Months–4 Years**: Our daily rest period is approximately 12:00–2:00 p.m. After lunch, familiar routines—including setting out mats, closing curtains, and turning on white noise—help children settle into a calm, restful environment.
+**18 Months–4 Years**: Our daily rest period is approximately 12:00–2:00 p.m. After lunch, familiar routines—including setting out mats, closing curtains, and turning on white noise—help children settle into a calm, restful environment.
 
 - **Time to rest**: Children have an opportunity to sleep, with gentle support from staff as needed. Children are not required to fall asleep.
 - **Quiet options for children who remain awake**: Children who are still awake after approximately 20 minutes may look at books or enjoy quiet activities on their mats while others sleep.
@@ -629,9 +629,9 @@ Snack and mealtimes vary by group and follow each group’s daily rhythm. Even w
 - Glass containers or anything breakable
 
 **Preparing food by age**:
-- **Infants, 4 – 18 months**: soft, safe and mashable with gums or minimal teeth; pre-cut for infant-sized utensils; small, labeled containers. No honey, added salt or choking hazards.
-- **Toddlers, 1 – 3 years**: bite-sized, pre-cut and soft enough to chew safely; nothing hard, sticky or crunchy; grapes and tomatoes quartered; hot dogs sliced lengthwise, then into small pieces.
-- **Children, 2½ years and up**: more texture is fine, still cut into child-sized pieces; grapes and tomatoes halved or quartered; hot dogs and sausages sliced lengthwise; nothing that needs adult help to eat.
+- **4 – 18 months**: soft, safe and mashable with gums or minimal teeth; pre-cut for infant-sized utensils; small, labeled containers. No honey, added salt or choking hazards.
+- **1 – 3 years**: bite-sized, pre-cut and soft enough to chew safely; nothing hard, sticky or crunchy; grapes and tomatoes quartered; hot dogs sliced lengthwise, then into small pieces.
+- **2½ years and up**: more texture is fine, still cut into child-sized pieces; grapes and tomatoes halved or quartered; hot dogs and sausages sliced lengthwise; nothing that needs adult help to eat.
 
 > If a child arrives without lunch or with food that isn’t safe, we may ask you to bring something suitable, and a child may be sent home without adequate food.
 
@@ -1147,7 +1147,7 @@ For children in foster care, placement documentation must be provided before car
 Our team members are people first: professionals who care deeply for your children, and individuals who deserve privacy, rest and respect. Families who can’t uphold these standards may be asked to leave Yalla.
 
 Adults are expected to treat children, families and team members with respect. Threatening, discriminatory or abusive conduct is never permitted.`,
-        ask: ["staff", "respect", "talk to teacher", "personal information"],
+        ask: ["staff", "respect", "talk to my child’s guide", "personal information"],
       },
       {
         id: "photography",
@@ -1195,7 +1195,7 @@ Our aim is always to protect the relationship between children, families and our
           camp: `For a concern about a camp day, talk with the team at departure, or email ${HELLO}.`,
           happenings: `For a concern about a Happening, talk with the team at departure, or email ${HELLO}.`,
         },
-        ask: ["complaint", "concern", "unhappy", "problem with teacher", "grievance", "who do i complain to"],
+        ask: ["complaint", "concern", "unhappy", "problem with a guide", "grievance", "who do i complain to"],
       },
       {
         id: "non-discrimination",
