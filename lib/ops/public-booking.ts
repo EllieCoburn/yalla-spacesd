@@ -50,6 +50,7 @@ import { submitEnquiry } from "./enquiries";
 import { flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
+import { bookingStatusPath } from "@/lib/links";
 
 const PUBLIC: Actor = { type: "system", name: "Public booking" };
 const BOOKABLE_MODES = ["instant", "request"];
@@ -397,7 +398,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
 
     // 5. Hold the spots (transactional capacity check) and start payment.
     const hold = await createHold(db, actor, { familyId, items, source: "public" });
-    if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}/book/confirmation/${hold.booking.reference}`, reference: hold.booking.reference };
+    if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}${bookingStatusPath(hold.booking.reference)}`, reference: hold.booking.reference };
     const checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
     return { ok: true, url: checkout.url, reference: hold.booking.reference };
   } catch (e) {
@@ -479,7 +480,7 @@ export async function retryCheckout(db: DB, reference: string, baseUrl: string) 
   if (!inv) return startCheckout(db, PUBLIC, b.id, { base: baseUrl });
   const pending = await db.select().from(payments).where(and(eq(payments.invoiceId, inv.id), eq(payments.status, "pending")));
   const provider = activeProvider();
-  if (pending[0]?.checkoutRef) return { url: provider.name === "test" ? `${baseUrl}/pay/test/${pending[0].checkoutRef}` : (pending[0].providerRef ?? `${baseUrl}/book/confirmation/${b.reference}`), free: false };
+  if (pending[0]?.checkoutRef) return { url: provider.name === "test" ? `${baseUrl}/pay/test/${pending[0].checkoutRef}` : (pending[0].providerRef ?? `${baseUrl}${bookingStatusPath(b.reference)}`), free: false };
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
   // Play Pass funds already set aside for this booking stay applied; the card covers the rest.
   const due = t.balance - ((await heldReservation(db, b.id))?.amountCents ?? 0);
@@ -495,8 +496,8 @@ export async function retryCheckout(db: DB, reference: string, baseUrl: string) 
     description: label.name,
     details: label.details,
     customerEmail: primary?.email,
-    successUrl: `${baseUrl}/book/confirmation/${b.reference}`,
-    cancelUrl: `${baseUrl}/book/confirmation/${b.reference}?cancelled=1`,
+    successUrl: `${baseUrl}${bookingStatusPath(b.reference)}`,
+    cancelUrl: `${baseUrl}${bookingStatusPath(b.reference, { cancelled: "1" })}`,
     expiresAt: b.holdExpiresAt,
     idempotencyKey: idem,
   });
@@ -543,6 +544,8 @@ export async function bookingStatusView(db: Executor, reference: string) {
   const balance = [...totals.values()].reduce((s, t) => s + t.balance, 0);
   return {
     reference: b.reference,
+    /** For access checks only; never shown. */
+    familyId: b.familyId,
     status: b.status,
     source: b.source,
     holdExpiresAt: b.holdExpiresAt?.toISOString() ?? null,

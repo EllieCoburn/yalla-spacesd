@@ -7,6 +7,8 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { bookingStatusView } from "@/lib/ops/public-booking";
 import { fmtDateTime } from "@/lib/time";
 import { retryPaymentAction } from "../../actions";
+import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
+import { mayViewStatus } from "@/lib/booking-access";
 
 export const metadata: Metadata = { title: "Your booking", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -14,12 +16,14 @@ export const dynamic = "force-dynamic";
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 
 /** Status comes from the database only — reaching this page never marks anything paid. */
-export default async function Confirmation({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ cancelled?: string; error?: string }> }) {
+export default async function Confirmation({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ cancelled?: string; error?: string; k?: string }> }) {
   const { ref } = await params;
   const sp = await searchParams;
   if (!isDbConfigured()) notFound();
   const v = await bookingStatusView(getDb(), ref);
-  if (!v) notFound();
+  // Without the private link (or the family's own sign-in) nothing about the booking is shown,
+  // not even whether the reference exists.
+  if (!v || !(await mayViewStatus("booking", ref, sp.k, v.familyId))) return <PrivateLinkNotice />;
   const holdValid = !!v.holdExpiresAt && new Date(v.holdExpiresAt) > new Date();
   const paymentFailed = v.latestPayment?.status === "failed";
   const pending = !sp.cancelled && ((v.status === "pending_payment" && !paymentFailed) || (v.status === "held" && v.latestPayment?.status === "pending"));
@@ -120,6 +124,7 @@ export default async function Confirmation({ params, searchParams }: { params: P
           {(v.status === "held" || v.status === "pending_payment") && holdValid && (paymentFailed || sp.cancelled) ? (
             <form action={retryPaymentAction}>
               <input type="hidden" name="reference" value={v.reference} />
+              <input type="hidden" name="k" value={sp.k ?? ""} />
               <button className="h-12 rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">Try payment again</button>
             </form>
           ) : null}

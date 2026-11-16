@@ -41,6 +41,7 @@ import { addonsFor, validAddons } from "@/lib/booking/addons";
 import { flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
+import { bookingStatusPath } from "@/lib/links";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
 
@@ -501,7 +502,7 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   const due = t.balance - fromWallet;
   if (due <= 0) {
     await confirmBooking(db, actor, b.id, { reason: fromWallet ? "Paid from Play Pass" : "No payment due" });
-    return { url: `${urls.base}/book/confirmation/${b.reference}`, free: true };
+    return { url: `${urls.base}${bookingStatusPath(b.reference)}`, free: true };
   }
   const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)));
   const provider = activeProvider();
@@ -511,7 +512,7 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
   // A declined or abandoned attempt gets a fresh key so the family can try again.
   if (existing[0] && existing[0].status !== "pending") idem = `${idem}:retry-${randomToken(6)}`;
   if (existing[0]?.checkoutRef && existing[0].status === "pending") {
-    return { url: provider.name === "test" ? `${urls.base}/pay/test/${existing[0].checkoutRef}` : existing[0].providerRef ?? `${urls.base}/book/confirmation/${b.reference}`, free: false };
+    return { url: provider.name === "test" ? `${urls.base}/pay/test/${existing[0].checkoutRef}` : existing[0].providerRef ?? `${urls.base}${bookingStatusPath(b.reference)}`, free: false };
   }
   const label = await checkoutLabel(db, b.id, { walletCents: fromWallet });
   const checkout = await provider.createCheckout({
@@ -520,8 +521,8 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     description: label.name,
     details: label.details,
     customerEmail: primary?.email,
-    successUrl: `${urls.base}/book/confirmation/${b.reference}`,
-    cancelUrl: `${urls.base}/book/confirmation/${b.reference}?cancelled=1`,
+    successUrl: `${urls.base}${bookingStatusPath(b.reference)}`,
+    cancelUrl: `${urls.base}${bookingStatusPath(b.reference, { cancelled: "1" })}`,
     expiresAt: b.holdExpiresAt,
     idempotencyKey: idem,
   });

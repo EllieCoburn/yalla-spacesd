@@ -153,7 +153,7 @@ describe("schedule & waitlist screens' operations", () => {
     const payments = await db().select().from(s.payments);
     expect(payments).toHaveLength(0);
     const msgs = await db().select().from(s.messages).where(eq(s.messages.templateKey, "waitlist_offer"));
-    expect(msgs[0].body).toContain("http://test/book/offer/");
+    expect(msgs[0].body).toContain("[private link removed]");
     // Lapse.
     await db().update(s.bookings).set({ holdExpiresAt: new Date(Date.now() - 1000) }).where(eq(s.bookings.id, offer.id));
     await db().update(s.waitlistEntries).set({ offerExpiresAt: new Date(Date.now() - 1000) }).where(eq(s.waitlistEntries.id, entry.id));

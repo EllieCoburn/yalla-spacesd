@@ -11,6 +11,7 @@ import { notifyFamily } from "@/lib/notify";
 import { fmtDate, fmtDateTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
 import { createHold, describeLine, bookingLines } from "./bookings";
+import { offerPath } from "@/lib/links";
 
 export const WAITLIST_STATUS_LABEL: Record<string, string> = {
   waiting: "Waiting",
@@ -64,7 +65,7 @@ export async function makeOffer(db: DB, actor: Actor, input: { entryId: string; 
       child_names: rows.map((r) => r.child?.preferredName || r.child?.firstName).filter(Boolean).join(" and ") || "your family",
       booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
       offer_expires: fmtDateTime(expires),
-      offer_link: `${input.baseUrl}/book/offer/${hold.booking.reference}`,
+      offer_link: `${input.baseUrl}${offerPath(hold.booking.reference)}`,
     },
     related: { type: "booking", id: hold.booking.id },
     createdBy: actor.name,

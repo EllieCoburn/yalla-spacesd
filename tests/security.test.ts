@@ -103,3 +103,17 @@ describe("Message log", () => {
     expect(redactSecrets("Status: https://yalla.test/book/confirmation/YL-1?k=abc")).toBe("Status: [private link removed]");
   });
 });
+
+describe("Private status links", () => {
+  it("carry a key that can't be derived from the reference alone", async () => {
+    const { bookingStatusPath, linkKey, validLinkKey } = await import("@/lib/links");
+    const path = bookingStatusPath("YL-ABC123");
+    const k = new URL(`https://x${path}`).searchParams.get("k")!;
+    expect(k).toHaveLength(32);
+    expect(validLinkKey("booking", "YL-ABC123", k)).toBe(true);
+    expect(validLinkKey("booking", "YL-ABC124", k)).toBe(false); // a key only opens its own booking
+    expect(validLinkKey("invoice", "YL-ABC123", k)).toBe(false); // and only that kind of page
+    expect(validLinkKey("booking", "YL-ABC123", undefined)).toBe(false);
+    expect(linkKey("booking", "YL-ABC123")).not.toBe(linkKey("offer", "YL-ABC123"));
+  });
+});

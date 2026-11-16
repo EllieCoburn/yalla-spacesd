@@ -6,16 +6,18 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { bookingStatusView } from "@/lib/ops/public-booking";
 import { fmtDateTime } from "@/lib/time";
 import { acceptOfferAction } from "../../actions";
+import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
+import { mayViewStatus } from "@/lib/booking-access";
 
 export const metadata: Metadata = { title: "Your waitlist offer", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-export default async function Offer({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string }> }) {
+export default async function Offer({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string; k?: string }> }) {
   const { ref } = await params;
-  const { error } = await searchParams;
+  const { error, k } = await searchParams;
   if (!isDbConfigured()) notFound();
   const v = await bookingStatusView(getDb(), ref);
-  if (!v || v.source !== "waitlist") notFound();
+  if (!v || v.source !== "waitlist" || !(await mayViewStatus("offer", ref, k, v.familyId))) return <PrivateLinkNotice what="offer" />;
   const open = (v.status === "held" || v.status === "pending_payment") && !!v.holdExpiresAt && new Date(v.holdExpiresAt) > new Date();
 
   return (
@@ -60,6 +62,7 @@ export default async function Offer({ params, searchParams }: { params: Promise<
           {open ? (
             <form action={acceptOfferAction}>
               <input type="hidden" name="reference" value={v.reference} />
+              <input type="hidden" name="k" value={k ?? ""} />
               <button className="h-12 rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">Accept and pay</button>
             </form>
           ) : null}

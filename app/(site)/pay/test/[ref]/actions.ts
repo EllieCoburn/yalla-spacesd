@@ -8,6 +8,7 @@ import { bookings, invoices, payments, playPassSubscriptions, spaceReservationGr
 import { paymentsStatus, signTestPayload } from "@/lib/payments/provider";
 import { testPaymentsAllowed } from "@/lib/payments/test-mode";
 import { requestContext } from "../../../portal/session";
+import { bookingStatusPath, invoiceStatusPath } from "@/lib/links";
 
 /**
  * The sandbox checkout sends a signed event to our own webhook endpoint over HTTP, so the same
@@ -37,10 +38,10 @@ export async function simulatePayment(form: FormData) {
   const [space] = inv.spaceGroupId ? await db.select().from(spaceReservationGroups).where(eq(spaceReservationGroups.id, inv.spaceGroupId)) : [];
   redirect(
     b
-      ? `/book/confirmation/${b.reference}`
+      ? bookingStatusPath(b.reference)
       : space
         ? `/portal/spaces/confirmation/${space.reference}${outcome === "decline" ? "?cancelled=1" : ""}`
-        : `/pay/complete?invoice=${encodeURIComponent(inv.number)}`,
+        : invoiceStatusPath(inv.number),
   );
 }
 

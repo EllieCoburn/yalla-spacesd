@@ -19,6 +19,7 @@ import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { randomToken } from "@/lib/auth/crypto";
 import { CLUB_YALLA_BILLED_HERE } from "./memberships";
 import { getPolicy } from "./settings";
+import { invoiceStatusPath } from "@/lib/links";
 
 export const usd = (cents: number) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -378,8 +379,8 @@ export async function sendInvoicePaymentLink(db: DB, actor: Actor, invoiceId: st
       description: inv.description ? inv.description.slice(0, 120) : `Yalla invoice ${inv.number}`,
       details: `Invoice ${inv.number}`,
       customerEmail: g?.email,
-      successUrl: `${baseUrl}/pay/complete?invoice=${inv.number}`,
-      cancelUrl: `${baseUrl}/pay/complete?invoice=${inv.number}&cancelled=1`,
+      successUrl: `${baseUrl}${invoiceStatusPath(inv.number)}`,
+      cancelUrl: `${baseUrl}${invoiceStatusPath(inv.number, { cancelled: "1" })}`,
       expiresAt: new Date(Date.now() + 23 * 3600 * 1000),
       idempotencyKey: idem,
     });

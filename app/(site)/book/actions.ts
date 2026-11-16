@@ -8,6 +8,8 @@ import { getGuardian, requestContext } from "../portal/session";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { bookings } from "@/lib/db/schema";
+import { bookingStatusPath, offerPath } from "@/lib/links";
+import { mayViewStatus } from "@/lib/booking-access";
 
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
@@ -67,12 +69,15 @@ export async function joinWaitlistAction(input: { sessionId: string; guardian: {
 /** Retry a declined payment while the hold is still valid. */
 export async function retryPaymentAction(form: FormData) {
   const ref = clip(form.get("reference"), 20);
+  const key = clip(form.get("k"), 40);
+  const [owned] = await getDb().select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.reference, ref));
+  if (!owned || !(await mayViewStatus("booking", ref, key, owned.familyId))) redirect("/book");
   const ctx = await requestContext();
   let url: string;
   try {
     url = (await retryCheckout(getDb(), ref, ctx.baseUrl)).url;
   } catch (e) {
-    if (e instanceof OpsError) redirect(`/book/confirmation/${ref}?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof OpsError) redirect(bookingStatusPath(ref, { error: e.message }));
     throw e;
   }
   redirect(url);
@@ -81,15 +86,16 @@ export async function retryPaymentAction(form: FormData) {
 /** Accept a waitlist offer: continue to payment for the held spot. */
 export async function acceptOfferAction(form: FormData) {
   const ref = clip(form.get("reference"), 20);
+  const key = clip(form.get("k"), 40);
   const ctx = await requestContext();
   const db = getDb();
   const [b] = await db.select().from(bookings).where(eq(bookings.reference, ref));
-  if (!b || b.source !== "waitlist") redirect(`/book/offer/${ref}`);
+  if (!b || b.source !== "waitlist" || !(await mayViewStatus("offer", ref, key, b.familyId))) redirect("/book");
   let url: string;
   try {
     url = (await startCheckout(db, { type: "system", name: "Waitlist offer" }, b.id, { base: ctx.baseUrl })).url;
   } catch (e) {
-    if (e instanceof OpsError) redirect(`/book/offer/${ref}?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof OpsError) redirect(offerPath(ref, { error: e.message }));
     throw e;
   }
   redirect(url);

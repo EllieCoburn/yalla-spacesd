@@ -4,14 +4,17 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { invoices } from "@/lib/db/schema";
 import { invoiceTotals, usd } from "@/lib/ops/billing";
 import { Mark } from "@/components/brand/Mark";
+import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
+import { mayViewStatus } from "@/lib/booking-access";
 
 export const metadata: Metadata = { title: "Payment", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 /** Shown after paying an invoice link. Status comes from the database (verified by webhook), never from this page. */
-export default async function PayComplete({ searchParams }: { searchParams: Promise<{ invoice?: string; cancelled?: string }> }) {
+export default async function PayComplete({ searchParams }: { searchParams: Promise<{ invoice?: string; cancelled?: string; k?: string }> }) {
   const sp = await searchParams;
   const inv = isDbConfigured() && sp.invoice ? (await getDb().select().from(invoices).where(eq(invoices.number, sp.invoice)))[0] : undefined;
+  if (!inv || !(await mayViewStatus("invoice", inv.number, sp.k, inv.familyId))) return <PrivateLinkNotice what="invoice" />;
   const t = inv ? (await invoiceTotals(getDb(), [inv.id])).get(inv.id) : undefined;
   const paid = inv?.status === "paid";
   return (
