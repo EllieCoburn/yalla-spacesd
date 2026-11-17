@@ -7,7 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * The Yalla Flex first-day welcome emails, early each morning (Vercel Cron, before anyone arrives).
+ * The Yalla Flex first-day welcome emails. Normally sent by the morning housekeeping run; this route
+ * can also be called on its own (with the cron secret).
  * Safe to run any number of times: each family is only ever welcomed once.
  */
 export async function GET(req: Request) {

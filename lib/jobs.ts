@@ -22,6 +22,14 @@ export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; 
 
 export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Date; reminders?: boolean }): Promise<HousekeepingResult> {
   const now = opts.now ?? new Date();
+  // Yalla Flex first-day welcomes first: this run is early in the morning (6am, 7am in summer), before
+  // anyone arrives. (Vercel's plan allows two scheduled runs: this one and the evening reminders.)
+  try {
+    const { sendFlexWelcomes } = await import("@/lib/ops/flex-welcome");
+    await sendFlexWelcomes(db, { now, baseUrl: opts.baseUrl });
+  } catch (e) {
+    console.error("[flex welcome run failed]", (e as Error).message?.slice(0, 160));
+  }
   const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
   const expiredOffers = (await expireOffers(db, now)).length;
   const membershipChanges = await applyDueChanges(db, SYSTEM);
@@ -31,13 +39,6 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   await applyPlayPassSchedules(db);
   // Keep Yalla Flex days (full until staff release spots) set up for the coming weeks.
   await ensureFlexDays(db);
-  // Yalla Flex first-day welcomes (normally sent by their own earlier run; this catches any it missed).
-  try {
-    const { sendFlexWelcomes } = await import("@/lib/ops/flex-welcome");
-    await sendFlexWelcomes(db, { now, baseUrl: opts.baseUrl });
-  } catch (e) {
-    console.error("[flex welcome run failed]", (e as Error).message?.slice(0, 160));
-  }
   // Security housekeeping: rate-limit records, used or expired sign-in and reset links, and ended sessions.
   await pruneSecurityRecords(db, now);
 
