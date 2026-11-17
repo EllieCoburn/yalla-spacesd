@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Pill, Status } from "@/components/admin/ui";
 import type { PaperworkItem } from "@/lib/ops/forms";
 import { fmtDate } from "@/lib/time";
+import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 const enforcementLabel: Record<string, string> = {
   blocks_booking: "Required to book",
@@ -24,8 +25,10 @@ export function PaperworkList({ items, familyId, childNames, canRecord }: { item
             <p className="text-[0.74rem] text-ink-soft">
               {enforcementLabel[i.enforcement] ?? i.enforcement}
               {i.signedAt && i.state !== "missing" ? ` · last completed ${fmtDate(i.signedAt.toISOString().slice(0, 10), "d MMM yyyy")}` : ""}
-              {i.expiresOn ? ` · expires ${fmtDate(i.expiresOn, "d MMM yyyy")}` : ""}
             </p>
+            {i.submissionId && i.state !== "missing" && i.frequency !== "per_booking" ? (
+              <p className={`text-[0.76rem] ${VALIDITY_CLASS[validity({ expiresOn: i.expiresOn, frequency: i.frequency, signed: true }).tone]}`}>{validity({ expiresOn: i.expiresOn, frequency: i.frequency, signed: true }).text}</p>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             {i.enforcement === "informational" && i.state !== "complete" ? (
@@ -36,9 +39,14 @@ export function PaperworkList({ items, familyId, childNames, canRecord }: { item
               <Status kind="paperwork" value={i.state} />
             )}
             {i.submissionId ? (
-              <Link href={`/admin/forms/submissions/${i.submissionId}`} className="text-[0.78rem] text-blue hover:underline">
-                View
-              </Link>
+              <>
+                <Link href={`/admin/forms/submissions/${i.submissionId}`} className="text-[0.78rem] text-blue hover:underline">
+                  View
+                </Link>
+                <Link href={`/admin/forms/submissions/${i.submissionId}/print`} className="text-[0.78rem] text-blue hover:underline">
+                  Print
+                </Link>
+              </>
             ) : null}
             {canRecord && i.state !== "complete" ? (
               <Link href={`/admin/forms/${i.templateId}?record=1&family=${familyId}${i.childId ? `&child=${i.childId}` : ""}#record`} className="text-[0.78rem] text-blue hover:underline">

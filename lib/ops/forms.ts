@@ -46,6 +46,8 @@ export type PaperworkItem = {
   submissionId: string | null;
   signedAt: Date | null;
   expiresOn: string | null;
+  /** once | periodic (e.g. a Flex agreement, valid a year) | per_booking (e.g. the Camp Yalla agreement). */
+  frequency: string;
 };
 
 type Ctx = { familyId: string; childIds: string[]; programIds?: string[]; sessionIds?: string[]; bookingId?: string; onDate?: string };
@@ -169,6 +171,7 @@ export async function paperworkStatus(db: Executor, ctx: Ctx): Promise<Map<strin
       submissionId: latest?.id ?? null,
       signedAt: latest?.signedAt ?? latest?.createdAt ?? null,
       expiresOn: latest?.expiresOn ?? null,
+      frequency: t.frequency,
     };
   };
 
@@ -379,6 +382,9 @@ export async function familySignedCopies(db: Executor, g: { familyId: string; gu
       bookingReference: r.b?.reference ?? null,
       signedAt: r.s.signedAt ?? r.s.createdAt,
       signerName: r.s.signerName,
+      expiresOn: r.s.expiresOn,
+      frequency: r.t.frequency,
+      kind: r.t.kind,
     }));
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 import { notFound } from "next/navigation";
 import { MovePanel } from "@/components/admin/bookings/MovePanel";
 import { PaymentPill, StatusLabel } from "@/components/admin/bookings/pills";
@@ -65,6 +66,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
   const billing = can(staff, "billing.view");
   const care = can(staff, "children.care");
   const forms = can(staff, "forms.view");
+  const docs = can(staff, "forms.documents");
   const contacts = can(staff, "families.view");
   const active = items.filter((i) => i.item.status === "held" || i.item.status === "confirmed");
   const shown = items.filter((i) => i.item.status !== "moved");
@@ -462,7 +464,21 @@ export default async function BookingDetailPage({ params, searchParams }: { para
           </Card>
 
           {forms ? (
-            <Card title="Paperwork" actions={<Link href={`/admin/families/${family.id}#paperwork`} className="text-blue">Family forms →</Link>}>
+            <Card
+              title="Agreements & paperwork"
+              actions={
+                <>
+                  {docs && [...d.paperwork.values()].flat().some((p) => p.submissionId) ? (
+                    <Link href={`/admin/bookings/${d.booking.id}/agreements`} className="text-blue">
+                      Print all
+                    </Link>
+                  ) : null}
+                  <Link href={`/admin/families/${family.id}#paperwork`} className="text-blue">
+                    Family forms →
+                  </Link>
+                </>
+              }
+            >
               {[...d.paperwork.values()].flat().length === 0 ? (
                 <p className="text-[0.85rem] text-ink-soft">No forms are required for this booking.</p>
               ) : (
@@ -470,15 +486,33 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                   {[...d.paperwork.entries()].flatMap(([key, list]) =>
                     list.map((p) => {
                       const who = key === "family" ? "Family" : (d.familyChildren.find((c) => c.id === key)?.preferredName ?? d.familyChildren.find((c) => c.id === key)?.firstName);
+                      const valid = validity({ expiresOn: p.expiresOn, frequency: p.frequency, signed: !!p.submissionId && p.state !== "missing" });
                       return (
-                        <li key={`${key}-${p.templateId}`} className="flex flex-wrap items-center justify-between gap-2 text-[0.84rem]">
-                          <span>
-                            <span className="text-ink">{p.title}</span>
-                            <span className="block text-[0.74rem] text-ink-soft">
-                              {who} · {p.enforcement === "blocks_booking" ? "Required to book" : p.enforcement === "before_attendance" ? "Required before attending" : "Informational"}
+                        <li key={`${key}-${p.templateId}`} className="border-b border-ink/6 pb-2.5 text-[0.84rem] last:border-0 last:pb-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span>
+                              <span className="text-ink">{p.title}</span>
+                              <span className="block text-[0.74rem] text-ink-soft">
+                                {who} · {p.enforcement === "blocks_booking" ? "Required to book" : p.enforcement === "before_attendance" ? "Required before attending" : "Informational"}
+                              </span>
                             </span>
-                          </span>
-                          <Status kind="paperwork" value={p.state} suffix={p.state === "complete" && p.signedAt ? fmtDate(p.signedAt.toISOString().slice(0, 10), "d MMM yy") : undefined} />
+                            <Status kind="paperwork" value={p.state} suffix={p.state === "complete" && p.signedAt ? fmtDate(p.signedAt.toISOString().slice(0, 10), "d MMM yy") : undefined} />
+                          </div>
+                          {p.submissionId ? (
+                            <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[0.76rem]">
+                              <span className={VALIDITY_CLASS[valid.tone]}>{valid.text}</span>
+                              {docs ? (
+                                <span className="flex gap-3">
+                                  <Link href={`/admin/forms/submissions/${p.submissionId}`} className="text-blue hover:underline">
+                                    View
+                                  </Link>
+                                  <Link href={`/admin/forms/submissions/${p.submissionId}/print`} className="text-blue hover:underline">
+                                    Print / PDF
+                                  </Link>
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </li>
                       );
                     }),

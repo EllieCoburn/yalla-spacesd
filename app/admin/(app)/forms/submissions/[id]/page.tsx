@@ -9,6 +9,7 @@ import { fmtDate, fmtDateTime } from "@/lib/time";
 import { describeAnswer } from "@/lib/forms/fields";
 import { effectiveFields } from "@/lib/ops/forms";
 import { SignedDocument } from "@/components/forms/SignedDocument";
+import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export const metadata = { title: "Submission" };
 
@@ -24,6 +25,7 @@ export default async function SubmissionPage({ params, searchParams }: { params:
   // Online forms: answers keyed by field, read against the exact version that was signed.
   const answers = (s.data as { answers?: Record<string, string> } | null)?.answers ?? null;
   const fields = effectiveFields(v, t.requiresSignature);
+  const valid = validity({ expiresOn: s.expiresOn, frequency: t.frequency, signed: true });
 
   return (
     <>
@@ -40,6 +42,9 @@ export default async function SubmissionPage({ params, searchParams }: { params:
               {s.status === "signed" ? "Signed" : s.status === "submitted" ? "Submitted" : s.status === "superseded" ? "Superseded by a later submission" : s.status}
             </Pill>
             {!isCurrent ? <Pill tone="warning" icon="alert">Signed against an earlier version</Pill> : null}
+            {s.status !== "superseded" ? (
+              <span className={`rounded-full border border-ink/10 bg-white px-3 py-0.5 text-[0.8rem] ${VALIDITY_CLASS[valid.tone]}`}>{valid.text}</span>
+            ) : null}
           </span>
         }
       />
@@ -80,7 +85,7 @@ export default async function SubmissionPage({ params, searchParams }: { params:
                 { label: "Typed signature", value: docs ? (s.signatureText ? <span className="font-serif text-[1.1rem] italic">{s.signatureText}</span> : "—") : "Restricted" },
                 { label: "Signed / submitted", value: fmtDateTime(s.signedAt ?? s.createdAt) },
                 { label: "Version", value: `v${v.version}, published ${fmtDateTime(v.publishedAt)}` },
-                { label: "Expires", value: s.expiresOn ? fmtDate(s.expiresOn) : "Doesn’t expire" },
+                { label: "Valid", value: <span className={VALIDITY_CLASS[valid.tone]}>{t.frequency === "per_booking" ? "Covers the booking it was signed for" : valid.text}</span> },
                 { label: "Recorded by", value: d.recordedBy ? `${d.recordedBy} (staff, on the family’s behalf)` : "The family (Family Portal)" },
                 { label: "Device", value: s.signerIp || s.signerUserAgent ? `${s.signerIp ?? "—"} · ${s.signerUserAgent?.slice(0, 80) ?? ""}` : "Not captured (staff-recorded)" },
                 ...(s.bookingId ? [{ label: "Booking", value: <Link href={`/admin/bookings/${s.bookingId}`} className="text-blue hover:underline">View booking</Link> }] : []),

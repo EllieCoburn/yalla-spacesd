@@ -45,6 +45,7 @@ export function samplePortalData(): PortalData {
     templateId,
     title,
     kind: "agreement",
+    frequency: "once",
     enforcement: "required",
     perChild: childId != null,
     childId,

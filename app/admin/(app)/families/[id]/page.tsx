@@ -14,6 +14,8 @@ import { WEEKDAY } from "@/lib/ops/memberships";
 import { ageLabel, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
 import { addChildAction, addGuardianAction, archiveFamilyAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
 import { portalStatusByEmail } from "@/lib/family-auth";
+import { familySignedCopies } from "@/lib/ops/forms";
+import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const staff = await requirePermission("families.view");
@@ -27,6 +29,8 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   const kidNames = new Map(d.children.map((c) => [c.id, c.preferredName || c.firstName]));
   const prefs = d.family.communicationPrefs as { email?: boolean; sms?: boolean };
   const allPaperwork = d.paperwork ? [...d.paperwork.values()].flat() : [];
+  // Every signed agreement (camp agreements are signed per purchase, so each purchase has its own).
+  const signedOnFile = can(staff, "forms.documents") ? (await familySignedCopies(getDb(), { familyId: d.family.id, guardianId: "", canViewSensitive: true })).filter((c) => c.kind === "policy") : [];
   const portal = await portalStatusByEmail(getDb(), d.guardians.map((g) => g.email));
   const primary = d.guardians.find((g) => g.isPrimary) ?? d.guardians[0];
 
@@ -256,6 +260,40 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
           {d.paperwork ? (
             <Card id="paperwork" title="Forms & waivers" actions={<PaperworkSummary items={allPaperwork} />}>
               <PaperworkList items={allPaperwork} familyId={d.family.id} childNames={kidNames} canRecord={can(staff, "forms.manage")} />
+            </Card>
+          ) : null}
+
+          {signedOnFile.length ? (
+            <Card title="Signed agreements on file">
+              <ul className="divide-y divide-ink/6">
+                {signedOnFile.map((c) => {
+                  const v = validity({ expiresOn: c.expiresOn, frequency: c.frequency, signed: true });
+                  return (
+                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[0.86rem] text-ink">
+                          {c.title}
+                          {c.childName ? <span className="text-ink-soft"> · {c.childName}</span> : null}
+                        </p>
+                        <p className="text-[0.74rem] text-ink-soft">
+                          Signed {fmtDate(c.signedAt.toISOString().slice(0, 10), "d MMM yyyy")}
+                          {c.signerName ? ` by ${c.signerName}` : ""}
+                          {c.bookingReference ? ` · booking ${c.bookingReference}` : ""}
+                        </p>
+                        <p className={`text-[0.76rem] ${VALIDITY_CLASS[v.tone]}`}>{c.frequency === "per_booking" ? `Covers booking ${c.bookingReference ?? ""}` : v.text}</p>
+                      </div>
+                      <div className="flex items-center gap-3 text-[0.78rem]">
+                        <Link href={`/admin/forms/submissions/${c.id}`} className="text-blue hover:underline">
+                          View
+                        </Link>
+                        <Link href={`/admin/forms/submissions/${c.id}/print`} className="text-blue hover:underline">
+                          Print
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </Card>
           ) : null}
 
