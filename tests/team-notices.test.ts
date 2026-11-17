@@ -5,8 +5,8 @@ import * as s from "@/lib/db/schema";
 import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
 import { staffCancelBooking } from "@/lib/ops/yalla-cancellations";
 import { setPolicy } from "@/lib/ops/settings";
-import { setStaffNotices, teamRecipients, upcomingDropIns } from "@/lib/ops/team-notices";
-import { addDaysISO, todayLA } from "@/lib/time";
+import { setStaffNotices, teamRecipients, upcomingDropIns, workdaysLabel, worksOn } from "@/lib/ops/team-notices";
+import { addDaysISO, todayLA, weekdayOf } from "@/lib/time";
 import { db, family, owner, program, reset, session } from "./helpers";
 
 beforeEach(reset);
@@ -55,6 +55,33 @@ describe("Who gets which team emails", () => {
     await book(evening.id, f.children[0].id, f.family.id);
     const all = await sent("staff_new_booking");
     expect(all.filter((m) => m.toAddress.includes("director"))).toHaveLength(1);
+  });
+
+  it("only emails someone on their workdays; with none set, every day", async () => {
+    await setPolicy(db(), owner, "notifications.staffEmails", "hello@yalla.test");
+    const today = weekdayOf(todayLA());
+    const off = await person("off.today@yalla.test");
+    const on = await person("on.today@yalla.test");
+    const always = await person("always@yalla.test");
+    await setStaffNotices(db(), owner, off.id, { notices: ["camp"], flexCohorts: ["wildflowers"], workdays: [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== today) });
+    await setStaffNotices(db(), owner, on.id, { notices: ["camp"], flexCohorts: [], workdays: [today] });
+    await setStaffNotices(db(), owner, always.id, { notices: ["camp"], flexCohorts: [], workdays: [] });
+    expect((await teamRecipients(db(), "camp")).sort()).toEqual(["always@yalla.test", "hello@yalla.test", "on.today@yalla.test"]);
+
+    // Drop-in emails follow the same rule.
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex" });
+    const wild = await session(flex.id, { capacity: 2, minAgeMonths: 36, maxAgeMonths: 59 }, 1);
+    const f = await family("Doe", [{ first: "Jane", birth: addDaysISO(todayLA(), -365 * 3 - 60) }]);
+    await book(wild.id, f.children[0].id, f.family.id);
+    expect(await sent("cohort_drop_in")).toHaveLength(0);
+
+    // Ticking every day is the same as none.
+    const saved = await setStaffNotices(db(), owner, off.id, { notices: ["camp"], flexCohorts: [], workdays: ["0", "1", "2", "3", "4", "5", "6"] });
+    expect(saved.workdays).toEqual([]);
+    expect(worksOn([1, 2, 3, 4, 5], "2026-11-21")).toBe(false); // a Saturday
+    expect(worksOn([1, 2, 3, 4, 5], "2026-11-20")).toBe(true);
+    expect(workdaysLabel([5, 4, 3, 2, 1])).toBe("Mon–Fri");
+    expect(workdaysLabel([1, 3, 5])).toBe("Mon, Wed, Fri");
   });
 
   it("ignores unknown topics and cohorts", async () => {

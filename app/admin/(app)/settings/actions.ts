@@ -103,7 +103,7 @@ export const resetMfaAction = adminAction("staff.manage", async ({ db, actor, st
 
 /** Which team emails a person gets, and the Flex cohorts they're part of. */
 export const noticesAction = adminAction("staff.manage", async ({ db, actor, str, all }) => {
-  const u = await setStaffNotices(db, actor, str("staffId"), { notices: all("notices"), flexCohorts: all("flexCohorts") });
+  const u = await setStaffNotices(db, actor, str("staffId"), { notices: all("notices"), flexCohorts: all("flexCohorts"), workdays: all("workdays") });
   return `Saved ${u.name}’s emails.`;
 });
 

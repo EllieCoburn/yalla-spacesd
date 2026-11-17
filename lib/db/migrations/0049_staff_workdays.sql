@@ -1,0 +1,1 @@
+ALTER TABLE "staff_users" ADD COLUMN "workdays" integer[] DEFAULT '{}'::integer[] NOT NULL;

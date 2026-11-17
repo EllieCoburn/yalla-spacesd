@@ -71,6 +71,8 @@ export const staffUsers = pgTable("staff_users", {
   notices: text("notices").array().notNull().default(sql`'{}'::text[]`),
   /** Yalla Flex cohorts this person is part of (e.g. "wildflowers"): they're emailed about drop-ins to them. */
   flexCohorts: text("flex_cohorts").array().notNull().default(sql`'{}'::text[]`),
+  /** Days of the week they work (0 = Sunday … 6 = Saturday). Team emails only go to them on these days; empty means every day. */
+  workdays: integer("workdays").array().notNull().default(sql`'{}'::integer[]`),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

@@ -7,6 +7,9 @@
  * to a staff account follows that person's own choices instead, so turning a topic off for someone
  * always works.
  *
+ * Someone with workdays set only gets team emails on those days (by Yalla's local date); with none
+ * set, every day.
+ *
  * Flex cohort teams (e.g. the Wildflowers team) are emailed about each drop-in to their cohort as
  * soon as it's booked, and if it's cancelled.
  */
@@ -16,7 +19,7 @@ import type { Executor } from "@/lib/db";
 import { bookingItems, children, programs, sessions, staffUsers } from "@/lib/db/schema";
 import { EARLY_BIRD, FLEX_GROUPS, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { addDaysISO, fmtDate, todayLA } from "@/lib/time";
+import { addDaysISO, fmtDate, todayLA, weekdayOf } from "@/lib/time";
 import { getPolicy } from "./settings";
 
 export const NOTICE_TOPICS = [
@@ -45,6 +48,27 @@ export function topicForProgram(p: { kind: string; slug: string }): NoticeTopic 
   return "happenings";
 }
 
+export const WEEKDAYS = [
+  { day: 1, short: "Mon", name: "Monday" },
+  { day: 2, short: "Tue", name: "Tuesday" },
+  { day: 3, short: "Wed", name: "Wednesday" },
+  { day: 4, short: "Thu", name: "Thursday" },
+  { day: 5, short: "Fri", name: "Friday" },
+  { day: 6, short: "Sat", name: "Saturday" },
+  { day: 0, short: "Sun", name: "Sunday" },
+];
+
+/** True when this person is working on the given day (no workdays set means every day). */
+export const worksOn = (workdays: number[], localDate = todayLA()) => !workdays.length || workdays.includes(weekdayOf(localDate));
+
+/** "Every day", "Mon–Fri", or "Mon, Wed, Fri". */
+export function workdaysLabel(workdays: number[]) {
+  if (!workdays.length || workdays.length === 7) return "Every day";
+  const set = new Set(workdays);
+  if (workdays.length === 5 && [1, 2, 3, 4, 5].every((d) => set.has(d))) return "Mon–Fri";
+  return WEEKDAYS.filter((w) => set.has(w.day)).map((w) => w.short).join(", ");
+}
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const parseList = (raw: unknown) => raw === undefined || raw === null ? [] : String(raw).split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => EMAIL.test(e));
 
@@ -52,22 +76,26 @@ const parseList = (raw: unknown) => raw === undefined || raw === null ? [] : Str
 export async function teamRecipients(db: Executor, topics: NoticeTopic | NoticeTopic[]): Promise<string[]> {
   const want = new Set(Array.isArray(topics) ? topics : [topics]);
   if (!want.size) return [];
-  const staff = await db.select({ email: staffUsers.email, status: staffUsers.status, notices: staffUsers.notices }).from(staffUsers);
+  const staff = await db.select({ email: staffUsers.email, status: staffUsers.status, notices: staffUsers.notices, workdays: staffUsers.workdays }).from(staffUsers);
+  const today = todayLA();
   const accounts = new Set(staff.map((s) => s.email.toLowerCase()));
   const out = new Set<string>();
   const general = [...want].some((t) => !MEMBERSHIP_TOPICS.has(t));
   const membership = [...want].some((t) => MEMBERSHIP_TOPICS.has(t));
   if (general) for (const e of parseList(await getPolicy(db, "notifications.staffEmails"))) if (!accounts.has(e)) out.add(e);
   if (membership) for (const e of parseList(await getPolicy(db, "notifications.membershipEmails"))) if (!accounts.has(e)) out.add(e);
-  for (const s of staff) if (s.status === "active" && s.notices.some((t) => want.has(t as NoticeTopic))) out.add(s.email.toLowerCase());
+  for (const s of staff) if (s.status === "active" && worksOn(s.workdays, today) && s.notices.some((t) => want.has(t as NoticeTopic))) out.add(s.email.toLowerCase());
   return [...out];
 }
 
 /** An owner chooses which team emails a person gets, and which Flex cohorts they're part of. */
-export async function setStaffNotices(db: Executor, actor: Actor, staffId: string, input: { notices: string[]; flexCohorts: string[] }) {
+export async function setStaffNotices(db: Executor, actor: Actor, staffId: string, input: { notices: string[]; flexCohorts: string[]; workdays?: (string | number)[] }) {
   const notices = [...new Set(input.notices.filter((t) => TOPIC_KEYS.has(t)))];
   const flexCohorts = [...new Set(input.flexCohorts.filter((k) => FLEX_GROUPS.some((g) => g.key === k)))];
-  const [u] = await db.update(staffUsers).set({ notices, flexCohorts, updatedAt: new Date() }).where(eq(staffUsers.id, staffId)).returning();
+  const days = [...new Set((input.workdays ?? []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+  // Every day ticked is the same as none: always send.
+  const workdays = days.length === 7 ? [] : days;
+  const [u] = await db.update(staffUsers).set({ notices, flexCohorts, workdays, updatedAt: new Date() }).where(eq(staffUsers.id, staffId)).returning();
   if (!u) throw new OpsError("not_found", "Staff member not found.");
   const labels = notices.map((t) => NOTICE_TOPICS.find((x) => x.key === t)!.label);
   const cohorts = flexCohorts.map((k) => FLEX_GROUPS.find((g) => g.key === k)!.cohort);
@@ -75,7 +103,7 @@ export async function setStaffNotices(db: Executor, actor: Actor, staffId: strin
     action: "staff.notices",
     entityType: "staff",
     entityId: staffId,
-    summary: `${u.name} gets: ${labels.length ? labels.join(", ") : "no team emails"}${cohorts.length ? ` · drop-ins to ${cohorts.join(", ")}` : ""}`,
+    summary: `${u.name} gets: ${labels.length ? labels.join(", ") : "no team emails"}${cohorts.length ? ` · drop-ins to ${cohorts.join(", ")}` : ""} · ${workdaysLabel(workdays)}`,
   });
   return u;
 }
@@ -138,10 +166,10 @@ async function flexItems(db: Executor, where: ReturnType<typeof and>) {
 
 async function cohortTeam(db: Executor, key: string) {
   const rows = await db
-    .select({ email: staffUsers.email })
+    .select({ email: staffUsers.email, workdays: staffUsers.workdays })
     .from(staffUsers)
     .where(and(eq(staffUsers.status, "active"), sql`${key} = ANY(${staffUsers.flexCohorts})`));
-  return [...new Set(rows.map((r) => r.email.toLowerCase()))];
+  return [...new Set(rows.filter((r) => worksOn(r.workdays)).map((r) => r.email.toLowerCase()))];
 }
 
 type Row = Awaited<ReturnType<typeof flexItems>>[number];

@@ -9,7 +9,7 @@ import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { getOperatingHours, listPolicies, poolUsage } from "@/lib/ops/settings";
 import { fmtDateTime } from "@/lib/time";
-import { NOTICE_TOPICS } from "@/lib/ops/team-notices";
+import { NOTICE_TOPICS, WEEKDAYS, workdaysLabel } from "@/lib/ops/team-notices";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { cohortAction, createRoleAction, hoursAction, inviteAction, locationAction, noticesAction, permissionsAction, policyAction, poolAction, resendInviteAction, resetMfaAction, roleAction, statusAction } from "./actions";
 import { redirect } from "next/navigation";
@@ -381,6 +381,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                         <span className="text-[0.8rem] font-normal text-ink-soft">
                           {topics.length ? topics.join(", ") : "No team emails"}
                           {cohorts.length ? ` · drop-ins to ${cohorts.join(", ")}` : ""}
+                          {topics.length || cohorts.length ? ` · ${workdaysLabel(u.workdays)}` : ""}
                         </span>
                       </span>
                     }
@@ -415,6 +416,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                             ))}
                           </div>
                           <p className="mt-2 text-[0.76rem] text-ink-soft">They’re emailed about each drop-in to these cohorts and see them under Drop-ins.</p>
+                          <p className="mt-5 mb-1.5 text-[0.72rem] font-semibold tracking-[0.06em] text-ink-soft uppercase">Workdays</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                            {WEEKDAYS.map((w) => (
+                              <label key={w.day} className="flex items-center gap-1.5 text-[0.84rem]">
+                                <input type="checkbox" name="workdays" value={w.day} defaultChecked={u.workdays.includes(w.day)} className="h-4 w-4 rounded border-ink/30" />
+                                {w.short}
+                              </label>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-[0.76rem] text-ink-soft">Team emails only go to them on these days. Leave them all unticked to send every day.</p>
                         </fieldset>
                       </div>
                     </ActionForm>
