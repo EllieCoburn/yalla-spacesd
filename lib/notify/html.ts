@@ -26,6 +26,8 @@ const C = {
 const STATUS: Record<string, { label: string; color: string; tint: string }> = {
   staff_new_booking: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
   staff_booking_cancelled: { label: "Cancelled", color: "#673e46", tint: "#f3e6e8" },
+  cohort_drop_in: { label: "Drop-in", color: "#6065f2", tint: "#eeedf6" },
+  cohort_drop_in_cancelled: { label: "Cancelled", color: "#673e46", tint: "#f3e6e8" },
   booking_confirmation: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
   booking_confirmed_team: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
   booking_welcome_team: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
@@ -68,6 +70,8 @@ const BUTTON: Record<string, string> = {
   staff_family_joined: "Open their family record",
   staff_new_booking: "Open the booking",
   staff_booking_cancelled: "Open the booking",
+  cohort_drop_in: "See upcoming drop-ins",
+  cohort_drop_in_cancelled: "See upcoming drop-ins",
   staff_invite: "Set your password",
 };
 

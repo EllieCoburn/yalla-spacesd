@@ -764,15 +764,24 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const notice = await staffBookingNotice(db, bookingId);
       if (notice) {
-        const { staffRecipients } = await import("./enquiries");
+        const { teamRecipients, topicForProgram } = await import("./team-notices");
         const { notifyStaff } = await import("@/lib/notify");
         const { trustedBaseUrl } = await import("@/lib/base-url");
-        for (const to of await staffRecipients(db))
+        const progs = await db
+          .selectDistinct({ kind: programs.kind, slug: programs.slug })
+          .from(bookingItems)
+          .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+          .innerJoin(programs, eq(programs.id, sessions.programId))
+          .where(eq(bookingItems.bookingId, bookingId));
+        for (const to of await teamRecipients(db, progs.map(topicForProgram)))
           await notifyStaff(db, { key: "staff_new_booking", to, vars: { ...notice, link: `${trustedBaseUrl()}/admin/bookings/${bookingId}` }, relatedType: "booking", relatedId: bookingId });
       }
     } catch (e) {
       console.error("[staff booking email failed]", (e as Error).message?.slice(0, 160));
     }
+    // Each Flex cohort's team hears about drop-ins to their cohort.
+    const { notifyCohortsOfDropIns } = await import("./team-notices");
+    await notifyCohortsOfDropIns(db, bookingId);
   }
   if (result.status === "confirmed" && result.changed && opts.notify !== false) {
     const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));

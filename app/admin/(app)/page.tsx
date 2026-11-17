@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { Capacity, Card, Empty, FilterBar, FilterField, inputCls, Money, PageHeader, Pill, Stat, Status } from "@/components/admin/ui";
-import { requirePermission } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import { requirePermission, requireStaff } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { children, families, locations, programs } from "@/lib/db/schema";
@@ -14,6 +15,9 @@ import { addDaysISO, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
 export const metadata = { title: "Today" };
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ date?: string; program?: string; location?: string }> }) {
+  const me = await requireStaff();
+  // A cohort's team only has the drop-ins page.
+  if (!can(me, "dashboard.view") && can(me, "dropins.view")) redirect("/admin/drop-ins");
   const staff = await requirePermission("dashboard.view");
   const sp = await searchParams;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? sp.date! : todayLA();

@@ -15,13 +15,13 @@ function Submit({ label }: { label: string }) {
 }
 
 /** Invite form that can show the invitation link during local test-mode development. */
-export function InviteForm({ action, roles }: { action: (p: ActionState, f: FormData) => Promise<ActionState>; roles: { key: string; name: string }[] }) {
+export function InviteForm({ action, roles, cohorts = [] }: { action: (p: ActionState, f: FormData) => Promise<ActionState>; roles: { key: string; name: string }[]; cohorts?: { key: string; name: string }[] }) {
   const [state, formAction] = useActionState(action, undefined);
   const v = state && !state.ok ? (state.values ?? {}) : {};
   const link = (state?.data as { link?: string } | undefined)?.link;
   return (
     <form action={formAction} className="space-y-3" key={state?.ok ? state.at : "form"}>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="space-y-1.5">
           <span className="block text-[0.8rem] font-medium">Name</span>
           <input name="name" required defaultValue={v.name} className={inputCls} />
@@ -40,7 +40,21 @@ export function InviteForm({ action, roles }: { action: (p: ActionState, f: Form
             ))}
           </select>
         </label>
+        {cohorts.length ? (
+          <label className="space-y-1.5">
+            <span className="block text-[0.8rem] font-medium">Flex cohort</span>
+            <select name="flexCohort" defaultValue={v.flexCohort ?? ""} className={inputCls}>
+              <option value="">None</option>
+              {cohorts.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.name} team
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
+      {cohorts.length ? <p className="text-[0.78rem] text-ink-soft">For a cohort’s team, choose the Cohort team role and their cohort. They’ll only see drop-ins to that cohort, and get an email for each one.</p> : null}
       {state ? (
         <div role={state.ok ? "status" : "alert"} className={`rounded-lg px-3 py-2 text-[0.85rem] ${state.ok ? "bg-[#e6f0ea] text-[#2c6447]" : "bg-[#f6e3e5] text-[#8a2333]"}`}>
           {state.ok ? state.message : state.error}

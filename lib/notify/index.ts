@@ -49,7 +49,9 @@ export type TemplateKey =
   | "family_welcome"
   | "staff_family_joined"
   | "staff_new_booking"
-  | "staff_booking_cancelled";
+  | "staff_booking_cancelled"
+  | "cohort_drop_in"
+  | "cohort_drop_in_cancelled";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -133,6 +135,20 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "Booking cancelled (to staff)",
     subject: "Cancelled: {{summary}}",
     body: "# Booking cancelled\n\n{{details}}\n\n{{link}}",
+    essential: true,
+    audience: "staff",
+  },
+  cohort_drop_in: {
+    name: "Flex drop-in coming (to the cohort’s team)",
+    subject: "Drop-in {{when}}: {{child_name}} · {{cohort}}",
+    body: "Hi {{team}},\n\n{{details}}\n\nSee all upcoming drop-ins to {{cohort}}:\n{{link}}",
+    essential: true,
+    audience: "staff",
+  },
+  cohort_drop_in_cancelled: {
+    name: "Flex drop-in cancelled (to the cohort’s team)",
+    subject: "Change of plans: {{child_name}} won’t drop in {{when}}",
+    body: "Hi {{team}},\n\n{{details}}\n\nSee all upcoming drop-ins to {{cohort}}:\n{{link}}",
     essential: true,
     audience: "staff",
   },
@@ -414,7 +430,8 @@ export async function notifyFamily(
       link = `${trustedBaseUrl()}/admin/families/${input.familyId}`;
     } catch {}
     const familyName = (f?.name ?? "").replace(/ family$/i, "") || "A";
-    for (const to of await membershipRecipients(db))
+    const { teamRecipients } = await import("@/lib/ops/team-notices");
+    for (const to of await teamRecipients(db, "playpass"))
       await notifyStaff(db, { key: "staff_membership_update", to, vars: { event, family_name: familyName, details: redactSecrets(firstBody.replace(/^# .*$/m, "").trim()), link }, relatedId: input.familyId }).catch((e) =>
         console.error("[membership notice failed]", (e as Error).message?.slice(0, 120)),
       );
@@ -472,6 +489,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_family_joined: ["family_name", "details", "link"],
   staff_new_booking: ["summary", "details", "reference", "link"],
   staff_booking_cancelled: ["summary", "details", "reference", "link"],
+  cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
+  cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
   application_received: ["name", "details", "explore"],
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };
@@ -507,6 +526,9 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   refund_note: "If a refund or credit applies, we’ll confirm it separately.",
   child_name: "Ava",
   child_names: "Ava",
+  team: "Wildflower team",
+  cohort: "Wildflowers",
+  when: "tomorrow",
   missing_forms: "• Health & immunization record",
   invoice_number: "INV-1001-AB",
   amount: "$150.00",

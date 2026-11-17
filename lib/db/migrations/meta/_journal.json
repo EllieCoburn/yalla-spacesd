@@ -330,6 +330,20 @@
       "when": 1794880009184,
       "tag": "0046_camp_agreement_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794934204772,
+      "tag": "0047_staff_notices",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794934205772,
+      "tag": "0048_staff_notice_topics",
+      "breakpoints": true
     }
   ]
 }

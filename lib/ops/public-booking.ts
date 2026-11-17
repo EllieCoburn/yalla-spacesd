@@ -47,6 +47,7 @@ import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type
 import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
+import { topicForProgram } from "./team-notices";
 import { flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
@@ -728,6 +729,7 @@ export async function joinPublicWaitlist(
       familyId,
       baseUrl: input.baseUrl,
       confirmToFamily: false,
+      topic: sx ? topicForProgram(sx.p) : undefined,
       details: [
         { label: "Session", value: sx ? `${sx.s.title ?? sx.p.name}, ${fmtDate(sx.s.localDate, "EEE MMM d")}` : input.sessionId },
         { label: "Child", value: kid ? `${kid.firstName}, born ${kid.birthDate}` : "" },

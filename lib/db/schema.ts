@@ -67,6 +67,10 @@ export const staffUsers = pgTable("staff_users", {
   failedLogins: integer("failed_logins").notNull().default(0),
   lockedUntil: ts("locked_until"),
   lastLoginAt: ts("last_login_at"),
+  /** Team emails this person gets (see NOTICE_TOPICS in lib/ops/team-notices.ts). Set by an owner in Settings → Staff & roles. */
+  notices: text("notices").array().notNull().default(sql`'{}'::text[]`),
+  /** Yalla Flex cohorts this person is part of (e.g. "wildflowers"): they're emailed about drop-ins to them. */
+  flexCohorts: text("flex_cohorts").array().notNull().default(sql`'{}'::text[]`),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

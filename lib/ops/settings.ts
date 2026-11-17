@@ -21,7 +21,7 @@ export const POLICIES = {
   "notifications.staffEmails": {
     group: "Notifications",
     label: "Send website messages to",
-    help: "Tour requests, event enquiries, waitlist sign-ups, handbook questions and new Family Portal accounts are emailed here (separate several addresses with commas). Everything is also kept in Admin → Inbox.",
+    help: "A shared inbox that gets every team email: bookings, cancellations, website messages and new Family Portal accounts (separate several addresses with commas). To choose which emails a team member gets, use Settings → Staff & roles → Team emails instead. Website messages are also kept in Admin → Inbox.",
     default: "hello@yallaspacesd.com",
     decision: false,
   } as PolicyDef<string>,

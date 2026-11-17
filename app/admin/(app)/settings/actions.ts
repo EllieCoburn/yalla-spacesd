@@ -7,6 +7,7 @@ import { resetStaffMfa } from "@/lib/auth/staff";
 import { POLICIES, saveCohort, saveLocation, savePool, setOperatingHours, setPolicy, type OperatingHours, type PolicyKey } from "@/lib/ops/settings";
 import { changeRole, createRole, inviteStaff, resendInvite, setStaffStatus, updateRolePermissions } from "@/lib/ops/staff-admin";
 import { trustedBaseUrl } from "@/lib/base-url";
+import { setStaffNotices } from "@/lib/ops/team-notices";
 
 async function baseUrl() {
   return trustedBaseUrl((await requestMeta()).host);
@@ -70,6 +71,7 @@ export const hoursAction = adminAction("settings.manage", async ({ db, actor, st
 
 export const inviteAction = adminAction("staff.manage", async ({ db, actor, str }) => {
   const res = await inviteStaff(db, actor, { email: str("email"), name: str("name"), roleKey: str("roleKey") }, await baseUrl());
+  if (str("flexCohort")) await setStaffNotices(db, actor, res.user.id, { notices: [], flexCohorts: [str("flexCohort")] });
   return {
     message: res.mode === "test" ? `Invitation for ${res.user.name} captured (test mode — no email sent).` : `Invitation sent to ${res.user.email}.`,
     data: showLink(res.mode) ? { link: res.link } : undefined,
@@ -97,6 +99,12 @@ export const resetMfaAction = adminAction("staff.manage", async ({ db, actor, st
   if (str("staffId") === staff.id) throw new OpsError("invalid", "To move to a new phone, use Account & security.");
   await resetStaffMfa(db, actor, str("staffId"));
   return "Two-step verification reset. They’ve been signed out and will set it up again at their next sign-in.";
+});
+
+/** Which team emails a person gets, and the Flex cohorts they're part of. */
+export const noticesAction = adminAction("staff.manage", async ({ db, actor, str, all }) => {
+  const u = await setStaffNotices(db, actor, str("staffId"), { notices: all("notices"), flexCohorts: all("flexCohorts") });
+  return `Saved ${u.name}’s emails.`;
 });
 
 export const permissionsAction = adminAction("staff.manage", async ({ db, actor, str, all }) => {

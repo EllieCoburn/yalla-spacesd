@@ -615,7 +615,7 @@ async function tellTeam(db: Executor, groupId: string) {
       .limit(1);
     const who = g ? `${g.firstName} ${g.lastName}` : "A family";
     const space = `${d.workspace.name} (${CATEGORY_LABEL[d.workspace.category as Category]})`;
-    const { staffRecipients } = await import("@/lib/ops/enquiries");
+    const { teamRecipients } = await import("@/lib/ops/team-notices");
     const { notifyStaff } = await import("@/lib/notify");
     const { trustedBaseUrl } = await import("@/lib/base-url");
     const vars = {
@@ -624,7 +624,7 @@ async function tellTeam(db: Executor, groupId: string) {
       reference: d.group.reference,
       link: `${trustedBaseUrl()}/admin/spaces/${groupId}`,
     };
-    for (const to of await staffRecipients(db)) await notifyStaff(db, { key: "staff_new_booking", to, vars, relatedType: "space_reservation", relatedId: groupId });
+    for (const to of await teamRecipients(db, "spaces")) await notifyStaff(db, { key: "staff_new_booking", to, vars, relatedType: "space_reservation", relatedId: groupId });
   } catch (e) {
     console.error("[staff space email failed]", (e as Error).message?.slice(0, 160));
   }

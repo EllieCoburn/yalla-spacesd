@@ -49,6 +49,7 @@ export const PERMISSION_GROUPS = [
     items: [
       { key: "roster.view", label: "View daily rosters" },
       { key: "attendance.manage", label: "Check children in and out" },
+      { key: "dropins.view", label: "See upcoming Yalla Flex drop-ins (only their own cohort’s, unless they can also view daily rosters)" },
     ],
   },
   {
@@ -130,6 +131,7 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
       "children.staffNotes",
       "roster.view",
       "attendance.manage",
+      "dropins.view",
       "forms.view",
       "forms.documents",
       "forms.manage",
@@ -144,7 +146,13 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
     key: "educator",
     name: "Educator",
     description: "Rosters, attendance, care information and departure contacts — no billing.",
-    permissions: ["dashboard.view", "programs.view", "bookings.view", "families.view", "children.care", "roster.view", "attendance.manage", "forms.view"],
+    permissions: ["dashboard.view", "programs.view", "bookings.view", "families.view", "children.care", "roster.view", "attendance.manage", "dropins.view", "forms.view"],
+  },
+  {
+    key: "cohort_team",
+    name: "Cohort team",
+    description: "Only the Yalla Flex drop-ins coming to their own cohort, with each child’s allergies and medical notes. Nothing else.",
+    permissions: ["dropins.view"],
   },
   {
     key: "billing",

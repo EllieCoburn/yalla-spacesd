@@ -20,7 +20,7 @@ import type { DB, Executor } from "@/lib/db";
 import { bookings, children, families, familyAuthTokens, familyInvites, familySessions, guardians, messages, playPassSubscriptions } from "@/lib/db/schema";
 import { validLinkKey } from "@/lib/links";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
-import { staffRecipients } from "@/lib/ops/enquiries";
+import { teamRecipients } from "@/lib/ops/team-notices";
 import { fmtDate } from "@/lib/time";
 import { allow } from "@/lib/rate-limit";
 
@@ -324,7 +324,7 @@ async function announceNewMember(db: DB, input: { familyId: string; guardianId: 
     `Email: ${g.email}`,
     ...(kids.length ? kids.map((c, i) => `${kids.length > 1 ? `Child ${i + 1}` : "Child"}: ${c.firstName}, born ${fmtDate(c.birthDate, "MMM d, yyyy")}`) : ["Children: none added yet"]),
   ].join("\n");
-  for (const to of await staffRecipients(db).catch(() => [] as string[]))
+  for (const to of await teamRecipients(db, "families").catch(() => [] as string[]))
     await notifyStaff(db, { key: "staff_family_joined", to, vars: { family_name: g.lastName.trim(), details, link: `${input.baseUrl}/admin/families/${input.familyId}` }, relatedId: input.familyId }).catch((e) =>
       console.error("[family joined email failed]", (e as Error).message?.slice(0, 120)),
     );

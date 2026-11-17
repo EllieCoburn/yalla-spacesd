@@ -11,7 +11,7 @@ import { notifyStaff } from "@/lib/notify";
 import { trustedBaseUrl } from "@/lib/base-url";
 import { fmtDate, fmtTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
-import { staffRecipients } from "./enquiries";
+import { notifyCohortsOfCancelledDropIns, teamRecipients, topicForProgram, type NoticeTopic } from "./team-notices";
 
 const dollars = (c: number) => "$" + (c / 100).toFixed(2);
 
@@ -24,8 +24,8 @@ async function parentName(db: Executor, familyId: string) {
   return g ? `${g.firstName} ${g.lastName}` : "A family";
 }
 
-async function send(db: Executor, vars: { summary: string; details: string; reference: string; link: string }, related: { type: string; id: string }) {
-  for (const to of await staffRecipients(db)) await notifyStaff(db, { key: "staff_booking_cancelled", to, vars, relatedType: related.type, relatedId: related.id });
+async function send(db: Executor, topics: NoticeTopic[], vars: { summary: string; details: string; reference: string; link: string }, related: { type: string; id: string }) {
+  for (const to of await teamRecipients(db, topics)) await notifyStaff(db, { key: "staff_booking_cancelled", to, vars, relatedType: related.type, relatedId: related.id });
 }
 
 /** A care booking (or some of its days) was cancelled. `money` says what happened to what they paid. */
@@ -63,12 +63,13 @@ export async function notifyTeamOfCancellation(db: Executor, input: { bookingId:
     const first = [...bySession.values()][0][0];
     await send(
       db,
+      [...new Set(rows.map((r) => topicForProgram(r.program)))],
       { summary: `${parent} · ${first.session.title ?? first.program.name} · ${fmtDate(first.session.localDate, "MMM d")}${bySession.size > 1 ? ` + ${bySession.size - 1} more` : ""}`, details, reference: b.reference, link: `${trustedBaseUrl()}/admin/bookings/${b.id}` },
       { type: "booking", id: b.id },
     );
   } catch (e) {
     console.error("[staff cancellation email failed]", (e as Error).message?.slice(0, 160));
-  }
+  }  await notifyCohortsOfCancelledDropIns(db, input.itemIds);
 }
 
 /** A workspace reservation was cancelled. */
@@ -85,7 +86,7 @@ export async function notifyTeamOfSpaceCancellation(db: Executor, input: { group
       `Parent: ${parent}\nCancelled by: ${input.actor.type === "staff" ? `${input.actor.name} (Team Yalla)` : `${parent} in the Family Portal`}\nReference: ${g.reference}`,
       `~~ ${input.money} ${ws?.name ?? "The space"} is free again for that time.`,
     ].join("\n\n");
-    await send(db, { summary: `${parent} · ${ws?.name ?? "Workspace"}${first ? ` · ${fmtDate(first.localDate, "MMM d")}` : ""}`, details, reference: g.reference, link: `${trustedBaseUrl()}/admin/spaces/${g.id}` }, { type: "space_reservation", id: g.id });
+    await send(db, ["spaces"], { summary: `${parent} · ${ws?.name ?? "Workspace"}${first ? ` · ${fmtDate(first.localDate, "MMM d")}` : ""}`, details, reference: g.reference, link: `${trustedBaseUrl()}/admin/spaces/${g.id}` }, { type: "space_reservation", id: g.id });
   } catch (e) {
     console.error("[staff space cancellation email failed]", (e as Error).message?.slice(0, 160));
   }

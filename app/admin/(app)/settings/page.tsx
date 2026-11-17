@@ -9,7 +9,9 @@ import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { getOperatingHours, listPolicies, poolUsage } from "@/lib/ops/settings";
 import { fmtDateTime } from "@/lib/time";
-import { cohortAction, createRoleAction, hoursAction, inviteAction, locationAction, permissionsAction, policyAction, poolAction, resendInviteAction, resetMfaAction, roleAction, statusAction } from "./actions";
+import { NOTICE_TOPICS } from "@/lib/ops/team-notices";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { cohortAction, createRoleAction, hoursAction, inviteAction, locationAction, noticesAction, permissionsAction, policyAction, poolAction, resendInviteAction, resetMfaAction, roleAction, statusAction } from "./actions";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Settings" };
@@ -296,7 +298,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     return (
       <div className="space-y-8">
         <Card title="Invite a staff member">
-          <InviteForm action={inviteAction} roles={roleOptions} />
+          <InviteForm action={inviteAction} roles={roleOptions} cohorts={FLEX_GROUPS.map((g) => ({ key: g.key, name: g.cohort }))} />
         </Card>
         <Card title={`Staff (${people.length})`} padded={false}>
           <Table head={["Person", "Role", "Status", "Two-step", "Last sign-in", "Actions"]}>
@@ -357,6 +359,70 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             ))}
           </Table>
         </Card>
+
+        <section>
+          <h2 className="mb-1 text-[1rem] font-semibold text-ink">Team emails</h2>
+          <p className="mb-4 max-w-2xl text-[0.85rem] text-ink-soft">
+            Choose which emails each person gets. Anyone in a Flex cohort is emailed as soon as a child books a drop-in to that cohort (and if it’s cancelled), and on the Cohort team role
+            that’s all they see in Admin. The shared addresses in Settings → Notifications still get everything, unless the address belongs to someone listed here.
+          </p>
+          <div className="space-y-3">
+            {people
+              .filter(({ u }) => u.status === "active")
+              .map(({ u }) => {
+                const topics = NOTICE_TOPICS.filter((t) => u.notices.includes(t.key)).map((t) => t.label);
+                const cohorts = FLEX_GROUPS.filter((g) => u.flexCohorts.includes(g.key)).map((g) => g.cohort);
+                return (
+                  <Disclosure
+                    key={u.id}
+                    label={
+                      <span className="flex flex-wrap items-center gap-2">
+                        {u.name}
+                        <span className="text-[0.8rem] font-normal text-ink-soft">
+                          {topics.length ? topics.join(", ") : "No team emails"}
+                          {cohorts.length ? ` · drop-ins to ${cohorts.join(", ")}` : ""}
+                        </span>
+                      </span>
+                    }
+                  >
+                    <ActionForm action={noticesAction} submit={{ label: `Save ${u.name.split(" ")[0]}’s emails` }}>
+                      <input type="hidden" name="staffId" value={u.id} />
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <fieldset>
+                          <legend className="mb-1.5 text-[0.72rem] font-semibold tracking-[0.06em] text-ink-soft uppercase">Emails about</legend>
+                          <div className="space-y-1.5">
+                            {NOTICE_TOPICS.map((t) => (
+                              <label key={t.key} className="flex items-start gap-2 text-[0.84rem]">
+                                <input type="checkbox" name="notices" value={t.key} defaultChecked={u.notices.includes(t.key)} className="mt-0.5 h-4 w-4 rounded border-ink/30" />
+                                <span>
+                                  {t.label}
+                                  <span className="block text-[0.76rem] text-ink-soft">{t.help}</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                        <fieldset>
+                          <legend className="mb-1.5 text-[0.72rem] font-semibold tracking-[0.06em] text-ink-soft uppercase">Part of these Flex cohorts</legend>
+                          <div className="space-y-1.5">
+                            {FLEX_GROUPS.map((g) => (
+                              <label key={g.key} className="flex items-start gap-2 text-[0.84rem]">
+                                <input type="checkbox" name="flexCohorts" value={g.key} defaultChecked={u.flexCohorts.includes(g.key)} className="mt-0.5 h-4 w-4 rounded border-ink/30" />
+                                <span>
+                                  {g.cohort} <span className="text-ink-soft">({g.label})</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-[0.76rem] text-ink-soft">They’re emailed about each drop-in to these cohorts and see them under Drop-ins.</p>
+                        </fieldset>
+                      </div>
+                    </ActionForm>
+                  </Disclosure>
+                );
+              })}
+          </div>
+        </section>
 
         <section>
           <h2 className="mb-1 text-[1rem] font-semibold text-ink">Roles & permissions</h2>

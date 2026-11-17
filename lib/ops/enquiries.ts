@@ -8,7 +8,8 @@ import { and, desc, eq, gte, inArray, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
 import { enquiries } from "@/lib/db/schema";
-import { membershipRecipients, notifyStaff } from "@/lib/notify";
+import { notifyStaff } from "@/lib/notify";
+import { teamRecipients, type NoticeTopic } from "./team-notices";
 import { getPolicy } from "./settings";
 
 export const ENQUIRY_KINDS = {
@@ -37,7 +38,7 @@ export async function staffRecipients(db: Executor) {
 
 export async function submitEnquiry(
   db: DB,
-  input: { kind: EnquiryKind; name: string; email: string; phone?: string; details: { label: string; value: string }[]; familyId?: string | null; ip?: string | null; baseUrl: string; confirmToFamily?: boolean; vars?: Record<string, string> },
+  input: { kind: EnquiryKind; name: string; email: string; phone?: string; details: { label: string; value: string }[]; familyId?: string | null; ip?: string | null; baseUrl: string; confirmToFamily?: boolean; vars?: Record<string, string>; topic?: NoticeTopic },
 ) {
   const name = input.name.trim().slice(0, 200);
   const email = input.email.trim().toLowerCase().slice(0, 200);
@@ -65,7 +66,8 @@ export async function submitEnquiry(
   // Email problems are recorded in Admin → Messages; the message itself is already saved.
   // Club Yalla applications go to the membership inbox; everything else to the general one. Replying
   // to the notice replies to the family.
-  const to_ = input.kind === "application" ? await membershipRecipients(db) : await staffRecipients(db);
+  const topic: NoticeTopic = input.topic ?? (input.kind === "application" ? "club" : input.kind === "event" ? "celebrations" : "enquiries");
+  const to_ = await teamRecipients(db, topic);
   for (const to of to_) {
     await notifyStaff(db, { key: "staff_new_enquiry", to, vars: { kind: kind.staffNoun, kind_label: kind.label, name, details: summary, link: `${input.baseUrl}/admin/inbox?open=${e.id}` }, relatedId: e.id, replyTo: email }).catch((err) =>
       console.error("[enquiry email failed]", (err as Error).message?.slice(0, 120)),
