@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   description: "What every Yalla program shares, and the many ways families take part: weekly membership, drop-in days, camps, and Happenings like immersive play, weekend play and evenings out.",
 };
 
-const principles = [
-  { title: "Play is the work", body: "Children learn by doing: building, pouring, painting, digging, pretending. Whatever the occasion, time at Yalla is built around open-ended play." },
-  { title: "Relationships first", body: "Children thrive with adults they trust. Our caregivers take the time to know each child, and each family, by name." },
-  { title: "Guided with intention", body: "Every material, invitation and transition is chosen on purpose. The environment does a great deal of quiet teaching." },
-  { title: "Raised in community", body: "Raising children is personal and communal. Yalla is a place for children and their grown-ups to share in it together." },
+const principles: { mark: MarkName; title: string; body: string }[] = [
+  { mark: "bunting", title: "Play is the work", body: "Children learn by doing: building, pouring, painting, digging, pretending. Whatever the occasion, time at Yalla is built around open-ended play." },
+  { mark: "waves", title: "Relationships first", body: "Children thrive with adults they trust. Our caregivers take the time to know each child, and each family, by name." },
+  { mark: "sprig", title: "Guided with intention", body: "Every material, invitation and transition is chosen on purpose. The environment does a great deal of quiet teaching." },
+  { mark: "balcony", title: "Raised in community", body: "Raising children is personal and communal. Yalla is a place for children and their grown-ups to share in it together." },
 ];
 
 /** Ways to take part, each with a plain line on how it works. */
@@ -65,18 +65,13 @@ export default function ExperiencePage() {
 
       {/* What every experience shares */}
       <Section tone="paper">
-        <div className="shell grid items-start gap-14 lg:grid-cols-12">
-          <div className="lg:sticky lg:top-32 lg:col-span-5">
+        <div className="shell grid items-center gap-14 lg:grid-cols-12">
+          <div className="lg:col-span-6">
             <Index n="01">What every visit shares</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
               Childhood, given <em>room to unfold.</em>
             </h2>
-            <div className="relative mt-12 aspect-[4/5] w-[80%] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/instruments.jpg" alt="An infant exploring a drum, bells and a tambourine" fill sizes="(min-width:1024px) 30vw, 80vw" className="object-cover" />
-            </div>
-          </div>
-          <div className="lg:col-span-6 lg:col-start-7">
-            <p className="lede text-ink-soft">
+            <p className="lede mt-8 text-ink-soft">
               Our approach to care is rooted in the Reggio Emilia and RIE traditions: play-based, relationship-led and unhurried. Children are
               given beautiful materials, time and full attention, and curiosity sets the pace.
             </p>
@@ -84,17 +79,24 @@ export default function ExperiencePage() {
               <span className="link-underline">Read about our approach</span>
               <Arrow className="h-3 w-5" />
             </Link>
-            <div className="mt-14 space-y-12">
-              {principles.map((a, i) => (
-                <Reveal key={a.title} delay={i * 80} className="hairline grid gap-4 border-t pt-8 sm:grid-cols-[3rem_1fr]">
-                  <span className="font-serif text-blue italic">0{i + 1}</span>
-                  <div>
-                    <h3 className="display text-[1.7rem]">{a.title}</h3>
-                    <p className="mt-3 text-ink-soft">{a.body}</p>
-                  </div>
-                </Reveal>
-              ))}
+          </div>
+          <div className="lg:col-span-5 lg:col-start-8">
+            <div className="relative ml-auto aspect-[4/5] w-[78%] overflow-hidden rounded-t-[999px] bg-sand lg:w-[85%]">
+              <Image src="/photos/instruments.jpg" alt="An infant exploring a drum, bells and a tambourine" fill sizes="(min-width:1024px) 30vw, 78vw" className="object-cover" />
             </div>
+          </div>
+        </div>
+
+        {/* What every visit shares, side by side (like the values on the About page). */}
+        <div className="shell">
+          <div className="mt-16 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:mt-24 lg:grid-cols-4">
+            {principles.map((a, i) => (
+              <Reveal key={a.title} delay={i * 90} className="bg-paper p-8 lg:p-10">
+                <Mark name={a.mark} className="h-12 w-auto text-blue" />
+                <h3 className="display mt-10 text-[1.8rem]">{a.title}</h3>
+                <p className="mt-3 text-ink-soft">{a.body}</p>
+              </Reveal>
+            ))}
           </div>
         </div>
       </Section>
