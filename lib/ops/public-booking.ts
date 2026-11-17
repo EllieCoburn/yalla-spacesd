@@ -767,18 +767,17 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
           })
         ).total
       : 0;
-  const vars = await bookingConfirmationVars(db, x.b.id);
+  const { cancellationVars } = await import("./bookings");
   await notifyFamily(db, {
     key: "booking_cancellation",
     familyId: x.b.familyId,
-    vars: {
-      ...vars,
-      refund_note: credited
-        ? `${usd(credited)} has been returned to your Yalla Wallet. Credit from a cancellation can be used toward any Yalla booking for 24 months.`
-        : hoursAhead >= cutoff
+    vars: await cancellationVars(db, x.b.id, [itemId], {
+      walletCents: credited,
+      note:
+        hoursAhead >= cutoff
           ? "Nothing was paid for this booking, so there’s nothing to return."
-          : `Because this was cancelled less than ${cutoff} hours before it began, it isn’t eligible for credit. If your child is unwell or something unexpected came up, please contact us.`,
-    },
+          : `Because this was cancelled less than ${cutoff} hours before it began, it isn’t eligible for credit. If your child is unwell or something unexpected came up, just reply to this email and let us know.`,
+    }),
     related: { type: "booking", id: x.b.id },
   });
   const { notifyTeamOfCancellation } = await import("./staff-notices");

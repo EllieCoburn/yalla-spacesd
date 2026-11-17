@@ -109,6 +109,18 @@ export async function staffCancelBooking(db: DB, actor: Actor, input: { bookingI
             ? "No credit was given (chosen when cancelling)."
             : "No credit was given (cancelled inside the credit cutoff, or nothing had been paid).";
     await notifyTeamOfCancellation(db, { bookingId: b.id, itemIds: before.map((x) => x.id), actor, money, walletCents: input.mode === "yalla" ? 0 : r.credited });
+    if (input.notify && input.mode !== "yalla") {
+      const { cancellationVars } = await import("./bookings");
+      await notifyFamily(db, {
+        key: "booking_cancellation",
+        familyId: b.familyId,
+        vars: await cancellationVars(db, b.id, before.map((x) => x.id), {
+          walletCents: r.credited,
+          note: "This cancellation isn’t eligible for credit under our cancellation policy. If something unexpected came up, just reply to this email and let us know.",
+        }),
+        related: { type: "booking", id: b.id },
+      });
+    }
   }
   return r;
 }
@@ -123,7 +135,8 @@ async function staffCancelBookingInner(db: DB, actor: Actor, input: { bookingId:
     .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
     .innerJoin(programs, eq(programs.id, sessions.programId))
     .where(and(eq(bookingItems.bookingId, b.id), eq(bookingItems.status, "confirmed"), input.itemIds?.length ? inArray(bookingItems.id, input.itemIds) : undefined));
-  await cancelBooking(db, actor, { bookingId: b.id, itemIds: input.itemIds, reason: input.reason, notify: input.notify && input.mode !== "yalla" });
+  // Confirmed care: the family's email is sent below, once we know what happened to the money.
+  await cancelBooking(db, actor, { bookingId: b.id, itemIds: input.itemIds, reason: input.reason, notify: input.notify && input.mode !== "yalla" && b.status !== "confirmed" });
   if (b.status !== "confirmed" || !rows.length) return { credited: 0, offered: 0 };
   if (input.mode === "family_none") return { credited: 0, offered: 0 };
   if (input.mode === "yalla") {

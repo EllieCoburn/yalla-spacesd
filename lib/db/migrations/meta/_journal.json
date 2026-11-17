@@ -295,6 +295,13 @@
       "when": 1794865783927,
       "tag": "0041_drop_pending_signups",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794865784927,
+      "tag": "0042_drop_unedited_template_copies",
+      "breakpoints": true
     }
   ]
 }

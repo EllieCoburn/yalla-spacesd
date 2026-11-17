@@ -26,6 +26,10 @@ const C = {
 const STATUS: Record<string, { label: string; color: string; tint: string }> = {
   staff_new_booking: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
   staff_booking_cancelled: { label: "Cancelled", color: "#673e46", tint: "#f3e6e8" },
+  booking_confirmation: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
+  booking_confirmed_team: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
+  booking_welcome_team: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
+  booking_cancellation: { label: "Cancelled", color: "#673e46", tint: "#f3e6e8" },
 };
 const SERIF = `Lora, 'Iowan Old Style', Georgia, 'Times New Roman', serif`;
 const SANS = `'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif`;
@@ -52,6 +56,8 @@ const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
   family_confirm_email: "Confirm my email and open my portal",
   family_invite: "Create your Family Portal account",
+  booking_confirmation: "View my booking",
+  booking_cancellation: "Book another experience",
   booking_welcome_team: "Set up my Family Portal",
   booking_confirmed_team: "View my bookings",
   payment_request: "Pay securely",
@@ -283,12 +289,12 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
   <tr><td align="center" style="padding:0 0 22px;"><a href="${base}"><img src="${base}/email/logo.png" width="84" height="85" alt="Yalla" style="display:block;border:0;width:84px;height:auto;"></a></td></tr>
   <tr><td style="background:${C.card};border-radius:28px;overflow:hidden;border:1px solid ${C.line};">
-    ${status ? `<div style="height:8px;background:${status.color};border-radius:28px 28px 0 0;font-size:0;line-height:0;">&nbsp;</div>` : ""}
+    ${status && !hero ? `<div style="height:8px;background:${status.color};border-radius:28px 28px 0 0;font-size:0;line-height:0;">&nbsp;</div>` : ""}
     ${hero ? `<img src="${base}/email/${hero}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:28px 28px 0 0;">` : ""}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="px" style="padding:${hero ? "36px" : "44px"} 48px 40px;">
       ${
         status
-          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr><td style="padding:5px 12px;border-radius:999px;background:${status.tint};font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${status.color};">●&nbsp; ${status.label}</td><td style="padding-left:12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.soft};">Yalla · Team</td></tr></table>`
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr><td style="padding:5px 12px;border-radius:999px;background:${status.tint};font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${status.color};">●&nbsp; ${status.label}</td><td style="padding-left:12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.soft};">${staff ? "Yalla · Team" : "Yalla"}</td></tr></table>`
           : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>`
       }
       <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(headline)}</h1>

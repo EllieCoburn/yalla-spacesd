@@ -97,7 +97,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   booking_confirmation: {
     name: "Booking confirmation",
     subject: "You’re booked: {{program}} on {{date}}",
-    body: "Hi {{guardian_first_name}},\n\nYour booking {{reference}} is confirmed.\n\n{{booking_details}}\n\nLocation: {{location}}\n{{arrival_instructions}}\n\nYou can view or change your booking in the Family Portal.\n\nWarmly,\nTeam Yalla",
+    body: "# You’re all set!\n\nHi {{guardian_first_name}},\n\nYour booking is confirmed, and we can’t wait to see you. Here are your details.\n\n{{booking_summary}}\n\n{{portal_link}}\n\nNeed to make a change? You can view or cancel your booking in your Family Portal.\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -194,8 +194,8 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
   booking_cancellation: {
     name: "Booking cancellation",
-    subject: "Booking {{reference}} cancelled",
-    body: "Hi {{guardian_first_name}},\n\nThis confirms that the following has been cancelled:\n\n{{booking_details}}\n\n{{refund_note}}\n\nTeam Yalla",
+    subject: "Your booking {{reference}} is cancelled",
+    body: "# Your booking is cancelled\n\nHi {{guardian_first_name}},\n\nThis confirms we’ve cancelled the following booking for you.\n\n{{booking_summary}}\n\n{{refund_summary}}\n\nWe’d love to see you again soon. Find another day or experience that works for your family:\n\n{{book_link}}\n\nYou can [review our cancellation policy]({{policy_link}}) anytime.\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -258,14 +258,14 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   booking_welcome_team: {
     name: "Booking made by the team (family new to the portal)",
     subject: "Welcome to Yalla! Your booking is confirmed",
-    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nTeam Yalla has confirmed your booking:\n\n{{booking_details}}\n\nLocation: {{location}}\n{{arrival_instructions}}\n\nYour Family Portal is ready for you. Set up your account to see your upcoming bookings, complete the forms we need before your child’s first day, and explore our Family Handbook and family resources.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWe can’t wait to welcome you.\n\nWarmly,\nTeam Yalla",
+    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nTeam Yalla has confirmed your booking.\n\n{{booking_summary}}\n\nYour Family Portal is ready for you. Set up your account to see your upcoming bookings, complete the forms we need before your child’s first day, and explore our Family Handbook and family resources.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
   booking_confirmed_team: {
     name: "Booking made by the team (family already in the portal)",
     subject: "You’re booked: {{program}} on {{date}}",
-    body: "Hi {{guardian_first_name}},\n\nGood news: Team Yalla has booked this for you, and it’s confirmed.\n\n{{booking_details}}\n\nLocation: {{location}}\n{{arrival_instructions}}\n\nIt’s in your Family Portal with your other bookings whenever you’d like to take a look.\n\n{{portal_link}}\n\nWarmly,\nTeam Yalla",
+    body: "# You’re all set!\n\nHi {{guardian_first_name}},\n\nGood news: Team Yalla has booked this for you, and it’s confirmed.\n\n{{booking_summary}}\n\n{{portal_link}}\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -440,10 +440,10 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
 
 /** Variables each template can use, with sample values for previews. */
 export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
-  booking_confirmation: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions"],
+  booking_confirmation: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "portal_link"],
   booking_reminder: ["guardian_first_name", "reference", "program", "date", "booking_details", "arrival_instructions"],
   booking_change: ["guardian_first_name", "reference", "change_summary", "booking_details"],
-  booking_cancellation: ["guardian_first_name", "reference", "booking_details", "refund_note"],
+  booking_cancellation: ["guardian_first_name", "reference", "booking_summary", "refund_summary", "book_link", "policy_link", "booking_details", "refund_note"],
   forms_missing: ["guardian_first_name", "child_name", "missing_forms"],
   payment_receipt: ["guardian_first_name", "invoice_number", "amount", "paid_at", "line_items", "balance"],
   payment_failed: ["guardian_first_name", "invoice_number", "amount", "reason", "hold_until"],
@@ -455,8 +455,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   family_sign_in: ["guardian_first_name", "link"],
   family_confirm_email: ["guardian_first_name", "purchase_summary", "link"],
   family_invite: ["name", "link"],
-  booking_welcome_team: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions", "link"],
-  booking_confirmed_team: ["guardian_first_name", "reference", "program", "date", "booking_details", "location", "arrival_instructions", "portal_link"],
+  booking_welcome_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "link"],
+  booking_confirmed_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "portal_link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],
   playpass_welcome: ["guardian_first_name", "plan", "amount", "added", "balance", "monthly_price", "monthly_allocation", "next_renewal"],
   playpass_renewal: ["guardian_first_name", "plan", "amount", "added", "balance", "next_renewal"],
@@ -477,6 +477,10 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
 };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
+  booking_summary: ">> Camp Yalla · 4 – 6 years\nWednesday, November 25, 2026 · 9:00am–3:00pm\n\nWho’s coming: Robin Sample\nExtras: Early Bird (8:00 – 9:00am)\n\nTotal: $180.00\nPaid by card: $180.00\n\nWhere: Yalla Bankers Hill\nReference: YL-SAMPLE",
+  refund_summary: "!! $180.00 | has been returned to your Yalla Wallet. Use it toward any Yalla booking within 24 months.",
+  book_link: "https://www.yallaspacesd.com/book",
+  policy_link: "https://www.yallaspacesd.com/policies#cancellation-refund",
   purchase_summary: "Your booking is confirmed",
   plan: "Gather",
   interests: "Club Yalla, Yalla Flex",

@@ -556,18 +556,99 @@ async function paymentSummary(db: Executor, bookingId: string) {
   return `\n\nTotal: ${usd(t.reduce((s, x) => s + x.total, 0))}\nPaid from your Play Pass: ${usd(wallet)}${card ? `\nPaid by card: ${usd(card)}` : ""}`;
 }
 
+type LineRow = Awaited<ReturnType<typeof bookingLines>>[number];
+
+/**
+ * Family emails, laid out for a glance: each session set large with its date and time, then who's
+ * coming and any extras (">>" lines are styled in the email; the plain-text version reads the same).
+ */
+function sessionBlocks(rows: LineRow[], opts: { cancelled?: boolean } = {}) {
+  const bySession = new Map<string, LineRow[]>();
+  for (const r of rows) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
+  const blocks: string[] = [];
+  for (const group of bySession.values()) {
+    const s = group[0].session;
+    const short = addonsFor(group[0].program.kind, group[0].program.slug).find((a) => a.endsAfterStartMinutes && group.some((r) => r.item.addons.includes(a.key)));
+    const end = short ? new Date(s.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : s.endsAt;
+    blocks.push(`>> ${s.title ?? group[0].program.name}${short ? ` (${short.label.toLowerCase()})` : ""}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(end)}`);
+    const card: string[] = group.map((r) => `${group.length > 1 || opts.cancelled ? "Child" : "Who’s coming"}: ${r.child ? `${r.child.preferredName || r.child.firstName} ${r.child.lastName}` : "Your family"}`);
+    const extras = [
+      ...new Set(
+        group.flatMap((r) =>
+          r.item.addons
+            .map((k) => addonsFor(r.program.kind, r.program.slug).find((a) => a.key === k && !a.endsAfterStartMinutes))
+            .filter((a): a is NonNullable<typeof a> => !!a)
+            .map((a) => `${a.label}${a.time ? ` (${a.time})` : ""}`),
+        ),
+      ),
+    ];
+    if (extras.length) card.push(`Extras: ${extras.join(", ")}`);
+    blocks.push(card.join("\n"));
+  }
+  return blocks;
+}
+
+/** What was paid, as a card: total, then how it was paid (or what's still due). */
+async function paymentCard(db: Executor, bookingId: string) {
+  const invs = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
+  if (!invs.length) return "";
+  const t = [...(await invoiceTotals(db, invs.map((i) => i.id))).values()];
+  const sum = (k: "total" | "paid" | "walletApplied" | "creditApplied" | "balance") => t.reduce((s, x) => s + x[k], 0);
+  if (!sum("total")) return "";
+  const lines = [`Total: ${usd(sum("total"))}`];
+  if (sum("walletApplied")) lines.push(`From your Play Pass: ${usd(sum("walletApplied"))}`);
+  if (sum("creditApplied") - sum("walletApplied") > 0) lines.push(`From your Yalla Wallet credit: ${usd(sum("creditApplied") - sum("walletApplied"))}`);
+  if (sum("paid")) lines.push(`Paid by card: ${usd(sum("paid"))}`);
+  if (sum("balance") > 0) lines.push(`Still due: ${usd(sum("balance"))}`);
+  return lines.join("\n");
+}
+
+async function siteBase() {
+  const { trustedBaseUrl } = await import("@/lib/base-url");
+  return trustedBaseUrl();
+}
+
 async function confirmationVars(db: Executor, bookingId: string) {
   const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
   const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status === "confirmed" || r.item.status === "held");
   const first = rows[0];
   const loc = first?.session.locationId ? (await db.select().from(locations).where(eq(locations.id, first.session.locationId)))[0] : undefined;
+  const arrival = first?.program.arrivalInstructions ?? loc?.arrivalInstructions ?? "";
+  const pay = await paymentCard(db, bookingId);
+  const summary = [...sessionBlocks(rows), ...(pay ? [pay] : []), `Where: ${loc?.name ?? "Yalla"}\nReference: ${b.reference}`, ...(arrival.trim() ? [`~~ ${arrival.trim().replace(/\s*\n+\s*/g, " ")}`] : [])].join("\n\n");
   return {
     reference: b.reference,
     program: [...new Set(rows.map((r) => r.program.name))].join(", "),
     date: first ? fmtDate(first.session.localDate) : "",
     booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n") + (await paymentSummary(db, bookingId)),
+    booking_summary: summary,
     location: loc?.name ?? "Yalla",
-    arrival_instructions: first?.program.arrivalInstructions ?? loc?.arrivalInstructions ?? "",
+    arrival_instructions: arrival,
+    portal_link: `${await siteBase()}/portal/home?tab=bookings`,
+  };
+}
+
+/**
+ * Variables for a family's cancellation email, about exactly what was cancelled. `refund` says what
+ * happened to the money: returned to the Yalla Wallet, too late for credit, or nothing was paid.
+ */
+export async function cancellationVars(db: Executor, bookingId: string, itemIds: string[], refund: { walletCents?: number; note?: string }) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+  const rows = (await bookingLines(db, bookingId)).filter((r) => itemIds.includes(r.item.id));
+  const base = await siteBase();
+  const credit = refund.walletCents
+    ? `!! ${usd(refund.walletCents)} | has been returned to your Yalla Wallet. Use it toward any Yalla booking within 24 months.`
+    : `~~ ${refund.note ?? "If a refund or credit applies, we’ll confirm it separately."}`;
+  return {
+    reference: b.reference,
+    program: [...new Set(rows.map((r) => r.program.name))].join(", "),
+    date: rows[0] ? fmtDate(rows[0].session.localDate) : "",
+    booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
+    booking_summary: [...sessionBlocks(rows, { cancelled: true }), `Reference: ${b.reference}\nStatus: Cancelled`].join("\n\n"),
+    refund_note: refund.walletCents ? `${usd(refund.walletCents)} has been returned to your Yalla Wallet. Credit from a cancellation can be used toward any Yalla booking for 24 months.` : (refund.note ?? "If a refund or credit applies, we’ll confirm it separately."),
+    refund_summary: credit,
+    book_link: `${base}/book`,
+    policy_link: `${base}/policies#cancellation-refund`,
   };
 }
 
@@ -807,14 +888,13 @@ export async function cancelBooking(db: DB, actor: Actor, input: { bookingId: st
       entityId: b.id,
       summary: `${allCancelled ? "Cancelled" : `Cancelled ${target.length} item(s) on`} ${b.reference}: ${input.reason}`,
     });
-    return { booking: b, sessionIds: [...new Set(target.map((i) => i.sessionId))] };
+    return { booking: b, sessionIds: [...new Set(target.map((i) => i.sessionId))], itemIds: target.map((i) => i.id) };
   });
   if (input.notify) {
-    const vars = await confirmationVars(db, input.bookingId);
     await notifyFamily(db, {
       key: "booking_cancellation",
       familyId: released.booking.familyId,
-      vars: { ...vars, refund_note: "If a refund or credit applies, we’ll confirm it separately." },
+      vars: await cancellationVars(db, input.bookingId, released.itemIds, {}),
       related: { type: "booking", id: input.bookingId },
     });
   }

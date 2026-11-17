@@ -77,6 +77,18 @@ describe("Team cancellation email", () => {
     expect(m.body).toContain("Cancelled by: John Doe in the Family Portal");
     expect(m.body).toContain("!! " + "$" + (out.credited / 100).toFixed(2) + " | returned to their Yalla Wallet");
     expect(m.body).toContain("!! 8 | spots now open in that age group");
+
+    // The family's own email: what was cancelled, the money returned, a way to book again and the policy.
+    const [fam] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "booking_cancellation"));
+    expect(fam.toAddress).toBe("john.doe@example.com");
+    expect(fam.body).toContain(">> Camp Yalla · 4 – 6 years");
+    expect(fam.body).toContain("!! " + "$" + (out.credited / 100).toFixed(2) + " | has been returned to your Yalla Wallet");
+    expect(fam.body).toMatch(/\n\S+\/book\n/);
+    expect(fam.body).toMatch(/\[review our cancellation policy\]\(\S+\/policies#cancellation-refund\)/);
+    // And the booking confirmation they got earlier used the same layout.
+    const [conf] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "booking_confirmation"));
+    expect(conf.body).toContain(">> Camp Yalla · 4 – 6 years");
+    expect(conf.body).toContain("Paid by card: $");
   });
 
   it("the team cancelling says who did it and what happened to the money", async () => {

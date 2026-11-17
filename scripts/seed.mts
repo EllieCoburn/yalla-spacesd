@@ -21,7 +21,6 @@ import { createHold, confirmAdminBooking, startCheckout, cancelBooking } from "@
 import { createTemplate, addRequirement, submitForm } from "@/lib/ops/forms";
 import { joinWaitlist } from "@/lib/ops/waitlist";
 import { processEvent } from "@/lib/payments/webhooks";
-import { DEFAULT_TEMPLATES } from "@/lib/notify/index";
 import { addDaysISO, ageInMonths, todayLA } from "@/lib/time";
 
 const url = process.env.DATABASE_URL ?? "";
@@ -168,7 +167,7 @@ await addRequirement(db, admin, { templateId: forms.weekendWaiver.template.id, s
 await addRequirement(db, admin, { templateId: forms.weekendWaiver.template.id, scope: "program", programId: after.id });
 
 /* Message templates */
-for (const [key, t] of Object.entries(DEFAULT_TEMPLATES)) await db.insert(s.messageTemplates).values({ key, name: t.name, subject: t.subject, body: t.body, essential: t.essential }).onConflictDoNothing();
+// Email templates use the defaults in code; only edits made in Admin are saved (message_templates).
 
 /* Families (synthetic) */
 const first = ["Ava", "Leo", "Mila", "Theo", "Isla", "Noah", "Luna", "Ezra", "Nora", "Kai", "Iris", "Milo", "Zoe", "Arlo", "June", "Remy", "Cleo", "Otis", "Wren", "Jude", "Ines", "Sami", "Lila", "Omar", "Rosa", "Felix", "Hana", "Ari"];
