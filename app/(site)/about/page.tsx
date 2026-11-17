@@ -39,21 +39,6 @@ export default function AboutPage() {
 
       <AboutOverview />
 
-      <Section>
-        <div className="shell">
-          <Index n="02">What we believe</Index>
-          <div className="mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
-            {values.map((v, i) => (
-              <Reveal key={v.title} delay={i * 90} className="bg-chalk p-8 lg:p-10">
-                <Mark name={v.mark} className="h-12 w-auto text-blue" />
-                <h3 className="display mt-10 text-[1.8rem]">{v.title}</h3>
-                <p className="mt-3 text-ink-soft">{v.body}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </Section>
-
       <LoopDivider />
 
       {/* Our space */}
@@ -61,7 +46,7 @@ export default function AboutPage() {
         <div className="shell">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-6">
-              <Index n="03">Our space</Index>
+              <Index n="02">Our space</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
                 A little world of wonder, <em>tucked into Bankers Hill.</em>
               </h2>
@@ -128,6 +113,21 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      <Section>
+        <div className="shell">
+          <Index n="03">What we believe</Index>
+          <div className="mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
+            {values.map((v, i) => (
+              <Reveal key={v.title} delay={i * 90} className="bg-chalk p-8 lg:p-10">
+                <Mark name={v.mark} className="h-12 w-auto text-blue" />
+                <h3 className="display mt-10 text-[1.8rem]">{v.title}</h3>
+                <p className="mt-3 text-ink-soft">{v.body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </Section>
 
       {/* Hidden until the team section is ready (TEAM_PUBLIC in content/team.ts). */}
       {TEAM_PUBLIC ? (
