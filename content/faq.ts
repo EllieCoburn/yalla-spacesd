@@ -135,6 +135,34 @@ export const DEFAULT_FAQS: Faq[] = [
       "Hours vary by program. Our weekday cohorts (Club Yalla and Yalla Flex) run year-round: full days 8:30am to 4:30pm, half days 8:30am to 12:00pm, with Early Bird care from 8:00am. Camps and Happenings have their own times, listed in the booking calendar.",
   },
   {
+    id: "coworking-included",
+    category: "getting-started",
+    alsoIn: ["bookings"],
+    order: 82,
+    status: "published",
+    question: "Is coworking included?",
+    answer:
+      "Yes. Our coworking common areas are included in the cost of your child’s Yalla Flex session or Club Yalla membership. Coworking is for families with a child in Yalla care that day, and one grown-up per family may cowork at no extra cost. For Yalla Happenings, coworking is optional and offered as an add-on at some sessions. [Learn about coworking at Yalla](/coworking).",
+  },
+  {
+    id: "coworking-hours-extra-adults",
+    category: "getting-started",
+    order: 84,
+    status: "published",
+    question: "When is coworking open, and can more than one parent come?",
+    answer:
+      "Coworking is open Monday to Friday, 8:30am to 4:30pm, and on Saturdays and Sundays during weekend sessions. If more than one grown-up would like to be onsite, each additional adult is $25 a day for access to our coworking common areas.",
+  },
+  {
+    id: "coworking-private",
+    category: "getting-started",
+    order: 86,
+    status: "published",
+    question: "Can I reserve a private office, desk or the phone booth?",
+    answer:
+      "Yes. The common areas come with your session, and you can also reserve a private office, a private desk or our phone booth in your Family Portal, subject to availability. [See prices and reserve](/coworking).",
+  },
+  {
     id: "paperwork",
     category: "getting-started",
     order: 90,

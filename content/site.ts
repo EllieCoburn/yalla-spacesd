@@ -25,6 +25,7 @@ export const nav = [
   { href: "/experience", label: "The Yalla Experience", short: "Experience" },
   { href: "/club-yalla", label: "Club Yalla", short: "Club Yalla" },
   { href: "/programs", label: "Programs", short: "Programs" },
+  { href: "/coworking", label: "Coworking", short: "Coworking" },
   { href: "/about", label: "About Yalla", short: "About" },
 ] as const;
 
