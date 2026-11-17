@@ -255,7 +255,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What happens if my child is absent?",
     answer:
-      "Club Yalla tuition reserves your child’s spot in their cohort on your chosen days, so absences and missed days, including sick days, aren’t credited or refunded. If your child will be absent, please message your child’s care team in Brightwheel so our team knows.",
+      "Club Yalla tuition reserves your child’s spot in their cohort on your chosen days, so absences and missed days, including sick days, aren’t credited or refunded. If your child will be absent, please message your child’s care team so they know.",
   },
   {
     id: "club-cancel",
