@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db";
 import { fmtDate, fmtDateTime } from "@/lib/time";
 import { describeAnswer } from "@/lib/forms/fields";
 import { effectiveFields } from "@/lib/ops/forms";
+import { SignedDocument } from "@/components/forms/SignedDocument";
 
 export const metadata = { title: "Submission" };
 
@@ -48,9 +49,20 @@ export default async function SubmissionPage({ params, searchParams }: { params:
         </div>
       ) : null}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card title="Exact text at the time of submission">
+        <Card
+          title="What they signed"
+          actions={
+            docs ? (
+              <Link href={`/admin/forms/submissions/${s.id}/print`} className="text-[0.85rem] font-medium text-blue hover:underline">
+                Print or save as PDF
+              </Link>
+            ) : undefined
+          }
+        >
           {docs ? (
-            <div className="max-h-[36rem] overflow-y-auto rounded-lg border border-ink/8 bg-white p-4 text-[0.88rem] leading-relaxed whitespace-pre-wrap text-ink">{s.versionBody}</div>
+            <div className="max-h-[48rem] overflow-y-auto rounded-lg border border-ink/8 bg-white p-5">
+              <SignedDocument fields={fields} answers={answers ?? {}} body={s.versionBody ?? v.body} kind={t.kind} signatureText={s.signatureText} signerName={s.signerName} signedAt={s.signedAt ?? s.createdAt} />
+            </div>
           ) : (
             <Notice tone="muted">Opening completed forms requires the “Open completed forms and documents” permission.</Notice>
           )}
