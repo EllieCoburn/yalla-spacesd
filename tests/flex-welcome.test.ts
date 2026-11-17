@@ -78,7 +78,7 @@ describe("Yalla Flex first-day welcome email", () => {
       expect(m.body).toContain("[View our parking guide](https://yalla.test/parking)");
       expect(m.body).toContain("[Reserve a space](https://yalla.test/portal/spaces)");
       // Coworking is part of the visit.
-      expect(m.body).toContain("Your coworking is included in your visit. There’s nothing extra to buy.");
+      expect(m.body).not.toContain("nothing extra to buy");
       expect(m.body).toContain("in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.");
       expect(m.body).toContain("[book a space](https://yalla.test/portal/spaces) and purchase it through your Family Portal");
     });

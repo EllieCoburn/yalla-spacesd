@@ -116,9 +116,8 @@ export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string) {
     ["### Connecting to Wi-Fi", `Network: ${WIFI.network}`, `Password: ${WIFI.password}`].join("\n"),
     [
       "### Coworking during your visit",
-      "**Your coworking is included in your visit. There’s nothing extra to buy.**",
+      "A large portion of Yalla’s coworking amenities are available on a first-come, first-served basis and are included in the cost of your visit. You’re welcome to choose the workspace that works best for you in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.",
     ].join("\n"),
-    "A large portion of Yalla’s coworking amenities are available on a first-come, first-served basis and are included in the cost of your visit. You’re welcome to choose the workspace that works best for you in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.",
     `If you’d like a designated private desk or private office instead, you can [book a space](${baseUrl}${SPACES_PATH}) and purchase it through your Family Portal, and it’s yours for the duration of your stay.`,
     ["### Using Brightwheel", "Brightwheel is how we stay connected during your visit."].join("\n"),
     [
