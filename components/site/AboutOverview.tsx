@@ -35,8 +35,8 @@ export function AboutOverview() {
         <Reveal className="mt-20 grid gap-10 lg:mt-28 lg:grid-cols-12">
           <div className="space-y-6 text-[1.08rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-2">
             <p>
-              Yalla is a community in San Diego’s Bankers Hill built around a simple idea: the early years of childhood should be full of possibility, and the people raising young children
-              deserve meaningful support along the way.
+              Everything we do is built around a simple idea: the early years of childhood should be full of possibility, and the people raising young children deserve meaningful
+              support along the way.
             </p>
             <p>
               Our spaces and experiences are shaped by a deep respect for childhood. We believe children are capable, curious, and naturally driven to explore the world around them. Through

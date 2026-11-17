@@ -101,7 +101,7 @@ export default function AboutPage() {
               },
               {
                 title: "Spaces that bring people together",
-                body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our Bankers Hill location includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
+                body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our space includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
                 img: { src: "/photos/cowork-atrium.webp", alt: "The coworking atrium with long shared desks and hanging textile art" },
                 shape: "rounded-full",
               },
