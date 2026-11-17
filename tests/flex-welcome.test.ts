@@ -77,6 +77,10 @@ describe("Yalla Flex first-day welcome email", () => {
       expect(m.body).toContain("Network: YallaSanDiego\nPassword: YallaSpaceSD");
       expect(m.body).toContain("[View our parking guide](https://yalla.test/parking)");
       expect(m.body).toContain("[Reserve a space](https://yalla.test/portal/spaces)");
+      // Coworking is part of the visit.
+      expect(m.body).toContain("Your coworking is included in your visit. There’s nothing extra to buy.");
+      expect(m.body).toContain("in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.");
+      expect(m.body).toContain("[book a space](https://yalla.test/portal/spaces) and purchase it through your Family Portal");
     });
   }
 
@@ -118,6 +122,20 @@ describe("Yalla Flex first-day welcome email", () => {
     // Matching codes are still labeled separately, each cohort once.
     expect(m.body.match(/Wildflowers door code: 2424/g)).toHaveLength(1);
     expect(m.body.match(/Sprouts door code: 2424/g)).toHaveLength(1);
+  });
+
+  it("two children, same length of day, different cohorts: one shared sentence", async () => {
+    const { sessions, familyId } = await setup();
+    const jane = await child(familyId, "Jane", "wildflowers");
+    const max = await child(familyId, "Max", "saplings");
+    await book(familyId, [
+      { sessionId: sessions.wildflowers.id, childId: jane.id },
+      { sessionId: sessions.saplings.id, childId: max.id },
+    ]);
+    await sendFlexWelcomes(db(), { now: morning() });
+    const m = await onlyWelcome();
+    expect(m.body).toContain("show you to the Wildflowers and Saplings cohorts, where Jane and Max will spend their day, and introduce you");
+    expect(m.body).toContain("Wildflowers door code: 2424\nSaplings door code: 2022");
   });
 
   it("two children in the same cohort: that cohort's code once", async () => {

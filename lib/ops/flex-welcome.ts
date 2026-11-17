@@ -73,7 +73,12 @@ export function welcomeLetter(kids: WelcomeChild[]) {
     if (p) p.names.push(k.name);
     else places.push({ cohort: k.cohort.cohort, names: [k.name], period: period(k) });
   }
-  const where = joinNames(places.map((p) => `the ${p.cohort} cohort where ${joinNames(p.names)} will spend ${p.period}`));
+  // The same length of day in different cohorts reads as one: "the Wildflowers and Saplings cohorts, where Jane and Max will spend their day".
+  const cohortsInOrder = [...new Set(places.map((p) => p.cohort))];
+  const where =
+    places.length > 1 && new Set(places.map((p) => p.period)).size === 1
+      ? `the ${joinNames(cohortsInOrder)} cohorts, where ${names} will spend ${places[0].period}`
+      : joinNames(places.map((p) => `the ${p.cohort} cohort where ${joinNames(p.names)} will spend ${p.period}`));
   // "pick up Jane and Max at 4:30pm" or "pick up Jane at 4:30pm and Max at 12:00pm"
   const pickups: { time: string; names: string[] }[] = [];
   for (const k of kids) {
@@ -109,6 +114,12 @@ export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string) {
     ["### Today", ...kids.map((k) => `${k.name}: ${k.cohort.cohort} · ${k.half ? "Half day" : "Full day"}, ${k.arrives}–${k.pickup} · **Pick up at ${k.pickup}**`)].join("\n"),
     ["### Getting inside", `Front door code: ${FRONT_DOOR_CODE}`, ...codes].join("\n"),
     ["### Connecting to Wi-Fi", `Network: ${WIFI.network}`, `Password: ${WIFI.password}`].join("\n"),
+    [
+      "### Coworking during your visit",
+      "**Your coworking is included in your visit. There’s nothing extra to buy.**",
+    ].join("\n"),
+    "A large portion of Yalla’s coworking amenities are available on a first-come, first-served basis and are included in the cost of your visit. You’re welcome to choose the workspace that works best for you in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.",
+    `If you’d like a designated private desk or private office instead, you can [book a space](${baseUrl}${SPACES_PATH}) and purchase it through your Family Portal, and it’s yours for the duration of your stay.`,
     ["### Using Brightwheel", "Brightwheel is how we stay connected during your visit."].join("\n"),
     [
       `• Check ${many ? "your children" : "your child"} in and out at the kiosk in our lobby. Each caregiver has their own check-in code in the Brightwheel app.`,
