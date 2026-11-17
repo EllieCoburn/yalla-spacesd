@@ -41,7 +41,12 @@ export default async function SignedCopy({ params }: { params: Promise<{ id: str
           </p>
 
           <div className="mt-10 space-y-5 border border-line bg-paper p-6 text-[0.95rem] leading-relaxed text-ink-soft sm:p-9">
-            {copy.fields.length === 0 ? <p className="whitespace-pre-wrap">{copy.body}</p> : null}
+            {/* A form's opening text is part of what was agreed (e.g. the sunscreen standards); an agreement's is only "please read and sign". */}
+            {copy.fields.length === 0 || (copy.kind !== "policy" && copy.body.trim()) ? (
+              <div className="space-y-3 border-b border-line pb-6">
+                <Markup text={copy.body} />
+              </div>
+            ) : null}
             {copy.fields
               .filter((f) => isShown(f, a))
               .map((f) => {
@@ -80,7 +85,11 @@ export default async function SignedCopy({ params }: { params: Promise<{ id: str
                 if (f.type === "text" || f.type === "textarea")
                   return (
                     <p key={f.id} className="text-[0.9rem]">
-                      <span className="text-ink">{f.label}:</span> {a[f.id] || "—"}
+                      <span className="text-ink">
+                        {f.label}
+                        {/[.?!:]$/.test(f.label.trim()) ? "" : ":"}
+                      </span>{" "}
+                      {a[f.id] || "—"}
                     </p>
                   );
                 if (f.type === "signature")

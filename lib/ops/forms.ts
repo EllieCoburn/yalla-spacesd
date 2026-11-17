@@ -397,6 +397,7 @@ export async function signedCopy(db: Executor, g: { familyId: string; guardianId
   const answers = ((r.s.data as { answers?: Record<string, string> } | null)?.answers ?? {}) as Record<string, string>;
   return {
     title: r.t.title,
+    kind: r.t.kind,
     version: v.version,
     body: r.s.versionBody ?? v.body,
     fields: Array.isArray(v.fields) && (v.fields as unknown[]).length ? effectiveFields(v, r.t.requiresSignature) : [],
