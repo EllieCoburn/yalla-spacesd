@@ -208,6 +208,23 @@ describe("Yalla Flex first-day welcome email", () => {
     expect(sent.map((m) => m.toAddress)).toEqual(["jordan.rivera@example.com"]);
   });
 
+  it("only applies to Flex bookings made after it goes live", async () => {
+    const { sessions, familyId } = await setup();
+    const jane = await child(familyId, "Jane", "wildflowers");
+    // Booked (and welcomed personally) before this existed: no run has happened yet.
+    const [b] = await db().insert(s.bookings).values({ familyId, reference: "YL-BEFORE", status: "confirmed", source: "public" }).returning();
+    await db().insert(s.bookingItems).values({ bookingId: b.id, sessionId: sessions.wildflowers.id, childId: jane.id, status: "confirmed" });
+    // A family who books after go-live (their confirmation is the first run).
+    const [f2] = await db().insert(s.families).values({ name: "New family" }).returning();
+    await db().insert(s.guardians).values({ familyId: f2.id, firstName: "Nia", lastName: "New", email: "nia@example.com", isPrimary: true });
+    const max = await child(f2.id, "Max", "sprouts");
+    await book(f2.id, [{ sessionId: sessions.sprouts.id, childId: max.id }]);
+    await sendFlexWelcomes(db(), { now: morning() });
+    expect((await welcomes()).map((m) => m.toAddress)).toEqual(["nia@example.com"]);
+    const [old] = await db().select().from(s.families).where(eq(s.families.id, familyId));
+    expect(old.flexWelcomeSentAt).not.toBeNull();
+  });
+
   it("renders as a letter, then the details, with working portal links", async () => {
     const { sessions, familyId } = await setup();
     const c = await child(familyId, "Jane", "wildflowers");

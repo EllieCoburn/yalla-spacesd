@@ -10,10 +10,12 @@
  * - It's written from the booking as it stands when it's sent (children, cohorts, times).
  * - It goes out from the morning run (cron), and right away when a family books their first Flex
  *   day the same morning (after that run).
+ * - Only for bookings made after it was switched on: the first time it runs, every family who had
+ *   already booked Flex is marked as welcomed (Yalla welcomed them personally before this existed).
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
-import { bookingItems, bookings, children, families, guardians, programs, sessions } from "@/lib/db/schema";
+import { bookingItems, bookings, children, families, guardians, programs, sessions, settings } from "@/lib/db/schema";
 import { EARLY_BIRD, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
 import { fmtTime, todayLA } from "@/lib/time";
@@ -158,8 +160,9 @@ export async function familiesDueWelcome(db: Executor, date: string) {
  * Sends today's welcome emails. Only before the family's arrival: after their first child's
  * session has started, it's no longer sent (it says "joining us today").
  */
-export async function sendFlexWelcomes(db: Executor, opts: { now?: Date; baseUrl?: string; familyIds?: string[] } = {}) {
+export async function sendFlexWelcomes(db: Executor, opts: { now?: Date; baseUrl?: string; familyIds?: string[]; bookingId?: string } = {}) {
   const now = opts.now ?? new Date();
+  await startWelcomes(db, opts.bookingId);
   if (!(await getPolicy(db, "notifications.flexWelcome"))) return { sent: 0 };
   const date = todayLA(now);
   let due = await familiesDueWelcome(db, date);
@@ -173,6 +176,32 @@ export async function sendFlexWelcomes(db: Executor, opts: { now?: Date; baseUrl
     }
   }
   return { sent };
+}
+
+export const WELCOME_STARTED_KEY = "flexWelcome.startedAt";
+
+/**
+ * The first time welcomes run (right after this goes live), every family with a Flex booking made
+ * before then is marked as already welcomed, so only families booking from now on get the email.
+ * `bookingId` is the booking that triggered this run (made after go-live), which doesn't count.
+ */
+async function startWelcomes(db: Executor, bookingId?: string) {
+  const startedAt = new Date();
+  const [first] = await db
+    .insert(settings)
+    .values({ key: WELCOME_STARTED_KEY, value: startedAt.toISOString(), updatedBy: "Flex welcome email (first run)" })
+    .onConflictDoNothing({ target: settings.key })
+    .returning({ key: settings.key });
+  if (!first) return;
+  await db.execute(sql`
+    UPDATE families SET flex_welcome_sent_at = ${startedAt.toISOString()}::timestamptz
+    WHERE flex_welcome_sent_at IS NULL AND id IN (
+      SELECT b.family_id FROM bookings b
+      JOIN booking_items i ON i.booking_id = b.id
+      JOIN sessions s ON s.id = i.session_id
+      JOIN programs p ON p.id = s.program_id
+      WHERE p.slug = ${FLEX_SLUG} AND b.status <> 'expired' AND b.id <> ${bookingId ?? ""}
+    )`);
 }
 
 async function sendFlexWelcome(db: Executor, familyId: string, date: string, opts: { now: Date; baseUrl?: string }) {

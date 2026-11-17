@@ -786,7 +786,7 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const { sendFlexWelcomes } = await import("./flex-welcome");
       const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
-      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId] });
+      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId], bookingId });
     } catch (e) {
       console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
     }
