@@ -160,14 +160,14 @@ export default function ExperiencePage() {
             eyebrow="03 · Community"
             title={
               <>
-                Your village, <em>however you join.</em>
+                There’s a place <em>for you here.</em>
               </>
             }
           >
             <p>
-              Some families are here every week. Others come for a camp, a weekend session or a night out, and everyone is welcome at our
-              Happenings. However often you’re here, you’re part of a community of children and grown-ups who make family life feel a
-              little less solitary.
+              Maybe we see you every week, or maybe you join us for camp, a weekend session, or a night out. You’re always welcome at our
+              Happenings, too. However you join us, we want Yalla to feel like a place where your child is known, you feel welcome, and
+              there’s always someone happy to see you.
             </p>
           </SectionTitle>
           <div className="relative lg:col-span-6 lg:col-start-7">
