@@ -620,7 +620,7 @@ async function tellTeam(db: Executor, groupId: string) {
     const { trustedBaseUrl } = await import("@/lib/base-url");
     const vars = {
       summary: `${who} · ${d.workspace.name}`,
-      details: `${who} reserved ${space}: ${describeWhen(d.rows)}.\n${d.group.totalCents ? `Paid ${usd(d.group.totalCents)}.` : "Complimentary time."}`,
+      details: `>> ${space}\n${describeWhen(d.rows)}\n\nParent: ${who}\n${d.group.totalCents ? `Paid: ${usd(d.group.totalCents)}` : "Paid: Complimentary time"}\nReference: ${d.group.reference}`,
       reference: d.group.reference,
       link: `${trustedBaseUrl()}/admin/spaces/${groupId}`,
     };

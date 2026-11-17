@@ -600,26 +600,31 @@ export async function staffBookingNotice(db: Executor, bookingId: string) {
   );
   const bySession = new Map<string, typeof rows>();
   for (const r of rows) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
-  const paras: string[] = [];
+  // Laid out for a glance: the session large, a details card, then spots left as a big number
+  // (">>", "!!" lines are styled in the email; the plain-text version reads the same without them).
+  const blocks: string[] = [];
   for (const group of bySession.values()) {
     const s = group[0].session;
     const what = s.title ?? group[0].program.name;
-    const day = fmtDate(s.localDate, "EEEE, MMMM d, yyyy");
-    const kids = group
-      .map((r) => (r.child ? `${r.child.firstName} ${r.child.lastName}, born ${fmtDate(r.child.birthDate, "MMMM d, yyyy")} (${ageOnDay(r.child.birthDate, s.localDate)})` : "a child"))
-      .join("; and ");
     const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
     const short = fmtDate(s.localDate, "MMMM d");
-    paras.push(
-      `${who} booked ${what} on ${day} (${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}) for ${kids}.\n` +
-        (left === 0 ? `That age group is now full for ${short}.` : `You now have ${left} ${left === 1 ? "spot" : "spots"} left in that age group for ${short} before it’s full.`),
+    blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+    blocks.push(
+      [
+        `Parent: ${who}`,
+        ...group.map((r) =>
+          r.child ? `Child: ${r.child.firstName} ${r.child.lastName} · born ${fmtDate(r.child.birthDate, "MMM d, yyyy")} · ${ageOnDay(r.child.birthDate, s.localDate)}` : "Child: not named",
+        ),
+      ].join("\n"),
     );
+    blocks.push(left === 0 ? `!! Full | That age group is now full for ${short}.` : `!! ${left} | ${left === 1 ? "spot" : "spots"} left in that age group for ${short} before it’s full`);
   }
+  const via = b.source === "admin" ? "By the team in Admin" : b.source === "waitlist" ? "From a waitlist offer" : "On the website";
+  blocks.push(`Booked: ${via}\nReference: ${b.reference}`);
   const first = rows[0];
   const sessionsCount = bySession.size;
   const summary = `${who} · ${first.session.title ?? first.program.name} · ${fmtDate(first.session.localDate, "MMM d")}${sessionsCount > 1 ? ` + ${sessionsCount - 1} more` : ""}`;
-  const via = b.source === "admin" ? "\n\nBooked by the team in Admin." : b.source === "waitlist" ? "\n\nBooked from a waitlist offer." : "";
-  return { summary, details: paras.join("\n\n") + via, reference: b.reference };
+  return { summary, details: blocks.join("\n\n"), reference: b.reference };
 }
 
 /**

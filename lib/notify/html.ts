@@ -18,6 +18,14 @@ const C = {
   mist: "#eeedf6",
   sand: "#f1ede4",
   line: "#e6e1d6",
+  oxblood: "#673e46",
+  rose: "#f3e6e8",
+};
+
+/** Team emails with a status: a colored bar across the top of the card and a status chip. */
+const STATUS: Record<string, { label: string; color: string; tint: string }> = {
+  staff_new_booking: { label: "Confirmed", color: "#6065f2", tint: "#eeedf6" },
+  staff_booking_cancelled: { label: "Cancelled", color: "#673e46", tint: "#f3e6e8" },
 };
 const SERIF = `Lora, 'Iowan Old Style', Georgia, 'Times New Roman', serif`;
 const SANS = `'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif`;
@@ -66,7 +74,11 @@ const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
-  return body.replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
+  return body
+    .replace(/^>>\s+/gm, "")
+    .replace(/^~~\s+/gm, "")
+    .replace(/^!!\s+(.+?)\s*\|\s*(.+)$/gm, "$1 $2")
+    .replace(/^!!\s+/gm, "").replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** A template can start with "# Headline" to use a headline other than the subject. */
@@ -110,12 +122,34 @@ function detailsCard(lines: string[]) {
         return `<tr><td colspan="2" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};"><span style="color:${C.blue};">●</span>&nbsp;&nbsp;${inline(bullet[1])}</td></tr>`;
       const m = l.match(LABEL_LINE);
       if (m)
-        return `<tr><td valign="top" style="padding:7px 16px 7px 0;font-family:${SANS};font-size:13px;line-height:1.5;letter-spacing:0.02em;color:${C.soft};white-space:nowrap;">${esc(m[1])}</td><td valign="top" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};">${inline(m[2])}</td></tr>`;
+        return `<tr><td valign="top" width="120" style="width:120px;padding:7px 16px 7px 0;font-family:${SANS};font-size:13px;line-height:1.5;letter-spacing:0.02em;color:${C.soft};white-space:nowrap;">${esc(m[1])}</td><td valign="top" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};">${inline(m[2])}</td></tr>`;
       return `<tr><td colspan="2" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};">${inline(l)}</td></tr>`;
     })
     .join("");
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;background:${C.sand};border-radius:18px;"><tr><td style="padding:18px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr></table>`;
+}
+
+/** ">> Camp Yalla · 4 – 6 years": the thing a team email is about, set large. */
+function subjectLine(text: string, sub?: string) {
+  return `<p style="margin:6px 0 ${sub ? "4px" : "16px"};font-family:${SERIF};font-size:24px;line-height:1.25;color:${C.ink};">${inline(text)}</p>${sub ? `<p style="margin:0 0 18px;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.soft};">${inline(sub)}</p>` : ""}`;
+}
+
+/** "!! 6 | spots left in this age group": a big number with a short explanation beside it. */
+function statCallout(big: string, small: string, key: string) {
+  const st = STATUS[key] ?? { color: C.blue, tint: C.mist };
+  const full = /^full$/i.test(big.trim());
+  const color = full ? C.oxblood : st.color;
+  const tint = full ? C.rose : st.tint;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px;background:${tint};border-radius:18px;"><tr>
+<td valign="middle" style="padding:16px 4px 16px 22px;width:1%;white-space:nowrap;font-family:${SERIF};font-size:38px;line-height:1;color:${color};">${esc(big)}</td>
+<td valign="middle" style="padding:16px 22px 16px 14px;font-family:${SANS};font-size:15px;line-height:1.45;color:${C.ink};">${inline(small)}</td>
+</tr></table>`;
+}
+
+/** "~~ a short note": a soft callout for anything worth a second look. */
+function noteCallout(text: string) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px;"><tr><td style="padding:12px 18px;border-left:3px solid ${C.line};font-family:${SANS};font-size:15px;line-height:1.55;color:${C.soft};">${inline(text)}</td></tr></table>`;
 }
 
 /** Turns a plain-text template into the email's inner content. */
@@ -139,6 +173,18 @@ export function bodyHtml(body: string, key: string) {
       out.push(`<p style="margin:30px 0 12px;font-family:${SERIF};font-size:21px;line-height:1.3;color:${C.ink};">${esc(b.shift()!.replace(/^##\s+/, ""))}</p>`);
     }
     if (!b.length) return;
+    if (/^>>\s+/.test(b[0])) {
+      out.push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
+      return;
+    }
+    if (b.every((l) => /^(!!|~~)\s+/.test(l))) {
+      for (const l of b) {
+        const stat = l.match(/^!!\s+(.+?)\s*\|\s*(.+)$/);
+        if (stat) out.push(statCallout(stat[1], stat[2], key));
+        else out.push(noteCallout(l.replace(/^(!!|~~)\s+/, "")));
+      }
+      return;
+    }
     if (i === 0 && b.length === 1 && /^(hi|hello|dear)\b.*,$/i.test(b[0])) {
       out.push(`<p style="margin:0 0 18px;font-family:${SERIF};font-size:20px;line-height:1.4;color:${C.ink};">${esc(b[0])}</p>`);
       return;
@@ -188,6 +234,7 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
   const base = assetBase();
   const staff = input.audience === "staff";
   const hero = !staff ? HERO[input.key] : undefined;
+  const status = STATUS[input.key];
   const { headline, rest } = splitHeadline(input.body, input.subject);
   const preheader = plainText(rest)
     .replace(/^(hi|hello|dear)[^\n]*\n+/i, "")
@@ -236,9 +283,14 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
   <tr><td align="center" style="padding:0 0 22px;"><a href="${base}"><img src="${base}/email/logo.png" width="84" height="85" alt="Yalla" style="display:block;border:0;width:84px;height:auto;"></a></td></tr>
   <tr><td style="background:${C.card};border-radius:28px;overflow:hidden;border:1px solid ${C.line};">
+    ${status ? `<div style="height:8px;background:${status.color};border-radius:28px 28px 0 0;font-size:0;line-height:0;">&nbsp;</div>` : ""}
     ${hero ? `<img src="${base}/email/${hero}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:28px 28px 0 0;">` : ""}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="px" style="padding:${hero ? "36px" : "44px"} 48px 40px;">
-      <p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>
+      ${
+        status
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr><td style="padding:5px 12px;border-radius:999px;background:${status.tint};font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${status.color};">●&nbsp; ${status.label}</td><td style="padding-left:12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.soft};">Yalla · Team</td></tr></table>`
+          : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>`
+      }
       <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(headline)}</h1>
       ${bodyHtml(rest, input.key)}
     </td></tr></table>

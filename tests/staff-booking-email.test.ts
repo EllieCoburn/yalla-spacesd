@@ -26,11 +26,12 @@ describe("Team booking email", () => {
     const sent = await db().select().from(s.messages).where(eq(s.messages.templateKey, "staff_new_booking"));
     expect(sent.map((m) => m.toAddress).sort()).toEqual(["hello@yalla.test", "ops@yalla.test"]);
     const body = sent[0].body;
-    expect(body).toContain(`${f.guardian.firstName} ${f.guardian.lastName} booked Camp Yalla · 18 months – 4 years on`);
-    expect(body).toContain(`Jane ${f.children[0].lastName}, born December 12, 2023 (`);
-    expect(body).toMatch(new RegExp(`Max ${f.children[1].lastName}, born June 1, 2025 \\(\\d+ months old\\)`));
-    expect(body).toContain("You now have 6 spots left in that age group");
-    expect(body).toContain("Booked by the team in Admin.");
+    expect(body).toContain(">> Camp Yalla · 18 months – 4 years");
+    expect(body).toContain(`Parent: ${f.guardian.firstName} ${f.guardian.lastName}`);
+    expect(body).toContain(`Child: Jane ${f.children[0].lastName} · born Dec 12, 2023 · `);
+    expect(body).toMatch(new RegExp(`Child: Max ${f.children[1].lastName} · born Jun 1, 2025 · \\d+ months old`));
+    expect(body).toContain("!! 6 | spots left in that age group");
+    expect(body).toContain("Booked: By the team in Admin");
     expect(sent[0].subject).toMatch(/^New booking: /);
   });
 
@@ -42,7 +43,7 @@ describe("Team booking email", () => {
     const hold = await createHold(db(), owner, { familyId: f.family.id, items: [{ sessionId: sess.id, childId: f.children[0].id }], source: "admin", acknowledgePaperwork: true });
     await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
     const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "staff_new_booking"));
-    expect(m.body).toContain("That age group is now full for");
+    expect(m.body).toContain("!! Full | That age group is now full for");
   });
 });
 
@@ -71,10 +72,11 @@ describe("Team cancellation email", () => {
     expect(out.credited).toBeGreaterThan(0);
     const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "staff_booking_cancelled"));
     expect(m.subject).toMatch(/^Cancelled: John Doe · Camp Yalla · 4 – 6 years/);
-    expect(m.body).toContain("John Doe cancelled: Camp Yalla · 4 – 6 years on");
-    expect(m.body).toContain("for Jane Doe.");
-    expect(m.body).toContain("We returned $" + (out.credited / 100).toFixed(2) + " to their Yalla Wallet.");
-    expect(m.body).toContain("You now have 8 spots in Camp Yalla · 4 – 6 years on");
+    expect(m.body).toContain(">> Camp Yalla · 4 – 6 years");
+    expect(m.body).toContain("Child: Jane Doe");
+    expect(m.body).toContain("Cancelled by: John Doe in the Family Portal");
+    expect(m.body).toContain("!! " + "$" + (out.credited / 100).toFixed(2) + " | returned to their Yalla Wallet");
+    expect(m.body).toContain("!! 8 | spots now open in that age group");
   });
 
   it("the team cancelling says who did it and what happened to the money", async () => {
@@ -86,8 +88,8 @@ describe("Team cancellation email", () => {
     await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
     await staffCancelBooking(db(), owner, { bookingId: hold.booking.id, reason: "Family asked by phone", notify: false, mode: "family_none" });
     const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "staff_booking_cancelled"));
-    expect(m.body).toContain("Test Owner (Team Yalla) cancelled");
-    expect(m.body).toContain("No credit was given (chosen when cancelling).");
-    expect(m.body).toContain("You now have 4 spots in");
+    expect(m.body).toContain("Cancelled by: Test Owner (Team Yalla)");
+    expect(m.body).toContain("~~ No credit was given (chosen when cancelling).");
+    expect(m.body).toContain("!! 4 | spots now open");
   });
 });

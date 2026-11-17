@@ -786,6 +786,7 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
     bookingId: x.b.id,
     itemIds: [itemId],
     actor: guardianActor(g),
+    walletCents: credited,
     money: credited
       ? `We returned ${usd(credited)} to their Yalla Wallet.`
       : hoursAhead >= cutoff

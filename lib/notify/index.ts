@@ -125,14 +125,14 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   staff_new_booking: {
     name: "New booking (to staff)",
     subject: "New booking: {{summary}}",
-    body: "# New booking\n\n{{details}}\n\nReference: {{reference}}\n\n{{link}}",
+    body: "# New booking\n\n{{details}}\n\n{{link}}",
     essential: true,
     audience: "staff",
   },
   staff_booking_cancelled: {
     name: "Booking cancelled (to staff)",
     subject: "Cancelled: {{summary}}",
-    body: "# Booking cancelled\n\n{{details}}\n\nReference: {{reference}}\n\n{{link}}",
+    body: "# Booking cancelled\n\n{{details}}\n\n{{link}}",
     essential: true,
     audience: "staff",
   },

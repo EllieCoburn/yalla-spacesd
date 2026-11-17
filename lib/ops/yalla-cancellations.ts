@@ -108,7 +108,7 @@ export async function staffCancelBooking(db: DB, actor: Actor, input: { bookingI
           : input.mode === "family_none"
             ? "No credit was given (chosen when cancelling)."
             : "No credit was given (cancelled inside the credit cutoff, or nothing had been paid).";
-    await notifyTeamOfCancellation(db, { bookingId: b.id, itemIds: before.map((x) => x.id), actor, money });
+    await notifyTeamOfCancellation(db, { bookingId: b.id, itemIds: before.map((x) => x.id), actor, money, walletCents: input.mode === "yalla" ? 0 : r.credited });
   }
   return r;
 }

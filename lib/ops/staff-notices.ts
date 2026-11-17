@@ -13,6 +13,8 @@ import { fmtDate, fmtTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
 import { staffRecipients } from "./enquiries";
 
+const dollars = (c: number) => "$" + (c / 100).toFixed(2);
+
 async function parentName(db: Executor, familyId: string) {
   const [g] = await db
     .select()
@@ -27,7 +29,7 @@ async function send(db: Executor, vars: { summary: string; details: string; refe
 }
 
 /** A care booking (or some of its days) was cancelled. `money` says what happened to what they paid. */
-export async function notifyTeamOfCancellation(db: Executor, input: { bookingId: string; itemIds: string[]; actor: Actor; money: string }) {
+export async function notifyTeamOfCancellation(db: Executor, input: { bookingId: string; itemIds: string[]; actor: Actor; money: string; walletCents?: number }) {
   try {
     if (!input.itemIds.length) return;
     const [b] = await db.select().from(bookings).where(eq(bookings.id, input.bookingId));
@@ -41,21 +43,23 @@ export async function notifyTeamOfCancellation(db: Executor, input: { bookingId:
       .where(inArray(bookingItems.id, input.itemIds));
     if (!rows.length) return;
     const parent = await parentName(db, b.familyId);
-    const who = input.actor.type === "staff" ? `${input.actor.name} (Team Yalla) cancelled ${parent}’s booking` : `${parent} cancelled`;
     const avail = await availabilityFor(db, [...new Set(rows.map((r) => r.session.id))]);
     const bySession = new Map<string, typeof rows>();
     for (const r of rows) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
-    const lines: string[] = [];
-    const spots: string[] = [];
-    for (const group of [...bySession.values()].sort((a, c) => a[0].session.startsAt.getTime() - c[0].session.startsAt.getTime())) {
+    // Same glanceable layout as the new-booking email (">>", "!!", "~~" lines are styled in the email).
+    const blocks: string[] = [];
+    const sorted = [...bySession.values()].sort((a, c) => a[0].session.startsAt.getTime() - c[0].session.startsAt.getTime());
+    for (const group of sorted) {
       const s = group[0].session;
       const what = s.title ?? group[0].program.name;
-      const kids = group.map((r) => (r.child ? `${r.child.firstName} ${r.child.lastName}` : "a child")).join(" and ");
-      lines.push(`${what} on ${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} (${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}) for ${kids}`);
       const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
-      spots.push(`You now have ${left} ${left === 1 ? "spot" : "spots"} in ${what} on ${fmtDate(s.localDate, "MMMM d")}.`);
+      blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+      blocks.push([`Parent: ${parent}`, ...group.map((r) => `Child: ${r.child ? `${r.child.firstName} ${r.child.lastName}` : "not named"}`)].join("\n"));
+      blocks.push(`!! ${left} | ${left === 1 ? "spot" : "spots"} now open in that age group for ${fmtDate(s.localDate, "MMMM d")}`);
     }
-    const details = `${who}: ${lines.join("; ")}.\n\n${input.money}\n\n${spots.join("\n")}`;
+    blocks.push(input.walletCents ? `!! ${dollars(input.walletCents)} | returned to their Yalla Wallet` : `~~ ${input.money}`);
+    blocks.push(`Cancelled by: ${input.actor.type === "staff" ? `${input.actor.name} (Team Yalla)` : `${parent} in the Family Portal`}\nReference: ${b.reference}`);
+    const details = blocks.join("\n\n");
     const first = [...bySession.values()][0][0];
     await send(
       db,
@@ -75,9 +79,12 @@ export async function notifyTeamOfSpaceCancellation(db: Executor, input: { group
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, g.workspaceId));
     const [first] = await db.select().from(spaceReservations).where(eq(spaceReservations.groupId, g.id)).orderBy(spaceReservations.startsAt).limit(1);
     const parent = await parentName(db, g.familyId);
-    const who = input.actor.type === "staff" ? `${input.actor.name} (Team Yalla) cancelled ${parent}’s reservation` : `${parent} cancelled`;
-    const when = first ? `${fmtDate(first.localDate, "EEEE, MMMM d, yyyy")} (${fmtTime(first.startsAt)}–${fmtTime(first.endsAt)})` : "";
-    const details = `${who}: ${ws?.name ?? "a workspace"}${when ? ` on ${when}` : ""}.\n\n${input.money}\n\n${ws?.name ?? "That space"} is free again for that time.`;
+    const when = first ? `${fmtDate(first.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(first.startsAt)}–${fmtTime(first.endsAt)}` : "";
+    const details = [
+      `>> ${ws?.name ?? "Workspace"}${when ? `\n${when}` : ""}`,
+      `Parent: ${parent}\nCancelled by: ${input.actor.type === "staff" ? `${input.actor.name} (Team Yalla)` : `${parent} in the Family Portal`}\nReference: ${g.reference}`,
+      `~~ ${input.money} ${ws?.name ?? "The space"} is free again for that time.`,
+    ].join("\n\n");
     await send(db, { summary: `${parent} · ${ws?.name ?? "Workspace"}${first ? ` · ${fmtDate(first.localDate, "MMM d")}` : ""}`, details, reference: g.reference, link: `${trustedBaseUrl()}/admin/spaces/${g.id}` }, { type: "space_reservation", id: g.id });
   } catch (e) {
     console.error("[staff space cancellation email failed]", (e as Error).message?.slice(0, 160));
