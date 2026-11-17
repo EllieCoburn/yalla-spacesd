@@ -6,6 +6,7 @@ import { CancelForm, CareForm, ResendConfirmationForm, SignForm } from "@/compon
 import { ResourceHub } from "@/components/portal/ResourceHub";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPortalData } from "@/lib/ops/public-booking";
+import { familySignedCopies } from "@/lib/ops/forms";
 import { walletSummary } from "@/lib/playpass/wallet";
 import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/portal-preview";
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
@@ -31,6 +32,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const { tab = "overview", signed, welcome } = await searchParams;
   const data = g ? await familyPortalData(getDb(), g) : samplePortalData();
   const outstanding = data.forms.filter((f) => f.state !== "complete");
+  const signedCopies = g && tab === "forms" ? await familySignedCopies(getDb(), g) : [];
   const walletBalance = g ? (await walletSummary(getDb(), g.familyId)).availableCents : 0;
   const today = todayLA();
   const tabs = [
@@ -345,6 +347,29 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                 ))}
               </ul>
             )}
+            {signedCopies.length ? (
+              <div className="mt-10">
+                <p className="display text-[1.6rem]">Signed copies</p>
+                <p className="mt-1 text-[0.85rem] text-ink-soft">Your signed agreements and forms, exactly as you signed them.</p>
+                <ul className="mt-5 divide-y divide-line border-y border-line">
+                  {signedCopies.map((c) => (
+                    <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-3 py-4">
+                      <span>
+                        <span className="block">{c.title}</span>
+                        <span className="text-[0.8rem] text-ink-soft">
+                          {c.childName ? `For ${c.childName} · ` : ""}
+                          {c.bookingReference ? `Booking ${c.bookingReference} · ` : ""}
+                          Signed {new Date(c.signedAt).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", dateStyle: "medium" })}
+                        </span>
+                      </span>
+                      <Link href={`/portal/forms/signed/${c.id}`} className="text-[0.88rem] text-ink underline underline-offset-4 hover:text-blue">
+                        View signed copy
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             </>
           ) : tab === "payments" && data.billing ? (
             <div className="border border-line bg-paper p-7">

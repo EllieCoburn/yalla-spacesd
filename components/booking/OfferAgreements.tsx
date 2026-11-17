@@ -35,7 +35,7 @@ function Submit() {
  * A waitlist offer that still needs agreements signed (e.g. the Camp Yalla agreement for this purchase):
  * the same agreement form as checkout, then on to payment.
  */
-export function OfferAgreements({ reference, k, agreements }: { reference: string; k: string; agreements: OfferAgreement[] }) {
+export function OfferAgreements({ reference, k, agreements, signedIn = false }: { reference: string; k: string; agreements: OfferAgreement[]; signedIn?: boolean }) {
   const [state, action] = useActionState<OfferState, FormData>(acceptOfferWithAgreementsAction, undefined);
   const [answers, setAnswers] = useState<Record<string, Answers>>({});
   const [sigs, setSigs] = useState<Record<string, { text: string; consent: boolean }>>({});
@@ -62,13 +62,12 @@ export function OfferAgreements({ reference, k, agreements }: { reference: strin
               {a.childName ? <span className="text-ink-soft"> · for {a.childName}</span> : null}
             </p>
             <p className="eyebrow mt-1 text-[0.55rem] text-ink-soft">Version {a.version}</p>
-            {a.perBooking ? <p className="mt-1 text-[0.78rem] text-ink-soft">Covers the days in this booking.</p> : null}
             {!a.completableOnline ? (
               <p className="mt-3 text-[0.88rem] text-oxblood">Please get in touch with Yalla to complete this before paying.</p>
             ) : (
               <>
                 {a.fields ? (
-                  <AgreementFields fields={a.fields} answers={answers[key] ?? {}} onAnswer={(id, v) => setAnswers((x) => ({ ...x, [key]: { ...(x[key] ?? {}), [id]: v } }))} />
+                  <AgreementFields fields={a.fields} answers={answers[key] ?? {}} onAnswer={(id, v) => setAnswers((x) => ({ ...x, [key]: { ...(x[key] ?? {}), [id]: v } }))} links={signedIn} />
                 ) : (
                   <div className="mt-3 max-h-40 overflow-y-auto border border-line bg-chalk p-3 text-[0.82rem] whitespace-pre-wrap text-ink-soft">{a.body}</div>
                 )}

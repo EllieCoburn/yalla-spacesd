@@ -6,7 +6,7 @@ import { policyById, policyHref } from "@/content/policies";
 const linkCls = "text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue hover:decoration-blue";
 
 /** [words](/link) and **bold** inside a line. */
-function inline(text: string, key: string, newTab = false): ReactNode[] {
+function inline(text: string, key: string, newTab = false, links = true): ReactNode[] {
   const out: ReactNode[] = [];
   const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
   let last = 0;
@@ -14,7 +14,10 @@ function inline(text: string, key: string, newTab = false): ReactNode[] {
   let i = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
-    if (m[1]) {
+    if (m[1] && !links) {
+      // Links turned off (e.g. Family Portal pages for someone not signed in yet): just the words.
+      out.push(m[1]);
+    } else if (m[1]) {
       const href = m[2];
       out.push(
         (href.startsWith("/") || href.startsWith("#")) && !newTab ? (
@@ -44,7 +47,7 @@ function inline(text: string, key: string, newTab = false): ReactNode[] {
  * Paragraphs (blank line between) and "- " lists. `newTab` opens every link in a new tab, for text
  * people are filling in or signing (an agreement), so following a link never loses their progress.
  */
-export function Markup({ text, newTab = false }: { text: string; newTab?: boolean }) {
+export function Markup({ text, newTab = false, links = true }: { text: string; newTab?: boolean; links?: boolean }) {
   const blocks = text.trim().split(/\n\s*\n/);
   return (
     <>
@@ -56,12 +59,12 @@ export function Markup({ text, newTab = false }: { text: string; newTab?: boolea
               {lines.map((l, li) => (
                 <li key={li} className="flex gap-3">
                   <span aria-hidden className="mt-[0.7em] h-1 w-1 shrink-0 rounded-full bg-blue/60" />
-                  <span>{inline(l.trim().slice(2), `${bi}-${li}`, newTab)}</span>
+                  <span>{inline(l.trim().slice(2), `${bi}-${li}`, newTab, links)}</span>
                 </li>
               ))}
             </ul>
           );
-        return <p key={bi}>{inline(lines.join(" "), String(bi), newTab)}</p>;
+        return <p key={bi}>{inline(lines.join(" "), String(bi), newTab, links)}</p>;
       })}
     </>
   );

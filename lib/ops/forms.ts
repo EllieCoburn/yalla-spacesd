@@ -8,7 +8,7 @@
  *   not a legal guarantee: Yalla must supply reviewed waiver language, and may connect a signature
  *   provider later (see docs/ADMIN.md).
  */
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, documents, formRequirements, formSubmissions, formTemplates, formVersions, guardians, memberships, programs, sessions } from "@/lib/db/schema";
@@ -353,6 +353,60 @@ export async function submitForm(
     summary: `${t.title} v${v.version} ${t.requiresSignature ? `signed by ${s.signerName}` : "submitted"}${actor.type === "staff" ? ` (recorded by ${actor.name})` : ""}`,
   });
   return s;
+}
+
+/* ── Signed copies for families (Family Portal) ── */
+
+/** Who may open a family's signed copy: the signer, or a guardian allowed to see care information. */
+const maySeeSigned = (g: { guardianId: string; canViewSensitive: boolean }, s: { signerGuardianId: string | null }) => g.canViewSensitive || s.signerGuardianId === g.guardianId;
+
+/** A family's signed agreements and forms, newest first (each purchase's camp agreement separately). */
+export async function familySignedCopies(db: Executor, g: { familyId: string; guardianId: string; canViewSensitive: boolean }) {
+  const rows = await db
+    .select({ s: formSubmissions, t: formTemplates, c: children, b: bookings })
+    .from(formSubmissions)
+    .innerJoin(formTemplates, eq(formTemplates.id, formSubmissions.templateId))
+    .leftJoin(children, eq(children.id, formSubmissions.childId))
+    .leftJoin(bookings, eq(bookings.id, formSubmissions.bookingId))
+    .where(and(eq(formSubmissions.familyId, g.familyId), inArray(formSubmissions.status, ["signed", "submitted"]), isNotNull(formSubmissions.versionId)))
+    .orderBy(desc(formSubmissions.createdAt));
+  return rows
+    .filter((r) => maySeeSigned(g, r.s))
+    .map((r) => ({
+      id: r.s.id,
+      title: r.t.title,
+      childName: r.c ? r.c.preferredName || r.c.firstName : null,
+      bookingReference: r.b?.reference ?? null,
+      signedAt: r.s.signedAt ?? r.s.createdAt,
+      signerName: r.s.signerName,
+    }));
+}
+
+/** One signed copy, exactly as it was signed: that version's text, with the family's answers. */
+export async function signedCopy(db: Executor, g: { familyId: string; guardianId: string; canViewSensitive: boolean }, id: string) {
+  const [r] = await db
+    .select({ s: formSubmissions, t: formTemplates, c: children, b: bookings })
+    .from(formSubmissions)
+    .innerJoin(formTemplates, eq(formTemplates.id, formSubmissions.templateId))
+    .leftJoin(children, eq(children.id, formSubmissions.childId))
+    .leftJoin(bookings, eq(bookings.id, formSubmissions.bookingId))
+    .where(and(eq(formSubmissions.id, id), eq(formSubmissions.familyId, g.familyId)));
+  if (!r || !maySeeSigned(g, r.s) || !r.s.versionId) return null;
+  const [v] = await db.select().from(formVersions).where(eq(formVersions.id, r.s.versionId));
+  if (!v) return null;
+  const answers = ((r.s.data as { answers?: Record<string, string> } | null)?.answers ?? {}) as Record<string, string>;
+  return {
+    title: r.t.title,
+    version: v.version,
+    body: r.s.versionBody ?? v.body,
+    fields: Array.isArray(v.fields) && (v.fields as unknown[]).length ? effectiveFields(v, r.t.requiresSignature) : [],
+    answers,
+    childName: r.c ? `${r.c.preferredName || r.c.firstName} ${r.c.lastName}` : null,
+    bookingReference: r.b?.reference ?? null,
+    signerName: r.s.signerName,
+    signatureText: r.s.signatureText,
+    signedAt: r.s.signedAt ?? r.s.createdAt,
+  };
 }
 
 /**

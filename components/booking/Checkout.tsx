@@ -1103,14 +1103,12 @@ export function Checkout({
                           <p className="eyebrow mt-1 text-[0.55rem] text-ink-soft">
                             Version {a.version}
                           </p>
-                          {a.perBooking ? (
-                            <p className="mt-1 text-[0.78rem] text-ink-soft">Covers the days in this booking. You’ll sign again when you book more.</p>
-                          ) : a.validForMonths ? (
+                          {a.perBooking ? null : a.validForMonths ? (
                             <p className="mt-1 text-[0.78rem] text-ink-soft">Signed once and kept on file for {a.validForMonths === 12 ? "one year" : `${a.validForMonths} months`}.</p>
                           ) : null}
                           {a.completableOnline && a.fields ? (
                             <>
-                              <AgreementFields fields={a.fields} answers={formAnswers[k] ?? {}} onAnswer={(id, x) => setAnswer(k, id, x)} />
+                              <AgreementFields fields={a.fields} answers={formAnswers[k] ?? {}} onAnswer={(id, x) => setAnswer(k, id, x)} links={!!guardian} />
                               <label className="mt-4 block">
                                 <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Type your full name to sign</span>
                                 <input

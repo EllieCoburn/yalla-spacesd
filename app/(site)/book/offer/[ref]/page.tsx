@@ -5,6 +5,7 @@ import { Mark } from "@/components/brand/Mark";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { agreementsForBooking, bookingStatusView } from "@/lib/ops/public-booking";
 import { OfferAgreements } from "@/components/booking/OfferAgreements";
+import { getGuardian } from "../../../portal/session";
 import { eq } from "drizzle-orm";
 import { bookings } from "@/lib/db/schema";
 import { fmtDateTime } from "@/lib/time";
@@ -64,7 +65,7 @@ export default async function Offer({ params, searchParams }: { params: Promise<
             ))}
           </ul>
         </div>
-        {open && toSign.length ? <OfferAgreements reference={v.reference} k={k ?? ""} agreements={toSign} /> : null}
+        {open && toSign.length ? <OfferAgreements reference={v.reference} k={k ?? ""} agreements={toSign} signedIn={!!(await getGuardian())} /> : null}
         <div className="mt-10 flex justify-center gap-3">
           {open && !toSign.length ? (
             <form action={acceptOfferAction}>

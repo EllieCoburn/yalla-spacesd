@@ -16,10 +16,12 @@ const ANSWERS = { "init-rates": PNG, "init-legal": PNG, "init-handbook": PNG, "r
 /** Runs the real migration, so the tests check what families will sign. */
 async function setup() {
   const p = await program({ slug: "camp-yalla", kind: "camp", name: "Camp Yalla", priceCents: 16000, minAgeMonths: 18, maxAgeMonths: 131, waitlistEnabled: true });
-  const text = readFileSync("lib/db/migrations/0045_camp_admission_agreement.sql", "utf8");
-  for (const stmt of text.split("--> statement-breakpoint")) {
-    const body = stmt.replace(/^--.*$/gm, "").trim();
-    if (body) await db().execute(sql.raw(body));
+  for (const file of ["0045_camp_admission_agreement.sql", "0046_camp_agreement_v2.sql"]) {
+    const text = readFileSync(`lib/db/migrations/${file}`, "utf8");
+    for (const stmt of text.split("--> statement-breakpoint")) {
+      const body = stmt.replace(/^--.*$/gm, "").trim();
+      if (body) await db().execute(sql.raw(body));
+    }
   }
   const day1 = await session(p.id, { capacity: 8, minAgeMonths: 48, maxAgeMonths: 95, title: "Camp Yalla · 4 – 7 years" }, 9, "09:00", "15:00");
   const day2 = await session(p.id, { capacity: 8, minAgeMonths: 48, maxAgeMonths: 95, title: "Camp Yalla · 4 – 7 years" }, 10, "09:00", "15:00");
@@ -47,7 +49,9 @@ describe("Camp Yalla admission agreement", () => {
     expect(text).toContain("San Diego Unified School District");
     expect(text).toContain("one guide for every six children (1:6)");
     expect(text).toContain("supervised water play");
-    expect(text).toContain("20. Photographs");
+    expect(text).toContain("14. Photographs");
+    expect(text).toContain("16. Food, belongings and personal care");
+    expect(list[0].version).toBe(2);
     for (const banned of ["classroom", "immuniz", "Title 22", "Flex", "Club Yalla", "November 11"]) expect(text.includes(banned), banned).toBe(false);
 
     const unsigned = await submitPublicBooking(db(), input([day1.id, day2.id]));
@@ -62,6 +66,19 @@ describe("Camp Yalla admission agreement", () => {
     expect(subs).toHaveLength(1);
     expect(subs[0].bookingId).toBe(b.id);
     expect(subs[0].status).toBe("signed");
+
+    // The signed copy is in the Family Portal, exactly as signed, with working links.
+    const { familySignedCopies, signedCopy } = await import("@/lib/ops/forms");
+    const [g] = await db().select().from(s.guardians);
+    const me = { familyId: g.familyId, guardianId: g.id, canViewSensitive: true };
+    const copies = await familySignedCopies(db(), me);
+    expect(copies.map((c) => [c.title, c.bookingReference])).toEqual([["Camp Yalla Admission Agreement", b.reference]]);
+    const copy = (await signedCopy(db(), me, copies[0].id))!;
+    expect(copy.version).toBe(2);
+    expect(JSON.stringify(copy.fields)).toContain("[Illness Policy](/portal/illness-policy)");
+    expect(copy.answers.signature).toMatch(/^data:image\/png/);
+    // Nobody outside the family can open it.
+    expect(await signedCopy(db(), { familyId: "someone-else", guardianId: "x", canViewSensitive: true }, copies[0].id)).toBeNull();
   });
 
   it("is signed again on the next purchase, and the first purchase keeps its signature", async () => {

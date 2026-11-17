@@ -11,7 +11,7 @@ const input =
  * An online agreement as families see it at checkout: the text in a scroll box with initials, then the
  * drawn signature. Shared by checkout and the staff preview, so what staff review is what families sign.
  */
-export function AgreementFields({ fields, answers, onAnswer }: { fields: FormField[]; answers: Answers; onAnswer: (id: string, value: string) => void }) {
+export function AgreementFields({ fields, answers, onAnswer, links = true }: { fields: FormField[]; answers: Answers; onAnswer: (id: string, value: string) => void; /** Family Portal links are clickable only for signed-in families. */ links?: boolean }) {
   return (
     <>
       <div className="mt-4 max-h-[32rem] space-y-4 overflow-y-auto border border-line bg-chalk p-4 text-[0.86rem] leading-relaxed text-ink-soft">
@@ -20,7 +20,7 @@ export function AgreementFields({ fields, answers, onAnswer }: { fields: FormFie
           .map((f) => {
             const v = answers[f.id] ?? "";
             if (f.type === "heading") return <p key={f.id} className="pt-2 font-serif text-[1.08rem] text-ink">{f.text}</p>;
-            if (f.type === "info") return <div key={f.id} className="space-y-2.5"><Markup text={f.text} newTab /></div>;
+            if (f.type === "info") return <div key={f.id} className="space-y-2.5"><Markup text={f.text} newTab links={links} /></div>;
             if (f.type === "initials")
               return (
                 <div key={f.id} className={`rounded-lg border p-3 ${v ? "border-ink/15 bg-paper" : "border-blue/50 bg-blue/[0.04]"}`}>
