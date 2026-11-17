@@ -95,6 +95,8 @@ export function ProgramDates({
   const [checkout, setCheckout] = useState<{ sessions: PublicSession[]; spots: Record<string, number>; extras: Record<string, string[]>; include: string[]; includeExtras: string[] } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [chosenKids, setChosenKids] = useState<string[]>([]);
+  /** Bumped when a family signs in from checkout, so the page picks up their children. */
+  const [familyKey, setFamilyKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +111,7 @@ export function ProgramDates({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [familyKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -811,6 +813,7 @@ export function ProgramDates({
           defaultExtras={checkout.extras}
           onClose={() => setCheckout(null)}
           onRefresh={() => setReloadKey((k) => k + 1)}
+          onSignedIn={() => setFamilyKey((k) => k + 1)}
         />
       ) : null}
     </div>

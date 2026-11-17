@@ -506,6 +506,7 @@ export function BookingExplorer({
           defaultExtras={sessionExtras}
           onClose={() => setCheckoutOpen(false)}
           onRefresh={load}
+          onSignedIn={() => router.refresh()}
         />
       ) : null}
       {waitlistFor ? (

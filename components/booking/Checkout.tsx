@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   agreementsAction,
+  portalEmailCheckAction,
   submitBookingAction,
 } from "@/app/(site)/book/actions";
 import { Mark } from "@/components/brand/Mark";
 import { AgreementFields } from "@/components/booking/AgreementFields";
+import { CheckoutSignIn } from "@/components/booking/CheckoutSignIn";
 import { validateAnswers, type Answers } from "@/lib/forms/fields";
 import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
@@ -59,17 +61,18 @@ function childrenNeeded(sessions: PublicSession[], spots: Record<string, number>
 
 export function Checkout({
   sessions,
-  guardian,
-  savedChildren,
+  guardian: guardianProp,
+  savedChildren: savedChildrenProp,
   includeChildren = [],
   includeExtras = [],
-  wallet = null,
+  wallet: walletProp = null,
   sibling = { percent: 0, withPass: false },
   spots = {},
   onSpots,
   defaultExtras = {},
   onClose,
   onRefresh,
+  onSignedIn,
 }: {
   sessions: PublicSession[];
   guardian: SignedInGuardian | null;
@@ -90,7 +93,18 @@ export function Checkout({
   defaultExtras?: Record<string, string[]>;
   onClose: () => void;
   onRefresh: () => void;
+  /** Called after a family signs in from inside checkout (the page can refresh what it shows). */
+  onSignedIn?: () => void;
 }) {
+  // A family can sign in from inside checkout; their saved children, details and wallet then replace
+  // the guest view without losing the selection.
+  const [live, setLive] = useState<{ guardian: SignedInGuardian; savedChildren: SavedChild[]; wallet: { passCents: number; creditCents: number } | null } | null>(null);
+  const guardian = live?.guardian ?? guardianProp;
+  const savedChildren = live?.savedChildren ?? savedChildrenProp;
+  const wallet = live ? live.wallet : walletProp;
+  /** The email entered belongs to a Family Portal account, so that family signs in to continue. */
+  const [mustSignIn, setMustSignIn] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [step, setStep] = useState(0);
   const [kids, setKids] = useState<ChildDraft[]>(() =>
     savedChildren.length
@@ -429,12 +443,56 @@ export function Checkout({
     return null;
   })();
 
+  /** Brings a family that just signed in into checkout: their saved children and details. */
+  function mergeFamily(g: SignedInGuardian, list: SavedChild[]) {
+    // Children already added are matched to the family's saved children (first name + date of birth);
+    // anyone new stays as a new child.
+    setKids((prev) => {
+      const same = (p: ChildDraft, sc: SavedChild) => p.birthDate === sc.birthDate && p.firstName.trim().toLowerCase() === (sc.preferredName || sc.firstName).toLowerCase();
+      if (prev.some((p) => p.existingId)) return prev;
+      const saved: ChildDraft[] = list.map((sc) => ({
+        key: sc.id,
+        existingId: sc.id,
+        firstName: sc.preferredName || sc.firstName,
+        lastName: sc.lastName,
+        birthDate: sc.birthDate,
+        allergies: "",
+        include: prev.some((p) => p.include && same(p, sc)),
+      }));
+      const extra = prev.filter((p) => !p.existingId && p.firstName.trim() && !list.some((sc) => same(p, sc)));
+      return [...saved, ...extra];
+    });
+    setSlots({});
+    setAssign({});
+    setAdult((a) => ({ ...a, firstName: g.firstName, lastName: g.lastName, email: g.email }));
+    setMustSignIn(false);
+  }
+
+  // Signing in refreshes the page, so a signed-in family can arrive as new props (booking page) or
+  // from the family API (program pages); either way they're merged in once.
+  const mergedFor = useRef<string | null>(guardianProp?.email ?? null);
+  useEffect(() => {
+    if (!guardian || mergedFor.current === guardian.email) return;
+    mergedFor.current = guardian.email;
+    mergeFamily(guardian, savedChildren);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardian, savedChildren]);
+
+  async function afterSignIn() {
+    const j = await fetch("/api/family/children", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
+    const c = j?.checkout;
+    if (c?.guardian) setLive({ guardian: c.guardian, savedChildren: c.savedChildren, wallet: c.wallet });
+    onSignedIn?.();
+  }
+
   const canNext =
     step === 0
       ? chosen.length > 0 && chosen.length >= needed && !unfinished && !ageProblem
       : step === 1
         ? !!guardian ||
-          (adult.firstName.trim() !== "" &&
+          (!mustSignIn &&
+            !checkingEmail &&
+            adult.firstName.trim() !== "" &&
             adult.lastName.trim() !== "" &&
             /\S+@\S+\.\S+/.test(adult.email))
         : lines.length > 0 && !slotProblem && agreements !== null && agreementsDone;
@@ -560,6 +618,11 @@ export function Checkout({
                   ? "Choose from your children, or add another."
                   : "Add each child you’re booking for."}
               </p>
+              {!guardian ? (
+                <div className="mt-6">
+                  <CheckoutSignIn onSignedIn={afterSignIn} />
+                </div>
+              ) : null}
               <div className="mt-8 space-y-4">
                 {kids.map((c, i) =>
                   c.existingId ? (
@@ -702,16 +765,13 @@ export function Checkout({
               ) : (
                 <>
                   <p className="mt-2 text-ink-soft">
-                    We’ll set up your Family Portal so you can manage bookings
-                    any time. Already with Yalla?{" "}
-                    <Link
-                      href="/portal?next=/book"
-                      className="text-ink underline underline-offset-4"
-                    >
-                      Sign in
-                    </Link>
-                    .
+                    New to Yalla? Your Family Portal opens as soon as you check out, so you can manage your bookings any time.
                   </p>
+                  {mustSignIn ? (
+                    <div className="mt-6">
+                      <CheckoutSignIn email={adult.email} required onSignedIn={afterSignIn} />
+                    </div>
+                  ) : null}
                   <div className="mt-8 grid gap-6 sm:grid-cols-2">
                     {(
                       [
@@ -729,9 +789,10 @@ export function Checkout({
                           type={t}
                           autoComplete={ac}
                           value={adult[k]}
-                          onChange={(e) =>
-                            setAdult((g) => ({ ...g, [k]: e.target.value }))
-                          }
+                          onChange={(e) => {
+                            setAdult((g) => ({ ...g, [k]: e.target.value }));
+                            if (k === "email") setMustSignIn(false);
+                          }}
                           className={input}
                         />
                       </label>
@@ -1146,8 +1207,18 @@ export function Checkout({
           </button>
           <button
             disabled={!canNext || pending}
-            onClick={() => {
+            onClick={async () => {
               setError(null);
+              // Anyone with a Family Portal signs in before going on, so they book with their saved details.
+              if (step === 1 && !guardian) {
+                setCheckingEmail(true);
+                const r = await portalEmailCheckAction(adult.email).catch(() => ({ hasPortal: false }));
+                setCheckingEmail(false);
+                if (r.hasPortal) {
+                  setMustSignIn(true);
+                  return;
+                }
+              }
               if (step < steps.length - 1) setStep(step + 1);
               else submit();
             }}
@@ -1155,6 +1226,8 @@ export function Checkout({
           >
             {pending
               ? "Holding your spots…"
+              : checkingEmail
+                ? "Checking…"
               : step === steps.length - 1
                 ? total - fromPass > 0
                   ? `Continue to payment`

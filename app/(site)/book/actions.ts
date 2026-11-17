@@ -4,13 +4,15 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { joinPublicWaitlist, previewAgreements, retryCheckout, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
 import { startCheckout } from "@/lib/ops/bookings";
 import { OpsError } from "@/lib/audit";
-import { getGuardian, requestContext } from "../portal/session";
+import { getGuardian, requestContext, setFamilyCookie } from "../portal/session";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { bookings } from "@/lib/db/schema";
 import { bookingStatusPath, offerPath } from "@/lib/links";
 import { mayViewStatus } from "@/lib/booking-access";
-import { allow } from "@/lib/rate-limit";
+import { allow, throttle } from "@/lib/rate-limit";
+import { requestMagicLink, safeNextPath, signInWithPassword } from "@/lib/family-auth";
+import { findGuardianByEmail } from "@/lib/ops/families";
 
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
@@ -133,4 +135,44 @@ export async function acceptOfferWithAgreementsAction(_: OfferState, form: FormD
     throw e;
   }
   redirect(url);
+}
+
+/* ── Signing in from inside checkout (the selection stays on the page) ── */
+
+export type CheckoutSignInState = { ok?: boolean; error?: string; message?: string; devLink?: string } | undefined;
+
+/**
+ * Whether an email belongs to a Family Portal account, so checkout can ask that family to sign in
+ * before they fill everything in. (Booking with that email would require signing in anyway.)
+ */
+export async function portalEmailCheckAction(email: string): Promise<{ hasPortal: boolean }> {
+  if (!isDbConfigured()) return { hasPortal: false };
+  const { ip } = await requestContext();
+  if (!(await allow(getDb(), "emailCheckIp", ip))) return { hasPortal: false };
+  const g = await findGuardianByEmail(getDb(), clip(email, 200));
+  return { hasPortal: !!g && (g.portalAccess || !!g.passwordHash) };
+}
+
+/** Email and password sign-in without leaving checkout. */
+export async function checkoutSignInAction(_: CheckoutSignInState, form: FormData): Promise<CheckoutSignInState> {
+  const email = clip(form.get("email"), 200);
+  const { baseUrl, ip } = await requestContext();
+  try {
+    await throttle(getDb(), "familySignInIp", ip, "Too many sign-in attempts from this connection. Please wait 15 minutes and try again.");
+    await throttle(getDb(), "familySignInEmail", email, "Too many sign-in attempts for this email. Please wait 15 minutes, or email yourself a sign-in link.");
+    const r = await signInWithPassword(getDb(), { email, password: String(form.get("password") ?? ""), baseUrl, ip });
+    if ("emailed" in r) return { message: "You haven’t set a password yet. We’ve emailed you a sign-in link; open it, then come back to this page.", devLink: r.devLink };
+    await setFamilyCookie(r.session);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof OpsError) return { error: e.message };
+    throw e;
+  }
+}
+
+/** Emails a sign-in link that brings the family back to this page. */
+export async function checkoutEmailLinkAction(email: string, next: string): Promise<CheckoutSignInState> {
+  const { baseUrl, ip } = await requestContext();
+  const { devLink } = (await allow(getDb(), "signInLinkIp", ip)) ? await requestMagicLink(getDb(), clip(email, 200), baseUrl, safeNextPath(next, "/book")) : { devLink: undefined };
+  return { message: "If that email has a Family Portal, a sign-in link is on its way. Open it and you’ll come back here.", devLink };
 }

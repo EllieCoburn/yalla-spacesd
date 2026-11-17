@@ -23,6 +23,7 @@ export const LIMITS = {
   waitlistIp: { limit: 15, windowSec: 60 * 60 },
   questionIp: { limit: 10, windowSec: 60 * 60 },
   playPassIp: { limit: 10, windowSec: 60 * 60 },
+  emailCheckIp: { limit: 30, windowSec: 60 * 60 },
 } as const;
 
 export type LimitName = keyof typeof LIMITS;
