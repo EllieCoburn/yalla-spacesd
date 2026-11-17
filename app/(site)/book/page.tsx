@@ -63,7 +63,7 @@ export default async function BookPage() {
       </section>
       {configured ? (
         <Suspense>
-          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null} savedChildren={saved} wallet={wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null} sibling={sibling} />
+          <BookingExplorer guardian={guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email, phone: guardian.phone ?? null } : null} savedChildren={saved} wallet={wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null} sibling={sibling} />
         </Suspense>
       ) : (
         <section className="pb-32">

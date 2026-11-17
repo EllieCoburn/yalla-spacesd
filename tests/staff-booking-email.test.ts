@@ -53,7 +53,7 @@ describe("Team cancellation email", () => {
     const p = await program({ name: "Camp Yalla", priceCents: 16000 });
     const sess = await session(p.id, { capacity: 8, title: "Camp Yalla · 4 – 6 years" });
     const r = await submitPublicBooking(db(), {
-      guardian: { firstName: "John", lastName: "Doe", email: "john.doe@example.com" },
+      guardian: { firstName: "John", lastName: "Doe", email: "john.doe@example.com", phone: "619-555-0100" },
       children: [{ key: "a", firstName: "Jane", lastName: "Doe", birthDate: "2021-12-12" }],
       lines: [{ sessionId: sess.id, childKeys: ["a"] }],
       signatures: [],

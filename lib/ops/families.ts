@@ -15,6 +15,12 @@ import { authorizedPickups, children, emergencyContacts, families, familyNotes, 
 
 const clean = (s?: string | null) => (s ?? "").trim();
 
+/** A phone number Yalla can call: at least 10 digits (spaces, dashes, dots and brackets are fine). */
+export function phoneProblem(phone: string | null | undefined): string | null {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15 ? null : "Enter a phone number we can reach you on, with the area code.";
+}
+
 export async function findGuardianByEmail(db: Executor, email: string) {
   const [g] = await db
     .select()

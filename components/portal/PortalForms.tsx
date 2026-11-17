@@ -194,6 +194,10 @@ export function CreateAccountForm({ invite, email, firstName, lastName, children
         <span className="mt-1 block text-[0.78rem] text-ink-soft">Your invitation was sent to this address, so it’s already confirmed.</span>
       </label>
       <label className="block">
+        <span className={label}>Mobile</span>
+        <input type="tel" name="phone" required autoComplete="tel" className={field} />
+      </label>
+      <label className="block">
         <span className={label}>Password</span>
         <PasswordInput name="password" autoComplete="new-password" placeholder="At least 8 characters" />
       </label>

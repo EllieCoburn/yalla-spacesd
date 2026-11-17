@@ -45,7 +45,7 @@ export async function GET() {
         birthDate: c.birthDate,
       })),
       checkout: {
-        guardian: guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email } : null,
+        guardian: guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email, phone: guardian.phone ?? null } : null,
         savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate })),
         wallet: wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null,
         sibling,

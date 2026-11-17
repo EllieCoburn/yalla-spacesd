@@ -42,7 +42,7 @@ import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
-import { addChild, createFamily, findGuardianByEmail, updateChild } from "./families";
+import { addChild, createFamily, findGuardianByEmail, phoneProblem, updateChild } from "./families";
 import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
 import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
@@ -380,6 +380,13 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   let createdFamily = false;
   if (input.signedIn) {
     if (!input.signedIn.canBook) return { ok: false, code: "forbidden", error: "Your account can’t make bookings. Ask the primary guardian." };
+    // Yalla needs a phone number for every family; one missing from an older account is asked for here.
+    const [me] = await db.select({ phone: guardians.phone }).from(guardians).where(eq(guardians.id, input.signedIn.guardianId));
+    if (!me?.phone?.trim()) {
+      const problem = phoneProblem(input.guardian.phone);
+      if (problem) return { ok: false, code: "invalid", error: problem };
+      await db.update(guardians).set({ phone: input.guardian.phone!.trim() }).where(eq(guardians.id, input.signedIn.guardianId));
+    }
     familyId = input.signedIn.familyId;
     guardianId = input.signedIn.guardianId;
     actor = guardianActor(input.signedIn);
@@ -387,6 +394,8 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     const email = input.guardian.email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false, code: "invalid", error: "Enter a valid email address." };
     if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) return { ok: false, code: "invalid", error: "Enter your first and last name." };
+    const phoneIssue = phoneProblem(input.guardian.phone);
+    if (phoneIssue) return { ok: false, code: "invalid", error: phoneIssue };
     const existing = await findGuardianByEmail(db, email);
     // Someone who started a booking before (or joined a waitlist) but never paid has no portal
     // account to sign in to, so they simply continue as a guest on the same family record.
@@ -401,7 +410,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
       };
     }
     for (const c of input.children) {
-      if (!c.firstName.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) return { ok: false, code: "invalid", error: "Add each child’s first name and date of birth." };
+      if (!c.firstName.trim() || !c.lastName?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) return { ok: false, code: "invalid", error: "Add each child’s first name, last name and date of birth." };
     }
     // Validate capacity and ages before creating any records.
     const pre = await precheck(db, input);
@@ -410,6 +419,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
       familyId = unclaimed.familyId;
       guardianId = unclaimed.id;
       actor = guardianActor({ guardianId, firstName: unclaimed.firstName, lastName: unclaimed.lastName });
+      if (input.guardian.phone?.trim()) await db.update(guardians).set({ phone: input.guardian.phone.trim() }).where(eq(guardians.id, unclaimed.id));
     } else {
       // No portal access until they pay: the payment is their way into the Family Portal.
       const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone, portalAccess: false } });
@@ -430,8 +440,8 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         if (!row) throw new OpsError("invalid", "One of the selected children isn’t part of your family.");
         childIdByKey.set(c.key, row.id);
       } else {
-        if (!c.firstName.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name and date of birth.");
-        const { child } = await addChild(db, actor, familyId, { firstName: c.firstName, lastName: c.lastName || input.guardian.lastName, birthDate: c.birthDate, allergies: c.allergies });
+        if (!c.firstName.trim() || !c.lastName?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
+        const { child } = await addChild(db, actor, familyId, { firstName: c.firstName, lastName: c.lastName.trim(), birthDate: c.birthDate, allergies: c.allergies });
         childIdByKey.set(c.key, child.id);
       }
     }
@@ -658,9 +668,24 @@ export async function bookingStatusView(db: Executor, reference: string) {
 
 export async function joinPublicWaitlist(
   db: DB,
-  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string }; child: { existingId?: string | null; firstName: string; birthDate: string }; sessionId: string; baseUrl: string },
+  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; sessionId: string; baseUrl: string },
 ): Promise<{ ok: true } | { ok: false; code: string; error: string; devLink?: string }> {
   try {
+    // Every family on file has a parent's full name, email and phone, and each child's full name and birthday.
+    if (!input.child.existingId && (!input.child.firstName.trim() || !input.child.lastName?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(input.child.birthDate)))
+      return { ok: false, code: "invalid", error: "Add your child’s first name, last name and date of birth." };
+    if (input.signedIn) {
+      const [me] = await db.select({ phone: guardians.phone }).from(guardians).where(eq(guardians.id, input.signedIn.guardianId));
+      if (!me?.phone?.trim()) {
+        const problem = phoneProblem(input.guardian.phone);
+        if (problem) return { ok: false, code: "invalid", error: problem };
+        await db.update(guardians).set({ phone: input.guardian.phone!.trim() }).where(eq(guardians.id, input.signedIn.guardianId));
+      }
+    } else {
+      if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) return { ok: false, code: "invalid", error: "Enter your first and last name." };
+      const problem = phoneProblem(input.guardian.phone);
+      if (problem) return { ok: false, code: "invalid", error: problem };
+    }
     let familyId: string;
     let actor: Actor;
     if (input.signedIn) {
@@ -671,13 +696,14 @@ export async function joinPublicWaitlist(
       const existing = await findGuardianByEmail(db, email);
       if (existing && !existing.portalAccess && !existing.passwordHash) {
         familyId = existing.familyId;
+        if (input.guardian.phone?.trim()) await db.update(guardians).set({ phone: input.guardian.phone.trim() }).where(eq(guardians.id, existing.id));
         actor = guardianActor({ guardianId: existing.id, firstName: existing.firstName, lastName: existing.lastName });
       } else if (existing) {
         const { devLink } = await requestMagicLink(db, email, input.baseUrl);
         return { ok: false, code: "sign_in_required", error: "This email is already part of a Yalla family. We’ve sent a sign-in link — join the waitlist once you’re signed in.", devLink };
       } else {
         // Joining a waitlist doesn't open the Family Portal (only a paid booking or an invitation does).
-        const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, portalAccess: false } });
+        const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone, portalAccess: false } });
         familyId = created.family.id;
         actor = guardianActor({ guardianId: created.guardian.id, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
       }
@@ -687,7 +713,7 @@ export async function joinPublicWaitlist(
       const [c] = await db.select().from(children).where(and(eq(children.id, childId), eq(children.familyId, familyId)));
       if (!c) throw new OpsError("invalid", "That child isn’t part of your family.");
     } else {
-      const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.guardian.lastName, birthDate: input.child.birthDate });
+      const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.child.lastName!.trim(), birthDate: input.child.birthDate });
       childId = child.id;
     }
     await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId] });

@@ -32,6 +32,14 @@ export type SignedInGuardian = {
   firstName: string;
   lastName: string;
   email: string;
+  /** Phone on file; asked for at checkout when missing. */
+  phone?: string | null;
+};
+
+/** At least 10 digits (the same rule the server checks). */
+const phoneOk = (p: string) => {
+  const n = p.replace(/\D/g, "").length;
+  return n >= 10 && n <= 15;
 };
 
 type ChildDraft = {
@@ -183,9 +191,9 @@ export function Checkout({
   const spotsOf = (sid: string) => spots[sid] ?? 1;
   const fixed = sorted.filter((s) => spotsOf(s.id) > 0);
   const needed = childrenNeeded(sessions, spots);
-  // A new child's form that's been started must be finished (name and date of birth).
+  // A new child's form that's been started must be finished (first name, last name and date of birth).
   const unfinished = kids.some(
-    (k) => !k.existingId && k.include && (k.firstName.trim() || k.lastName.trim() || k.birthDate) && !(k.firstName.trim() && /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate)),
+    (k) => !k.existingId && k.include && (k.firstName.trim() || k.lastName.trim() || k.birthDate) && !(k.firstName.trim() && k.lastName.trim() && /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate)),
   );
 
   useEffect(() => {
@@ -489,12 +497,14 @@ export function Checkout({
     step === 0
       ? chosen.length > 0 && chosen.length >= needed && !unfinished && !ageProblem
       : step === 1
-        ? !!guardian ||
-          (!mustSignIn &&
+        ? guardian
+          ? !!guardian.phone?.trim() || phoneOk(adult.phone)
+          : !mustSignIn &&
             !checkingEmail &&
             adult.firstName.trim() !== "" &&
             adult.lastName.trim() !== "" &&
-            /\S+@\S+\.\S+/.test(adult.email))
+            /\S+@\S+\.\S+/.test(adult.email) &&
+            phoneOk(adult.phone)
         : lines.length > 0 && !slotProblem && agreements !== null && agreementsDone;
 
   function submit() {
@@ -506,7 +516,7 @@ export function Checkout({
           key: c.key,
           existingId: c.existingId,
           firstName: c.firstName,
-          lastName: c.lastName || adult.lastName,
+          lastName: c.lastName,
           birthDate: c.birthDate,
           allergies: c.allergies,
         })),
@@ -762,7 +772,15 @@ export function Checkout({
                   </span>{" "}
                   ({guardian.email}).
                 </p>
-              ) : (
+              ) : null}
+              {guardian && !guardian.phone?.trim() ? (
+                <label className="mt-6 block max-w-sm">
+                  <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Mobile</span>
+                  <input type="tel" autoComplete="tel" value={adult.phone} onChange={(e) => setAdult((g) => ({ ...g, phone: e.target.value }))} className={input} />
+                  <span className="mt-1 block text-[0.78rem] text-ink-soft">We don’t have a phone number for you yet. We’ll save it to your Family Portal.</span>
+                </label>
+              ) : null}
+              {guardian ? null : (
                 <>
                   <p className="mt-2 text-ink-soft">
                     New to Yalla? Your Family Portal opens as soon as you check out, so you can manage your bookings any time.
@@ -778,7 +796,7 @@ export function Checkout({
                         ["firstName", "First name", "text", "given-name"],
                         ["lastName", "Last name", "text", "family-name"],
                         ["email", "Email", "email", "email"],
-                        ["phone", "Mobile (optional)", "tel", "tel"],
+                        ["phone", "Mobile", "tel", "tel"],
                       ] as const
                     ).map(([k, l, t, ac]) => (
                       <label key={k} className="block">

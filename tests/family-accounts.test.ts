@@ -36,6 +36,7 @@ const account = (over: Partial<Parameters<typeof registerFamilyAccount>[1]> = {}
   firstName: "Maya",
   lastName: "Rivera",
   email: "",
+  phone: "619-555-0100",
   password: "garden-swing-42",
   children: [
     { firstName: "Leo", lastName: "Rivera", birthDate: "2022-03-14" },
@@ -144,7 +145,7 @@ describe("Joining by invitation", () => {
 
 describe("Joining by booking", () => {
   const input = (sessionId: string, email = "robin.new@example.com"): PublicBookingInput => ({
-    guardian: { firstName: "Robin", lastName: "Newcomer", email },
+    guardian: { firstName: "Robin", lastName: "Newcomer", email, phone: "619-555-0100" },
     children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01" }],
     lines: [{ sessionId, childKeys: ["a"] }],
     signatures: [],
@@ -277,7 +278,7 @@ describe("Joining with a Play Pass", () => {
     tier: "gather",
     acceptTerms: true,
     baseUrl: base,
-    guardian: { firstName: "Pat", lastName: "Member", email: "pat@example.com" },
+    guardian: { firstName: "Pat", lastName: "Member", email: "pat@example.com", phone: "619-555-0100" },
     children: [{ firstName: "Lu", lastName: "Member", birthDate: "2021-09-09" }],
     ...over,
   });
@@ -316,6 +317,6 @@ describe("Joining with a Play Pass", () => {
   it("someone already in the portal is asked to sign in", async () => {
     await plan();
     await join();
-    await expect(startGuestSignup(db(), guest({ guardian: { firstName: "M", lastName: "R", email: "maya@example.com" } }))).rejects.toThrow(/sign in/);
+    await expect(startGuestSignup(db(), guest({ guardian: { firstName: "M", lastName: "R", email: "maya@example.com", phone: "619-555-0100" } }))).rejects.toThrow(/sign in/);
   });
 });

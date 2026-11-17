@@ -79,6 +79,7 @@ export async function createAccountAction(_: PortalState, form: FormData): Promi
         firstName: String(form.get("firstName") ?? "").slice(0, 80),
         lastName: String(form.get("lastName") ?? "").slice(0, 80),
         email: "",
+        phone: String(form.get("phone") ?? "").slice(0, 40),
         password: String(form.get("password") ?? ""),
         children: firsts.slice(0, 12).map((n, i) => ({ firstName: n.slice(0, 80), lastName: (lasts[i] ?? "").slice(0, 80), birthDate: births[i] ?? "" })),
       },

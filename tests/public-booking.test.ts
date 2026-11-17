@@ -14,7 +14,7 @@ beforeEach(reset);
 
 function input(sessionId: string, overrides: Partial<PublicBookingInput> = {}): PublicBookingInput {
   return {
-    guardian: { firstName: "Robin", lastName: "Newcomer", email: "robin.new@example.com" },
+    guardian: { firstName: "Robin", lastName: "Newcomer", email: "robin.new@example.com", phone: "619-555-0100" },
     children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01" }],
     lines: [{ sessionId, childKeys: ["a"] }],
     signatures: [],
@@ -33,7 +33,7 @@ describe("public booking", () => {
     if (first.ok) expect(first.url).toMatch(/\/pay\/test\/tcs_/);
     // Once the family has a portal account, the email needs signing in.
     await db().update(s.guardians).set({ portalAccess: true });
-    const second = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Robin", lastName: "Newcomer", email: "ROBIN.NEW@example.com" } }));
+    const second = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Robin", lastName: "Newcomer", email: "ROBIN.NEW@example.com", phone: "619-555-0100" } }));
     expect(second.ok).toBe(false);
     if (!second.ok) expect(second.code).toBe("sign_in_required");
     expect(await db().select().from(s.families)).toHaveLength(1);
@@ -45,6 +45,39 @@ describe("public booking", () => {
     const third = await submitPublicBooking(db(), input(sess2.id, { signedIn }));
     expect(third.ok).toBe(true);
     expect(await db().select().from(s.children)).toHaveLength(1);
+  });
+
+  it("asks every new family for a phone number and each child's full name", async () => {
+    const p = await program();
+    const sess = await session(p.id, { capacity: 5 });
+    const noPhone = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Robin", lastName: "Newcomer", email: "robin.new@example.com" } }));
+    expect(noPhone.ok).toBe(false);
+    if (!noPhone.ok) expect(noPhone.error).toMatch(/phone number/);
+    const noLast = await submitPublicBooking(db(), input(sess.id, { children: [{ key: "a", firstName: "Pip", lastName: "", birthDate: "2023-02-01" }] }));
+    expect(noLast.ok).toBe(false);
+    if (!noLast.ok) expect(noLast.error).toMatch(/last name/);
+    expect(await db().select().from(s.families)).toHaveLength(0);
+    const ok = await submitPublicBooking(db(), input(sess.id));
+    expect(ok.ok).toBe(true);
+    const [g] = await db().select().from(s.guardians);
+    expect(g.phone).toBe("619-555-0100");
+    const [c] = await db().select().from(s.children);
+    expect([c.firstName, c.lastName, c.birthDate]).toEqual(["Pip", "Newcomer", "2023-02-01"]);
+  });
+
+  it("a signed-in family with no phone on file is asked for one, and it's saved", async () => {
+    const f = await family("NoPhone");
+    const p = await program();
+    const sess = await session(p.id, { capacity: 5 });
+    const ctx = { sessionId: "x", guardianId: f.guardian.id, familyId: f.family.id, familyName: "", firstName: f.guardian.firstName, lastName: f.guardian.lastName, email: f.guardian.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: true, hasPassword: true };
+    const lines = [{ sessionId: sess.id, childKeys: [f.children[0].id] }];
+    const kids = [{ key: f.children[0].id, existingId: f.children[0].id, firstName: f.children[0].firstName, lastName: f.children[0].lastName, birthDate: f.children[0].birthDate }];
+    const without = await submitPublicBooking(db(), input(sess.id, { signedIn: ctx, children: kids, lines, guardian: { firstName: "", lastName: "", email: "" } }));
+    expect(without.ok).toBe(false);
+    const withPhone = await submitPublicBooking(db(), input(sess.id, { signedIn: ctx, children: kids, lines, guardian: { firstName: "", lastName: "", email: "", phone: "(619) 555-0177" } }));
+    expect(withPhone.ok).toBe(true);
+    const [g] = await db().select().from(s.guardians).where(eq(s.guardians.id, f.guardian.id));
+    expect(g.phone).toBe("(619) 555-0177");
   });
 
   it("explains insufficient capacity for siblings before payment and leaves no records", async () => {

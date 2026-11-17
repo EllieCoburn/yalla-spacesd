@@ -11,9 +11,9 @@ const input = "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5
 
 /** Join the waitlist for a full session. Nothing is charged; we offer the spot if one opens. */
 export function WaitlistForm({ session, guardian, savedChildren, onClose }: { session: PublicSession; guardian: SignedInGuardian | null; savedChildren: SavedChild[]; onClose: () => void }) {
-  const [adult, setAdult] = useState({ firstName: guardian?.firstName ?? "", lastName: guardian?.lastName ?? "", email: guardian?.email ?? "" });
+  const [adult, setAdult] = useState({ firstName: guardian?.firstName ?? "", lastName: guardian?.lastName ?? "", email: guardian?.email ?? "", phone: "" });
   const [childId, setChildId] = useState<string>(savedChildren[0]?.id ?? "");
-  const [child, setChild] = useState({ firstName: "", birthDate: "" });
+  const [child, setChild] = useState({ firstName: "", lastName: "", birthDate: "" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string; devLink?: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -32,13 +32,18 @@ export function WaitlistForm({ session, guardian, savedChildren, onClose }: { se
           <div className="mt-6 space-y-5">
             {!guardian ? (
               <div className="grid gap-5 sm:grid-cols-2">
-                {(["firstName", "lastName", "email"] as const).map((k) => (
-                  <label key={k} className={`block ${k === "email" ? "sm:col-span-2" : ""}`}>
-                    <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">{k === "firstName" ? "Your first name" : k === "lastName" ? "Last name" : "Email"}</span>
-                    <input type={k === "email" ? "email" : "text"} value={adult[k]} onChange={(e) => setAdult((a) => ({ ...a, [k]: e.target.value }))} className={input} />
+                {(["firstName", "lastName", "email", "phone"] as const).map((k) => (
+                  <label key={k} className="block">
+                    <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">{k === "firstName" ? "Your first name" : k === "lastName" ? "Last name" : k === "email" ? "Email" : "Mobile"}</span>
+                    <input type={k === "email" ? "email" : k === "phone" ? "tel" : "text"} autoComplete={k === "phone" ? "tel" : undefined} value={adult[k]} onChange={(e) => setAdult((a) => ({ ...a, [k]: e.target.value }))} className={input} />
                   </label>
                 ))}
               </div>
+            ) : !guardian.phone?.trim() ? (
+              <label className="block">
+                <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Mobile</span>
+                <input type="tel" autoComplete="tel" value={adult.phone} onChange={(e) => setAdult((a) => ({ ...a, phone: e.target.value }))} className={input} />
+              </label>
             ) : null}
             {savedChildren.length ? (
               <label className="block">
@@ -56,6 +61,10 @@ export function WaitlistForm({ session, guardian, savedChildren, onClose }: { se
                 <label className="block">
                   <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Child’s first name</span>
                   <input value={child.firstName} onChange={(e) => setChild((c) => ({ ...c, firstName: e.target.value }))} className={input} />
+                </label>
+                <label className="block">
+                  <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Child’s last name</span>
+                  <input value={child.lastName} onChange={(e) => setChild((c) => ({ ...c, lastName: e.target.value }))} className={input} />
                 </label>
                 <label className="block">
                   <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Date of birth</span>
@@ -77,7 +86,7 @@ export function WaitlistForm({ session, guardian, savedChildren, onClose }: { se
               disabled={pending}
               onClick={() =>
                 start(async () => {
-                  const res = await joinWaitlistAction({ sessionId: session.id, guardian: adult, child: savedChildren.length ? { existingId: childId, firstName: "", birthDate: "" } : child });
+                  const res = await joinWaitlistAction({ sessionId: session.id, guardian: adult, child: savedChildren.length ? { existingId: childId, firstName: "", lastName: "", birthDate: "" } : child });
                   setMsg(res.ok ? { ok: true, text: "You’re on the waitlist. We’ll email you if a spot opens." } : { ok: false, text: res.error, devLink: "devLink" in res ? res.devLink : undefined });
                 })
               }

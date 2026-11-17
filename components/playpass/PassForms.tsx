@@ -89,7 +89,7 @@ export function GuestPass({ tier, terms, label }: { tier: string; terms: string[
         </label>
         <label className="block">
           <span className={lab}>Mobile</span>
-          <input type="tel" name="phone" autoComplete="tel" className={field} />
+          <input type="tel" name="phone" required autoComplete="tel" className={field} />
         </label>
       </div>
       <fieldset className="border-t border-line pt-5">

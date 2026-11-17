@@ -25,9 +25,9 @@ const asRole = (key: string): StaffContext => ({
 
 describe("families", () => {
   it("won't duplicate a family when a returning guardian's email is used again", async () => {
-    const first = await createFamily(db(), owner, { guardian: { firstName: "Robin", lastName: "Example", email: "robin@example.com" } });
+    const first = await createFamily(db(), owner, { guardian: { firstName: "Robin", lastName: "Example", email: "robin@example.com", phone: "619-555-0100" } });
     try {
-      await createFamily(db(), owner, { guardian: { firstName: "Robin", lastName: "Example", email: "ROBIN@example.com " } });
+      await createFamily(db(), owner, { guardian: { firstName: "Robin", lastName: "Example", email: "ROBIN@example.com ", phone: "619-555-0100" } });
       throw new Error("expected duplicate");
     } catch (e) {
       expect(e).toBeInstanceOf(OpsError);

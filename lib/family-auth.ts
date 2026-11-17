@@ -15,7 +15,7 @@
 import { and, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
-import { addChild, createFamily } from "@/lib/ops/families";
+import { addChild, createFamily, phoneProblem } from "@/lib/ops/families";
 import type { DB, Executor } from "@/lib/db";
 import { bookings, children, families, familyAuthTokens, familyInvites, familySessions, guardians, messages, playPassSubscriptions } from "@/lib/db/schema";
 import { validLinkKey } from "@/lib/links";
@@ -45,6 +45,8 @@ export type GuardianContext = {
   /** Has confirmed their email (by invitation or the confirmation email). */
   emailVerified: boolean;
   hasPassword: boolean;
+  /** The guardian's phone on file (asked for at checkout when missing). */
+  phone?: string | null;
 };
 
 /**
@@ -122,6 +124,7 @@ export async function resolveFamilySession(db: Executor, token: string | null | 
     canViewSensitive: row.g.canViewSensitive,
     emailVerified: !!row.g.emailVerifiedAt,
     hasPassword: !!row.g.passwordHash,
+    phone: row.g.phone,
   };
 }
 
@@ -154,6 +157,7 @@ export type NewAccount = {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   password: string;
   children: { firstName: string; lastName?: string; birthDate: string }[];
 };
@@ -263,6 +267,8 @@ export async function registerFamilyAccount(db: DB, input: NewAccount & { invite
   const inv = await validInvite(db, input.inviteToken);
   if (!inv) throw new OpsError("invite", "This invitation has expired or was already used. Please ask Yalla for a new one, or sign in if you already have an account.");
   if (!input.firstName.trim() || !input.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
+  const phoneIssue = phoneProblem(input.phone);
+  if (phoneIssue) throw new OpsError("invalid", phoneIssue);
   const problem = familyPasswordProblem(input.password);
   if (problem) throw new OpsError("invalid", problem);
   const kids = input.children.filter((c) => c.firstName.trim() || c.lastName?.trim() || c.birthDate);
@@ -288,12 +294,12 @@ export async function registerFamilyAccount(db: DB, input: NewAccount & { invite
       if (!have && !kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
     } else {
       if (!kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
-      const made = await createFamily(tx, actor, { guardian: { firstName: input.firstName.trim(), lastName: input.lastName.trim(), email: inv.email } });
+      const made = await createFamily(tx, actor, { guardian: { firstName: input.firstName.trim(), lastName: input.lastName.trim(), email: inv.email, phone: input.phone!.trim() } });
       guardian = made.guardian;
       familyId = made.family.id;
       isNew = true;
     }
-    await tx.update(guardians).set({ passwordHash: hashPassword(input.password), portalAccess: true, emailVerifiedAt: new Date(), failedLogins: 0, lockedUntil: null }).where(eq(guardians.id, guardian.id));
+    await tx.update(guardians).set({ passwordHash: hashPassword(input.password), portalAccess: true, emailVerifiedAt: new Date(), failedLogins: 0, lockedUntil: null, phone: input.phone!.trim() }).where(eq(guardians.id, guardian.id));
     for (const c of kids)
       await addChild(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, familyId, { firstName: c.firstName.trim(), lastName: c.lastName!.trim(), birthDate: c.birthDate });
     await audit(tx, { type: "family", id: guardian.id, name: `${guardian.firstName} ${guardian.lastName}` }, { action: "family.account_created", entityType: "family", entityId: familyId, summary: `Created a Family Portal account from an invitation${kids.length ? ` with ${kids.length} ${kids.length === 1 ? "child" : "children"}` : ""}` });

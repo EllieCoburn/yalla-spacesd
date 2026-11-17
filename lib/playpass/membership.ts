@@ -16,7 +16,7 @@ import { families, guardians, playPassCharges, playPassPlans, playPassSubscripti
 import { guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { notifyFamily } from "@/lib/notify";
 import { linkKey } from "@/lib/links";
-import { addChild, createFamily, findGuardianByEmail } from "@/lib/ops/families";
+import { addChild, createFamily, findGuardianByEmail, phoneProblem } from "@/lib/ops/families";
 import type { NormalizedEvent } from "@/lib/payments/provider";
 import { fmtDate, todayLA, zonedDateTime } from "@/lib/time";
 import { activeMembershipBilling, membershipBillingFor } from "./provider";
@@ -175,6 +175,8 @@ export async function startGuestSignup(
   const email = input.guardian.email.trim().toLowerCase();
   if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new OpsError("invalid", "Enter a valid email address.");
+  const phoneIssue = phoneProblem(input.guardian.phone);
+  if (phoneIssue) throw new OpsError("invalid", phoneIssue);
   const today = todayLA();
   const kids = input.children.filter((c) => c.firstName.trim() || c.lastName.trim() || c.birthDate);
   if (!kids.length) throw new OpsError("invalid", "Add at least one child with their first name, last name and date of birth.");
@@ -187,7 +189,10 @@ export async function startGuestSignup(
   if (existing && (existing.portalAccess || existing.passwordHash)) throw new OpsError("sign_in", "This email is already part of a Yalla family. Please sign in to continue.");
   const actor = { type: "system" as const, name: "Play Pass sign-up (website)" };
   let g: typeof guardians.$inferSelect;
-  if (existing) g = existing;
+  if (existing) {
+    g = existing;
+    await db.update(guardians).set({ phone: input.guardian.phone!.trim() }).where(eq(guardians.id, existing.id));
+  }
   else {
     const made = await createFamily(db, actor, { guardian: { firstName: input.guardian.firstName.trim(), lastName: input.guardian.lastName.trim(), email, phone: input.guardian.phone, portalAccess: false } });
     g = made.guardian;
