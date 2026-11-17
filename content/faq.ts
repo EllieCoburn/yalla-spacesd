@@ -160,7 +160,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "Can I reserve a private office, desk or the phone booth?",
     answer:
-      "Yes. The common areas come with your session. You can also rent a private office or a private desk, or book complimentary time in our phone booth, in your Family Portal, subject to availability. [See prices and reserve](/coworking).",
+      "Yes. Coworking in any of our common areas is included with Yalla Flex and Club Yalla, and you can also rent a private office or a private desk, or book complimentary time in our phone booth, in your Family Portal, subject to availability. [See prices and reserve](/coworking).",
   },
   {
     id: "paperwork",

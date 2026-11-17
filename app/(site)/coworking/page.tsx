@@ -165,12 +165,13 @@ export default async function CoworkingPage() {
             <div className="lg:col-span-6">
               <Index n="03">Private spaces</Index>
               <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
-                When you need <em>a door that closes.</em>
+                A little more <em>room to focus.</em>
               </h2>
             </div>
             <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
-              The common areas come with your session. If you’d like a dedicated private office, desk or the phone booth, reserve it in your
-              Family Portal, subject to availability.
+              Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of Yalla Flex
+              and Club Yalla. For a dedicated private office or desk, or time in the phone booth, reserve in your Family Portal, subject to
+              availability.
             </p>
           </div>
           <div className="mt-14 grid gap-px overflow-hidden bg-line md:grid-cols-3">
