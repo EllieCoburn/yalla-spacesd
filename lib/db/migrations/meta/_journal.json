@@ -302,6 +302,20 @@
       "when": 1794865784927,
       "tag": "0042_drop_unedited_template_copies",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794879970166,
+      "tag": "0043_program_notice_minutes",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794880007184,
+      "tag": "0044_drop_program_notice_hours",
+      "breakpoints": true
     }
   ]
 }

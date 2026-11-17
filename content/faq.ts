@@ -359,7 +359,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What is Camp Yalla?",
     answer:
-      "Camp days for children 18 months to 10 years, planned with the same care as every Yalla day: unhurried, hands-on and full of discovery. Camp runs 9:00am to 3:00pm, with optional Early Bird care from 8:00am and a late stay until 4:30pm. Book the days that suit your family; [see camp dates](/programs/camp-yalla).",
+      "Camp days for children 18 months to 10 years, planned with the same care as every Yalla day: unhurried, hands-on and full of discovery. Camp runs 9:00am to 3:00pm, with optional Early Bird care from 8:00am and a late stay until 4:30pm. Book the days that suit your family until 30 minutes before camp begins, or until the day is full; [see camp dates](/programs/camp-yalla).",
   },
   {
     id: "camp-day",
@@ -369,7 +369,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What does a camp day look like?",
     answer:
-      "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 6 years, and 7 to 10 years.",
+      "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 7 years, and 8 to 10 years. Each group has its own guides: one adult for every six children in the youngest group, and one for every eight in the older two. Yalla provides a morning snack and a light afternoon snack, and siblings booked on the same day save 10% on each additional child.",
   },
   {
     id: "what-are-happenings",
@@ -394,7 +394,6 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "what-to-bring",
     category: "bookings",
-    pages: { camp: 4 },
     order: 60,
     status: "published",
     question: "What should my child bring?",
@@ -453,11 +452,12 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "camp-meals",
     category: "bookings",
+    pages: { camp: 4 },
     order: 66,
-    status: "draft",
-    needs: "Whether camp provides lunch or snacks, and what children should bring.",
+    status: "published",
     question: "What should my child bring to camp?",
-    answer: "",
+    answer:
+      "Please label everything with your child’s name.\n\n- **A packed lunch** and a labeled water bottle. Yalla provides a morning snack and a light afternoon snack.\n- **Sunscreen and a sunhat**\n- **A light jacket**\n- **A change of clothes**\n- **For the 18 months – 3 years group:** a sheet and a light blanket for rest time. If your child isn’t yet using the toilet independently, send enough diapers or pull-ups and wipes for the day; our caregivers will help with diapering and toileting.\n\nPlease leave toys from home and electronics at home. Yalla is a nut-free environment, so please don’t pack any nuts.",
   },
   {
     id: "change-cancel-reservation",

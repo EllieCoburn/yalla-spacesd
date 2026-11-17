@@ -35,7 +35,7 @@ const base = (over: Partial<ProgramInput> = {}): ProgramInput => ({
   waitlistEnabled: true,
   waitlistAutoOffer: false,
   offerWindowHours: 24,
-  minNoticeHours: 0,
+  minNoticeMinutes: 0,
   priceUnit: "session",
   ...over,
 });

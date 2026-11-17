@@ -177,7 +177,7 @@ export type PublicState =
 
 export function publicState(
   session: { status: string; startsAt: Date; bookingOpensAt: Date | null; bookingClosesAt: Date | null },
-  program: Pick<typeof programs.$inferSelect, "status" | "showRemaining" | "lowAvailabilityThreshold" | "waitlistEnabled" | "minNoticeHours" | "advanceBookingDays">,
+  program: Pick<typeof programs.$inferSelect, "status" | "showRemaining" | "lowAvailabilityThreshold" | "waitlistEnabled" | "minNoticeMinutes" | "advanceBookingDays">,
   remaining: number,
   now = new Date(),
 ): PublicState {
@@ -186,7 +186,7 @@ export function publicState(
   if (program.status === "paused") return { state: "closed", reason: "Booking paused" };
   if (session.bookingOpensAt && now < session.bookingOpensAt) return { state: "closed", reason: "Booking not yet open" };
   if (session.bookingClosesAt && now >= session.bookingClosesAt) return { state: "closed", reason: "Booking closed" };
-  if (session.startsAt.getTime() - now.getTime() < program.minNoticeHours * 3600_000) return { state: "closed", reason: "Booking closed" };
+  if (session.startsAt.getTime() - now.getTime() < program.minNoticeMinutes * 60_000) return { state: "closed", reason: "Booking closed" };
   if (program.advanceBookingDays != null && session.startsAt.getTime() - now.getTime() > program.advanceBookingDays * 86400_000)
     return { state: "closed", reason: "Not yet open for booking" };
   if (remaining <= 0) return { state: "full", waitlist: program.waitlistEnabled };

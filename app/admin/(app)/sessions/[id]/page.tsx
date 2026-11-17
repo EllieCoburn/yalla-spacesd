@@ -220,7 +220,7 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
                   label: "Series",
                   value: d.series ? `${d.series.title ?? "Weekly schedule"} · ${d.series.weekdays.map((w) => WEEKDAY[w]).join(", ")} · ${fmtDate(d.series.starts_on, "d MMM")}–${fmtDate(d.series.ends_on, "d MMM yyyy")}${s.isException ? " · edited individually" : ""}` : "One-off session",
                 },
-                { label: "Booking window", value: s.bookingOpensAt || s.bookingClosesAt ? `${s.bookingOpensAt ? `Opens ${fmtDateTime(s.bookingOpensAt)}` : ""} ${s.bookingClosesAt ? `Closes ${fmtDateTime(s.bookingClosesAt)}` : ""}` : `Program rules · ${p.minNoticeHours}h minimum notice` },
+                { label: "Booking window", value: s.bookingOpensAt || s.bookingClosesAt ? `${s.bookingOpensAt ? `Opens ${fmtDateTime(s.bookingOpensAt)}` : ""} ${s.bookingClosesAt ? `Closes ${fmtDateTime(s.bookingClosesAt)}` : ""}` : `Program rules · closes ${p.minNoticeMinutes} min before start` },
               ]}
             />
           </Card>

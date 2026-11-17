@@ -76,7 +76,7 @@ export type ProgramInput = {
   waitlistAutoOffer: boolean;
   offerWindowHours: number;
   advanceBookingDays?: number | null;
-  minNoticeHours: number;
+  minNoticeMinutes: number;
   cancellationDeadlineHours?: number | null;
   priceCents?: number | null;
   priceUnit: string;
@@ -103,7 +103,7 @@ export function validateProgram(input: ProgramInput): ProgramInput {
   nonNeg(input.defaultCapacity, "Capacity");
   nonNeg(input.lowAvailabilityThreshold, "Low-availability threshold");
   nonNeg(input.advanceBookingDays, "Advance booking limit");
-  nonNeg(input.minNoticeHours, "Minimum notice");
+  nonNeg(input.minNoticeMinutes, "Minimum notice");
   nonNeg(input.cancellationDeadlineHours, "Cancellation deadline");
   nonNeg(input.priceCents, "Price");
   nonNeg(input.depositCents, "Deposit");

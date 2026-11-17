@@ -209,7 +209,8 @@ export const programs = pgTable("programs", {
   offerWindowHours: integer("offer_window_hours").notNull().default(24),
   /** How far ahead families may book (days). null = no limit. */
   advanceBookingDays: integer("advance_booking_days"),
-  minNoticeHours: integer("min_notice_hours").notNull().default(0),
+  /** How long before a session starts booking closes, in minutes (e.g. 30 for camp). */
+  minNoticeMinutes: integer("min_notice_minutes").notNull().default(0),
   cancellationDeadlineHours: integer("cancellation_deadline_hours"),
   priceCents: integer("price_cents"),
   priceUnit: text("price_unit").notNull().default("session"), // session | series | hour | month | event

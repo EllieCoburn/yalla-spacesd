@@ -47,7 +47,7 @@ function programInput({ str, num, bool, cents }: Ctx): ProgramInput {
     waitlistAutoOffer: bool("waitlistAutoOffer"),
     offerWindowHours: int("offerWindowHours") ?? 24,
     advanceBookingDays: int("advanceBookingDays"),
-    minNoticeHours: int("minNoticeHours") ?? 0,
+    minNoticeMinutes: int("minNoticeMinutes") ?? 0,
     cancellationDeadlineHours: int("cancellationDeadlineHours"),
     priceCents: cents("priceCents"),
     priceUnit: str("priceUnit") || "session",

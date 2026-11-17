@@ -289,7 +289,7 @@ A reservation is confirmed once you receive your booking confirmation and any pa
         programs: {
           club: `Club Yalla is a membership rather than a booking. Apply at [yallaspacesd.com/apply](/apply); see “Enrolling in Club Yalla” below. Club Yalla tuition is never charged through the Family Portal: it’s invoiced through Brightwheel.`,
           flex: "Flex days open when there’s a vacancy in your child’s age group. Choose full or half days (and Early Bird, where offered) before checkout. Bookings for a day close at 8:00am that morning.",
-          camp: "Book the camp days that suit your family. Your child is placed in the right age group automatically from their date of birth.",
+          camp: "Book the camp days that suit your family, up to 30 minutes before camp begins or until the day is full. Your child is placed in the right age group automatically from their date of birth.",
           happenings: "Each Happening shows its ages, times and price in the booking calendar. Some, like After Hours Evenings, have their own sibling pricing, applied automatically.",
         },
         ask: ["how do i book", "how to reserve", "sibling discount", "payment failed", "card declined", "how much does it cost"],
@@ -442,7 +442,7 @@ Children move to their new cohort each August. Over the summer, care teams prepa
 - **Wildflowers**: 3 – 4 years
 
 Flex fills vacancies, so availability depends on openings in your child’s group.`,
-          camp: `Camp days have three age groups: 18 months – 3 years, 4 – 6 years and 7 – 10 years.`,
+          camp: `Camp days have three age groups: 18 months – 3 years, 4 – 7 years and 8 – 10 years. There is one adult for every six children in the youngest group and one for every eight in the older two.`,
           happenings: `Immersive Play Sessions are for children 3 – 8 years. Weekend Play Sessions and After Hours Evenings are for 18 months – 10 years, in separate age groups. Pop-ups list their own ages.`,
         },
         ask: ["what group is my child in", "cohort placement", "age groups", "move up", "transition to new cohort", "seedlings", "saplings", "sprouts", "wildflowers"],
@@ -610,7 +610,7 @@ Snack and mealtimes vary by group and follow each group’s daily rhythm. Even w
         programs: {
           club: "**Seedlings** families provide lunch and any snacks their child needs. **Saplings, Sprouts and Wildflowers** families provide lunch, and Yalla provides nutritious morning and afternoon snacks. Our monthly snack menu is posted on the family bulletin board.",
           flex: "Pack lunch for the day. Yalla provides snacks for children who eat solid foods, as set out in your Flex admission agreement. Infants need all bottles and food for the whole session.",
-          camp: "Pack a lunch and a labeled water bottle each camp day. Check your booking confirmation for anything extra to bring.",
+          camp: "Pack a lunch and a labeled water bottle each camp day. Yalla provides a morning snack and a light afternoon snack. No nuts, please: Yalla is nut-free.",
           happenings: "Immersive Play Sessions include lunch together at 11:30am, packed from home. Other Happenings note any food details in the listing.",
         },
         ask: ["lunch", "snacks", "do you provide food", "what to pack for lunch", "food", "menu", "juice"],
@@ -758,7 +758,7 @@ Please **label everything** with your child’s name, especially outerwear.`,
         programs: {
           club: "Keep your child’s cubby stocked; we’ll send a courtesy reminder in Brightwheel when supplies run low.",
           flex: "Bring everything your child needs for the session; it goes home with you at the end of the day. Every child should have a labeled water bottle, lunch box, light jacket and a spare outfit.",
-          camp: "Send a labeled water bottle, lunch box, light jacket and one spare outfit, plus anything listed in your booking confirmation.",
+          camp: "Send a packed lunch, a labeled water bottle, sunscreen, a sunhat, a light jacket and a change of clothes. The 18 months – 3 years group also needs a sheet and a light blanket for rest time. Please leave toys from home and electronics at home.",
           happenings: "Bring what the listing suggests; for most Happenings that’s a labeled water bottle and a spare outfit.",
         },
         ask: ["what to bring", "packing list", "what do i need to pack", "what to pack for camp", "what to bring to a happening", "supplies", "first day checklist"],
@@ -815,7 +815,7 @@ During changes, our team washes hands and wears gloves, uses a clean, sanitized 
         programs: {
           club: "Diaper changes for children under 18 months are logged in Brightwheel, so you can match your supply to how many are used. Your child’s educarer or guide will send a courtesy reminder when the supply runs low.",
           flex: "Bring enough diapers or pull-ups and wipes for the whole session.",
-          camp: "Children in the 18 months – 3 years group who use diapers or pull-ups should bring enough for the day, plus wipes.",
+          camp: "In the 18 months – 3 years group, caregivers help with diapering and toileting for children not yet using the toilet independently. Please send enough diapers or pull-ups and wipes for the day.",
         },
         ask: ["diapers", "pull ups", "wipes", "cloth diapers", "diaper cream"],
       },

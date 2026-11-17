@@ -28,7 +28,7 @@ type ProgramValues = {
   waitlistAutoOffer?: boolean;
   offerWindowHours?: number;
   advanceBookingDays?: number | null;
-  minNoticeHours?: number;
+  minNoticeMinutes?: number;
   cancellationDeadlineHours?: number | null;
   priceCents?: number | null;
   priceUnit?: string;
@@ -96,7 +96,7 @@ export function ProgramForm({
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <TextField name="advanceBookingDays" label="Book up to (days ahead)" type="number" defaultValue={p.advanceBookingDays} hint="Blank = no limit." />
-            <TextField name="minNoticeHours" label="Minimum notice (hours)" type="number" defaultValue={p.minNoticeHours ?? 0} />
+            <TextField name="minNoticeMinutes" label="Booking closes (minutes before start)" hint="e.g. 30 for camp, 720 for 12 hours. 0 = until it starts." type="number" defaultValue={p.minNoticeMinutes ?? 0} />
             <TextField name="cancellationDeadlineHours" label="Cancellation deadline (hours before)" type="number" defaultValue={p.cancellationDeadlineHours} />
           </div>
         </Section>

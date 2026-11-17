@@ -1,0 +1,1 @@
+ALTER TABLE "programs" DROP COLUMN "min_notice_hours";

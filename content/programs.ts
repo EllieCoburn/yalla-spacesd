@@ -11,8 +11,8 @@ export interface FactBlock {
   note?: string;
 }
 
-const groups = (middle = "4 – 6 years"): FactBlock[] => [
-  { rows: [{ label: "18 months – 3 years" }, { label: middle }, { label: "7 – 10 years" }] },
+const groups = (middle = "4 – 7 years"): FactBlock[] => [
+  { rows: [{ label: "18 months – 3 years" }, { label: middle }, { label: "8 – 10 years" }] },
 ];
 
 /** Camp Yalla's confirmed 2026–27 camp days (the camp page shows live availability for these when it can). */
@@ -78,14 +78,14 @@ export const programs: ProgramContent[] = [
       "Camp days for children 18 months to 10 years, planned with the same care as every Yalla day: unhurried, hands-on and full of discovery.",
     body: [
       "Each camp is built around an idea children can explore with their hands: making, building, growing, getting messy and discovering.",
-      "Book the days that suit your family. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 6 years, and 7 to 10 years.",
+      "Book the days that suit your family. Children spend the day with others close to their age, in three groups: 18 months to 3 years, 4 to 7 years, and 8 to 10 years.",
     ],
     image: "/photos/painting-table.jpg",
     imageAlt: "A toddler painting with brushes and bright colors outdoors",
     motif: "sprig",
-    ages: "18 months – 10 years, in three age groups: 18 months – 3 years, 4 – 6 years, and 7 – 10 years",
+    ages: "18 months – 10 years, in three age groups: 18 months – 3 years, 4 – 7 years, and 8 – 10 years",
     days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
-    pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day. Siblings: 10% off each additional child on the same day, applied automatically.",
+    pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day. Siblings: 10% off each additional child on the same day, applied automatically. Includes a morning snack and a light afternoon snack; families pack lunch.",
     facts: {
       ages: groups(),
       days: [
