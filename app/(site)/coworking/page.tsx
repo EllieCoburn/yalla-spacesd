@@ -45,7 +45,7 @@ const usd = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
 
 const SPACES: { category: Category; blurb: string; mark: "window" | "arch" | "balcony" }[] = [
   { category: "private_office", blurb: "A fully private office with a door that closes, for focused work and calls.", mark: "window" },
-  { category: "private_desk", blurb: "A desk that’s yours for the day or the week, away from the common areas.", mark: "balcony" },
+  { category: "private_desk", blurb: "A dedicated desk that’s yours for the day or the week.", mark: "balcony" },
   { category: "phone_booth", blurb: "A private booth for calls, virtual meetings and quiet conversations.", mark: "arch" },
 ];
 
