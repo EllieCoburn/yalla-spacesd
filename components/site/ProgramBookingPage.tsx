@@ -26,10 +26,13 @@ type Page = {
   familyRate?: boolean;
   goodToKnow: { label: string; lines: ReactNode[] }[];
   after?: ReactNode;
-  /** A calmer header: a short lede, an even grid of key facts, one button and a rates link. */
+  /** A calmer header: a short lede, the ways to book side by side, one button and a rates link. */
   hero?: {
     lede: string;
-    facts: { label: string; value: string; note?: string }[];
+    /** e.g. Full day and Half day, each with its hours and starting price. */
+    options: { label: string; time: string; price: string }[];
+    /** One quiet line under the options (ages, what's included). */
+    meta: string;
     cta: string;
     ratesLink?: { label: string; href: string };
   };
@@ -105,13 +108,12 @@ export const BOOKING_PAGES: Record<string, Page> = {
     ),
     lede: "Thoughtful childcare for your little one, a welcoming coworking space for you. Book a full or half day, Monday–Friday.",
     hero: {
-      lede: "Thoughtful childcare for your little one, a welcoming coworking space for you. Book a full or half day, Monday–Friday, and explore availability for your child’s age group below.",
-      facts: [
-        { label: "Full day", value: "8:30am–4:30pm" },
-        { label: "Half day", value: "8:30am–12:00pm" },
-        { label: "Ages", value: "4 months–4 years" },
-        { label: "Full-day rates", value: `Starting at $${Math.min(...cohorts.map((c) => c.daily.full))}`, note: "Childcare + coworking included" },
+      lede: "Thoughtful childcare for your little one and a welcoming coworking space for you, Monday to Friday.",
+      options: [
+        { label: "Full day", time: "8:30am – 4:30pm", price: "From $" + Math.min(...cohorts.map((c) => c.daily.full)) },
+        { label: "Half day", time: "8:30am – 12:00pm", price: "From $" + Math.min(...cohorts.map((c) => c.daily.half)) },
       ],
+      meta: "Ages 4 months – 4 years · Coworking included",
       cta: "Explore availability",
       ratesLink: { label: "View all rates", href: "#rates" },
     },
@@ -176,15 +178,16 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
                 </Eyebrow>
                 <h1 className="display mt-6 text-[clamp(2.4rem,1.7rem+2.6vw,4rem)]">{page.title}</h1>
                 <p className="mt-6 max-w-xl text-[1.12rem] leading-relaxed text-ink-soft">{page.hero.lede}</p>
-                <dl className="mt-10 grid max-w-xl grid-cols-2 gap-x-8 gap-y-7 border-t border-line pt-8">
-                  {page.hero.facts.map((f) => (
-                    <div key={f.label}>
-                      <dt className="eyebrow text-[0.6rem] text-ink-soft">{f.label}</dt>
-                      <dd className="mt-2 text-[1.08rem] text-ink">{f.value}</dd>
-                      {f.note ? <dd className="mt-1 text-[0.84rem] text-ink-soft">{f.note}</dd> : null}
+                <div className="mt-10 grid max-w-xl grid-cols-2 gap-3 sm:gap-4">
+                  {page.hero.options.map((o) => (
+                    <div key={o.label} className="border border-line bg-paper px-5 py-5 sm:px-6">
+                      <p className="eyebrow text-[0.6rem] text-ink-soft">{o.label}</p>
+                      <p className="display mt-2 text-[1.7rem] leading-none text-ink">{o.price}</p>
+                      <p className="mt-2 text-[0.9rem] text-ink-soft">{o.time}</p>
                     </div>
                   ))}
-                </dl>
+                </div>
+                <p className="mt-4 text-[0.92rem] text-ink-soft">{page.hero.meta}</p>
                 <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
                   <Button href="#dates" size="lg">
                     {page.hero.cta}
