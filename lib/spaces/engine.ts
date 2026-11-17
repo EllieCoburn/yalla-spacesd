@@ -501,7 +501,10 @@ function describeGroupLine(ws: Pick<Workspace, "name" | "category">, type: Booki
 
 export async function createReservation(db: DB, actor: Actor, input: ReserveInput, opts: CreateOptions) {
   const group = await db.transaction((tx) => reserveInTx(tx, actor, input, opts));
-  if (group.status === "confirmed") await sendConfirmation(db, group.id);
+  if (group.status === "confirmed") {
+    await sendConfirmation(db, group.id);
+    await tellTeam(db, group.id);
+  }
   return group;
 }
 
@@ -592,8 +595,39 @@ export async function confirmSpaceGroup(db: DB, actor: Actor, groupId: string, o
     await audit(tx, actor, { action: "spaces.confirm", entityType: "space_reservation", entityId: g.id, summary: `Confirmed ${g.reference}: ${opts.reason}` });
     return { status: "confirmed", changed: true };
   });
-  if (result.changed && result.status === "confirmed") await sendConfirmation(db, groupId);
+  if (result.changed && result.status === "confirmed") {
+    await sendConfirmation(db, groupId);
+    await tellTeam(db, groupId);
+  }
   return result;
+}
+
+/** The team hears about every workspace reservation right away (same email as care bookings). */
+async function tellTeam(db: Executor, groupId: string) {
+  try {
+    const d = await groupDetail(db, groupId);
+    if (!d) return;
+    const { guardians } = await import("@/lib/db/schema");
+    const [g] = await db
+      .select()
+      .from(guardians)
+      .where(and(eq(guardians.familyId, d.group.familyId), eq(guardians.isPrimary, true)))
+      .limit(1);
+    const who = g ? `${g.firstName} ${g.lastName}` : "A family";
+    const space = `${d.workspace.name} (${CATEGORY_LABEL[d.workspace.category as Category]})`;
+    const { staffRecipients } = await import("@/lib/ops/enquiries");
+    const { notifyStaff } = await import("@/lib/notify");
+    const { trustedBaseUrl } = await import("@/lib/base-url");
+    const vars = {
+      summary: `${who} · ${d.workspace.name}`,
+      details: `${who} reserved ${space}: ${describeWhen(d.rows)}.\n${d.group.totalCents ? `Paid ${usd(d.group.totalCents)}.` : "Complimentary time."}`,
+      reference: d.group.reference,
+      link: `${trustedBaseUrl()}/admin/spaces/${groupId}`,
+    };
+    for (const to of await staffRecipients(db)) await notifyStaff(db, { key: "staff_new_booking", to, vars, relatedType: "space_reservation", relatedId: groupId });
+  } catch (e) {
+    console.error("[staff space email failed]", (e as Error).message?.slice(0, 160));
+  }
 }
 
 async function sendConfirmation(db: Executor, groupId: string) {

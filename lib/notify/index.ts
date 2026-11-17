@@ -47,7 +47,8 @@ export type TemplateKey =
   | "application_received"
   | "event_received"
   | "family_welcome"
-  | "staff_family_joined";
+  | "staff_family_joined"
+  | "staff_new_booking";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -119,6 +120,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\nWe’re sorry: we’ve had to cancel the following reservation.\n\n{{booking_details}}\nReason: {{reason}}\n\nYou paid {{amount}}. Please choose how you’d like it back in your Family Portal, under Yalla Wallet:\n\n- Yalla Wallet credit of {{credit_amount}} (the full amount plus {{bonus_percent}}% as a thank-you for your flexibility), usable on any Yalla booking for 24 months, or\n- A full refund of {{amount}} to your original payment method. We process refunds within 7 business days; when the funds appear depends on your bank or card issuer.\n\nThank you for understanding,\nTeam Yalla",
     essential: true,
     audience: "billing",
+  },
+  staff_new_booking: {
+    name: "New booking (to staff)",
+    subject: "New booking: {{summary}}",
+    body: "# New booking\n\n{{details}}\n\nReference: {{reference}}\n\n{{link}}",
+    essential: true,
+    audience: "staff",
   },
   staff_new_enquiry: {
     name: "New website message (to staff)",
@@ -454,6 +462,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   tour_received: ["name", "details", "interests", "explore"],
   family_welcome: ["guardian_first_name", "portal_link"],
   staff_family_joined: ["family_name", "details", "link"],
+  staff_new_booking: ["summary", "details", "reference", "link"],
   application_received: ["name", "details", "explore"],
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };

@@ -571,6 +571,57 @@ async function confirmationVars(db: Executor, bookingId: string) {
   };
 }
 
+/** "2 years old" from 2 years up, "14 months old" below that (on the day of care). */
+function ageOnDay(birthDate: string, onDate: string) {
+  const m = ageInMonths(birthDate, onDate);
+  if (m < 0) return "not yet born";
+  if (m < 24) return `${m} ${m === 1 ? "month" : "months"} old`;
+  const y = Math.floor(m / 12);
+  return `${y} years old`;
+}
+
+/**
+ * The team's email for each confirmed booking: who booked what, for whom (with birthday and age),
+ * and how many spots are left in that age group on that day.
+ */
+export async function staffBookingNotice(db: Executor, bookingId: string) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+  const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status === "confirmed");
+  if (!b || !rows.length) return null;
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  const who = g ? `${g.firstName} ${g.lastName}` : "A family";
+  const avail = await availabilityFor(
+    db,
+    [...new Set(rows.map((r) => r.session.id))],
+  );
+  const bySession = new Map<string, typeof rows>();
+  for (const r of rows) bySession.set(r.session.id, [...(bySession.get(r.session.id) ?? []), r]);
+  const paras: string[] = [];
+  for (const group of bySession.values()) {
+    const s = group[0].session;
+    const what = s.title ?? group[0].program.name;
+    const day = fmtDate(s.localDate, "EEEE, MMMM d, yyyy");
+    const kids = group
+      .map((r) => (r.child ? `${r.child.firstName} ${r.child.lastName}, born ${fmtDate(r.child.birthDate, "MMMM d, yyyy")} (${ageOnDay(r.child.birthDate, s.localDate)})` : "a child"))
+      .join("; and ");
+    const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
+    const short = fmtDate(s.localDate, "MMMM d");
+    paras.push(
+      `${who} booked ${what} on ${day} (${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}) for ${kids}.\n` +
+        (left === 0 ? `That age group is now full for ${short}.` : `You now have ${left} ${left === 1 ? "spot" : "spots"} left in that age group for ${short} before it’s full.`),
+    );
+  }
+  const first = rows[0];
+  const sessionsCount = bySession.size;
+  const summary = `${who} · ${first.session.title ?? first.program.name} · ${fmtDate(first.session.localDate, "MMM d")}${sessionsCount > 1 ? ` + ${sessionsCount - 1} more` : ""}`;
+  const via = b.source === "admin" ? "\n\nBooked by the team in Admin." : b.source === "waitlist" ? "\n\nBooked from a waitlist offer." : "";
+  return { summary, details: paras.join("\n\n") + via, reference: b.reference };
+}
+
 /**
  * Confirms held items. If the hold has lapsed (e.g. a delayed payment callback), capacity is
  * re-checked under lock; when the spots are gone the booking is flagged "needs attention" rather
@@ -617,6 +668,21 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     await tx.update(waitlistEntries).set({ status: "accepted", updatedAt: now }).where(eq(waitlistEntries.offerBookingId, b.id));
     return { status: "confirmed" as const, changed: true, familyId: b.familyId };
   });
+  if (result.status === "confirmed" && result.changed) {
+    // The team hears about every booking right away, however it was made.
+    try {
+      const notice = await staffBookingNotice(db, bookingId);
+      if (notice) {
+        const { staffRecipients } = await import("./enquiries");
+        const { notifyStaff } = await import("@/lib/notify");
+        const { trustedBaseUrl } = await import("@/lib/base-url");
+        for (const to of await staffRecipients(db))
+          await notifyStaff(db, { key: "staff_new_booking", to, vars: { ...notice, link: `${trustedBaseUrl()}/admin/bookings/${bookingId}` }, relatedType: "booking", relatedId: bookingId });
+      }
+    } catch (e) {
+      console.error("[staff booking email failed]", (e as Error).message?.slice(0, 160));
+    }
+  }
   if (result.status === "confirmed" && result.changed && opts.notify !== false) {
     const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     const vars = await confirmationVars(db, bookingId);
