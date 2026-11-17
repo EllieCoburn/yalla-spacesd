@@ -31,7 +31,7 @@ export default function AboutPage() {
         mark="sun"
         title={
           <>
-            Meet <em>Yalla.</em>
+            Hello, <em>neighbor.</em>
           </>
         }
         lede="Yalla is a community for children and their grown-ups, offering thoughtfully designed childcare, coworking, and ways to play, learn, and connect in San Diego."
