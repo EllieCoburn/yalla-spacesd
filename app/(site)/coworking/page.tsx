@@ -159,22 +159,32 @@ export default async function CoworkingPage() {
         </div>
       </Section>
 
+      {/* Included with care */}
+      <Section tone="sand">
+        <div className="shell grid gap-8 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-6">
+            <Index n="03">Included with care</Index>
+            <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
+              Your workspace, <em>already included.</em>
+            </h2>
+          </div>
+          <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
+            Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of Yalla Flex and
+            Club Yalla.
+          </p>
+        </div>
+      </Section>
+
       {/* Private spaces */}
       <Section tone="paper">
         <div className="shell">
-          <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-6">
-              <Index n="03">Private spaces</Index>
-              <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
-                A little more <em>room to focus.</em>
-              </h2>
-            </div>
-            <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
-              Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of Yalla Flex
-              and Club Yalla. For a dedicated private office or desk, or time in the phone booth, reserve in your Family Portal, subject to
-              availability.
-            </p>
-          </div>
+          <Index n="04">Private spaces</Index>
+          <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
+            A little more <em>room to focus.</em>
+          </h2>
+          <p className="mt-5 max-w-xl text-[1.05rem] text-ink-soft">
+            Rent a dedicated private office or desk, or book complimentary time in our phone booth, in your Family Portal, subject to availability.
+          </p>
           <div className="mt-14 grid gap-px overflow-hidden bg-line md:grid-cols-3">
             {SPACES.map((sp, i) => {
               const list = rates.get(sp.category) ?? [];
