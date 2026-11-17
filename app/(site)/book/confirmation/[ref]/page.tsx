@@ -5,6 +5,7 @@ import { Mark } from "@/components/brand/Mark";
 import { AutoRefresh } from "@/components/booking/AutoRefresh";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { bookingStatusView } from "@/lib/ops/public-booking";
+import { CartBooked } from "@/components/booking/CartButton";
 import { fmtDateTime } from "@/lib/time";
 import { retryPaymentAction } from "../../actions";
 import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
@@ -94,9 +95,12 @@ export default async function Confirmation({ params, searchParams }: { params: P
     body = "No payment was taken. Choose your sessions again to see current availability.";
   }
 
+  // Booked and paid (or sent as a request): those days come out of the cart.
+  const booked = v.status === "confirmed" || v.status === "requested" ? <CartBooked sessionIds={v.lines.map((l) => l.sessionId)} /> : null;
   return (
     <section className="pt-32 pb-28 lg:pt-40">
       {pending ? <AutoRefresh seconds={2} maxTries={30} /> : null}
+      {booked}
       <div className="shell">
         <div className="mx-auto max-w-xl text-center">
           <Mark name={mark} className={`mx-auto w-auto text-blue ${mark === "mark" ? "h-28" : "h-12"}`} />

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Mark } from "@/components/brand/Mark";
 import { nav, secondaryNav } from "@/content/site";
 import { SocialLinks } from "./SocialLinks";
+import { CartButton } from "@/components/booking/CartButton";
 
 export function SiteHeader({ offset = false }: { offset?: boolean }) {
   const pathname = usePathname();
@@ -54,6 +55,7 @@ export function SiteHeader({ offset = false }: { offset?: boolean }) {
 
           <div className="flex items-center gap-2 sm:gap-5">
             <SocialLinks className="hidden lg:flex" />
+            <CartButton />
             <Link
               href="/portal"
               className="hidden h-10 items-center rounded-full bg-ink px-5 text-[0.82rem] tracking-[0.04em] text-chalk transition-colors duration-500 hover:bg-blue sm:inline-flex"

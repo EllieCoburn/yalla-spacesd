@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { readCart, writeCart } from "@/lib/booking/cart";
 import { Mark } from "@/components/brand/Mark";
 import type { PublicSession } from "@/lib/ops/public-booking";
 import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
@@ -108,12 +109,18 @@ export function BookingExplorer({
   ); // eslint-disable-line react-hooks/exhaustive-deps
   const comingExtras = useMemo(() => (params.get("extras") ?? "").split(",").filter(Boolean).slice(0, 6), []); // eslint-disable-line react-hooks/exhaustive-deps
   const preselected = useRef(false);
+  /** The cart has been put back (or there was nothing to restore): from then on, changes are saved to it. */
+  const restored = useRef(false);
+  const openCart = useMemo(() => params.get("cart") === "1", []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     try {
+      // Days already in the cart may be further out than the calendar (e.g. a camp day months ahead).
+      const cartEnd = readCart().reduce<string | null>((m, i) => (!m || i.date > m ? i.date : m), null);
+      const furthest = [until, cartEnd].filter(Boolean).sort().pop() ?? null;
       const end =
-        until && until > addDaysISO(start, DAYS - 1)
-          ? until
+        furthest && furthest > addDaysISO(start, DAYS - 1)
+          ? furthest
           : addDaysISO(start, DAYS - 1);
       const found: PublicSession[] = [];
       let err: string | null = null;
@@ -137,32 +144,50 @@ export function BookingExplorer({
         const ok = found
           .filter((s) => preselect.some((p) => p.id === s.id) && stateLabel(s).selectable)
           .map((s) => s.id);
+        // Anything already in the cart stays in it, alongside what was just chosen.
+        const earlier = readCart().filter((i) => !ok.includes(i.id) && found.some((s) => s.id === i.id && stateLabel(s).selectable));
         if (ok.length) {
-          setSelected(ok);
-          setSpots(Object.fromEntries(preselect.map((p) => [p.id, p.n])));
+          setSelected([...earlier.map((i) => i.id), ...ok]);
+          setSpots({ ...Object.fromEntries(earlier.map((i) => [i.id, Math.min(8, Math.max(1, i.spots || 1))])), ...Object.fromEntries(preselect.map((p) => [p.id, p.n])) });
           // Day length and Early Bird chosen on the Yalla Flex page carry into Your selection.
           const flexExtras = comingExtras.filter((k) => k === "half" || k === "early");
-          if (flexExtras.length)
-            setSessionExtras(Object.fromEntries(found.filter((s) => ok.includes(s.id) && s.kind === "drop_in").map((s) => [s.id, flexExtras])));
+          setSessionExtras({
+            ...Object.fromEntries(earlier.filter((i) => i.extras.length).map((i) => [i.id, i.extras])),
+            ...(flexExtras.length ? Object.fromEntries(found.filter((s) => ok.includes(s.id) && s.kind === "drop_in").map((s) => [s.id, flexExtras])) : {}),
+          });
           // Several age groups of the same Happening, chosen together: the right group is picked by age.
           const chosenNow = found.filter((s) => ok.includes(s.id));
-          setFlexible(
-            chosenNow
+          setFlexible([
+            ...earlier.filter((i) => i.flexible).map((i) => i.id),
+            ...chosenNow
               .filter((s) => chosenNow.filter((o) => o.programId === s.programId && o.startsAt === s.startsAt).length > 1)
               .map((s) => s.id),
-          );
+          ]);
           setCheckoutOpen(true);
         }
         if (ok.length < preselect.length)
           setError(
             "Some of the days you chose were just booked by someone else. The rest are in your basket.",
           );
+      } else if (!restored.current) {
+        // Put back what's in the cart from earlier (another page, or an earlier visit).
+        const cart = readCart();
+        const ok = cart.filter((i) => found.some((s) => s.id === i.id && stateLabel(s).selectable));
+        if (ok.length) {
+          setSelected(ok.map((i) => i.id));
+          setSpots(Object.fromEntries(ok.map((i) => [i.id, Math.min(8, Math.max(1, i.spots || 1))])));
+          setSessionExtras(Object.fromEntries(ok.filter((i) => i.extras.length).map((i) => [i.id, i.extras])));
+          setFlexible(ok.filter((i) => i.flexible).map((i) => i.id));
+          if (openCart) setCheckoutOpen(true);
+        }
+        if (ok.length < cart.length) setError("Some days in your cart have since filled up or closed, so we’ve taken them out.");
       }
+      restored.current = true;
     } catch {
       setError("We couldn’t load availability. Please refresh.");
       setSessions([]);
     }
-  }, [start, until, preselect]);
+  }, [start, until, preselect, openCart]);
 
   useEffect(() => {
     load();
@@ -212,6 +237,22 @@ export function BookingExplorer({
   }, [visible]);
   const shown = day ? grouped : grouped.slice(0, dayLimit);
   const selectedSessions = all.filter((s) => selected.includes(s.id));
+
+  // Whatever's chosen is kept in the cart, so leaving this page (to read the FAQ, say) loses nothing.
+  useEffect(() => {
+    if (!restored.current || !sessions) return;
+    writeCart(
+      selectedSessions.map((s) => ({
+        id: s.id,
+        date: s.localDate,
+        label: s.title || s.programName,
+        spots: spots[s.id] ?? 1,
+        extras: sessionExtras[s.id] ?? [],
+        flexible: flexible.includes(s.id) || undefined,
+      })),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, spots, sessionExtras, flexible, sessions]);
 
   function seriesOf(s: PublicSession) {
     return s.bookAsSeries && s.seriesId

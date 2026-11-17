@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { addToCart, removeFromCart } from "@/lib/booking/cart";
 import { familyRateTotal } from "@/lib/booking/family-rate";
 import type { PublicSession } from "@/lib/ops/public-booking";
 import { Checkout, type SavedChild, type SignedInGuardian } from "@/components/booking/Checkout";
@@ -301,6 +302,8 @@ export function ProgramDates({
     // Open checkout over this page, so the chosen days stay in view.
     if (lines.length) {
       const flexExtras = chosenExtras.filter((k) => k === "half" || k === "early");
+      // Into the cart too, so it's kept if they look at another page first.
+      addToCart(lines.map((s) => ({ id: s.id, date: s.localDate, label: s.title || s.programName, spots: spotCount.get(s.id) ?? 1, extras: flexExtras })));
       setCheckout({
         sessions: lines,
         spots: Object.fromEntries(lines.map((s) => [s.id, spotCount.get(s.id) ?? 1])),
@@ -799,7 +802,10 @@ export function ProgramDates({
           wallet={ctx.wallet}
           sibling={ctx.sibling}
           spots={checkout.spots}
-          onSpots={(sessionId, n) =>
+          onSpots={(sessionId, n) => {
+            const s = checkout.sessions.find((x) => x.id === sessionId);
+            if (n > 0 && s) addToCart([{ id: s.id, date: s.localDate, label: s.title || s.programName, spots: Math.min(8, n), extras: checkout.extras[s.id] ?? [] }]);
+            else removeFromCart([sessionId]);
             setCheckout((c) =>
               c
                 ? n > 0
@@ -808,8 +814,8 @@ export function ProgramDates({
                     ? { ...c, sessions: c.sessions.filter((x) => x.id !== sessionId), spots: Object.fromEntries(Object.entries(c.spots).filter(([k]) => k !== sessionId)) }
                     : null
                 : c,
-            )
-          }
+            );
+          }}
           defaultExtras={checkout.extras}
           onClose={() => setCheckout(null)}
           onRefresh={() => setReloadKey((k) => k + 1)}

@@ -662,7 +662,7 @@ export async function bookingStatusView(db: Executor, reference: string) {
     status: b.status,
     source: b.source,
     holdExpiresAt: b.holdExpiresAt?.toISOString() ?? null,
-    lines: rows.map((r) => ({ id: r.item.id, label: describeLine(r), status: r.item.status, priceCents: r.item.priceCents })),
+    lines: rows.map((r) => ({ id: r.item.id, sessionId: r.session.id, label: describeLine(r), status: r.item.status, priceCents: r.item.priceCents })),
     totalCents: total,
     balanceCents: balance,
     walletCents: [...totals.values()].reduce((s, t) => s + t.walletApplied, 0),
