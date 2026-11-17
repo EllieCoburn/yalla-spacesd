@@ -36,6 +36,7 @@ const amenities = [
   "Access to our coworking kitchen",
   "Unlimited color printing",
   "Lactation space",
+  "Private lockers for personal belongings",
   "Private office rental",
   "Complimentary private phone booth",
 ];
