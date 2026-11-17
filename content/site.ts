@@ -38,8 +38,8 @@ export const secondaryNav = [
  * disappears by itself after `until` (a San Diego date).
  */
 export const announcement: { text: string; short: string; linkLabel: string; href: string; until: string } | null = {
-  text: "Holiday camp is now booking for November & December",
-  short: "Holiday camp is now booking",
+  text: "Camp Yalla is now booking for November & December",
+  short: "Camp Yalla is now booking",
   linkLabel: "Book camp days",
   href: "/book?offering=camp",
   until: "2026-12-30",
