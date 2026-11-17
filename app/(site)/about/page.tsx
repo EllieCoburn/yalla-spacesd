@@ -21,6 +21,12 @@ const values = [
   { mark: "sun" as const, title: "Wonder", body: "Childhood is magic. We protect the time and space for children to play, explore and create." },
   { mark: "window" as const, title: "Intention", body: "Every member of Team Yalla guides with care and purpose, and every detail of the environment is chosen thoughtfully." },
   { mark: "palm" as const, title: "Community", body: "Raising children is both personal and communal. We make room for both." },
+  {
+    mark: "dotsun" as const,
+    title: "Belonging",
+    body: "Belonging isn’t a separate initiative at Yalla. It’s foundational to how we welcome every family and build community together.",
+    link: { href: "/belonging", label: "Belonging at Yalla" },
+  },
 ];
 
 export default function AboutPage() {
@@ -117,12 +123,17 @@ export default function AboutPage() {
       <Section>
         <div className="shell">
           <Index n="03">What we believe</Index>
-          <div className="mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2 xl:grid-cols-5">
             {values.map((v, i) => (
-              <Reveal key={v.title} delay={i * 90} className="bg-chalk p-8 lg:p-10">
+              <Reveal key={v.title} delay={i * 90} className={`bg-chalk p-8 lg:p-10 ${i === values.length - 1 && values.length % 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}>
                 <Mark name={v.mark} className="h-12 w-auto text-blue" />
                 <h3 className="display mt-10 text-[1.8rem]">{v.title}</h3>
                 <p className="mt-3 text-ink-soft">{v.body}</p>
+                {"link" in v && v.link ? (
+                  <Link href={v.link.href} className="link-underline mt-4 inline-block text-[0.9rem] text-blue">
+                    {v.link.label} →
+                  </Link>
+                ) : null}
               </Reveal>
             ))}
           </div>
