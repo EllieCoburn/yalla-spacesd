@@ -7,7 +7,7 @@ import { Mark } from "@/components/brand/Mark";
 import { FlexRates } from "@/components/site/FlexRates";
 import { ProgramDates, type DateGroup } from "@/components/site/ProgramDates";
 import { Arrow, Button, Eyebrow } from "@/components/ui/primitives";
-import { CAMP_DAYS, type ProgramContent } from "@/content/programs";
+import { type ProgramContent } from "@/content/programs";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { cohorts } from "@/content/tuition";
 
@@ -69,7 +69,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
   camp: {
     title: (
       <>
-        Camp days, <em>2026–27.</em>
+        Our <em>camp days.</em>
       </>
     ),
     lede: "Hands-on, unhurried days of making, building and discovering. Pick your dates to book.",
@@ -87,8 +87,8 @@ export const BOOKING_PAGES: Record<string, Page> = {
     ),
     unit: "day",
     groups: AGE_GROUPS(16000),
-    days: CAMP_DAYS,
-    horizonDays: 0,
+    // Every camp day the team has posted in Admin, up to a year ahead.
+    horizonDays: 365,
     goodToKnow: [
       {
         label: "Age groups",

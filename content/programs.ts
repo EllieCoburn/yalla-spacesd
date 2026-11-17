@@ -15,8 +15,6 @@ const groups = (middle = "4 – 7 years"): FactBlock[] => [
   { rows: [{ label: "18 months – 3 years" }, { label: middle }, { label: "8 – 10 years" }] },
 ];
 
-/** Camp Yalla's confirmed 2026–27 camp days (the camp page shows live availability for these when it can). */
-export const CAMP_DAYS = ["2026-11-11", "2026-11-25", "2026-11-27", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15", "2027-07-05"];
 
 export interface ProgramContent {
   slug: string;
@@ -84,7 +82,7 @@ export const programs: ProgramContent[] = [
     imageAlt: "A toddler painting with brushes and bright colors outdoors",
     motif: "sprig",
     ages: "18 months – 10 years, in three age groups: 18 months – 3 years, 4 – 7 years, and 8 – 10 years",
-    days: "9:00am – 3:00pm. 2026–27 camp days: November 11, 25 and 27; December 21, 22, 23, 28, 29 and 30; January 18; February 15; July 5",
+    days: "9:00am – 3:00pm. New camp days are added to the calendar throughout the year.",
     pricing: "$160 per child per day. Optional extras: Early Bird from 8:00am, $20, and a late stay from 3:00 to 4:30pm, $30, per child per day. Siblings: 10% off each additional child on the same day, applied automatically. Includes a morning snack and a light afternoon snack; families pack lunch.",
     facts: {
       ages: groups(),
@@ -97,14 +95,8 @@ export const programs: ProgramContent[] = [
           ],
         },
         {
-          lead: "2026–27 camp days",
-          rows: [
-            { label: "November", value: "11, 25, 27" },
-            { label: "December", value: "21, 22, 23, 28, 29, 30" },
-            { label: "January", value: "18" },
-            { label: "February", value: "15" },
-            { label: "July", value: "5" },
-          ],
+          lead: "Camp days",
+          rows: [{ label: "Dates", value: "Added to the calendar throughout the year" }],
         },
       ],
       pricing: [
