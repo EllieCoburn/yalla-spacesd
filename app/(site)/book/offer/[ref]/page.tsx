@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { getDb, isDbConfigured } from "@/lib/db";
-import { bookingStatusView } from "@/lib/ops/public-booking";
+import { agreementsForBooking, bookingStatusView } from "@/lib/ops/public-booking";
+import { OfferAgreements } from "@/components/booking/OfferAgreements";
+import { eq } from "drizzle-orm";
+import { bookings } from "@/lib/db/schema";
 import { fmtDateTime } from "@/lib/time";
 import { acceptOfferAction } from "../../actions";
 import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
@@ -19,6 +22,9 @@ export default async function Offer({ params, searchParams }: { params: Promise<
   const v = await bookingStatusView(getDb(), ref);
   if (!v || v.source !== "waitlist" || !(await mayViewStatus("offer", ref, k, v.familyId))) return <PrivateLinkNotice what="offer" />;
   const open = (v.status === "held" || v.status === "pending_payment") && !!v.holdExpiresAt && new Date(v.holdExpiresAt) > new Date();
+  // Anything that must be signed before paying (e.g. the Camp Yalla agreement) is signed right here.
+  const [row] = open ? await getDb().select({ id: bookings.id }).from(bookings).where(eq(bookings.reference, ref)) : [];
+  const toSign = row ? await agreementsForBooking(getDb(), row.id) : [];
 
   return (
     <section className="pt-32 pb-28 lg:pt-40">
@@ -58,8 +64,9 @@ export default async function Offer({ params, searchParams }: { params: Promise<
             ))}
           </ul>
         </div>
+        {open && toSign.length ? <OfferAgreements reference={v.reference} k={k ?? ""} agreements={toSign} /> : null}
         <div className="mt-10 flex justify-center gap-3">
-          {open ? (
+          {open && !toSign.length ? (
             <form action={acceptOfferAction}>
               <input type="hidden" name="reference" value={v.reference} />
               <input type="hidden" name="k" value={k ?? ""} />

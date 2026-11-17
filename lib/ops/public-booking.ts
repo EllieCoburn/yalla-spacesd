@@ -210,6 +210,8 @@ export type Agreement = {
   fields: FormField[] | null;
   /** How long a signature stays on file, if it expires. */
   validForMonths: number | null;
+  /** Signed for the sessions in this booking only (e.g. Camp Yalla); asked again on each purchase. */
+  perBooking: boolean;
 };
 
 type ChildRef = { key: string; existingId?: string | null; firstName: string; birthDate?: string };
@@ -270,7 +272,7 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
   for (const t of blockingTemplates.values()) {
     const v = versions.find((x) => x.id === t.currentVersionId);
     const fields = v && Array.isArray(v.fields) && (v.fields as unknown[]).length ? effectiveFields(v, t.requiresSignature) : null;
-    const base = { templateId: t.id, title: t.title, kind: t.kind, body: v?.body ?? "", version: v?.version ?? 1, requiresSignature: t.requiresSignature, perChild: t.perChild, completableOnline: t.kind !== "upload", fields, validForMonths: t.validForMonths };
+    const base = { templateId: t.id, title: t.title, kind: t.kind, body: v?.body ?? "", version: v?.version ?? 1, requiresSignature: t.requiresSignature, perChild: t.perChild, completableOnline: t.kind !== "upload", fields, validForMonths: t.validForMonths, perBooking: t.frequency === "per_booking" };
     if (t.perChild) {
       for (const c of input.children) {
         if (c.existingId && done.has(`${t.id}:${c.existingId}`)) continue;
@@ -280,6 +282,75 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
     } else if (!done.has(`${t.id}:family`)) out.push({ ...base, childKey: null });
   }
   return out;
+}
+
+/**
+ * What a held booking still needs signed before payment (e.g. a waitlist offer: the Camp Yalla
+ * agreement for that purchase, or a Flex agreement that has expired), with the online form for each.
+ */
+export async function agreementsForBooking(db: Executor, bookingId: string) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+  if (!b) return [];
+  const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status === "held" || r.item.status === "confirmed");
+  const childIds = [...new Set(rows.map((r) => r.item.childId).filter(Boolean) as string[])];
+  const status = await paperworkStatus(db, { familyId: b.familyId, childIds, programIds: [...new Set(rows.map((r) => r.program.id))], sessionIds: rows.map((r) => r.session.id), bookingId });
+  const missing = [...status.values()].flat().filter((i) => i.enforcement === "blocks_booking" && i.state !== "complete");
+  if (!missing.length) return [];
+  const templates = await db.select().from(formTemplates).where(inArray(formTemplates.id, [...new Set(missing.map((m) => m.templateId))]));
+  const versions = await db.select().from(formVersions).where(inArray(formVersions.templateId, templates.map((t) => t.id)));
+  const kids = childIds.length ? await db.select().from(children).where(inArray(children.id, childIds)) : [];
+  return missing.map((m) => {
+    const t = templates.find((x) => x.id === m.templateId)!;
+    const v = versions.find((x) => x.id === t.currentVersionId);
+    const fields = v && Array.isArray(v.fields) && (v.fields as unknown[]).length ? effectiveFields(v, t.requiresSignature) : null;
+    const child = kids.find((c) => c.id === m.childId);
+    return {
+      templateId: t.id,
+      title: t.title,
+      body: v?.body ?? "",
+      version: v?.version ?? 1,
+      childId: m.childId,
+      childName: child ? child.preferredName || child.firstName : null,
+      completableOnline: t.kind !== "upload",
+      fields,
+      perBooking: t.frequency === "per_booking",
+      validForMonths: t.validForMonths,
+    };
+  });
+}
+
+/** Signs what a held booking needs (from agreementsForBooking), recording each signature against it. */
+export async function signForBooking(
+  db: DB,
+  actor: Actor,
+  input: { bookingId: string; signatures: { templateId: string; childId: string | null; signatureText?: string; consent: boolean; answers?: Answers }[]; ip?: string; userAgent?: string },
+) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, input.bookingId));
+  if (!b) throw new OpsError("not_found", "Booking not found.");
+  const needed = await agreementsForBooking(db, b.id);
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, b.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  for (const a of needed) {
+    const sig = input.signatures.find((x) => x.templateId === a.templateId && (x.childId ?? null) === (a.childId ?? null));
+    if (!sig || !a.completableOnline) continue;
+    if (!sig.consent) throw new OpsError("invalid", `Please agree to sign ${a.title} electronically.`);
+    await submitForm(db, actor, {
+      templateId: a.templateId,
+      familyId: b.familyId,
+      childId: a.childId,
+      bookingId: a.perBooking ? b.id : null,
+      signerGuardianId: g?.id ?? null,
+      signatureText: sig.signatureText ?? null,
+      consent: sig.consent,
+      answers: a.fields ? (sig.answers ?? {}) : undefined,
+      data: a.fields ? undefined : { confirmed: sig.consent },
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+  }
 }
 
 /* ───────────────────────── Submitting a booking ───────────────────────── */
@@ -378,10 +449,12 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
     // 4. Blocking agreements: sign what was provided, report what's still needed.
     const refs = input.children.filter((c) => childIdByKey.has(c.key)).map((c) => ({ key: c.key, existingId: childIdByKey.get(c.key)!, firstName: c.firstName, birthDate: c.birthDate }));
     let needed = await previewAgreements(db, { familyId, sessionIds: items.map((i) => i.sessionId), children: refs });
+    // Agreements signed for each purchase are attached to the booking once it exists (step 5).
+    const signedForThisBooking: { submissionId: string; key: string }[] = [];
     for (const a of needed) {
       const sig = input.signatures.find((s) => s.templateId === a.templateId && (s.childKey ?? null) === a.childKey);
       if (!sig || !a.completableOnline) continue;
-      await submitForm(db, actor, {
+      const submission = await submitForm(db, actor, {
         templateId: a.templateId,
         familyId,
         childId: a.childKey ? childIdByKey.get(a.childKey) : null,
@@ -394,8 +467,11 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         ip: input.meta.ip,
         userAgent: input.meta.userAgent,
       });
+      if (a.perBooking) signedForThisBooking.push({ submissionId: submission.id, key: `${a.templateId}:${a.childKey ?? ""}` });
     }
-    needed = await previewAgreements(db, { familyId, sessionIds: items.map((i) => i.sessionId), children: refs });
+    needed = (await previewAgreements(db, { familyId, sessionIds: items.map((i) => i.sessionId), children: refs })).filter(
+      (a) => !(a.perBooking && signedForThisBooking.some((x) => x.key === `${a.templateId}:${a.childKey ?? ""}`)),
+    );
     if (needed.length) {
       throw new OpsError(
         "agreements",
@@ -408,6 +484,16 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
 
     // 5. Hold the spots (transactional capacity check) and start payment.
     const hold = await createHold(db, actor, { familyId, items, source: "public" });
+    if (signedForThisBooking.length)
+      await db
+        .update(formSubmissions)
+        .set({ bookingId: hold.booking.id })
+        .where(
+          inArray(
+            formSubmissions.id,
+            signedForThisBooking.map((x) => x.submissionId),
+          ),
+        );
     if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}${bookingStatusPath(hold.booking.reference)}`, reference: hold.booking.reference };
     const checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
     return { ok: true, url: checkout.url, reference: hold.booking.reference };

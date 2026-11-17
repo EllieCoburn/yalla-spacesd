@@ -1015,7 +1015,9 @@ export function Checkout({
                   <div className="space-y-6">
                     <h3 className="display text-[1.5rem]">Agreements</h3>
                     <p className="text-[0.82rem] text-ink-soft">
-                      These are required before booking. Once signed, they stay on file, so you won’t be asked again until they expire.
+                      {agreements.every((a) => a.perBooking)
+                        ? "These are required before booking, and cover the days in this booking."
+                        : "These are required before booking. Most stay on file once signed, so you won’t be asked again until they expire."}
                     </p>
                     {agreements.map((a) => {
                       const k = sigKey(a);
@@ -1040,7 +1042,9 @@ export function Checkout({
                           <p className="eyebrow mt-1 text-[0.55rem] text-ink-soft">
                             Version {a.version}
                           </p>
-                          {a.validForMonths ? (
+                          {a.perBooking ? (
+                            <p className="mt-1 text-[0.78rem] text-ink-soft">Covers the days in this booking. You’ll sign again when you book more.</p>
+                          ) : a.validForMonths ? (
                             <p className="mt-1 text-[0.78rem] text-ink-soft">Signed once and kept on file for {a.validForMonths === 12 ? "one year" : `${a.validForMonths} months`}.</p>
                           ) : null}
                           {a.completableOnline && a.fields ? (

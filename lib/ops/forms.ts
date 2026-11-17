@@ -174,6 +174,9 @@ export async function paperworkStatus(db: Executor, ctx: Ctx): Promise<Map<strin
 
   const seen = new Set<string>();
   for (const r of reqs) {
+    // Agreements signed for each purchase are checked against that booking only (at checkout and before
+    // paying); outside a booking there's nothing to sign yet, so they aren't listed as outstanding.
+    if (r.t.frequency === "per_booking" && !ctx.bookingId) continue;
     if (r.t.perChild) {
       for (const c of ctx.childIds) {
         if (!r.appliesToChild(c) || seen.has(`${r.t.id}:${c}`)) continue;
@@ -314,7 +317,8 @@ export async function submitForm(
         eq(formSubmissions.templateId, t.id),
         eq(formSubmissions.familyId, input.familyId),
         input.childId ? eq(formSubmissions.childId, input.childId) : isNull(formSubmissions.childId),
-        input.bookingId ? eq(formSubmissions.bookingId, input.bookingId) : sql`true`,
+        // An agreement signed for each purchase only replaces an earlier signature for the same purchase.
+        input.bookingId ? eq(formSubmissions.bookingId, input.bookingId) : t.frequency === "per_booking" ? isNull(formSubmissions.bookingId) : sql`true`,
         inArray(formSubmissions.status, ["submitted", "signed"]),
       ),
     );

@@ -1,7 +1,7 @@
 "use server";
 
 import { getDb, isDbConfigured } from "@/lib/db";
-import { joinPublicWaitlist, previewAgreements, retryCheckout, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
+import { joinPublicWaitlist, previewAgreements, retryCheckout, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
 import { startCheckout } from "@/lib/ops/bookings";
 import { OpsError } from "@/lib/audit";
 import { getGuardian, requestContext } from "../portal/session";
@@ -102,6 +102,34 @@ export async function acceptOfferAction(form: FormData) {
     url = (await startCheckout(db, { type: "system", name: "Waitlist offer" }, b.id, { base: ctx.baseUrl })).url;
   } catch (e) {
     if (e instanceof OpsError) redirect(offerPath(ref, { error: e.message }));
+    throw e;
+  }
+  redirect(url);
+}
+
+export type OfferState = { error?: string } | undefined;
+
+/** Accept a waitlist offer that needs agreements signed first: sign them, then continue to payment. */
+export async function acceptOfferWithAgreementsAction(_: OfferState, form: FormData): Promise<OfferState> {
+  const ref = clip(form.get("reference"), 20);
+  const key = clip(form.get("k"), 40);
+  const ctx = await requestContext();
+  const db = getDb();
+  const [b] = await db.select().from(bookings).where(eq(bookings.reference, ref));
+  if (!b || b.source !== "waitlist" || !(await mayViewStatus("offer", ref, key, b.familyId))) return { error: "This offer link isn’t valid. Please use the link in your email." };
+  let signatures: { templateId: string; childId: string | null; signatureText?: string; consent: boolean; answers?: Record<string, string> }[] = [];
+  try {
+    const raw = JSON.parse(String(form.get("signatures") ?? "[]"));
+    if (Array.isArray(raw)) signatures = raw.slice(0, 20);
+  } catch {
+    return { error: "Something went wrong reading your signature. Please try again." };
+  }
+  let url: string;
+  try {
+    await signForBooking(db, { type: "system", name: "Waitlist offer" }, { bookingId: b.id, signatures, ip: ctx.ip, userAgent: ctx.userAgent });
+    url = (await startCheckout(db, { type: "system", name: "Waitlist offer" }, b.id, { base: ctx.baseUrl })).url;
+  } catch (e) {
+    if (e instanceof OpsError) return { error: e.message };
     throw e;
   }
   redirect(url);
