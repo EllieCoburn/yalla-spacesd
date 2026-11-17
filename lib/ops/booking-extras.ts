@@ -19,7 +19,7 @@ import { invoiceStatusPath } from "@/lib/links";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd } from "./billing";
 
-export type ExtraOffer = { key: string; label: string; time: string; priceCents: number; perFamily: boolean; prompt?: string };
+export type ExtraOffer = { key: string; label: string; time: string; priceCents: number; perFamily: boolean; prompt?: string; note?: string };
 export type DayExtras = {
   sessionId: string;
   title: string;
@@ -31,7 +31,7 @@ export type DayExtras = {
 };
 
 const offerable = (a: Addon) => !a.dayLength && !a.limitedSeats && a.priceCents > 0;
-const toOffer = (a: Addon): ExtraOffer => ({ key: a.key, label: a.label, time: a.time, priceCents: a.priceCents, perFamily: !!a.perFamily, prompt: a.prompt });
+const toOffer = (a: Addon): ExtraOffer => ({ key: a.key, label: a.label, time: a.time, priceCents: a.priceCents, perFamily: !!a.perFamily, prompt: a.prompt, note: a.note });
 
 /** The family's confirmed care on `date` that hasn't ended, with the extras they can still add. */
 export async function extrasForDay(db: Executor, familyId: string, date: string, now = new Date()): Promise<DayExtras[]> {

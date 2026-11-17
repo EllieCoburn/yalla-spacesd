@@ -1035,7 +1035,10 @@ export function Checkout({
                                   }
                                   className="h-4 w-4 accent-[var(--color-blue)]"
                                 />
-                                {a.label} <span className="text-ink-soft">({a.time})</span> +{usd(a.priceCents)}
+                                <span>
+                                  {a.label} <span className="text-ink-soft">({a.time})</span> +{usd(a.priceCents)}
+                                  {a.note ? <span className="block text-[0.76rem] text-ink-soft">{a.note}</span> : null}
+                                </span>
                               </label>
                             );
                           })}

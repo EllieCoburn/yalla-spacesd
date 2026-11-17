@@ -172,7 +172,7 @@ describe("Flex: a second grown-up coworking", () => {
     if (!r.ok) throw new Error(r.error);
     const [inv] = await db().select().from(s.invoices);
     const lines = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, inv.id));
-    const adult = lines.filter((l) => l.description.startsWith("A second grown-up coworking"));
+    const adult = lines.filter((l) => l.description.startsWith("Coworking for a second parent or guardian"));
     expect(adult).toHaveLength(1);
     expect(adult[0].unitCents).toBe(2500);
   });

@@ -22,6 +22,8 @@ export type Addon = {
   limitedSeats?: boolean;
   /** The question families see for a per-family extra (default "Staying?"). */
   prompt?: string;
+  /** A short explanation shown under it (instead of the time). */
+  note?: string;
 };
 
 export const ADDONS: Record<string, Addon[]> = {
@@ -31,7 +33,15 @@ export const ADDONS: Record<string, Addon[]> = {
     { key: "half", label: "Half day", time: "8:30am – 12:00pm", priceCents: 0, endsAfterStartMinutes: 210, dayLength: "half" },
     { key: "early", label: "Early Bird", time: "8:00 – 8:30am", priceCents: 1600, minAgeMonths: 12, limitedSeats: true },
     // One grown-up per family coworks at no charge; each day, a second one is $25 (common areas).
-    { key: "adult", label: "A second grown-up coworking", time: "Coworking common areas, for the day", priceCents: 2500, perFamily: true, prompt: "Bringing another grown-up?" },
+    {
+      key: "adult",
+      label: "Coworking for a second parent or guardian",
+      time: "Coworking common areas, for the day",
+      priceCents: 2500,
+      perFamily: true,
+      prompt: "Will a second parent or guardian be onsite?",
+      note: "Coworking for one parent or guardian is included with every session. Add this only if a second parent or guardian will also be onsite that day.",
+    },
   ],
   camp: [
     { key: "early", label: "Early Bird", time: "8:00 – 9:00am", priceCents: 2000 },

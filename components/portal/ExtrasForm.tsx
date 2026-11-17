@@ -28,13 +28,14 @@ export function ExtrasForm({ date, days }: { date: string; days: DayExtras[] }) 
       else delete next[v];
       return next;
     });
-  const row = (v: string, cents: number, label: string, time: string, prompt?: string) => (
+  const row = (v: string, cents: number, label: string, time: string, prompt?: string, note?: string) => (
     <label key={v} className={"flex cursor-pointer items-start gap-3 border p-4 transition-colors " + (picked[v] != null ? "border-blue bg-blue/[0.05]" : "border-line hover:border-ink/40")}>
       <input type="checkbox" name="pick" value={v} checked={picked[v] != null} onChange={(e) => toggle(v, cents, e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-blue)]" />
       <span className="flex-1">
         {prompt ? <span className="block text-[0.78rem] text-ink-soft">{prompt}</span> : null}
         <span className="block">{label}</span>
         <span className="text-[0.82rem] text-ink-soft">{time}</span>
+        {note ? <span className="mt-1 block text-[0.8rem] text-ink-soft">{note}</span> : null}
       </span>
       <span className="text-ink">+{usd(cents)}</span>
     </label>
@@ -56,7 +57,7 @@ export function ExtrasForm({ date, days }: { date: string; days: DayExtras[] }) 
                   ✓ {f.offer.label} is already added.
                 </p>
               ) : (
-                row(f.itemId + "|" + f.offer.key, f.offer.priceCents, f.offer.label, f.offer.time, f.offer.prompt)
+                row(f.itemId + "|" + f.offer.key, f.offer.priceCents, f.offer.label, f.offer.time, f.offer.prompt, f.offer.note)
               ),
             )}
             {d.children.map((c) => c.offers.map((o) => row(c.itemId + "|" + o.key, o.priceCents, o.label + " for " + c.name, o.time)))}

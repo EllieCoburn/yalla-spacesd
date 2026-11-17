@@ -479,6 +479,27 @@ export function ProgramDates({
       </p>
     );
 
+  /** Extras for the grown-ups, once per family (e.g. a second parent coworking on a Flex day). */
+  const familyBoxes = forFamily.map((a) => (
+    <label
+      key={a.key}
+      className={`${isFlex ? "" : "mt-4 "}flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${stay.includes(a.key) ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
+    >
+      <span>
+        <span className="block text-[0.95rem]">
+          {a.prompt ? `${a.prompt} +${usd(a.priceCents)}` : `Staying? ${a.label} +${usd(a.priceCents)}`}
+        </span>
+        <span className="text-[0.78rem] text-ink-soft">{a.note ?? `${a.time}, once per session for your family`}</span>
+      </span>
+      <input
+        type="checkbox"
+        checked={stay.includes(a.key)}
+        onChange={() => setStay((s) => (s.includes(a.key) ? s.filter((k) => k !== a.key) : [...s, a.key]))}
+        className="h-5 w-5 shrink-0 accent-[var(--color-blue)]"
+      />
+    </label>
+  ));
+
   return (
     <div className="border border-line bg-chalk">
       {/* Who's coming */}
@@ -630,33 +651,7 @@ export function ProgramDates({
             </p>
           </>
         )}
-        {forFamily.map((a) => (
-          <label
-            key={a.key}
-            className={`mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors sm:max-w-md ${stay.includes(a.key) ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
-          >
-            <span>
-              <span className="block text-[0.95rem]">
-                {a.prompt ?? "Staying?"} {a.label} +{usd(a.priceCents)}
-              </span>
-              <span className="text-[0.78rem] text-ink-soft">
-                {a.time}, {isFlex ? "per day" : "once per session"} for your family
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={stay.includes(a.key)}
-              onChange={() =>
-                setStay((s) =>
-                  s.includes(a.key)
-                    ? s.filter((k) => k !== a.key)
-                    : [...s, a.key],
-                )
-              }
-              className="h-5 w-5 accent-[var(--color-blue)]"
-            />
-          </label>
-        ))}
+        {isFlex ? null : familyBoxes}
         {isFlex ? (
           <div className="mt-6 space-y-3">
             <p className="text-[0.85rem] text-ink-soft">How long?</p>
@@ -677,7 +672,7 @@ export function ProgramDates({
               ))}
             </div>
             <label
-              className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors sm:max-w-md ${early ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
+              className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${early ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}
             >
               <span>
                 <span className="block text-[0.95rem]">Add Early Bird +$16 per child</span>
@@ -685,6 +680,7 @@ export function ProgramDates({
               </span>
               <input type="checkbox" checked={early} onChange={(e) => setEarly(e.target.checked)} className="h-5 w-5 accent-[var(--color-blue)]" />
             </label>
+            {familyBoxes}
           </div>
         ) : null}
       </div>
