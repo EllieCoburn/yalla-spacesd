@@ -250,11 +250,12 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "club-absence",
     category: "club-yalla",
+    pages: { "club-yalla": 7 },
     order: 80,
-    status: "draft",
-    needs: "What happens with tuition or credits when a child is absent, and how families let Yalla know.",
+    status: "published",
     question: "What happens if my child is absent?",
-    answer: "",
+    answer:
+      "Club Yalla tuition reserves your child’s spot in their cohort on your chosen days, so absences and missed days, including sick days, aren’t credited or refunded. If your child will be absent, please message your child’s care team in Brightwheel so our team knows.",
   },
   {
     id: "club-cancel",
@@ -574,7 +575,8 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "cancellation-refund-policy",
     category: "billing",
-    pages: { "club-yalla": 7, "play-pass": 7 },
+    // Not on the Club Yalla page: Club Yalla absences aren't credited (see "club-absence").
+    pages: { "play-pass": 7 },
     order: 10,
     status: "published",
     policy: "cancellation-refund",

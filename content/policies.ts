@@ -94,7 +94,10 @@ export const POLICIES: Policy[] = [
       },
       {
         heading: "Memberships",
-        paragraphs: ["Club Yalla and Play Pass memberships require 30 days’ notice to cancel. See [canceling a membership](/policies#canceling-a-membership)."],
+        paragraphs: [
+          "Club Yalla and Play Pass memberships require 30 days’ notice to cancel. See [canceling a membership](/policies#canceling-a-membership).",
+          "Club Yalla tuition reserves your child’s spot in their cohort on your chosen days, so absences and missed days, including sick days, aren’t credited or refunded.",
+        ],
       },
     ],
   },
