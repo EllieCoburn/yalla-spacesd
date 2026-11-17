@@ -18,6 +18,8 @@ type Page = {
   /** Everything else about price, shown right under the facts so all pricing is in one place. */
   priceNote?: ReactNode;
   datesTitle: ReactNode;
+  /** A short, gentle note under the dates heading. */
+  datesNote?: ReactNode;
   unit: "day" | "evening";
   groups: DateGroup[];
   groupNoun?: string;
@@ -142,6 +144,8 @@ export const BOOKING_PAGES: Record<string, Page> = {
         Choose your <em>Flex days.</em>
       </>
     ),
+    datesNote:
+      "Yalla is a small community, and Flex families share spaces with our Club Yalla families. Flex spots are first come, first served. If you see a date that works for your family, we recommend booking early while there’s still room.",
     unit: "day",
     // Each Flex day has a session per age group; a group is open only when staff release a spot.
     groups: FLEX_GROUPS.map((g) => ({
@@ -278,6 +282,7 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
           <h2 className="display text-center text-[clamp(2rem,1.5rem+1.6vw,3rem)]">
             {page.datesTitle}
           </h2>
+          {page.datesNote ? <p className="mx-auto mt-4 max-w-2xl text-center text-[1rem] leading-relaxed text-ink-soft">{page.datesNote}</p> : null}
           <div className="mx-auto mt-8 max-w-4xl">
             <ProgramDates
               kind={p.kind}
