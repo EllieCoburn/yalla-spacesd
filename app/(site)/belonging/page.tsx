@@ -33,7 +33,7 @@ const chapters: Chapter[] = [
     title: "Participation Looks Different for Everyone",
     paragraphs: [
       "We recognize that people of all ages communicate, learn, socialize, work, and experience their environments in different ways.",
-      "Our commitment to inclusion extends to every child and adult, whatever their temperament, pace, strengths, or ways of communicating and engaging with the world. Everyone brings something to our community, and everyone deserves a place in it.",
+      "Our commitment to inclusion extends to every child and adult, whatever their background, strengths, or ways of learning, communicating, and engaging with the world. Everyone brings something to our community, and everyone deserves a place in it.",
       "We do not believe that belonging should depend on a person’s ability to conform to a single model of participation, communication, or behavior.",
       "For children, this means approaching developing skills and challenging moments with curiosity, compassion, and individualized support. For adults, it means respecting different needs, perspectives, communication styles, and ways of participating in community life.",
       "Yalla voluntarily draws upon professional guidance from the National Association for the Education of Young Children (NAEYC) and the Division for Early Childhood (DEC), including principles of equitable access, developmentally appropriate practice, and meaningful participation.",
