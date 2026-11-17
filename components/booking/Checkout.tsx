@@ -645,17 +645,41 @@ export function Checkout({
           ))}
         </div>
 
-        {/* What's being booked, so it stays in view through every step. */}
-        <div className="px-6 pt-4 sm:px-10">
-          <p className="text-[0.8rem] leading-relaxed text-ink-soft">
-            <span className="text-ink">Booking:</span>{" "}
-            {sorted
-              .slice(0, 3)
-              .map((x) => `${x.title} · ${fmtDate(x.localDate, "EEE d MMM")}${spotsOf(x.id) > 1 ? ` · ${spotsOf(x.id)} children` : ""}`)
-              .join("; ")}
-            {sorted.length > 3 ? `; and ${sorted.length - 3} more` : ""}
-          </p>
-        </div>
+        {/* What's being booked (every date, large), so it stays in view through every step. */}
+        {(() => {
+          const dates = [...new Set(sorted.map((x) => x.localDate))];
+          const titles = [...new Set(sorted.map((x) => x.title))];
+          // One program for every date: say it once, and keep each date card compact.
+          const shared = titles.length === 1 ? titles[0] : null;
+          const kids = shared && new Set(sorted.map((x) => spotsOf(x.id))).size === 1 && spotsOf(sorted[0]?.id) > 1 ? spotsOf(sorted[0].id) : null;
+          return (
+            <div className="px-6 pt-5 sm:px-10">
+              <p className="eyebrow text-[0.62rem] text-ink-soft">
+                {dates.length === 1 ? "You’re booking" : `You’re booking ${dates.length} dates`}
+                {shared ? <span className="text-ink"> · {shared}{kids ? ` · ${kids} children` : ""}</span> : null}
+              </p>
+              <div className="mt-2.5 flex max-h-[13.5rem] flex-wrap gap-2 overflow-y-auto">
+                {dates.map((d) => {
+                  const onDay = sorted.filter((x) => x.localDate === d);
+                  return (
+                    <div key={d} className={`border border-blue/40 bg-blue/[0.05] ${shared ? "px-3.5 py-2.5" : "px-4 py-3"}`}>
+                      <p className="text-[0.64rem] tracking-[0.16em] text-blue uppercase">{fmtDate(d, shared && dates.length > 3 ? "EEE" : "EEEE")}</p>
+                      <p className={`display mt-0.5 leading-none text-ink ${shared ? "text-[1.45rem]" : "text-[1.7rem]"}`}>{fmtDate(d, "MMM d")}</p>
+                      {shared
+                        ? null
+                        : onDay.map((x) => (
+                            <p key={x.id} className="mt-1.5 text-[0.76rem] leading-snug text-ink-soft">
+                              {x.title}
+                              {spotsOf(x.id) > 1 ? ` · ${spotsOf(x.id)} children` : ""}
+                            </p>
+                          ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10">
           {error ? (

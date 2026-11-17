@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const values = [
   { mark: "arch" as const, title: "Closeness", body: "Parents deserve to thrive personally and professionally without sacrificing closeness with their children." },
   { mark: "sun" as const, title: "Wonder", body: "Childhood is magic. We protect the time and space for children to play, explore and create." },
-  { mark: "window" as const, title: "Intention", body: "Educators guide with care and purpose, and every detail of the environment is chosen thoughtfully." },
+  { mark: "window" as const, title: "Intention", body: "Every member of Team Yalla guides with care and purpose, and every detail of the environment is chosen thoughtfully." },
   { mark: "palm" as const, title: "Community", body: "Raising children is both personal and communal. We make room for both." },
 ];
 
