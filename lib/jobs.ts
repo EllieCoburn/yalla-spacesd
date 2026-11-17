@@ -16,7 +16,7 @@ import { expireSpaceHolds } from "@/lib/spaces/engine";
 import { expireCredits } from "@/lib/playpass/wallet";
 import { applyPlayPassSchedules } from "@/lib/playpass/changes";
 import { ensureFlexDays } from "@/lib/ops/flex";
-import { fmtDate } from "@/lib/time";
+import { addDaysISO, fmtDate, todayLA } from "@/lib/time";
 
 export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; membershipChanges: number; offers: number; reminders: number };
 
@@ -52,8 +52,9 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   const withRoom = ids.filter((id) => (avail.get(id)?.remaining ?? 0) > 0);
   const offers = withRoom.length ? (await autoOffer(db, SYSTEM, withRoom, opts.baseUrl)).length : 0;
 
+  // Session reminders now go out the evening before (sendEveningReminders, its own run).
   let reminders = 0;
-  if (opts.reminders !== false) {
+  if (opts.reminders === true) {
     // A rolling 24-hour window 12–36 hours ahead: a once-daily run reminds every session exactly
     // once (more frequent runs are deduplicated below).
     const from = new Date(now.getTime() + 12 * 3600_000);
@@ -103,6 +104,56 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   return { expiredHolds, expiredOffers, membershipChanges, offers, reminders };
 }
 
+
+/**
+ * The evening before: a reminder for every booking with a session tomorrow (San Diego date), once
+ * per booking, with a nudge to reserve a private space and to add a second grown-up or extras.
+ */
+export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?: Date }) {
+  const now = opts.now ?? new Date();
+  const tomorrow = addDaysISO(todayLA(now), 1);
+  const due = await db
+    .selectDistinct({ bookingId: bookings.id, familyId: bookings.familyId })
+    .from(bookingItems)
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .where(and(eq(bookingItems.status, "confirmed"), eq(bookings.status, "confirmed"), eq(sessions.localDate, tomorrow)));
+  if (!due.length) return { sent: 0 };
+  const already = new Set(
+    (
+      await db
+        .select({ relatedId: messages.relatedId })
+        .from(messages)
+        .where(and(eq(messages.templateKey, "booking_reminder"), inArray(messages.relatedId, due.map((d) => d.bookingId)), gte(messages.createdAt, new Date(now.getTime() - 20 * 3600_000))))
+    ).map((m) => m.relatedId),
+  );
+  let sent = 0;
+  for (const d of due) {
+    if (already.has(d.bookingId)) continue;
+    const rows = (await bookingLines(db, d.bookingId)).filter((r) => r.item.status === "confirmed" && r.session.localDate === tomorrow);
+    if (!rows.length) continue;
+    const [b] = await db.select().from(bookings).where(eq(bookings.id, d.bookingId));
+    await notifyFamily(db, {
+      key: "booking_reminder",
+      familyId: d.familyId,
+      vars: {
+        reference: b.reference,
+        program: rows[0].program.name,
+        date: fmtDate(tomorrow, "EEEE, MMMM d"),
+        booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
+        arrival_instructions: rows[0].program.arrivalInstructions ?? "",
+        upgrade_note: [
+          "## Make the most of tomorrow",
+          `Need a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](${opts.baseUrl}/portal/spaces?date=${tomorrow})`,
+          `Bringing a second grown-up, or want to add extras? [Add them in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`,
+        ].join("\n\n"),
+      },
+      related: { type: "booking", id: d.bookingId },
+    });
+    sent++;
+  }
+  return { sent };
+}
 
 /**
  * Removes records only needed for a short time: rate-limit attempts (after a day), sign-in, reset

@@ -582,6 +582,27 @@ export const bookingItems = pgTable(
   (t) => [index("booking_items_session_idx").on(t.sessionId, t.status), index("booking_items_child_idx").on(t.childId)],
 );
 
+/**
+ * Extras a family adds to a day already booked (e.g. a second grown-up coworking), from the Family
+ * Portal. Each is paid by its own invoice and joins the booking item once that payment succeeds.
+ */
+export const bookingExtras = pgTable(
+  "booking_extras",
+  {
+    id: id(),
+    bookingItemId: text("booking_item_id")
+      .notNull()
+      .references(() => bookingItems.id),
+    addonKey: text("addon_key").notNull(),
+    priceCents: integer("price_cents").notNull(),
+    invoiceId: text("invoice_id").notNull(),
+    status: text("status").notNull().default("pending"), // pending | added | void
+    createdAt: createdAt(),
+    addedAt: ts("added_at"),
+  },
+  (t) => [index("booking_extras_invoice_idx").on(t.invoiceId)],
+);
+
 export const bookingEvents = pgTable(
   "booking_events",
   {

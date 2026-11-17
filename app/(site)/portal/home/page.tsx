@@ -65,6 +65,11 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                 {fmtDate(b.localDate, "EEE")} {fmtTime(b.startsAt)} – {fmtTime(b.endsAt)} · {b.reference}
               </span>
               {cancellable && b.itemStatus === "confirmed" ? <span className="block text-[0.75rem] text-ink-soft">{b.cancelNote}</span> : null}
+              {b.itemStatus === "confirmed" && b.bookingStatus === "confirmed" && new Date(b.endsAt) > new Date() ? (
+                <Link href={`/portal/extras/${b.localDate}`} className="mt-1 inline-block text-[0.78rem] text-blue underline-offset-4 hover:underline">
+                  Add coworking &amp; extras →
+                </Link>
+              ) : null}
             </span>
             {b.itemStatus === "cancelled" ? (
               <span className="eyebrow text-[0.55rem] text-ink-soft">Cancelled</span>

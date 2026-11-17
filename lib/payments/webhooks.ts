@@ -80,6 +80,11 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
       const [inv] = await db.select().from(invoices).where(eq(invoices.id, pay.invoiceId));
       if (inv.bookingId) await confirmBooking(db, WEBHOOK, inv.bookingId, { reason: "Payment verified by provider" });
       if (inv.spaceGroupId) await confirmSpaceGroup(db, WEBHOOK, inv.spaceGroupId, { reason: "Payment verified by provider" });
+      // Extras added to a day already booked (from the Family Portal) join the booking now.
+      {
+        const { applyPaidExtras } = await import("@/lib/ops/booking-extras");
+        await applyPaidExtras(db, inv.id);
+      }
       if (!changed) return "already processed";
       const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
       await notifyFamily(db, {

@@ -108,8 +108,8 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
   booking_reminder: {
     name: "Upcoming session reminder",
-    subject: "See you soon: {{program}} on {{date}}",
-    body: "Hi {{guardian_first_name}},\n\nA reminder about your upcoming booking {{reference}}:\n\n{{booking_details}}\n\n{{arrival_instructions}}\n\nTeam Yalla",
+    subject: "See you tomorrow: {{program}} on {{date}}",
+    body: "Hi {{guardian_first_name}},\n\nA reminder about your booking tomorrow ({{reference}}):\n\n{{booking_details}}\n\n{{arrival_instructions}}\n\n{{upgrade_note}}\n\nWe can’t wait to see you.\n\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -468,7 +468,7 @@ export async function notifyStaff(db: Executor, input: { key: TemplateKey; to: s
 /** Variables each template can use, with sample values for previews. */
 export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   booking_confirmation: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "portal_link"],
-  booking_reminder: ["guardian_first_name", "reference", "program", "date", "booking_details", "arrival_instructions"],
+  booking_reminder: ["guardian_first_name", "reference", "program", "date", "booking_details", "arrival_instructions", "upgrade_note"],
   booking_change: ["guardian_first_name", "reference", "change_summary", "booking_details"],
   booking_cancellation: ["guardian_first_name", "reference", "booking_summary", "refund_summary", "book_link", "policy_link", "booking_details", "refund_note"],
   forms_missing: ["guardian_first_name", "child_name", "missing_forms"],
@@ -541,6 +541,7 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   child_names: "Ava",
   welcome_letter: welcomeLetter([SAMPLE_CHILD]),
   first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),
+  upgrade_note: "## Make the most of tomorrow\n\nNeed a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](https://www.yallaspacesd.com/portal/spaces)\n\nBringing a second grown-up, or want to add extras? [Add them in your Family Portal](https://www.yallaspacesd.com/portal/home)",
   team: "Wildflower team",
   cohort: "Wildflowers",
   when: "tomorrow",
