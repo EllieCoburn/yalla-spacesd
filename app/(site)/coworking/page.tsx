@@ -28,7 +28,7 @@ const included = [
 ];
 
 const amenities = [
-  "Onsite childcare rooted in the Reggio Emilia and RIE approaches, provided by credentialed, exceptional early childhood educators",
+  "Onsite childcare rooted in the Reggio Emilia and RIE approaches, provided by a highly qualified team of caregivers",
   "Communal coworking access",
   "High-speed internet",
   "Complimentary coffee and tea",
@@ -37,7 +37,7 @@ const amenities = [
   "Unlimited color printing",
   "Lactation space",
   "Private office rental",
-  "Private phone booth",
+  "Complimentary private phone booth",
 ];
 
 const PER: Record<PaidBookingType, string> = { half_day: "half day", full_day: "full day", week: "week", hourly: "hour" };
@@ -99,8 +99,8 @@ export default async function CoworkingPage() {
             </h2>
             <p className="mt-6 text-[1.05rem] text-ink-soft">
               Coworking is for families with a child in Yalla care that day. One grown-up per family works in our coworking common areas at
-              no extra cost. If more than one grown-up would like to be onsite, each additional adult is {EXTRA_ADULT} a day for common-area
-              access.
+              no extra cost. If a second grown-up would like to be onsite too, add them when you book: {EXTRA_ADULT} a day for
+              common-area access.
             </p>
             <dl className="mt-8 grid gap-4 border-t border-line pt-6 text-[0.95rem]">
               <div className="grid grid-cols-[7.5rem_1fr] gap-3">
@@ -112,8 +112,8 @@ export default async function CoworkingPage() {
                 <dd className="text-ink">Saturday and Sunday, during weekend sessions</dd>
               </div>
               <div className="grid grid-cols-[7.5rem_1fr] gap-3">
-                <dt className="text-ink-soft">Extra adults</dt>
-                <dd className="text-ink">{EXTRA_ADULT} a day each, common areas</dd>
+                <dt className="text-ink-soft">Second grown-up</dt>
+                <dd className="text-ink">{EXTRA_ADULT} a day, added when you book</dd>
               </div>
             </dl>
           </div>

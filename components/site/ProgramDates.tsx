@@ -301,7 +301,7 @@ export function ProgramDates({
     const chosenExtras = [...stay, ...(isFlex && half ? ["half"] : []), ...(isFlex && early ? ["early"] : [])];
     // Open checkout over this page, so the chosen days stay in view.
     if (lines.length) {
-      const flexExtras = chosenExtras.filter((k) => k === "half" || k === "early");
+      const flexExtras = chosenExtras.filter((k) => k === "half" || k === "early" || k === "adult");
       // Into the cart too, so it's kept if they look at another page first.
       addToCart(lines.map((s) => ({ id: s.id, date: s.localDate, label: s.title || s.programName, spots: spotCount.get(s.id) ?? 1, extras: flexExtras })));
       setCheckout({
@@ -623,10 +623,10 @@ export function ProgramDates({
           >
             <span>
               <span className="block text-[0.95rem]">
-                Staying? {a.label} +{usd(a.priceCents)}
+                {a.prompt ?? "Staying?"} {a.label} +{usd(a.priceCents)}
               </span>
               <span className="text-[0.78rem] text-ink-soft">
-                {a.time}, once per session for your family
+                {a.time}, {isFlex ? "per day" : "once per session"} for your family
               </span>
             </span>
             <input

@@ -154,3 +154,26 @@ describe("Flex drop-in emails to the cohort's team", () => {
     expect((await upcomingDropIns(db(), { cohorts: null })).map((r) => r.child.firstName).sort()).toEqual(["Jane", "Max"]);
   });
 });
+
+describe("Flex: a second grown-up coworking", () => {
+  it("is charged $25 once per day for the family, however many children come", async () => {
+    const { submitPublicBooking } = await import("@/lib/ops/public-booking");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const day = await session(flex.id, { capacity: 4, minAgeMonths: 36, maxAgeMonths: 59, priceCents: 15000 }, 3);
+    const kid = (first: string) => ({ key: first, firstName: first, lastName: "Two", birthDate: addDaysISO(todayLA(), -365 * 4), allergies: "", medications: "" });
+    const r = await submitPublicBooking(db(), {
+      guardian: { firstName: "Ari", lastName: "Two", email: "ari.two@example.com", phone: "619-555-0100" },
+      children: [kid("Ada"), kid("Bo")],
+      lines: [{ sessionId: day.id, childKeys: ["Ada", "Bo"], addons: { Ada: ["adult"], Bo: ["adult"] } }],
+      signatures: [],
+      meta: {},
+      baseUrl: "http://test",
+    });
+    if (!r.ok) throw new Error(r.error);
+    const [inv] = await db().select().from(s.invoices);
+    const lines = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, inv.id));
+    const adult = lines.filter((l) => l.description.startsWith("A second grown-up coworking"));
+    expect(adult).toHaveLength(1);
+    expect(adult[0].unitCents).toBe(2500);
+  });
+});

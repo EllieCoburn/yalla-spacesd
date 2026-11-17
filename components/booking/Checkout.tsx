@@ -1014,7 +1014,7 @@ export function Checkout({
                       if (!forFamily.length || !coming.length) return null;
                       return (
                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem]">
-                          <span className="text-ink-soft">Staying?</span>
+                          <span className="text-ink-soft">{forFamily[0].prompt ?? "Staying?"}</span>
                           {forFamily.map((a) => {
                             const on = coming.some((c) => extrasOf(extras, s, c.key).includes(a.key));
                             return (

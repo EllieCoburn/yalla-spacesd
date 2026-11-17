@@ -150,7 +150,7 @@ export function BookingExplorer({
           setSelected([...earlier.map((i) => i.id), ...ok]);
           setSpots({ ...Object.fromEntries(earlier.map((i) => [i.id, Math.min(8, Math.max(1, i.spots || 1))])), ...Object.fromEntries(preselect.map((p) => [p.id, p.n])) });
           // Day length and Early Bird chosen on the Yalla Flex page carry into Your selection.
-          const flexExtras = comingExtras.filter((k) => k === "half" || k === "early");
+          const flexExtras = comingExtras.filter((k) => k === "half" || k === "early" || k === "adult");
           setSessionExtras({
             ...Object.fromEntries(earlier.filter((i) => i.extras.length).map((i) => [i.id, i.extras])),
             ...(flexExtras.length ? Object.fromEntries(found.filter((s) => ok.includes(s.id) && s.kind === "drop_in").map((s) => [s.id, flexExtras])) : {}),

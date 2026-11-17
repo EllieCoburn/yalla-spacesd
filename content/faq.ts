@@ -151,7 +151,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "When is coworking open, and can more than one parent come?",
     answer:
-      "Coworking is open Monday to Friday, 8:30am to 4:30pm, and on Saturdays and Sundays during weekend sessions. If more than one grown-up would like to be onsite, each additional adult is $25 a day for access to our coworking common areas.",
+      "Coworking is open Monday to Friday, 8:30am to 4:30pm, and on Saturdays and Sundays during weekend sessions. If a second grown-up would like to be onsite too, you can add them when you book: it’s $25 a day for access to our coworking common areas.",
   },
   {
     id: "coworking-private",
@@ -160,7 +160,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "Can I reserve a private office, desk or the phone booth?",
     answer:
-      "Yes. The common areas come with your session, and you can also reserve a private office, a private desk or our phone booth in your Family Portal, subject to availability. [See prices and reserve](/coworking).",
+      "Yes. The common areas come with your session. You can also rent a private office or a private desk, or book complimentary time in our phone booth, in your Family Portal, subject to availability. [See prices and reserve](/coworking).",
   },
   {
     id: "paperwork",
