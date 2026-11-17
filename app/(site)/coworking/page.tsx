@@ -169,8 +169,15 @@ export default async function CoworkingPage() {
             </h2>
           </div>
           <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
-            Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of Yalla Flex and
-            Club Yalla.
+            Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of{" "}
+            <Link href="/programs/yalla-flex" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+              Yalla Flex sessions
+            </Link>{" "}
+            and{" "}
+            <Link href="/club-yalla" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+              Club Yalla membership
+            </Link>
+            .
           </p>
         </div>
       </Section>
