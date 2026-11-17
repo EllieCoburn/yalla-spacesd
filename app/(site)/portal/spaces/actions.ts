@@ -103,6 +103,15 @@ export async function cancel(reference: string): Promise<Result<null>> {
     const g = await guardian();
     const grp = await ownGroup(g.familyId, reference);
     await cancelSpaceGroup(getDb(), actorOf(g), grp.id, { familyId: g.familyId, reason: "Cancelled by family" });
+    if (grp.status === "confirmed") {
+      const { notifyTeamOfSpaceCancellation } = await import("@/lib/ops/staff-notices");
+      const paid = (grp.totalCents / 100).toFixed(2);
+      await notifyTeamOfSpaceCancellation(getDb(), {
+        groupId: grp.id,
+        actor: actorOf(g),
+        money: grp.totalCents > 0 ? `They had paid ${"$" + paid}. Nothing was refunded or credited automatically; you can do that from the reservation.` : "Complimentary time, so there was nothing to return.",
+      });
+    }
     revalidatePath("/portal/spaces", "layout");
     return null;
   });

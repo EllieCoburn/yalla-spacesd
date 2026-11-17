@@ -48,7 +48,8 @@ export type TemplateKey =
   | "event_received"
   | "family_welcome"
   | "staff_family_joined"
-  | "staff_new_booking";
+  | "staff_new_booking"
+  | "staff_booking_cancelled";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -125,6 +126,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "New booking (to staff)",
     subject: "New booking: {{summary}}",
     body: "# New booking\n\n{{details}}\n\nReference: {{reference}}\n\n{{link}}",
+    essential: true,
+    audience: "staff",
+  },
+  staff_booking_cancelled: {
+    name: "Booking cancelled (to staff)",
+    subject: "Cancelled: {{summary}}",
+    body: "# Booking cancelled\n\n{{details}}\n\nReference: {{reference}}\n\n{{link}}",
     essential: true,
     audience: "staff",
   },
@@ -463,6 +471,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   family_welcome: ["guardian_first_name", "portal_link"],
   staff_family_joined: ["family_name", "details", "link"],
   staff_new_booking: ["summary", "details", "reference", "link"],
+  staff_booking_cancelled: ["summary", "details", "reference", "link"],
   application_received: ["name", "details", "explore"],
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };

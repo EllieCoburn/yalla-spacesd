@@ -11,7 +11,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
-import { bookingItems, bookings, cancellationOffers, invoices, programs, sessions, spaceReservations, workspaces } from "@/lib/db/schema";
+import { bookingItems, bookings, cancellationOffers, invoices, programs, sessions, spaceReservationGroups, spaceReservations, workspaces } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { issueCredit, usd } from "@/lib/playpass/wallet";
 import { fmtDate } from "@/lib/time";
@@ -80,7 +80,40 @@ async function createOffer(
 export const bonusFor = (amount: number, percent: number) => Math.round((amount * percent) / 100);
 
 /** Staff cancel booked items, saying who cancelled and so how the money is handled. */
+/** "The family chooses between $X in credit (with the 5% thank-you) or a full refund of $Y." */
+async function yallaChoice(db: Executor, amountCents: number) {
+  const bonus = Number(await getPolicy(db, "booking.yallaCancelBonusPercent")) || 0;
+  return `Because Yalla cancelled, the family chooses in their Family Portal between ${usd(Math.round(amountCents * (1 + bonus / 100)))} in Yalla Wallet credit (including the ${bonus}% thank-you) or a full refund of ${usd(amountCents)}.`;
+}
+
 export async function staffCancelBooking(db: DB, actor: Actor, input: { bookingId: string; itemIds?: string[]; reason: string; notify: boolean; mode: StaffCancelMode; now?: Date }) {
+  const [b] = await db.select().from(bookings).where(eq(bookings.id, input.bookingId));
+  const before = b
+    ? await db
+        .select({ id: bookingItems.id })
+        .from(bookingItems)
+        .where(and(eq(bookingItems.bookingId, b.id), eq(bookingItems.status, "confirmed"), input.itemIds?.length ? inArray(bookingItems.id, input.itemIds) : undefined))
+    : [];
+  const r = await staffCancelBookingInner(db, actor, input);
+  // Only confirmed care is news to the team (an abandoned checkout hold isn't a cancellation).
+  if (b?.status === "confirmed" && before.length) {
+    const { notifyTeamOfCancellation } = await import("./staff-notices");
+    const money =
+      input.mode === "yalla"
+        ? r.offered
+          ? await yallaChoice(db, r.offered)
+          : "Because Yalla cancelled, the family would choose credit or a refund, but nothing had been paid."
+        : r.credited
+          ? `We returned ${usd(r.credited)} to their Yalla Wallet.`
+          : input.mode === "family_none"
+            ? "No credit was given (chosen when cancelling)."
+            : "No credit was given (cancelled inside the credit cutoff, or nothing had been paid).";
+    await notifyTeamOfCancellation(db, { bookingId: b.id, itemIds: before.map((x) => x.id), actor, money });
+  }
+  return r;
+}
+
+async function staffCancelBookingInner(db: DB, actor: Actor, input: { bookingId: string; itemIds?: string[]; reason: string; notify: boolean; mode: StaffCancelMode; now?: Date }) {
   const now = input.now ?? new Date();
   const [b] = await db.select().from(bookings).where(eq(bookings.id, input.bookingId));
   if (!b) throw new OpsError("not_found", "Booking not found.");
@@ -120,8 +153,14 @@ export async function staffCancelBooking(db: DB, actor: Actor, input: { bookingI
 
 /** Staff cancel a paid workspace reservation because Yalla can't honor it. */
 export async function staffCancelSpace(db: DB, actor: Actor, input: { groupId: string; reason: string; yalla: boolean }) {
+  const [was] = await db.select().from(spaceReservationGroups).where(eq(spaceReservationGroups.id, input.groupId));
   const g = await cancelSpaceGroup(db, actor, input.groupId, { reason: input.reason });
-  if (!input.yalla || g.totalCents <= 0) return { offered: 0 };
+  const { notifyTeamOfSpaceCancellation } = await import("./staff-notices");
+  const tell = (money: string) => (was?.status === "confirmed" ? notifyTeamOfSpaceCancellation(db, { groupId: g.id, actor, money }) : Promise.resolve());
+  if (!input.yalla || g.totalCents <= 0) {
+    await tell(g.totalCents > 0 ? `They had paid ${usd(g.totalCents)}. Nothing was refunded or credited automatically; you can do that from the reservation.` : "Complimentary time, so there was nothing to return.");
+    return { offered: 0 };
+  }
   const invs = await db.select({ id: invoices.id }).from(invoices).where(eq(invoices.spaceGroupId, g.id));
   const [ws] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, g.workspaceId));
   const [first] = await db.select().from(spaceReservations).where(eq(spaceReservations.groupId, g.id)).limit(1);
@@ -133,6 +172,7 @@ export async function staffCancelSpace(db: DB, actor: Actor, input: { groupId: s
     description: `${g.reference}: ${ws?.name ?? "Workspace"}${first ? `, ${fmtDate(first.localDate, "EEE MMM d")}` : ""}`,
     reason: input.reason,
   });
+  await tell(await yallaChoice(db, offer?.amountCents ?? 0));
   return { offered: offer?.amountCents ?? 0 };
 }
 

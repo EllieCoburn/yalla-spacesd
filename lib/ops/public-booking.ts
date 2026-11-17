@@ -781,6 +781,17 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
     },
     related: { type: "booking", id: x.b.id },
   });
+  const { notifyTeamOfCancellation } = await import("./staff-notices");
+  await notifyTeamOfCancellation(db, {
+    bookingId: x.b.id,
+    itemIds: [itemId],
+    actor: guardianActor(g),
+    money: credited
+      ? `We returned ${usd(credited)} to their Yalla Wallet.`
+      : hoursAhead >= cutoff
+        ? "Nothing had been paid for this booking, so nothing was returned."
+        : `They cancelled less than ${cutoff} hours before it began, so no credit was given.`,
+  });
   return { credited, late: hoursAhead < cutoff };
 }
 

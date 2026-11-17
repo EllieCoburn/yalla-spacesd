@@ -53,6 +53,7 @@ const BUTTON: Record<string, string> = {
   family_welcome: "Open the Family Portal",
   staff_family_joined: "Open their family record",
   staff_new_booking: "Open the booking",
+  staff_booking_cancelled: "Open the booking",
   staff_invite: "Set your password",
 };
 
