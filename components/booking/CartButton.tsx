@@ -24,15 +24,16 @@ export function CartButton({ className = "" }: { className?: string }) {
     <Link
       href="/book?cart=1"
       title={n === 1 ? first.label : `${first.label} and ${n - 1} more`}
-      className={`inline-flex h-10 items-center gap-2 rounded-full bg-blue pr-4 pl-3.5 text-[0.82rem] tracking-[0.02em] text-chalk shadow-[0_6px_18px_-8px_rgba(96,101,242,0.7)] transition-colors duration-500 hover:bg-blue-deep ${className}`}
+      className={`relative inline-flex h-11 w-11 items-center justify-center text-ink transition-colors duration-500 hover:text-blue ${className}`}
     >
-      <svg viewBox="0 0 24 24" aria-hidden className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 8h14l-1.2 11.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5 8Z" />
-        <path d="M9 10V7a3 3 0 0 1 6 0v3" />
+      <span className="sr-only">Continue booking: {n} in your cart</span>
+      <svg viewBox="0 0 24 24" aria-hidden className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2.5 3.5h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1l1.6-6.3H6" />
+        <circle cx="9.5" cy="19.5" r="1.3" />
+        <circle cx="16.5" cy="19.5" r="1.3" />
       </svg>
-      <span>
-        <span className="sr-only">Continue booking: </span>
-        Cart · {n}
+      <span aria-hidden className="absolute top-1 right-0.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-blue px-1 text-[0.66rem] leading-none font-medium text-chalk">
+        {n}
       </span>
     </Link>
   );
