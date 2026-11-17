@@ -120,7 +120,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <Section>
+      {/* Little space below: the closing band right after has its own. */}
+      <Section className="pb-4! lg:pb-6!">
         <div className="shell">
           <Index n="03">What we believe</Index>
           <div className="mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2 xl:grid-cols-5">
