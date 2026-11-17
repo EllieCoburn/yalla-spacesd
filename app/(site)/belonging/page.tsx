@@ -95,10 +95,10 @@ export default function BelongingPage() {
       <section className="bg-paper py-20 lg:py-32">
         <div className="shell">
           <div className="grid gap-10 lg:grid-cols-12">
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-5">
               <Mark name="sprig" className="h-12 w-auto text-blue" />
-              <h2 className="display mt-6 text-[clamp(2.3rem,1.6rem+2.4vw,3.8rem)]">
-                An experiment <em>in community.</em>
+              <h2 className="display mt-6 text-[clamp(2.2rem,1.6rem+1.8vw,3.2rem)] text-balance">
+                An experiment <span className="whitespace-nowrap"><em>in community.</em></span>
               </h2>
             </div>
             <div className="space-y-6 text-[1.1rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-3">
@@ -152,10 +152,10 @@ export default function BelongingPage() {
       <section className="py-20 lg:py-32">
         <div className="shell">
           <div className="grid gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-5">
               <p className="eyebrow text-ink-soft">Our commitments</p>
-              <h2 className="display mt-5 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                What belonging <em>asks of us.</em>
+              <h2 className="display mt-5 text-[clamp(2.1rem,1.5rem+1.8vw,3.2rem)] text-balance">
+                What belonging <span className="whitespace-nowrap"><em>asks of us.</em></span>
               </h2>
             </div>
             <div className="space-y-5 text-[1.05rem] leading-[1.8] text-ink-soft lg:col-span-7 lg:col-start-6 lg:pt-3">
