@@ -800,7 +800,7 @@ export function ProgramDates({
               </p>
             ) : (
               <p className="text-ink-soft">
-                Tap the {unit}s you’d like. Book as many as you want.
+                Tap each {unit} you’d like to reserve.
               </p>
             )}
             {fullFor.length ? (
