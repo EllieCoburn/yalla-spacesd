@@ -29,7 +29,7 @@ const ways: { mark: MarkName; title: string; intro: string; items: { slug: strin
     intro: "Book online, one session at a time.",
     items: [
       { slug: "yalla-flex", how: "Childcare and coworking by the day, Monday to Friday, when a spot opens in your child’s age group." },
-      { slug: "camp-yalla", how: "Themed weeks, booked as a set so friends and educators stay the same." },
+      { slug: "camp-yalla", how: "We offer seasonal, play-based camps grounded in our approach to care. Camp days bring art, storytelling, and outdoor discovery together, with time for children to make something of their own and share it with other campers." },
     ],
   },
   {
