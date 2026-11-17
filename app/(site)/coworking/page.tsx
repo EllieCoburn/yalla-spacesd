@@ -83,7 +83,7 @@ export default async function CoworkingPage() {
         mark="window"
         title={
           <>
-            Work, just <em>down the hall.</em>
+            Work and play, <em>under one roof.</em>
           </>
         }
         lede="Our coworking common areas are included in the cost of your child’s session, so you can settle in and get things done while your child plays nearby."
