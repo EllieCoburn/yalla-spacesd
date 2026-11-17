@@ -15,7 +15,7 @@ beforeEach(reset);
 function input(sessionId: string, overrides: Partial<PublicBookingInput> = {}): PublicBookingInput {
   return {
     guardian: { firstName: "Robin", lastName: "Newcomer", email: "robin.new@example.com", phone: "619-555-0100" },
-    children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01" }],
+    children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01", allergies: "", medications: "" }],
     lines: [{ sessionId, childKeys: ["a"] }],
     signatures: [],
     meta: {},
@@ -53,7 +53,7 @@ describe("public booking", () => {
     const noPhone = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Robin", lastName: "Newcomer", email: "robin.new@example.com" } }));
     expect(noPhone.ok).toBe(false);
     if (!noPhone.ok) expect(noPhone.error).toMatch(/phone number/);
-    const noLast = await submitPublicBooking(db(), input(sess.id, { children: [{ key: "a", firstName: "Pip", lastName: "", birthDate: "2023-02-01" }] }));
+    const noLast = await submitPublicBooking(db(), input(sess.id, { children: [{ key: "a", firstName: "Pip", lastName: "", birthDate: "2023-02-01", allergies: "", medications: "" }] }));
     expect(noLast.ok).toBe(false);
     if (!noLast.ok) expect(noLast.error).toMatch(/last name/);
     expect(await db().select().from(s.families)).toHaveLength(0);
@@ -71,7 +71,7 @@ describe("public booking", () => {
     const sess = await session(p.id, { capacity: 5 });
     const ctx = { sessionId: "x", guardianId: f.guardian.id, familyId: f.family.id, familyName: "", firstName: f.guardian.firstName, lastName: f.guardian.lastName, email: f.guardian.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: true, hasPassword: true };
     const lines = [{ sessionId: sess.id, childKeys: [f.children[0].id] }];
-    const kids = [{ key: f.children[0].id, existingId: f.children[0].id, firstName: f.children[0].firstName, lastName: f.children[0].lastName, birthDate: f.children[0].birthDate }];
+    const kids = [{ key: f.children[0].id, existingId: f.children[0].id, firstName: f.children[0].firstName, lastName: f.children[0].lastName, birthDate: f.children[0].birthDate, allergies: "", medications: "" }];
     const without = await submitPublicBooking(db(), input(sess.id, { signedIn: ctx, children: kids, lines, guardian: { firstName: "", lastName: "", email: "" } }));
     expect(without.ok).toBe(false);
     const withPhone = await submitPublicBooking(db(), input(sess.id, { signedIn: ctx, children: kids, lines, guardian: { firstName: "", lastName: "", email: "", phone: "(619) 555-0177" } }));
@@ -87,8 +87,8 @@ describe("public booking", () => {
       db(),
       input(sess.id, {
         children: [
-          { key: "a", firstName: "Ivy", lastName: "Sib", birthDate: "2022-05-01" },
-          { key: "b", firstName: "Jo", lastName: "Sib", birthDate: "2023-08-01" },
+          { key: "a", firstName: "Ivy", lastName: "Sib", birthDate: "2022-05-01", allergies: "", medications: "" },
+          { key: "b", firstName: "Jo", lastName: "Sib", birthDate: "2023-08-01", allergies: "", medications: "" },
         ],
         lines: [{ sessionId: sess.id, childKeys: ["a", "b"] }],
       }),

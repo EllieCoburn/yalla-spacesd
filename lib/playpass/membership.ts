@@ -16,7 +16,7 @@ import { families, guardians, playPassCharges, playPassPlans, playPassSubscripti
 import { guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { notifyFamily } from "@/lib/notify";
 import { linkKey } from "@/lib/links";
-import { addChild, createFamily, findGuardianByEmail, phoneProblem } from "@/lib/ops/families";
+import { CARE_REQUIRED, careValid, recordCareAnswers, addChild, createFamily, findGuardianByEmail, phoneProblem } from "@/lib/ops/families";
 import type { NormalizedEvent } from "@/lib/payments/provider";
 import { fmtDate, todayLA, zonedDateTime } from "@/lib/time";
 import { activeMembershipBilling, membershipBillingFor } from "./provider";
@@ -170,7 +170,7 @@ export async function startSignup(db: DB, g: GuardianContext, input: { tier: str
  */
 export async function startGuestSignup(
   db: DB,
-  input: { tier: string; acceptTerms: boolean; baseUrl: string; guardian: { firstName: string; lastName: string; email: string; phone?: string }; children: { firstName: string; lastName: string; birthDate: string }[] },
+  input: { tier: string; acceptTerms: boolean; baseUrl: string; guardian: { firstName: string; lastName: string; email: string; phone?: string }; children: { firstName: string; lastName: string; birthDate: string; allergies?: string | null; medications?: string | null }[] },
 ) {
   const email = input.guardian.email.trim().toLowerCase();
   if (!input.guardian.firstName.trim() || !input.guardian.lastName.trim()) throw new OpsError("invalid", "Enter your first and last name.");
@@ -183,6 +183,7 @@ export async function startGuestSignup(
   for (const c of kids) {
     if (!c.firstName.trim() || !c.lastName.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
     if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);
+    if (!careValid(c.allergies) || !careValid(c.medications)) throw new OpsError("invalid", CARE_REQUIRED);
   }
   if (!input.acceptTerms) throw new OpsError("terms", "Please confirm you agree to the monthly billing terms.");
   const existing = await findGuardianByEmail(db, email);
@@ -197,7 +198,10 @@ export async function startGuestSignup(
     const made = await createFamily(db, actor, { guardian: { firstName: input.guardian.firstName.trim(), lastName: input.guardian.lastName.trim(), email, phone: input.guardian.phone, portalAccess: false } });
     g = made.guardian;
   }
-  for (const c of kids) await addChild(db, actor, g.familyId, { firstName: c.firstName.trim(), lastName: c.lastName.trim(), birthDate: c.birthDate }).catch((e) => { if (!(e instanceof OpsError && e.code === "duplicate")) throw e; });
+  for (const c of kids) {
+    const { child } = await addChild(db, actor, g.familyId, { firstName: c.firstName.trim(), lastName: c.lastName.trim(), birthDate: c.birthDate });
+    await recordCareAnswers(db, actor, child.id, { allergies: c.allergies ?? "", medications: c.medications ?? "" });
+  }
   const [f] = await db.select().from(families).where(eq(families.id, g.familyId));
   const ctx: GuardianContext = { sessionId: "guest", guardianId: g.id, familyId: g.familyId, familyName: f.name, firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: false, hasPassword: false };
   return startSignup(db, ctx, { tier: input.tier, acceptTerms: input.acceptTerms, baseUrl: input.baseUrl });

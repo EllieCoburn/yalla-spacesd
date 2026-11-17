@@ -1,7 +1,7 @@
 "use server";
 
 import { getDb, isDbConfigured } from "@/lib/db";
-import { joinPublicWaitlist, previewAgreements, retryCheckout, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
+import { careNeededForBooking, joinPublicWaitlist, previewAgreements, retryCheckout, saveBookingCare, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
 import { startCheckout } from "@/lib/ops/bookings";
 import { OpsError } from "@/lib/audit";
 import { getGuardian, requestContext, setFamilyCookie } from "../portal/session";
@@ -12,11 +12,11 @@ import { bookingStatusPath, offerPath } from "@/lib/links";
 import { mayViewStatus } from "@/lib/booking-access";
 import { allow, throttle } from "@/lib/rate-limit";
 import { requestMagicLink, safeNextPath, signInWithPassword } from "@/lib/family-auth";
-import { findGuardianByEmail } from "@/lib/ops/families";
+import { CARE_REQUIRED, findGuardianByEmail } from "@/lib/ops/families";
 
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
-  children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string }[];
+  children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string | null; medications?: string | null }[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Record<string, string> }[];
 };
@@ -37,7 +37,7 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
     return await submitPublicBooking(getDb(), {
       signedIn,
       guardian: { firstName: clip(payload.guardian.firstName, 80), lastName: clip(payload.guardian.lastName, 80), email: clip(payload.guardian.email, 200), phone: clip(payload.guardian.phone, 40) },
-      children: payload.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), lastName: clip(c.lastName, 80), birthDate: clip(c.birthDate, 10), allergies: clip(c.allergies, 500) })),
+      children: payload.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), lastName: clip(c.lastName, 80), birthDate: clip(c.birthDate, 10), allergies: typeof c.allergies === "string" ? clip(c.allergies, 1000) : null, medications: typeof c.medications === "string" ? clip(c.medications, 1000) : null })),
       lines: payload.lines.slice(0, 60).map((l) => ({
         sessionId: clip(l.sessionId, 60),
         childKeys: l.childKeys.slice(0, 8).map((k) => clip(k, 60)),
@@ -94,6 +94,28 @@ export async function retryPaymentAction(form: FormData) {
 }
 
 /** Accept a waitlist offer: continue to payment for the held spot. */
+/** A waitlist offer asks for each child's allergies and medications (if we don't have them) before payment. */
+export async function saveOfferCareAction(form: FormData) {
+  const ref = clip(form.get("reference"), 20);
+  const key = clip(form.get("k"), 40);
+  const db = getDb();
+  const [b] = await db.select().from(bookings).where(eq(bookings.reference, ref));
+  if (!b || b.source !== "waitlist" || !(await mayViewStatus("offer", ref, key, b.familyId))) redirect("/book");
+  const ids = form.getAll("childId").map((x) => clip(x, 60));
+  const answer = (kind: string, id: string) => {
+    const yn = String(form.get(`${kind}Answer-${id}`) ?? "");
+    const text = clip(form.get(`${kind}-${id}`), 1000).trim();
+    return yn === "no" ? "" : yn === "yes" && text ? text : null;
+  };
+  try {
+    await saveBookingCare(db, b.id, ids.map((id) => ({ childId: id, allergies: answer("allergies", id), medications: answer("medications", id) })));
+  } catch (e) {
+    if (e instanceof OpsError) redirect(offerPath(ref, { error: e.message }));
+    throw e;
+  }
+  redirect(offerPath(ref));
+}
+
 export async function acceptOfferAction(form: FormData) {
   const ref = clip(form.get("reference"), 20);
   const key = clip(form.get("k"), 40);
@@ -101,6 +123,7 @@ export async function acceptOfferAction(form: FormData) {
   const db = getDb();
   const [b] = await db.select().from(bookings).where(eq(bookings.reference, ref));
   if (!b || b.source !== "waitlist" || !(await mayViewStatus("offer", ref, key, b.familyId))) redirect("/book");
+  if ((await careNeededForBooking(db, b.id)).length) redirect(offerPath(ref, { error: CARE_REQUIRED }));
   let url: string;
   try {
     url = (await startCheckout(db, { type: "system", name: "Waitlist offer" }, b.id, { base: ctx.baseUrl })).url;
@@ -128,6 +151,7 @@ export async function acceptOfferWithAgreementsAction(_: OfferState, form: FormD
   } catch {
     return { error: "Something went wrong reading your signature. Please try again." };
   }
+  if ((await careNeededForBooking(db, b.id)).length) return { error: CARE_REQUIRED };
   let url: string;
   try {
     await signForBooking(db, { type: "system", name: "Waitlist offer" }, { bookingId: b.id, signatures, ip: ctx.ip, userAgent: ctx.userAgent });

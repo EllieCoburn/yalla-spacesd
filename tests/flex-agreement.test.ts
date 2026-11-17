@@ -36,7 +36,7 @@ async function setup() {
 
 const input = (sessionId: string, over: Partial<PublicBookingInput> = {}): PublicBookingInput => ({
   guardian: { firstName: "Robin", lastName: "Flex", email: "robin.flex@example.com", phone: "619-555-0100" },
-  children: [{ key: "a", firstName: "Pip", lastName: "Flex", birthDate: addDaysISO(todayLA(), -365 * 2) }],
+  children: [{ key: "a", firstName: "Pip", lastName: "Flex", birthDate: addDaysISO(todayLA(), -365 * 2), allergies: "", medications: "" }],
   lines: [{ sessionId, childKeys: ["a"] }],
   signatures: [],
   meta: {},

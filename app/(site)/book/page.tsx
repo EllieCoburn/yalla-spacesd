@@ -24,10 +24,12 @@ export default async function BookPage() {
   const guardian = configured ? await getGuardian() : null;
   const saved = guardian
     ? await getDb()
-        .select({ id: children.id, firstName: children.firstName, lastName: children.lastName, preferredName: children.preferredName, birthDate: children.birthDate })
+        .select({ id: children.id, firstName: children.firstName, lastName: children.lastName, preferredName: children.preferredName, birthDate: children.birthDate, allergies: children.allergies, medicalNotes: children.medicalNotes })
         .from(children)
         .where(and(eq(children.familyId, guardian.familyId), eq(children.status, "active")))
         .orderBy(asc(children.birthDate))
+        // Allergies and medications on file are shown only to guardians who may see care details.
+        .then((rows) => rows.map((r) => (guardian.canViewSensitive ? r : { ...r, allergies: null, medicalNotes: null })))
     : [];
   const testPayments = configured && paymentsStatus().provider === "test";
   const wallet = guardian ? await walletSummary(getDb(), guardian.familyId) : null;

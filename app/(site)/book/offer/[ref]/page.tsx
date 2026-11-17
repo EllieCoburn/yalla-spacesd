@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { getDb, isDbConfigured } from "@/lib/db";
-import { agreementsForBooking, bookingStatusView } from "@/lib/ops/public-booking";
+import { agreementsForBooking, bookingStatusView, careNeededForBooking } from "@/lib/ops/public-booking";
+import { OfferCare } from "@/components/booking/OfferCare";
 import { OfferAgreements } from "@/components/booking/OfferAgreements";
 import { getGuardian } from "../../../portal/session";
 import { eq } from "drizzle-orm";
@@ -26,6 +27,8 @@ export default async function Offer({ params, searchParams }: { params: Promise<
   // Anything that must be signed before paying (e.g. the Camp Yalla agreement) is signed right here.
   const [row] = open ? await getDb().select({ id: bookings.id }).from(bookings).where(eq(bookings.reference, ref)) : [];
   const toSign = row ? await agreementsForBooking(getDb(), row.id) : [];
+  // Each child's allergies and medications are asked first, if we don't have them.
+  const care = row ? await careNeededForBooking(getDb(), row.id) : [];
 
   return (
     <section className="pt-32 pb-28 lg:pt-40">
@@ -65,9 +68,10 @@ export default async function Offer({ params, searchParams }: { params: Promise<
             ))}
           </ul>
         </div>
-        {open && toSign.length ? <OfferAgreements reference={v.reference} k={k ?? ""} agreements={toSign} signedIn={!!(await getGuardian())} /> : null}
+        {open && care.length ? <OfferCare reference={v.reference} k={k ?? ""} kids={care} /> : null}
+        {open && !care.length && toSign.length ? <OfferAgreements reference={v.reference} k={k ?? ""} agreements={toSign} signedIn={!!(await getGuardian())} /> : null}
         <div className="mt-10 flex justify-center gap-3">
-          {open && !toSign.length ? (
+          {open && !care.length && !toSign.length ? (
             <form action={acceptOfferAction}>
               <input type="hidden" name="reference" value={v.reference} />
               <input type="hidden" name="k" value={k ?? ""} />

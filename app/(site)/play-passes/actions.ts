@@ -35,6 +35,12 @@ export async function startGuestPlayPassAction(_: PassState, form: FormData): Pr
   const firsts = form.getAll("childFirstName").map(String);
   const lasts = form.getAll("childLastName").map(String);
   const births = form.getAll("childBirthDate").map(String);
+  // "no" = none known; "yes" = the details typed beside it.
+  const care = (kind: string, i: number) => {
+    const yn = String(form.getAll(`child${kind}Answer`)[i] ?? "");
+    const text = String(form.getAll(`child${kind}`)[i] ?? "").slice(0, 1000).trim();
+    return yn === "no" ? "" : yn === "yes" && text ? text : null;
+  };
   let url: string;
   try {
     await throttle(getDb(), "playPassIp", ip);
@@ -43,7 +49,7 @@ export async function startGuestPlayPassAction(_: PassState, form: FormData): Pr
       acceptTerms: form.get("accept") === "on",
       baseUrl,
       guardian: { firstName: f("firstName"), lastName: f("lastName"), email: f("email", 200), phone: f("phone", 40) },
-      children: firsts.slice(0, 8).map((n, i) => ({ firstName: n.slice(0, 80), lastName: (lasts[i] ?? "").slice(0, 80), birthDate: births[i] ?? "" })),
+      children: firsts.slice(0, 8).map((n, i) => ({ firstName: n.slice(0, 80), lastName: (lasts[i] ?? "").slice(0, 80), birthDate: births[i] ?? "", allergies: care("Allergies", i), medications: care("Medications", i) })),
     }));
   } catch (e) {
     if (e instanceof OpsError) return { error: e.message, at: Date.now() };

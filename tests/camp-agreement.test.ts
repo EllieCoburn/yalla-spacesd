@@ -30,7 +30,7 @@ async function setup() {
 
 const input = (sessionIds: string[], over: Partial<PublicBookingInput> = {}): PublicBookingInput => ({
   guardian: { firstName: "Robin", lastName: "Camp", email: "robin.camp@example.com", phone: "619-555-0100" },
-  children: [{ key: "a", firstName: "Pip", lastName: "Camp", birthDate: "2021-03-01" }],
+  children: [{ key: "a", firstName: "Pip", lastName: "Camp", birthDate: "2021-03-01", allergies: "", medications: "" }],
   lines: sessionIds.map((sessionId) => ({ sessionId, childKeys: ["a"] })),
   signatures: [],
   meta: {},
@@ -87,7 +87,7 @@ describe("Camp Yalla admission agreement", () => {
     const [g] = await db().select().from(s.guardians);
     const [child] = await db().select().from(s.children);
     const signedIn = { sessionId: "x", guardianId: g.id, familyId: g.familyId, familyName: "", firstName: g.firstName, lastName: g.lastName, email: g.email, canBook: true, canViewBilling: true, canViewSensitive: true, emailVerified: true, hasPassword: false };
-    const kid = [{ key: child.id, existingId: child.id, firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate }];
+    const kid = [{ key: child.id, existingId: child.id, firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, allergies: "", medications: "" }];
     const again = await previewAgreements(db(), { familyId: g.familyId, sessionIds: [day2.id], children: kid });
     expect(again.map((a) => a.templateId)).toEqual(["camp-agreement"]);
     const second = await submitPublicBooking(db(), input([day2.id], { signedIn, children: kid, lines: [{ sessionId: day2.id, childKeys: [child.id] }], signatures: [{ ...signed, childKey: child.id }] }));

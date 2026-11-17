@@ -117,6 +117,26 @@ export async function addChild(db: Executor, actor: Actor, familyId: string, inp
   return { child: c, existed: false };
 }
 
+/**
+ * Allergies and medications, asked of every family before payment. `""` means "none known";
+ * null means we haven't asked yet. Medications are kept in the child's medical notes.
+ */
+export const careAnswered = (c: { allergies: string | null; medicalNotes: string | null }) => c.allergies !== null && c.medicalNotes !== null;
+export const CARE_REQUIRED = "Tell us whether each child has any known allergies or takes any medications.";
+
+/** Whether a family's answer is complete: "" for none, or the details. */
+export const careValid = (v: unknown): v is string => typeof v === "string";
+
+/** Saves a family's allergy and medication answers to the child's record. */
+export async function recordCareAnswers(db: Executor, actor: Actor, childId: string, a: { allergies: string; medications: string }) {
+  const allergies = clean(a.allergies).slice(0, 1000);
+  const medicalNotes = clean(a.medications).slice(0, 1000);
+  const [c] = await db.select().from(children).where(eq(children.id, childId));
+  if (!c || (c.allergies === allergies && c.medicalNotes === medicalNotes)) return;
+  await db.update(children).set({ allergies, medicalNotes, infoUpdatedAt: new Date(), infoUpdatedBy: actor.name }).where(eq(children.id, childId));
+  await audit(db, actor, { action: "family.child_care", entityType: "child", entityId: childId, summary: `Allergies and medications updated for ${c.firstName}` });
+}
+
 export async function updateChild(
   db: Executor,
   actor: Actor,

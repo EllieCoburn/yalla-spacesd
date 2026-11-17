@@ -146,7 +146,7 @@ describe("Joining by invitation", () => {
 describe("Joining by booking", () => {
   const input = (sessionId: string, email = "robin.new@example.com"): PublicBookingInput => ({
     guardian: { firstName: "Robin", lastName: "Newcomer", email, phone: "619-555-0100" },
-    children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01" }],
+    children: [{ key: "a", firstName: "Pip", lastName: "Newcomer", birthDate: "2023-02-01", allergies: "", medications: "" }],
     lines: [{ sessionId, childKeys: ["a"] }],
     signatures: [],
     meta: {},
@@ -279,7 +279,7 @@ describe("Joining with a Play Pass", () => {
     acceptTerms: true,
     baseUrl: base,
     guardian: { firstName: "Pat", lastName: "Member", email: "pat@example.com", phone: "619-555-0100" },
-    children: [{ firstName: "Lu", lastName: "Member", birthDate: "2021-09-09" }],
+    children: [{ firstName: "Lu", lastName: "Member", birthDate: "2021-09-09", allergies: "", medications: "" }],
     ...over,
   });
   async function pay(subId: string) {

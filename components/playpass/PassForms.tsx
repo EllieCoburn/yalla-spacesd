@@ -116,6 +116,28 @@ export function GuestPass({ tier, terms, label }: { tier: string; terms: string[
               ) : (
                 <span className="hidden sm:block" />
               )}
+              <div className="col-span-2 grid gap-4 sm:col-span-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["Allergies", "Known allergies?", "No known allergies", "If yes, which ones and how they react"],
+                    ["Medications", "Takes any medications?", "No medications", "If yes, which ones and anything we should know"],
+                  ] as const
+                ).map(([kind, q, none, detail]) => (
+                  <div key={kind} className="space-y-2">
+                    <label className="block">
+                      <span className={lab}>{q}</span>
+                      <select name={`child${kind}Answer`} required={i === 0} defaultValue="" className={field}>
+                        <option value="" disabled>
+                          Choose…
+                        </option>
+                        <option value="no">{none}</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </label>
+                    <input name={`child${kind}`} placeholder={detail} maxLength={1000} autoComplete="off" className={field} />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

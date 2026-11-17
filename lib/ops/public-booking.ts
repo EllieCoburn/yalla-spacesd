@@ -42,7 +42,7 @@ import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
-import { addChild, createFamily, findGuardianByEmail, phoneProblem, updateChild } from "./families";
+import { addChild, CARE_REQUIRED, careAnswered, careValid, createFamily, findGuardianByEmail, phoneProblem, recordCareAnswers, updateChild } from "./families";
 import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
 import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
@@ -359,7 +359,8 @@ export async function signForBooking(
 export type PublicBookingInput = {
   signedIn?: GuardianContext | null;
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
-  children: (ChildRef & { lastName: string; birthDate: string; allergies?: string })[];
+  /** allergies / medications: "" for none known, the details, or null if not answered. */
+  children: (ChildRef & { lastName: string; birthDate: string; allergies?: string | null; medications?: string | null })[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Answers }[];
   meta: { ip?: string; userAgent?: string };
@@ -373,6 +374,9 @@ export type PublicBookingResult =
 export async function submitPublicBooking(db: DB, input: PublicBookingInput): Promise<PublicBookingResult> {
   const lines = input.lines.filter((l) => l.childKeys.length);
   if (!lines.length) return { ok: false, code: "empty", error: "Choose at least one session and who’s coming." };
+  // Every child's known allergies and medications are asked before payment.
+  if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
+    return { ok: false, code: "care", error: CARE_REQUIRED };
 
   // 1. Who is booking?
   let familyId: string;
@@ -440,10 +444,12 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         const [row] = await db.select().from(children).where(and(eq(children.id, c.existingId), eq(children.familyId, familyId)));
         if (!row) throw new OpsError("invalid", "One of the selected children isn’t part of your family.");
         childIdByKey.set(c.key, row.id);
+        await recordCareAnswers(db, actor, row.id, { allergies: c.allergies ?? "", medications: c.medications ?? "" });
       } else {
         if (!c.firstName.trim() || !c.lastName?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
-        const { child } = await addChild(db, actor, familyId, { firstName: c.firstName, lastName: c.lastName.trim(), birthDate: c.birthDate, allergies: c.allergies });
+        const { child } = await addChild(db, actor, familyId, { firstName: c.firstName, lastName: c.lastName.trim(), birthDate: c.birthDate });
         childIdByKey.set(c.key, child.id);
+        await recordCareAnswers(db, actor, child.id, { allergies: c.allergies ?? "", medications: c.medications ?? "" });
       }
     }
 
@@ -934,5 +940,25 @@ export async function familySignForm(db: Executor, g: GuardianContext, input: { 
     ip: input.ip,
     userAgent: input.userAgent,
   });
+}
+
+/** Children in a booking whose allergies and medications haven't been answered yet (asked before payment). */
+export async function careNeededForBooking(db: Executor, bookingId: string) {
+  const rows = await db
+    .selectDistinct({ child: children })
+    .from(bookingItems)
+    .innerJoin(children, eq(children.id, bookingItems.childId))
+    .where(and(eq(bookingItems.bookingId, bookingId), inArray(bookingItems.status, ["held", "confirmed"])));
+  return rows.filter((r) => !careAnswered(r.child)).map((r) => ({ childId: r.child.id, name: r.child.preferredName || r.child.firstName }));
+}
+
+/** Saves the allergy and medication answers for the children in a booking (from a waitlist offer page). */
+export async function saveBookingCare(db: Executor, bookingId: string, answers: { childId: string; allergies: unknown; medications: unknown }[]) {
+  const needed = await careNeededForBooking(db, bookingId);
+  for (const n of needed) {
+    const a = answers.find((x) => x.childId === n.childId);
+    if (!a || !careValid(a.allergies) || !careValid(a.medications)) throw new OpsError("invalid", CARE_REQUIRED);
+    await recordCareAnswers(db, { type: "system", name: "Waitlist offer" }, n.childId, { allergies: a.allergies, medications: a.medications });
+  }
 }
 

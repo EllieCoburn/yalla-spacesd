@@ -27,6 +27,9 @@ export type SavedChild = {
   lastName: string;
   preferredName: string | null;
   birthDate: string;
+  /** "" = none known, text = details, null = not asked yet. */
+  allergies?: string | null;
+  medicalNotes?: string | null;
 };
 export type SignedInGuardian = {
   firstName: string;
@@ -48,9 +51,60 @@ type ChildDraft = {
   firstName: string;
   lastName: string;
   birthDate: string;
+  /** Known allergies and medications, answered before payment ("no", or "yes" with details). */
+  allergyAnswer: "" | "no" | "yes";
   allergies: string;
+  medsAnswer: "" | "no" | "yes";
+  medications: string;
   include: boolean;
 };
+
+const NO_CARE = { allergyAnswer: "" as const, allergies: "", medsAnswer: "" as const, medications: "" };
+/** A saved child's answers on file, so families only confirm them. */
+function careFromSaved(sc: SavedChild) {
+  const a = sc.allergies ?? null;
+  const m = sc.medicalNotes ?? null;
+  return {
+    allergyAnswer: a === null ? ("" as const) : a.trim() ? ("yes" as const) : ("no" as const),
+    allergies: a ?? "",
+    medsAnswer: m === null ? ("" as const) : m.trim() ? ("yes" as const) : ("no" as const),
+    medications: m ?? "",
+  };
+}
+const careDone = (k: ChildDraft) =>
+  (k.allergyAnswer === "no" || (k.allergyAnswer === "yes" && k.allergies.trim() !== "")) && (k.medsAnswer === "no" || (k.medsAnswer === "yes" && k.medications.trim() !== ""));
+
+/** Asked for every child before payment: known allergies, and medications. */
+function CareQuestions({ child, onChange }: { child: ChildDraft; onChange: (patch: Partial<ChildDraft>) => void }) {
+  const name = child.firstName.trim() || "your child";
+  const rows = [
+    { q: `Does ${name} have any known allergies?`, answer: "allergyAnswer", text: "allergies", detail: "Which allergies, and how do they react?" },
+    { q: `Does ${name} take any medications?`, answer: "medsAnswer", text: "medications", detail: "Which medications, and anything our team should know" },
+  ] as const;
+  return (
+    <div className="mt-5 space-y-4 border-t border-line pt-4">
+      {rows.map((r) => (
+        <fieldset key={r.answer}>
+          <legend className="text-[0.92rem] text-ink">{r.q}</legend>
+          <div className="mt-2 flex gap-5">
+            {(["no", "yes"] as const).map((v) => (
+              <label key={v} className="flex cursor-pointer items-center gap-2 text-[0.92rem]">
+                <input type="radio" name={`${child.key}-${r.answer}`} checked={child[r.answer] === v} onChange={() => onChange({ [r.answer]: v })} className="h-4 w-4 accent-[var(--color-blue)]" />
+                {v === "no" ? "No" : "Yes"}
+              </label>
+            ))}
+          </div>
+          {child[r.answer] === "yes" ? (
+            <label className="mt-3 block">
+              <span className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">{r.detail}</span>
+              <textarea value={child[r.text]} onChange={(e) => onChange({ [r.text]: e.target.value })} rows={2} maxLength={1000} className={input} />
+            </label>
+          ) : null}
+        </fieldset>
+      ))}
+    </div>
+  );
+}
 
 const steps = ["Children", "Your details", "Review & agree"] as const;
 const input =
@@ -122,7 +176,7 @@ export function Checkout({
           firstName: c.preferredName || c.firstName,
           lastName: c.lastName,
           birthDate: c.birthDate,
-          allergies: "",
+          ...careFromSaved(c),
           include: includeChildren.includes(c.id),
         }))
       : Array.from({ length: Math.max(1, childrenNeeded(sessions, spots)) }, (_, i) => ({
@@ -131,7 +185,7 @@ export function Checkout({
           firstName: "",
           lastName: "",
           birthDate: "",
-          allergies: "",
+          ...NO_CARE,
           include: true,
         })),
   );
@@ -464,7 +518,7 @@ export function Checkout({
         firstName: sc.preferredName || sc.firstName,
         lastName: sc.lastName,
         birthDate: sc.birthDate,
-        allergies: "",
+        ...careFromSaved(sc),
         include: prev.some((p) => p.include && same(p, sc)),
       }));
       const extra = prev.filter((p) => !p.existingId && p.firstName.trim() && !list.some((sc) => same(p, sc)));
@@ -495,7 +549,7 @@ export function Checkout({
 
   const canNext =
     step === 0
-      ? chosen.length > 0 && chosen.length >= needed && !unfinished && !ageProblem
+      ? chosen.length > 0 && chosen.length >= needed && !unfinished && !ageProblem && chosen.every(careDone)
       : step === 1
         ? guardian
           ? !!guardian.phone?.trim() || phoneOk(adult.phone)
@@ -518,7 +572,8 @@ export function Checkout({
           firstName: c.firstName,
           lastName: c.lastName,
           birthDate: c.birthDate,
-          allergies: c.allergies,
+          allergies: c.allergyAnswer === "no" ? "" : c.allergies.trim(),
+          medications: c.medsAnswer === "no" ? "" : c.medications.trim(),
         })),
         lines,
         signatures: (agreements ?? []).map((a) => ({
@@ -636,9 +691,9 @@ export function Checkout({
               <div className="mt-8 space-y-4">
                 {kids.map((c, i) =>
                   c.existingId ? (
+                    <div key={c.key} className={`border transition-colors ${c.include ? "border-blue bg-blue/[0.05]" : "border-line bg-paper"}`}>
                     <label
-                      key={c.key}
-                      className={`flex cursor-pointer items-center justify-between border p-5 transition-colors ${c.include ? "border-blue bg-blue/[0.05]" : "border-line bg-paper"}`}
+                      className="flex cursor-pointer items-center justify-between p-5"
                     >
                       <span>
                         <span className="display block text-[1.3rem]">
@@ -663,6 +718,12 @@ export function Checkout({
                         className="h-5 w-5"
                       />
                     </label>
+                    {c.include ? (
+                      <div className="px-5 pb-5">
+                        <CareQuestions child={c} onChange={(patch) => setKids((ks) => ks.map((x) => (x.key === c.key ? { ...x, ...patch } : x)))} />
+                      </div>
+                    ) : null}
+                    </div>
                   ) : (
                     <div
                       key={c.key}
@@ -692,7 +753,6 @@ export function Checkout({
                             ["firstName", "First name", "text"],
                             ["lastName", "Last name", "text"],
                             ["birthDate", "Date of birth", "date"],
-                            ["allergies", "Allergies (optional)", "text"],
                           ] as const
                         ).map(([k, l, t]) => (
                           <label key={k} className="block">
@@ -716,6 +776,7 @@ export function Checkout({
                           </label>
                         ))}
                       </div>
+                      <CareQuestions child={c} onChange={(patch) => setKids((ks) => ks.map((x) => (x.key === c.key ? { ...x, ...patch } : x)))} />
                     </div>
                   ),
                 )}
@@ -729,7 +790,7 @@ export function Checkout({
                         firstName: "",
                         lastName: "",
                         birthDate: "",
-                        allergies: "",
+                        ...NO_CARE,
                         include: true,
                       },
                     ])
@@ -755,6 +816,9 @@ export function Checkout({
                       Go back to your selection
                     </button>
                   </p>
+                ) : null}
+                {!unfinished && chosen.length && !chosen.every(careDone) ? (
+                  <p className="border-l-2 border-blue/40 pl-3 text-[0.88rem] text-ink-soft">Please answer the allergy and medication questions for each child (and add the details for any “Yes”) to continue.</p>
                 ) : null}
                 {unfinished ? (
                   <p className="border-l-2 border-oxblood/40 pl-3 text-[0.88rem] text-oxblood">Add a first name and date of birth for each child, or remove the extra form.</p>
