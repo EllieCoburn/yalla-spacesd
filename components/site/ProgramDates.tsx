@@ -165,6 +165,21 @@ export function ProgramDates({
     return [...m.entries()];
   }, [all]);
 
+  /** A month's dates as Monday–Friday weeks: five slots per week, null where there's no day to show. */
+  const weeksOf = (list: string[]) => {
+    const wd = (d: string) => new Date(`${d}T12:00:00Z`).getUTCDay(); // 0 Sunday … 6 Saturday
+    const weeks = new Map<string, (string | null)[]>();
+    for (const d of list) {
+      const w = wd(d);
+      if (w === 0 || w === 6) continue;
+      const monday = addDays(d, 1 - w);
+      const row = weeks.get(monday) ?? [null, null, null, null, null];
+      row[w - 1] = d;
+      weeks.set(monday, row);
+    }
+    return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, row]) => row);
+  };
+
   // Sparse schedules (one or two dates a month, like After Hours) read better as one grid than as
   // a row per month.
   const flow =
@@ -343,15 +358,16 @@ export function ProgramDates({
     return { reason: list[0].closure as string, camp: list.some((x) => x.campToday) };
   };
 
-  const tile = (d: string, flowTile: boolean) => {
+  const tile = (d: string, flowTile: boolean, fill = false) => {
+    // fill: the tile stretches to its column (Yalla Flex's Monday–Friday week rows).
+    const size = flowTile ? "h-[5.75rem] w-full" : fill ? "h-[5.25rem] w-full" : "h-[5.25rem] w-[5.25rem]";
     const closed = closedDay(d);
     if (closed) {
-      const size = flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]";
       const date = (
         <>
-          <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>
+          {fill ? null : <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>}
           <span className={`font-serif leading-none ${flowTile ? "text-[1.6rem]" : "text-[1.45rem]"}`}>{fmt(d, { day: "numeric" })}</span>
-          <span className="mt-1 text-[0.58rem] leading-tight">Yalla closed</span>
+          <span className="mt-1 text-[0.58rem] leading-tight">{fill ? "Closed" : "Yalla closed"}</span>
         </>
       );
       const label = `${fmt(d, { weekday: "long", month: "long", day: "numeric" })}: Yalla closed for ${closed.reason}`;
@@ -363,7 +379,7 @@ export function ProgramDates({
           className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-blue/40 bg-blue/[0.04] px-1 text-center text-ink/45 transition-colors hover:border-blue hover:text-ink ${size}`}
         >
           {date}
-          <span className="mt-0.5 text-[0.58rem] leading-tight text-blue">Explore camp →</span>
+          <span className="mt-0.5 text-[0.58rem] leading-tight text-blue">{fill ? "Camp →" : "Explore camp →"}</span>
         </a>
       ) : (
         <span aria-label={label} title={`${closed.reason}: Yalla closed`} className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/15 bg-ink/[0.03] px-1 text-center text-ink/35 ${size}`}>
@@ -377,9 +393,9 @@ export function ProgramDates({
           type="button"
           onClick={askWho}
           aria-label={`${fmt(d, { weekday: "long", month: "long", day: "numeric" })}: choose who’s coming first`}
-          className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/15 px-1 text-center text-ink/35 ${flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]"}`}
+          className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/15 px-1 text-center text-ink/35 ${size}`}
         >
-          <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>
+          {fill ? null : <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">{flowTile ? fmt(d, { month: "short" }) : fmt(d, { weekday: "short" })}</span>}
           <span className={`font-serif leading-none ${flowTile ? "text-[1.6rem]" : "text-[1.45rem]"}`}>{fmt(d, { day: "numeric" })}</span>
         </button>
       );
@@ -401,12 +417,10 @@ export function ProgramDates({
                 : "A few spots left"
               : null;
     const label = `${fmt(d, { weekday: "long", month: "long", day: "numeric", ...(flowTile ? { year: "numeric" } : {}) })}${status ? `, ${status.toLowerCase()}` : ""}`;
-    const shape = `relative flex flex-col items-center justify-center rounded-xl border px-1 text-center transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${
-      flowTile ? "h-[5.75rem] w-full" : "h-[5.25rem] w-[5.25rem]"
-    }`;
+    const shape = `relative flex flex-col items-center justify-center rounded-xl border px-1 text-center transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue/40 focus-visible:outline-none ${size}`;
     const inner = (
       <>
-        <span className="text-[0.62rem] tracking-[0.12em] uppercase opacity-70">
+        <span className={`text-[0.62rem] tracking-[0.12em] uppercase opacity-70 ${fill ? "hidden" : ""}`}>
           {flowTile
             ? fmt(d, { month: "short" }) +
               (d.slice(0, 4) !== today.slice(0, 4) ? ` ’${d.slice(2, 4)}` : "")
@@ -421,7 +435,7 @@ export function ProgramDates({
           <span
             className={`mt-1 text-[0.6rem] leading-tight ${on ? "opacity-80" : full ? "" : "text-oxblood"}`}
           >
-            {status}
+            {fill && status === "Session full" ? "Full" : status}
           </span>
         ) : isFlex && early && !full ? (
           <span className={`mt-1 text-[0.58rem] leading-tight ${on ? "opacity-80" : "text-ink-soft"}`}>{earlyOn(d) ? "Early Bird open" : "No Early Bird"}</span>
@@ -722,7 +736,7 @@ export function ProgramDates({
               return (
                 <div
                   key={month}
-                  className="grid gap-3 py-4 sm:grid-cols-[8.5rem_1fr] sm:items-center"
+                  className={`grid gap-3 py-4 sm:grid-cols-[8.5rem_1fr] ${isFlex ? "sm:items-start sm:pt-9" : "sm:items-center"}`}
                 >
                   <div className="flex items-baseline justify-between gap-3 sm:block">
                     <p className="font-serif text-[1.3rem] leading-tight">
@@ -741,11 +755,29 @@ export function ProgramDates({
                       </button>
                     ) : null}
                   </div>
-                  <ul className="flex flex-wrap gap-2">
-                    {list.map((d) => (
-                      <li key={d}>{tile(d, false)}</li>
-                    ))}
-                  </ul>
+                  {isFlex ? (
+                    // Yalla Flex runs Monday to Friday: one row per week, each weekday in its own column.
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-5 gap-2 text-center text-[0.62rem] tracking-[0.14em] text-ink-soft uppercase" aria-hidden>
+                        {["Mon", "Tue", "Wed", "Thu", "Fri"].map((w) => (
+                          <span key={w}>{w}</span>
+                        ))}
+                      </div>
+                      {weeksOf(list).map((week) => (
+                        <ul key={week[0] ?? week.find(Boolean)} className="grid grid-cols-5 gap-2">
+                          {week.map((d, i) => (
+                            <li key={d ?? `gap-${i}`}>{d ? tile(d, false, true) : <span aria-hidden className="block h-[5.25rem] w-full rounded-xl border border-dashed border-ink/[0.07]" />}</li>
+                          ))}
+                        </ul>
+                      ))}
+                    </div>
+                  ) : (
+                    <ul className="flex flex-wrap gap-2">
+                      {list.map((d) => (
+                        <li key={d}>{tile(d, false)}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}
