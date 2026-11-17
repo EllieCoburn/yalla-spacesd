@@ -144,8 +144,16 @@ export const BOOKING_PAGES: Record<string, Page> = {
         Choose your <em>Flex days.</em>
       </>
     ),
-    datesNote:
-      "Yalla is a small community, and Flex families share spaces with our Club Yalla families. Flex spots are first come, first served. If you see a date that works for your family, we recommend booking early while there’s still room.",
+    datesNote: (
+      <>
+        Yalla is a small community, and Flex families share spaces with our{" "}
+        <Link href="/club-yalla" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+          Club Yalla
+        </Link>{" "}
+        families. Flex spots are first come, first served. If you see a date that works for your family, we recommend booking early while there’s
+        still room.
+      </>
+    ),
     unit: "day",
     // Each Flex day has a session per age group; a group is open only when staff release a spot.
     groups: FLEX_GROUPS.map((g) => ({
