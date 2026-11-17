@@ -42,6 +42,7 @@ import { flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 import { bookingStatusPath } from "@/lib/links";
+import { site } from "@/content/site";
 
 export type ItemRequest = { sessionId: string; childId?: string | null; adults?: number; addons?: string[] };
 
@@ -615,7 +616,11 @@ async function confirmationVars(db: Executor, bookingId: string) {
   const loc = first?.session.locationId ? (await db.select().from(locations).where(eq(locations.id, first.session.locationId)))[0] : undefined;
   const arrival = first?.program.arrivalInstructions ?? loc?.arrivalInstructions ?? "";
   const pay = await paymentCard(db, bookingId);
-  const summary = [...sessionBlocks(rows), ...(pay ? [pay] : []), `Where: ${loc?.name ?? "Yalla"}\nReference: ${b.reference}`, ...(arrival.trim() ? [`~~ ${arrival.trim().replace(/\s*\n+\s*/g, " ")}`] : [])].join("\n\n");
+  // "Where" opens the address in the family's maps app.
+  const address = loc?.address?.trim() || site.address.value || "";
+  const placeName = loc?.name ?? "Yalla";
+  const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Childcare & Coworking, ${address}`)})` : placeName;
+  const summary = [...sessionBlocks(rows), ...(pay ? [pay] : []), `Where: ${where}\nReference: ${b.reference}`, ...(arrival.trim() ? [`~~ ${arrival.trim().replace(/\s*\n+\s*/g, " ")}`] : [])].join("\n\n");
   return {
     reference: b.reference,
     program: [...new Set(rows.map((r) => r.program.name))].join(", "),

@@ -166,6 +166,12 @@ export function bodyHtml(body: string, key: string) {
     .map((b) => b.split("\n").map((l) => l.trim()).filter(Boolean))
     .filter((b) => b.length);
   const out: string[] = [];
+  // What each piece of `out` is, so the closing after the last button can be centered.
+  const kinds: ("para" | "button" | "other")[] = [];
+  const push = (html: string, kind: "para" | "button" | "other" = "other") => {
+    out.push(html);
+    kinds.push(kind);
+  };
   const label = BUTTON[key] ?? "Open";
 
   // The sign-off: the last block if it's short and ends with "Yalla" (or is a closing phrase).
@@ -176,47 +182,47 @@ export function bodyHtml(body: string, key: string) {
   blocks.forEach((b, i) => {
     // "## Section heading" lines.
     while (b.length && /^##\s+/.test(b[0])) {
-      out.push(`<p style="margin:30px 0 12px;font-family:${SERIF};font-size:21px;line-height:1.3;color:${C.ink};">${esc(b.shift()!.replace(/^##\s+/, ""))}</p>`);
+      push(`<p style="margin:30px 0 12px;font-family:${SERIF};font-size:21px;line-height:1.3;color:${C.ink};">${esc(b.shift()!.replace(/^##\s+/, ""))}</p>`);
     }
     if (!b.length) return;
     if (/^>>\s+/.test(b[0])) {
-      out.push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
+      push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
       return;
     }
     if (b.every((l) => /^(!!|~~)\s+/.test(l))) {
       for (const l of b) {
         const stat = l.match(/^!!\s+(.+?)\s*\|\s*(.+)$/);
-        if (stat) out.push(statCallout(stat[1], stat[2], key));
-        else out.push(noteCallout(l.replace(/^(!!|~~)\s+/, "")));
+        if (stat) push(statCallout(stat[1], stat[2], key));
+        else push(noteCallout(l.replace(/^(!!|~~)\s+/, "")));
       }
       return;
     }
     if (i === 0 && b.length === 1 && /^(hi|hello|dear)\b.*,$/i.test(b[0])) {
-      out.push(`<p style="margin:0 0 18px;font-family:${SERIF};font-size:20px;line-height:1.4;color:${C.ink};">${esc(b[0])}</p>`);
+      push(`<p style="margin:0 0 18px;font-family:${SERIF};font-size:20px;line-height:1.4;color:${C.ink};">${esc(b[0])}</p>`);
       return;
     }
     const isDetails = b.every((l) => LABEL_LINE.test(l) || /^[•\-*]\s/.test(l)) && !b.some((l) => /:\s*https?:\/\//.test(l));
     if (isDetails && (b.length > 1 || /^[•\-*]\s/.test(b[0]))) {
-      out.push(detailsCard(b));
+      push(detailsCard(b));
       return;
     }
     // Paragraphs, with any bare link (or "Text: link") turned into a button.
     let para: string[] = [];
     const flush = () => {
-      if (para.length) out.push(p(para.map(inline).join("<br>")));
+      if (para.length) push(p(para.map(inline).join("<br>")), "para");
       para = [];
     };
     for (const l of b) {
       if (URL_ONLY.test(l)) {
         flush();
-        out.push(button(l, label));
+        push(button(l, label), "button");
         continue;
       }
       const tail = l.match(/^(.*?):\s*(https?:\/\/\S+)$/);
       if (tail) {
         para.push(`${tail[1]}.`.replace(/\.\.$/, "."));
         flush();
-        out.push(button(tail[2], label));
+        push(button(tail[2], label), "button");
         continue;
       }
       para.push(l);
@@ -224,12 +230,23 @@ export function bodyHtml(body: string, key: string) {
     flush();
   });
 
+  // When an email ends with a button followed only by short closing lines, center that closing
+  // (and the sign-off) under the button, so the ending reads as one piece.
+  const lastButton = kinds.lastIndexOf("button");
+  const centerClosing = lastButton >= 0 && kinds.slice(lastButton + 1).every((k) => k === "para");
+  if (centerClosing) for (let i = lastButton + 1; i < out.length; i++) out[i] = out[i].replace('<p style="', '<p style="text-align:center;');
+  // A short lead-in that introduces the closing button ("…for your family:") sits centered above it too.
+  if (centerClosing && kinds[lastButton - 1] === "para" && /:<\/p>$/.test(out[lastButton - 1])) out[lastButton - 1] = out[lastButton - 1].replace('<p style="', '<p style="text-align:center;');
   if (signOff) {
     const [lead, name] = signOff.length === 2 ? signOff : [null, signOff[0]];
     const signature = /^yalla$/i.test(name.trim()) ? "Team Yalla" : name;
+    // Every sign-off is centered; so is a short closing line right above it ("We can’t wait to see you.").
+    const last = out.length - 1;
+    if (!centerClosing && kinds[last] === "para" && out[last].replace(/<[^>]+>/g, "").length <= 120) out[last] = out[last].replace('<p style="', '<p style="text-align:center;');
+    const align = "text-align:center;";
     out.push(
-      `<p style="margin:8px 0 0;font-family:${SANS};font-size:16px;line-height:1.6;color:${C.ink};">${lead ? esc(lead) : "Warmly,"}</p>` +
-        `<p style="margin:2px 0 0;font-family:${SERIF};font-style:italic;font-size:24px;line-height:1.3;color:${C.blue};">${esc(signature)}</p>`,
+      `<p style="${align}margin:8px 0 0;font-family:${SANS};font-size:16px;line-height:1.6;color:${C.ink};">${lead ? esc(lead) : "Warmly,"}</p>` +
+        `<p style="${align}margin:2px 0 0;font-family:${SERIF};font-style:italic;font-size:24px;line-height:1.3;color:${C.blue};">${esc(signature)}</p>`,
     );
   }
   return out.join("\n");
