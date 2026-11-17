@@ -150,7 +150,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
         <Link href="/club-yalla" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
           Club Yalla
         </Link>{" "}
-        families. Flex spots are first come, first served. If you see a date that works for your family, we recommend booking early while there’s
+        families. Flex spots are first come, first served. If you see an available date that works for your family, we recommend booking early while there’s
         still room.
       </>
     ),
