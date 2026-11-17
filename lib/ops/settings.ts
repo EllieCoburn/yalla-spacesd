@@ -25,6 +25,13 @@ export const POLICIES = {
     default: "hello@yallaspacesd.com",
     decision: false,
   } as PolicyDef<string>,
+  "notifications.flexWelcome": {
+    group: "Notifications",
+    label: "Send the Yalla Flex first-day welcome email",
+    help: "On the morning of a new Flex family’s first visit, before they arrive, they get one welcome letter from Team Yalla with door codes, Wi-Fi, Brightwheel and parking links.",
+    default: true,
+    decision: false,
+  } as PolicyDef<boolean>,
   "notifications.membershipEmails": {
     group: "Notifications",
     label: "Send membership messages to",

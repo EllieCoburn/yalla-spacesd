@@ -50,6 +50,7 @@ const HERO: Record<string, string> = {
   playpass_welcome: "hero-rainbow.jpg",
   booking_confirmation: "hero-rainbow.jpg",
   booking_welcome_team: "hero-rainbow.jpg",
+  flex_welcome: "hero-rainbow.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",
 };
@@ -88,7 +89,7 @@ export function plainText(body: string) {
     .replace(/^>>\s+/gm, "")
     .replace(/^~~\s+/gm, "")
     .replace(/^!!\s+(.+?)\s*\|\s*(.+)$/gm, "$1 $2")
-    .replace(/^!!\s+/gm, "").replace(MD_LINK, "$1: $2").replace(/^#{1,2}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
+    .replace(/^!!\s+/gm, "").replace(MD_LINK, "$1: $2").replace(/^#{1,3}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** A template can start with "# Headline" to use a headline other than the subject. */
@@ -184,11 +185,22 @@ export function bodyHtml(body: string, key: string) {
   if (last && last.length <= 2 && last.every((l) => SIGN_OFF.test(l) || l.length < 28) && /yalla$/i.test(last[last.length - 1])) signOff = blocks.pop()!;
 
   blocks.forEach((b, i) => {
-    // "## Section heading" lines.
-    while (b.length && /^##\s+/.test(b[0])) {
-      push(`<p style="margin:30px 0 12px;font-family:${SERIF};font-size:21px;line-height:1.3;color:${C.ink};">${esc(b.shift()!.replace(/^##\s+/, ""))}</p>`);
+    // "## Section heading" and "### Smaller heading" lines.
+    const headed = /^###\s+/.test(b[0] ?? "");
+    while (b.length && /^#{2,3}\s+/.test(b[0])) {
+      const line = b.shift()!;
+      if (/^###\s+/.test(line)) push(`<p style="margin:22px 0 8px;font-family:${SANS};font-size:12px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:${C.blue};">${esc(line.replace(/^###\s+/, ""))}</p>`);
+      else push(`<p style="margin:34px 0 4px;padding-top:26px;border-top:1px solid ${C.line};font-family:${SERIF};font-size:23px;line-height:1.3;color:${C.ink};">${esc(line.replace(/^##\s+/, ""))}</p>`);
     }
     if (!b.length) return;
+    // A sign-off in the middle of an email (a letter followed by more details).
+    if (b.length === 2 && SIGN_OFF.test(b[0]) && /^team yalla$/i.test(b[1])) {
+      push(
+        `<p style="margin:8px 0 0;font-family:${SANS};font-size:16px;line-height:1.6;color:${C.ink};">${esc(b[0])}</p>` +
+          `<p style="margin:2px 0 10px;font-family:${SERIF};font-style:italic;font-size:24px;line-height:1.3;color:${C.blue};">${esc(b[1])}</p>`,
+      );
+      return;
+    }
     if (/^>>\s+/.test(b[0])) {
       push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
       return;
@@ -206,7 +218,7 @@ export function bodyHtml(body: string, key: string) {
       return;
     }
     const isDetails = b.every((l) => LABEL_LINE.test(l) || /^[•\-*]\s/.test(l)) && !b.some((l) => /:\s*https?:\/\//.test(l));
-    if (isDetails && (b.length > 1 || /^[•\-*]\s/.test(b[0]))) {
+    if (isDetails && (b.length > 1 || headed || /^[•\-*]\s/.test(b[0]))) {
       push(detailsCard(b));
       return;
     }

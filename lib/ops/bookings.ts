@@ -782,6 +782,14 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     // Each Flex cohort's team hears about drop-ins to their cohort.
     const { notifyCohortsOfDropIns } = await import("./team-notices");
     await notifyCohortsOfDropIns(db, bookingId);
+    // A new Flex family booking their first day the same morning (after the early run) is welcomed now.
+    try {
+      const { sendFlexWelcomes } = await import("./flex-welcome");
+      const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
+      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId] });
+    } catch (e) {
+      console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
+    }
   }
   if (result.status === "confirmed" && result.changed && opts.notify !== false) {
     const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));

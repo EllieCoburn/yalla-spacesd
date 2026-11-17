@@ -1,0 +1,1 @@
+ALTER TABLE "families" ADD COLUMN "flex_welcome_sent_at" timestamp with time zone;

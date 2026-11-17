@@ -31,6 +31,13 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   await applyPlayPassSchedules(db);
   // Keep Yalla Flex days (full until staff release spots) set up for the coming weeks.
   await ensureFlexDays(db);
+  // Yalla Flex first-day welcomes (normally sent by their own earlier run; this catches any it missed).
+  try {
+    const { sendFlexWelcomes } = await import("@/lib/ops/flex-welcome");
+    await sendFlexWelcomes(db, { now, baseUrl: opts.baseUrl });
+  } catch (e) {
+    console.error("[flex welcome run failed]", (e as Error).message?.slice(0, 160));
+  }
   // Security housekeeping: rate-limit records, used or expired sign-in and reset links, and ended sessions.
   await pruneSecurityRecords(db, now);
 

@@ -7,6 +7,8 @@
  * - NOTIFICATIONS_MODE=live with POSTMARK_SERVER_TOKEN + NOTIFICATIONS_FROM: emails are delivered.
  * Marketing preferences never block essential service messages, and marketing is never sent here.
  */
+import { firstVisitDetails, welcomeLetter, type WelcomeChild } from "@/lib/ops/flex-welcome";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { guardians, messages, messageTemplates } from "@/lib/db/schema";
@@ -50,6 +52,7 @@ export type TemplateKey =
   | "staff_family_joined"
   | "staff_new_booking"
   | "staff_booking_cancelled"
+  | "flex_welcome"
   | "cohort_drop_in"
   | "cohort_drop_in_cancelled";
 
@@ -137,6 +140,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "# Booking cancelled\n\n{{details}}\n\n{{link}}",
     essential: true,
     audience: "staff",
+  },
+  flex_welcome: {
+    name: "Yalla Flex first-day welcome (to families)",
+    subject: "Welcome to your first day of Yalla Flex!",
+    body: "Hi {{guardian_first_name}},\n\n{{welcome_letter}}\n\nWarmly,\nTeam Yalla\n\n{{first_visit_details}}",
+    essential: true,
+    audience: "family",
   },
   cohort_drop_in: {
     name: "Flex drop-in coming (to the cohort’s team)",
@@ -489,11 +499,14 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_family_joined: ["family_name", "details", "link"],
   staff_new_booking: ["summary", "details", "reference", "link"],
   staff_booking_cancelled: ["summary", "details", "reference", "link"],
+  flex_welcome: ["guardian_first_name", "welcome_letter", "first_visit_details"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
   application_received: ["name", "details", "explore"],
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };
+
+const SAMPLE_CHILD: WelcomeChild = { childId: "sample", name: "Ava", cohort: FLEX_GROUPS[3], half: false, arrives: "8:30am", pickup: "4:30pm" };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
   booking_summary: ">> Camp Yalla · 4 – 6 years\nWednesday, November 25, 2026 · 9:00am–3:00pm\n\nWho’s coming: Robin Sample\nExtras: Early Bird (8:00 – 9:00am)\n\nTotal: $180.00\nPaid by card: $180.00\n\nWhere: Yalla Bankers Hill\nReference: YL-SAMPLE",
@@ -526,6 +539,8 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   refund_note: "If a refund or credit applies, we’ll confirm it separately.",
   child_name: "Ava",
   child_names: "Ava",
+  welcome_letter: welcomeLetter([SAMPLE_CHILD]),
+  first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),
   team: "Wildflower team",
   cohort: "Wildflowers",
   when: "tomorrow",

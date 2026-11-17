@@ -363,6 +363,8 @@ export const families = pgTable("families", {
   communicationPrefs: jsonb("communication_prefs").notNull().default({ email: true, sms: false }),
   providerCustomerId: text("provider_customer_id"),
   isSample: boolean("is_sample").notNull().default(false),
+  /** When the Yalla Flex first-day welcome email went out (once per family, ever). */
+  flexWelcomeSentAt: ts("flex_welcome_sent_at"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   archivedAt: ts("archived_at"),

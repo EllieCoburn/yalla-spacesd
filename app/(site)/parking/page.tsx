@@ -201,7 +201,17 @@ export default async function ParkingGuide() {
               ))}
             </div>
             <Note>
-              {enrolled ? null : <>Lot locations are shared with Yalla families when they enroll in one of our programs. </>}
+              {enrolled ? null : signedIn ? (
+                <>Lot locations are shared with Yalla families when they enroll in one of our programs. </>
+              ) : (
+                <>
+                  Lot locations are shared with Yalla families when they enroll in one of our programs. Already a Yalla family?{" "}
+                  <Link href="/portal?signin=1&next=/parking" className={ext}>
+                    Sign in to see them
+                  </Link>
+                  .{" "}
+                </>
+              )}
               Contact the Yalla team at{" "}
               <a href="mailto:hello@yallaspacesd.com" className={ext}>
                 hello@yallaspacesd.com

@@ -55,7 +55,7 @@ export type GuardianContext = {
  * in local development while emails are captured instead of sent.
  */
 /** Where a sign-in link may send the family afterwards (same-site pages only). */
-export const safeNextPath = (n: unknown, fallback = "/portal/home") => (typeof n === "string" && /^\/(book|portal|play-passes|programs)(\/|$|\?)/.test(n) && !n.startsWith("//") ? n : fallback);
+export const safeNextPath = (n: unknown, fallback = "/portal/home") => (typeof n === "string" && /^\/(book|portal|play-passes|programs|parking)(\/|$|\?)/.test(n) && !n.startsWith("//") ? n : fallback);
 
 export async function requestMagicLink(db: Executor, email: string, baseUrl: string, next?: string): Promise<{ devLink?: string }> {
   const clean = email.trim().toLowerCase();
