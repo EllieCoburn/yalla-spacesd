@@ -594,36 +594,38 @@ function SessionRow({
       )}
     </>
   );
+  // Unavailable rows are faded part by part, so a link inside (e.g. "Explore camp") stays bright and clickable.
+  const dim = disabled && s.state.state !== "full" ? "opacity-55" : "";
   return (
     <li>
       <div
         className={`grid w-full grid-cols-[1fr_auto] items-center gap-4 border p-5 text-left transition-all duration-300 sm:grid-cols-[8rem_1fr_auto] sm:p-6 ${
           selected ? "border-blue bg-blue/[0.06]" : "border-line bg-paper"
-        } ${disabled && s.state.state !== "full" ? "opacity-55" : ""}`}
+        }`}
       >
-        <span className="hidden font-serif text-[1.05rem] sm:block">
+        <span className={`hidden font-serif text-[1.05rem] sm:block ${dim}`}>
           {fmtTime(s.startsAt)}
           <span className="block text-[0.85rem] text-ink-soft">
             to {fmtTime(s.endsAt)}
           </span>
         </span>
         <span>
-          <span className="eyebrow block text-[0.58rem] text-ink-soft">
+          <span className={`eyebrow block text-[0.58rem] text-ink-soft ${dim}`}>
             {s.kind === "happening" && s.programName !== "Yalla Happenings" ? `Yalla Happenings · ${s.programName}` : (kindName[s.kind] ?? s.programName)}
             {s.cohort ? ` · ${s.cohort}` : ""}
           </span>
-          <span className="display mt-1 block text-[1.35rem]">
+          <span className={`display mt-1 block text-[1.35rem] ${dim}`}>
             {s.kind === "drop_in" && s.closure ? `Yalla closed · ${s.closure}` : (heading ?? s.title)}
           </span>
           {s.campToday ? (
-            <a href={`/book?offering=camp&date=${s.localDate}`} className="mt-1 inline-block text-[0.82rem] text-blue underline underline-offset-4">
+            <a href={`/book?offering=camp&date=${s.localDate}`} className="mt-1 inline-block text-[0.82rem] font-medium text-blue underline decoration-blue/50 underline-offset-4 transition-colors hover:text-blue-deep hover:decoration-blue-deep">
               Camp Yalla runs this day. Explore camp →
             </a>
           ) : null}
-          <span className="mt-1 block text-[0.82rem] text-ink-soft sm:hidden">
+          <span className={`mt-1 block text-[0.82rem] text-ink-soft sm:hidden ${dim}`}>
             {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
           </span>
-          <span className={`mt-1 block text-[0.82rem] text-ink-soft ${s.kind === "drop_in" && s.closure ? "hidden" : ""}`}>
+          <span className={`mt-1 block text-[0.82rem] text-ink-soft ${dim} ${s.kind === "drop_in" && s.closure ? "hidden" : ""}`}>
             {s.halfPriceCents != null ? `${usd(s.priceCents)} full day · ${usd(s.halfPriceCents)} half day` : usd(s.priceCents)}
             {s.priceCents != null
               ? s.bookingUnit === "per_family"
@@ -640,9 +642,9 @@ function SessionRow({
               : ""}
             {s.approvalRequired ? " · confirmed after approval" : ""}
           </span>
-          <span className="mt-1 block text-[0.8rem] sm:hidden">{status}</span>
+          <span className={`mt-1 block text-[0.8rem] sm:hidden ${dim}`}>{status}</span>
         </span>
-        <span className="flex items-center gap-4">
+        <span className={`flex items-center gap-4 ${dim}`}>
           <span className="hidden text-right text-[0.8rem] sm:block">
             {status}
           </span>
