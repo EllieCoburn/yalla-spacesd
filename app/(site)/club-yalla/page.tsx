@@ -6,7 +6,6 @@ import { Mark } from "@/components/brand/Mark";
 import { ClubYallaDay } from "@/components/site/ClubYallaDay";
 import { CtaBand, Facts, Section } from "@/components/site/PageParts";
 import { ContextualFaq } from "@/components/faq/ContextualFaq";
-import { ToConfirm } from "@/components/ui/Draft";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { membershipIncludes, publicCohorts } from "@/content/pricing-public";
@@ -121,7 +120,7 @@ export default function ClubYallaPage() {
               <p>
                 Members choose a recurring weekly rhythm of one to five days, full or half days, and keep those same days each week.
                 Tuition is monthly. Your child joins one of four small cohorts, each with a low caregiver-to-child ratio, while you work
-                onsite in the coworking space. <ToConfirm>Cohort age ranges</ToConfirm>
+                onsite in the coworking space.
               </p>
               <p>
                 The cohort year runs August through July, and children move up to their next cohort at the start of each new cohort year.
@@ -144,6 +143,7 @@ export default function ClubYallaPage() {
                     />
                   </div>
                   <p className="display mt-6 text-[1.7rem] sm:text-[1.9rem]">{c.name}</p>
+                  <p className="mt-1 text-[0.92rem] text-ink-soft">{c.ages}</p>
                   <dl className="hairline mt-4 grid grid-cols-2 border-t pt-4">
                     <div>
                       <dt className="eyebrow text-[0.55rem] text-ink-soft">Ratio</dt>

@@ -10,11 +10,12 @@ export const publicPricing = {
 };
 
 /** Cohorts as described publicly: small by design. */
+/** Club Yalla cohorts. Ages are Club Yalla's own (not Yalla Flex's age groups). */
 export const publicCohorts = [
-  { name: "Seedlings", ratio: "1:4", maxSize: 8 },
-  { name: "Saplings", ratio: "1:4", maxSize: 8 },
-  { name: "Sprouts", ratio: "1:6", maxSize: 12 },
-  { name: "Wildflowers", ratio: "1:8", maxSize: 12 },
+  { name: "Seedlings", ages: "4 months to nearly 2 years", ratio: "1:4", maxSize: 8 },
+  { name: "Saplings", ages: "11 months to about 2½ years", ratio: "1:4", maxSize: 8 },
+  { name: "Sprouts", ages: "18 months to about 3½ years", ratio: "1:6", maxSize: 12 },
+  { name: "Wildflowers", ages: "2½ years to age 5", ratio: "1:8", maxSize: 12 },
 ];
 
 export const membershipIncludes = [
