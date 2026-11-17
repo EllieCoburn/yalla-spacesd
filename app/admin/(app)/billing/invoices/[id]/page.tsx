@@ -8,7 +8,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { fmtDate, fmtDateTime } from "@/lib/time";
-import { adjustmentAction, applyCreditAction, offlinePaymentAction, paymentLinkAction, voidAction } from "../../actions";
+import { adjustmentAction, applyCreditAction, deleteInvoiceAction, offlinePaymentAction, paymentLinkAction, voidAction } from "../../actions";
 
 export const metadata = { title: "Invoice" };
 
@@ -301,6 +301,21 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                   <p className="text-[0.78rem] text-ink-soft">Invoices with payments can’t be voided — refund or adjust instead, so the history stays intact.</p>
                 )}
               </div>
+            </Card>
+          ) : null}
+          {staff.roleKey === "owner" ? (
+            <Card title="Delete permanently (test only)">
+              <ActionForm
+                action={deleteInvoiceAction}
+                submit={{ label: "Delete invoice for good", variant: "danger" }}
+                confirm={{ title: `Delete ${i.number} for good?`, body: "The invoice, its payments, refunds and wallet entries are removed and can’t be recovered. This doesn’t refund a real card: refund in Stripe first if money was taken.", confirmLabel: "Delete for good", danger: true }}
+              >
+                <input type="hidden" name="invoiceId" value={i.id} />
+                <p className="text-[0.8rem] text-ink-soft">
+                  For test invoices only. Real invoices should be voided or refunded so the history stays intact. Owners only; it’s recorded in the audit trail.
+                </p>
+                <TextField name="confirmNumber" label={`Type ${i.number} to confirm`} required />
+              </ActionForm>
             </Card>
           ) : null}
         </div>

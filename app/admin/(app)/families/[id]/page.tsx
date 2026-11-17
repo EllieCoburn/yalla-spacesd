@@ -12,7 +12,8 @@ import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
 import { ageLabel, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
-import { addChildAction, addGuardianAction, archiveFamilyAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
+import { addChildAction, addGuardianAction, archiveFamilyAction, purgeTestDataAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
+import { familyTestDataCounts } from "@/lib/ops/test-data";
 import { portalStatusByEmail } from "@/lib/family-auth";
 import { familySignedCopies } from "@/lib/ops/forms";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
@@ -22,6 +23,8 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const sp = await searchParams;
   const d = await familyProfile(getDb(), staff, id);
+  // Owners can permanently delete a test family's bookings and invoices.
+  const testData = d && staff.roleKey === "owner" ? await familyTestDataCounts(getDb(), d.family.id) : null;
   if (!d) notFound();
   const today = todayLA();
   const manage = can(staff, "families.manage");
@@ -338,6 +341,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
               ) : (
                 <p className="mt-3 text-[0.85rem] text-ink-soft">No invoices yet.</p>
               )}
+              {d.ledger.invoices.length ? <p className="mt-3 text-[0.78rem] text-ink-soft">Open an invoice to void it (unpaid invoices) or to refund a payment.</p> : null}
             </Card>
           ) : null}
 
@@ -422,6 +426,34 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                   <p className="text-[0.8rem] text-ink-soft">Families with bookings, payments or signed paperwork are archived, never deleted.</p>
                 </ActionForm>
               )}
+            </Card>
+          ) : null}
+
+          {testData && (testData.bookings || testData.invoices || testData.spaceReservations) ? (
+            <Card title="Delete test bookings & invoices">
+              <ActionForm
+                action={purgeTestDataAction}
+                submit={{ label: "Delete for good", variant: "danger" }}
+                confirm={{
+                  title: `Permanently delete ${d.family.name}’s bookings and invoices?`,
+                  body: "This can’t be undone. Use it only for test bookings, never for a real family’s records.",
+                  confirmLabel: "Delete for good",
+                  danger: true,
+                }}
+              >
+                <input type="hidden" name="familyId" value={d.family.id} />
+                <p className="text-[0.8rem] text-ink-soft">
+                  For test data only. Permanently removes this family’s {testData.bookings} booking{testData.bookings === 1 ? "" : "s"}
+                  {testData.spaceReservations ? `, ${testData.spaceReservations} workspace reservation${testData.spaceReservations === 1 ? "" : "s"}` : ""} and {testData.invoices} invoice
+                  {testData.invoices === 1 ? "" : "s"}, with their payments, refunds and wallet entries. The family, guardians, children and signed paperwork are kept.
+                </p>
+                {testData.paidPayments ? (
+                  <Notice tone="warning">
+                    {testData.paidPayments} payment{testData.paidPayments === 1 ? " was" : "s were"} taken. Deleting the records doesn’t refund a real card: refund in Stripe first if needed.
+                  </Notice>
+                ) : null}
+                <TextField name="confirmName" label={`Type ${d.family.name} to confirm`} required />
+              </ActionForm>
             </Card>
           ) : null}
         </div>

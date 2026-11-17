@@ -183,3 +183,11 @@ export const inviteGuardianAction = adminAction("families.manage", async ({ db, 
   const r = await inviteToPortal(db, actor, { email: g.email, name: `${g.firstName} ${g.lastName}` }, trustedBaseUrl((await headers()).get("host")));
   return `Invitation sent to ${r.email}. It works once, for 14 days.${r.devLink ? ` (Test mode link: ${r.devLink})` : ""}`;
 });
+
+/** Owners only: permanently delete a family's bookings and invoices (test data). */
+export const purgeTestDataAction = adminAction("staff.manage", async ({ db, actor, staff, str }) => {
+  if (staff.roleKey !== "owner") throw new OpsError("forbidden", "Only an owner can permanently delete bookings and invoices.");
+  const { purgeFamilyBookingsAndInvoices } = await import("@/lib/ops/test-data");
+  const r = await purgeFamilyBookingsAndInvoices(db, actor, { familyId: str("familyId"), confirmName: str("confirmName") });
+  return `Deleted ${r.bookings} booking${r.bookings === 1 ? "" : "s"}, ${r.spaceReservations} workspace reservation${r.spaceReservations === 1 ? "" : "s"} and ${r.invoices} invoice${r.invoices === 1 ? "" : "s"} for good.`;
+});

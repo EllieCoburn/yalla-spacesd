@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
 import { requestMeta } from "@/lib/auth/session";
@@ -102,4 +103,12 @@ export const discountAction = adminAction("billing.manage", async ({ db, actor, 
     maxUses: num("maxUses"),
   });
   return "Discount saved.";
+});
+
+/** Owners only: permanently delete one invoice (test data), then back to the invoice list. */
+export const deleteInvoiceAction = adminAction("staff.manage", async ({ db, actor, staff, str }) => {
+  if (staff.roleKey !== "owner") throw new OpsError("forbidden", "Only an owner can permanently delete an invoice.");
+  const { deleteInvoicePermanently } = await import("@/lib/ops/test-data");
+  await deleteInvoicePermanently(db, actor, { invoiceId: str("invoiceId"), confirmNumber: str("confirmNumber") });
+  redirect("/admin/billing/invoices");
 });
