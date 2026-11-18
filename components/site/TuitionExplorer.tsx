@@ -159,24 +159,7 @@ export function TuitionExplorer({
                 availability.
               </p>
             </div>
-          ) : (
-            <label className="mt-6 flex cursor-pointer items-start gap-3 text-[0.92rem]">
-              <input type="checkbox" checked={earlyBird} onChange={(e) => setEarlyBird(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
-              <span>
-                Add Early Bird care from {clock(EARLY_BIRD)}
-                <span className="block text-[0.82rem] text-ink-soft">{usd(earlyBirdDaily)} a day, included in the monthly totals below</span>
-              </span>
-            </label>
-          )}
-
-          <label className="mt-4 flex cursor-pointer items-start gap-3 text-[0.92rem]">
-            <input type="checkbox" checked={sibling} onChange={(e) => setSibling(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
-            <span>
-              Apply the sibling discount
-              <span className="block text-[0.82rem] text-ink-soft">{pct}% off monthly tuition for each sibling’s membership</span>
-            </span>
-          </label>
-
+          ) : null}
           {c.note ? <p className="mt-4 text-[0.85rem] text-oxblood">{c.note}</p> : null}
           <table className="mt-6 w-full border-y border-line text-left">
             <caption className="sr-only">
@@ -210,6 +193,28 @@ export function TuitionExplorer({
               {withEarlyBird ? `Includes Early Bird at ${usd(earlyBirdDaily)} a day, averaged over about 4.3 weeks a month${sibling ? " (not discounted)" : ""}.` : ""}
             </p>
           ) : null}
+          {/* Optional additions, under the core rates. */}
+          <div className="mt-8">
+            <p className="eyebrow text-[0.58rem] text-ink-soft">Adjust your estimate</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {day !== "custom" ? (
+                <label className={`flex cursor-pointer items-start gap-3 border p-4 text-[0.92rem] transition-colors ${earlyBird ? "border-blue bg-blue/[0.05]" : "border-line hover:border-ink/40"}`}>
+                  <input type="checkbox" checked={earlyBird} onChange={(e) => setEarlyBird(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
+                  <span>
+                    Add Early Bird care from {clock(EARLY_BIRD)}
+                    <span className="block text-[0.82rem] text-ink-soft">{usd(earlyBirdDaily)} a day, added to the monthly totals above</span>
+                  </span>
+                </label>
+              ) : null}
+              <label className={`flex cursor-pointer items-start gap-3 border p-4 text-[0.92rem] transition-colors ${sibling ? "border-blue bg-blue/[0.05]" : "border-line hover:border-ink/40"}`}>
+                <input type="checkbox" checked={sibling} onChange={(e) => setSibling(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--color-blue)]" />
+                <span>
+                  Apply the sibling discount
+                  <span className="block text-[0.82rem] text-ink-soft">{pct}% off monthly tuition for each sibling’s membership</span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
         <dl className="grid grid-cols-2 gap-px self-start overflow-hidden bg-line lg:grid-cols-1">
           <div className="bg-paper p-6">
