@@ -216,7 +216,8 @@ export default function ClubYallaPage() {
         </div>
       </Section>
 
-      <ContextualFaq page="club-yalla" />
+      {/* No bottom padding: the closing band sits close under the FAQ. */}
+      <ContextualFaq page="club-yalla" className="pt-20 lg:pt-28" />
 
       <CtaBand
         title={
@@ -226,6 +227,7 @@ export default function ClubYallaPage() {
         }
         body="Applications are accepted year-round, first come, first served, depending on cohort availability."
         primary={{ href: "/apply", label: "Apply for Club Yalla" }}
+        tight
       />
     </>
   );

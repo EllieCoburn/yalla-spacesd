@@ -123,14 +123,17 @@ export function CtaBand({
   body,
   primary,
   secondary,
+  tight = false,
 }: {
   title: ReactNode;
   body?: string;
   primary: { href: string; label: string };
   secondary?: { href: string; label: string };
+  /** Less space above, for when the section before already ends with breathing room. */
+  tight?: boolean;
 }) {
   return (
-    <section className="py-24 lg:py-32">
+    <section className={tight ? "pt-8 pb-24 lg:pt-10 lg:pb-32" : "py-24 lg:py-32"}>
       <div className="shell">
         <Reveal className="relative overflow-hidden bg-mist px-8 py-16 text-center sm:px-16 lg:py-24">
           <Mark name="roofline" className="mx-auto h-5 w-auto text-blue" />
