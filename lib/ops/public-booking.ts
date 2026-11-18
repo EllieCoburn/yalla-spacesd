@@ -241,15 +241,19 @@ async function expandSeries(db: Executor, sessionIds: string[]) {
 export async function previewAgreements(db: Executor, input: { familyId?: string | null; sessionIds: string[]; children: ChildRef[] }): Promise<Agreement[]> {
   const sessionIds = await expandSeries(db, input.sessionIds);
   if (!sessionIds.length) return [];
-  const programIds = [...new Set((await db.select({ p: sessions.programId }).from(sessions).where(inArray(sessions.id, sessionIds))).map((r) => r.p))];
+  const sessRows = await db.select({ p: sessions.programId, d: sessions.localDate }).from(sessions).where(inArray(sessions.id, sessionIds));
+  const programIds = [...new Set(sessRows.map((r) => r.p))];
+  // Ages are taken on the first day booked, not today: a child who turns 18 months before camp is
+  // asked for the forms that fit them then.
+  const firstDay = sessRows.map((r) => r.d).sort()[0];
   const existingIds = input.children.map((c) => c.existingId).filter(Boolean) as string[];
-  const reqs = await applicableTemplates(db, { familyId: input.familyId ?? "00000000-none", childIds: existingIds, programIds, sessionIds });
+  const reqs = await applicableTemplates(db, { familyId: input.familyId ?? "00000000-none", childIds: existingIds, programIds, sessionIds, onDate: firstDay });
   const blockingTemplates = new Map<string, (typeof reqs)[number]["t"]>();
   for (const r of reqs) if (r.t.enforcement === "blocks_booking") blockingTemplates.set(r.t.id, r.t);
   if (!blockingTemplates.size) return [];
   // Per-child forms narrowed by age (e.g. one Flex agreement per age group) apply only to children who
   // fit. Saved children are checked against their record; new children by the birth date entered.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = firstDay ?? new Date().toISOString().slice(0, 10);
   const forChild = (templateId: string, c: ChildRef) =>
     reqs
       .filter((r) => r.t.id === templateId)

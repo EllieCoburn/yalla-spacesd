@@ -202,7 +202,7 @@ export function ProgramDates({
     const c: AddedChild = { id: `new-${Date.now()}`, name: `${firstName} ${lastName}`, firstName, lastName, birthDate: draft.birthDate };
     setAdded((a) => [...a, c]);
     // Ticked straight away when they fit one of this program's age groups.
-    if (groupOf(c, picked[0] ?? today)) setChosenKids((k) => [...k, c.id]);
+    if (fitsOn(c)) setChosenKids((k) => [...k, c.id]);
     setDraft({ firstName: "", lastName: "", birthDate: "" });
     setAddError(null);
     setAdding(false);
@@ -219,7 +219,13 @@ export function ProgramDates({
         g.minAge != null && g.maxAge != null && m >= g.minAge && m <= g.maxAge,
     );
   };
+  /** The first chosen day (or, before any is chosen, the first upcoming day) the child is old enough for. */
+  const fitsOn = (c: Child) => (picked.length ? picked : all).find((d) => groupOf(c, d));
   const pickedKids = allKids.filter((c) => chosenKids.includes(c.id));
+  /** Chosen children who aren't the right age yet on a chosen day (that day isn't booked for them). */
+  const tooYoungOn = byName
+    ? picked.flatMap((d) => pickedKids.filter((k) => !groupOf(k, d) && ageInMonths(k.birthDate, d) < Math.min(...groups.map((x) => x.minAge ?? 0))).map((k) => `${k.name.split(" ")[0]} on ${fmt(d, { month: "short", day: "numeric" })}`))
+    : [];
   /** How many children go in each group on a given day. */
   const countsOn = (day: string): Record<string, number> => {
     if (!byName) return counts;
@@ -538,9 +544,12 @@ export function ProgramDates({
               {allKids.map((c) => {
                 const isAdded = added.some((a) => a.id === c.id);
                 const on = chosenKids.includes(c.id);
-                const day = picked[0] ?? today;
-                const g = groupOf(c, day);
-                const m = ageInMonths(c.birthDate, day);
+                // A child fits if they're the right age on any chosen day (or any upcoming day before
+                // one is chosen): a child turning 18 months next week can book camp days after that.
+                const fitDay = fitsOn(c);
+                const g = fitDay ? groupOf(c, fitDay) : undefined;
+                const m = ageInMonths(c.birthDate, today);
+                const from = fitDay && !groupOf(c, picked[0] ?? today) && !picked.length ? fitDay : null;
                 return (
                   <li key={c.id}>
                     <button
@@ -561,9 +570,7 @@ export function ProgramDates({
                         <span className="text-[0.78rem] text-ink-soft">
                           {m >= 0 ? ageText(m) : "Not yet born"} ·{" "}
                           {g
-                            ? g.cohort
-                              ? g.label
-                              : `${g.label} group`
+                            ? `${g.cohort ? g.label : `${g.label} group`}${from ? ` from ${fmt(from, { month: "short", day: "numeric" })}` : ""}`
                             : m < Math.min(...groups.map((x) => x.minAge ?? 0))
                               ? `Joins from ${ageText(Math.min(...groups.map((x) => x.minAge ?? 0)))}`
                               : "Past this program’s ages"}
@@ -849,6 +856,12 @@ export function ProgramDates({
                 Tap each {unit} you’d like to reserve.
               </p>
             )}
+            {tooYoungOn.length ? (
+              <p className="mt-0.5 text-[0.75rem] text-oxblood">
+                Not old enough yet: {tooYoungOn.slice(0, 3).join(", ")}
+                {tooYoungOn.length > 3 ? ` and ${tooYoungOn.length - 3} more` : ""}
+              </p>
+            ) : null}
             {fullFor.length ? (
               <p className="mt-0.5 text-[0.75rem] text-oxblood">
                 Full: {fullFor.slice(0, 3).join(", ")}
