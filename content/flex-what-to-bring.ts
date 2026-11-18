@@ -30,11 +30,11 @@ const lunch: BringItem = { text: "Lunch", detail: "Nutritious and packed in cont
 const outerwear: BringItem = { text: "Weather-appropriate outerwear", detail: "Jacket, sweater, or sun hat depending on the season.", short: "Weather-appropriate outerwear" };
 const playShoes: BringItem = { text: "Shoes", detail: "Closed-toe and suitable for exposure to outdoor play, mud, water and paint.", short: "Closed-toe shoes" };
 const waterBottle: BringItem = { text: "Water bottle", detail: "Spill-proof and clearly labeled.", short: "Water bottle" };
-const changeOfClothes: BringItem = { text: "Complete change of clothes", detail: "Including socks and underwear, in a labeled zip bag.", short: "Change of clothes" };
-const threeOutfits: BringItem = {
-  text: "Three complete extra outfits, including socks",
-  detail: "Soiled clothes are sent home in a bag. Please make sure three full changes of clothing are always in your child’s bag.",
-  short: "Three extra outfits",
+/** A day of Flex needs one or two spare outfits (Club Yalla, a full week at Yalla, keeps more). */
+const extraOutfits: BringItem = {
+  text: "1–2 complete extra outfits, including socks",
+  detail: "Include underwear if your child wears it, packed in a labeled zip bag. Soiled clothes are sent home in a bag.",
+  short: "1–2 extra outfits",
 };
 /** For families booked a week or more in a row (Yalla's weekly routine for items that stay). */
 export const WEEK_BLOCK_NOTE =
@@ -61,11 +61,7 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
         key: "clothes",
         title: "Extra clothes and layers",
         items: [
-          {
-            text: "Two complete extra outfits, including socks",
-            detail: "Soiled clothes are sent home in a bag. Please make sure two full changes of clothing are always in your child’s bag.",
-            short: "Two extra outfits",
-          },
+          extraOutfits,
           { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" },
           { text: "Sun hat", short: "Sun hat" },
         ],
@@ -88,13 +84,13 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
       {
         key: "daily",
         title: "Pack each day",
-        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
+        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, outerwear],
       },
       CARE,
       {
         key: "clothes",
         title: "Extra clothes and layers",
-        items: [threeOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
+        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
       },
       {
         key: "rest",
@@ -117,13 +113,13 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
       {
         key: "daily",
         title: "Pack each day",
-        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
+        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, outerwear],
       },
       CARE,
       {
         key: "clothes",
         title: "Extra clothes and layers",
-        items: [threeOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
+        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
       },
       {
         key: "rest",
@@ -151,7 +147,7 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
         key: "clothes",
         title: "Extra clothes and layers",
         items: [
-          threeOutfits,
+          extraOutfits,
           { text: "Small (bath size) personal towel", short: "Small personal towel" },
           { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" },
           { text: "Sun hat", short: "Sun hat" },
