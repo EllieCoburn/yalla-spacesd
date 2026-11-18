@@ -80,13 +80,18 @@ export default function MembershipPage() {
             </div>
 
             <p className="eyebrow mt-16 text-ink-soft">Coworking</p>
-            <div className="mt-5 bg-mist/60 p-6">
-              <p className="text-[1rem]">Communal coworking is included with every Club Yalla membership.</p>
-              <p className="mt-1.5 max-w-md text-[0.88rem] leading-relaxed text-ink-soft">Work from Yalla’s shared spaces on your child’s days, at no extra cost.</p>
-              <Link href="/coworking" className="mt-4 inline-flex items-center gap-3 border-b border-ink/30 pb-1 text-[0.95rem] text-ink hover:border-blue hover:text-blue">
-                Learn about coworking at Yalla <Arrow className="h-3 w-4" />
-              </Link>
-            </div>
+            <dl className="mt-5 border-y border-line">
+              <div className="flex items-baseline justify-between gap-6 py-5">
+                <dt>
+                  <span className="block text-[1rem]">Communal coworking</span>
+                  <span className="text-[0.82rem] text-ink-soft">Work from Yalla’s shared spaces on your child’s days.</span>
+                </dt>
+                <dd className="font-serif text-[1.35rem] whitespace-nowrap">Included</dd>
+              </div>
+            </dl>
+            <Link href="/coworking" className="mt-5 inline-flex items-center gap-3 border-b border-ink/30 pb-1 text-[0.95rem] text-ink hover:border-blue hover:text-blue">
+              Learn about coworking at Yalla <Arrow className="h-3 w-4" />
+            </Link>
           </div>
         </div>
       </Section>
