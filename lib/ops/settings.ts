@@ -35,7 +35,7 @@ export const POLICIES = {
   "notifications.flexWelcome": {
     group: "Notifications",
     label: "Send the Yalla Flex first-day welcome email",
-    help: "On the morning of a new Flex family’s first visit, before they arrive, they get one welcome letter from Team Yalla with door codes, Wi-Fi, Brightwheel and parking links.",
+    help: "The evening before a new Flex family’s first visit (about 6pm), they get one welcome letter from Team Yalla with their times, what to bring, door codes, Wi-Fi, Brightwheel, parking and extras. It replaces that evening’s reminder for their Flex day. Families who book later (that evening or the same morning) get it as soon as they book.",
     default: true,
     decision: false,
   } as PolicyDef<boolean>,

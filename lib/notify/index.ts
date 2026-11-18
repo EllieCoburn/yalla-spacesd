@@ -144,7 +144,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
   flex_welcome: {
     name: "Yalla Flex first-day welcome (to families)",
-    subject: "Welcome to your first day of Yalla Flex!",
+    subject: "Welcome to Yalla Flex! See you {{when}}",
     body: "Hi {{guardian_first_name}},\n\n{{welcome_letter}}\n\nWarmly,\nTeam Yalla\n\n{{first_visit_details}}",
     essential: true,
     audience: "family",
@@ -508,7 +508,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_family_joined: ["family_name", "details", "link"],
   staff_new_booking: ["summary", "details", "reference", "link"],
   staff_booking_cancelled: ["summary", "details", "reference", "link"],
-  flex_welcome: ["guardian_first_name", "welcome_letter", "first_visit_details"],
+  flex_welcome: ["guardian_first_name", "when", "welcome_letter", "first_visit_details"],
   flex_thank_you: ["guardian_first_name", "child_names", "coupon_code", "coupon_link", "book_link"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],

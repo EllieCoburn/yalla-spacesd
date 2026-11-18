@@ -1,15 +1,16 @@
 /**
- * The Yalla Flex first-day welcome: one letter from Team Yalla per family, sent on the morning of
- * their first Flex visit (Yalla's local time), before they arrive, followed by the practical
- * details for that visit (door codes, Wi-Fi, Brightwheel, parking and space reservations).
+ * The Yalla Flex first-day welcome: one letter from Team Yalla per family, with everything for their
+ * first visit (times and pickup, what to bring, door codes, Wi-Fi, coworking, Brightwheel, parking,
+ * spaces and extras). It is also that evening's "see you tomorrow" reminder for their Flex day.
  *
  * - A family's first visit is the earliest day they have confirmed Flex care. Every child coming
  *   that day is in the same email, however many bookings they were made in.
+ * - When: the evening before (the 6pm run), so families can get ready the night before. A family who
+ *   books after that run (that evening, or the morning of) gets it as soon as the booking is
+ *   confirmed. The early-morning run catches anyone still missing it.
  * - It's sent once per family, ever: `families.flex_welcome_sent_at` is claimed before sending, so
  *   a second run, an updated booking or two runs at once can never send it again.
  * - It's written from the booking as it stands when it's sent (children, cohorts, times).
- * - It goes out from the morning run (cron), and right away when a family books their first Flex
- *   day the same morning (after that run).
  * - Only for bookings made after it was switched on: the first time it runs, every family who had
  *   already booked Flex is marked as welcomed (Yalla welcomed them personally before this existed).
  */
@@ -18,7 +19,7 @@ import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, families, guardians, programs, sessions, settings } from "@/lib/db/schema";
 import { EARLY_BIRD, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { fmtTime, todayLA } from "@/lib/time";
+import { addDaysISO, fmtDate, fmtTime, todayLA, zonedDateTime } from "@/lib/time";
 import { getPolicy } from "./settings";
 import { WEEK_BLOCK_NOTE, whatToBring } from "@/content/flex-what-to-bring";
 
@@ -69,7 +70,7 @@ export async function firstVisitChildren(db: Executor, familyId: string, date: s
 const period = (c: WelcomeChild) => (c.half ? "their morning" : "their day");
 
 /** The letter itself (between "Hi …," and "Warmly, Team Yalla"), worded for one child or several. */
-export function welcomeLetter(kids: WelcomeChild[]) {
+export function welcomeLetter(kids: WelcomeChild[], when: "today" | "tomorrow" = "today") {
   const many = kids.length > 1;
   const names = joinNames(kids.map((k) => k.name));
   // "the Wildflowers cohort where Jane will spend their day and the Sprouts cohort where Max will spend their morning"
@@ -95,7 +96,7 @@ export function welcomeLetter(kids: WelcomeChild[]) {
   const pickup = joinNames(pickups.map((p) => `${joinNames(p.names)} at ${p.time}`));
   const needs = kids.length === 2 ? "either of them needs" : many ? "any of them needs" : "your child needs";
   return [
-    `We’re so glad you${many ? "," : " and"} ${names} are joining us today! A member of Team Yalla will be onsite to welcome you, show you to ${where}, and introduce you to our coworking spaces and amenities.`,
+    `We’re so glad you${many ? "," : " and"} ${names} are joining us ${when}! A member of Team Yalla will be onsite to welcome you, show you to ${where}, and introduce you to our coworking spaces and amenities.`,
     `Our team looks forward to getting to know ${names}—their interests, their ${many ? "personalities" : "personality"}, and the little things that help them feel at home. We’ll follow their lead as they explore, make connections, and find their rhythm here.`,
     `As you settle into our coworking space, please remember to remain onsite throughout your ${many ? "children’s sessions" : "child’s session"}. If ${needs} you, we’ll reach out—and you’re always welcome to ask how they’re doing.`,
     `You’ll also receive updates through Brightwheel. If you haven’t accepted your invitation yet, you can do that whenever you have a moment. We’re happy to help you get connected.`,
@@ -133,7 +134,7 @@ export function whatToBringBlocks(kids: WelcomeChild[], baseUrl: string, opts: {
   return blocks;
 }
 
-export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string, opts: { weekBlock?: boolean } = {}) {
+export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string, opts: { weekBlock?: boolean; when?: "today" | "tomorrow"; date?: string } = {}) {
   const many = kids.length > 1;
   // Each cohort's door code once, in the order the children are listed; Seedlings has no line at all.
   const codes: string[] = [];
@@ -145,7 +146,7 @@ export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string, opts: {
   const who = joinNames(kids.map((k) => k.name));
   return [
     "## A few details for your first visit",
-    ["### Today", ...kids.map((k) => `${k.name}: ${k.cohort.cohort} · ${k.half ? "Half day" : "Full day"}, ${k.arrives}–${k.pickup} · **Pick up at ${k.pickup}**`)].join("\n"),
+    [opts.when === "tomorrow" && opts.date ? `### Tomorrow, ${fmtDate(opts.date, "EEEE, MMMM d")}` : "### Today", ...kids.map((k) => `${k.name}: ${k.cohort.cohort} · ${k.half ? "Half day" : "Full day"}, ${k.arrives}–${k.pickup} · **Pick up at ${k.pickup}**`)].join("\n"),
     ...whatToBringBlocks(kids, baseUrl, opts),
     ["### Getting inside", `Front door code: ${FRONT_DOOR_CODE}`, ...codes].join("\n"),
     ["### Connecting to Wi-Fi", `Network: ${WIFI.network}`, `Password: ${WIFI.password}`].join("\n"),
@@ -161,7 +162,12 @@ export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string, opts: {
       "• Keep your notifications on so you see our updates and messages during your session.",
     ].join("\n"),
     `You don’t need to set up Brightwheel before your first visit. If your account isn’t ready yet, our team will check ${who} in and help you get connected.`,
-    ["### Parking and space reservations", `• [View our parking guide](${baseUrl}${PARKING_PATH})`, `• [Reserve a space](${baseUrl}${SPACES_PATH})`].join("\n"),
+    [
+      "### Parking, spaces and extras",
+      `• [View our parking guide](${baseUrl}${PARKING_PATH})`,
+      `• [Reserve a space](${baseUrl}${SPACES_PATH}${opts.date ? `?date=${opts.date}` : ""})`,
+      ...(opts.date ? [`• [Add a second grown-up or other extras](${baseUrl}/portal/extras/${opts.date})`] : []),
+    ].join("\n"),
   ].join("\n\n");
 }
 
@@ -193,22 +199,69 @@ export async function familiesDueWelcome(db: Executor, date: string) {
  * Sends today's welcome emails. Only before the family's arrival: after their first child's
  * session has started, it's no longer sent (it says "joining us today").
  */
-export async function sendFlexWelcomes(db: Executor, opts: { now?: Date; baseUrl?: string; familyIds?: string[]; bookingId?: string } = {}) {
+/**
+ * Sends the welcome to every new Flex family due one.
+ * - `evening: true` (the 6pm run): families whose first Flex day is tomorrow.
+ * - Otherwise (the early-morning run): anyone whose first day is today and still hasn't had it.
+ * - `familyIds` (right after a booking): today, and also tomorrow once that evening's run has passed.
+ */
+export async function sendFlexWelcomes(db: Executor, opts: { now?: Date; baseUrl?: string; familyIds?: string[]; bookingId?: string; evening?: boolean } = {}) {
   const now = opts.now ?? new Date();
   await startWelcomes(db, opts.bookingId);
   if (!(await getPolicy(db, "notifications.flexWelcome"))) return { sent: 0 };
-  const date = todayLA(now);
-  let due = await familiesDueWelcome(db, date);
-  if (opts.familyIds) due = due.filter((id) => opts.familyIds!.includes(id));
+  const today = todayLA(now);
+  const tomorrow = addDaysISO(today, 1);
+  const targets: { date: string; when: "today" | "tomorrow" }[] = opts.familyIds
+    ? [{ date: today, when: "today" }, ...(now >= zonedDateTime(today, EVENING_SEND) ? [{ date: tomorrow, when: "tomorrow" as const }] : [])]
+    : opts.evening
+      ? [{ date: tomorrow, when: "tomorrow" }]
+      : [{ date: today, when: "today" }];
   let sent = 0;
-  for (const familyId of due) {
-    try {
-      if (await sendFlexWelcome(db, familyId, date, { now, baseUrl: opts.baseUrl })) sent++;
-    } catch (e) {
-      console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
+  for (const t of targets) {
+    let due = await familiesDueWelcome(db, t.date);
+    if (opts.familyIds) due = due.filter((id) => opts.familyIds!.includes(id));
+    for (const familyId of due) {
+      try {
+        if (await sendFlexWelcome(db, familyId, t.date, { now, baseUrl: opts.baseUrl, when: t.when })) sent++;
+      } catch (e) {
+        console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
+      }
     }
   }
   return { sent };
+}
+
+/** The evening run's local time: after it, a booking for tomorrow gets its welcome straight away. */
+export const EVENING_SEND = "18:00";
+
+/**
+ * Families whose first Flex day is `date` and whose welcome went out in the last day: that letter is
+ * their reminder too. (Families marked as welcomed when this was switched on never got the letter,
+ * so they keep their usual reminder.)
+ */
+export async function familiesWelcomedFor(db: Executor, date: string, familyIds: string[], now = new Date()) {
+  if (!familyIds.length) return new Set<string>();
+  const [started] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, WELCOME_STARTED_KEY));
+  const since = new Date(now.getTime() - 30 * 3600_000);
+  const rows = await db
+    .select({ familyId: bookings.familyId, first: sql<string>`min(${sessions.localDate})`, sentAt: sql<Date>`max(${families.flexWelcomeSentAt})` })
+    .from(bookingItems)
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .innerJoin(families, eq(families.id, bookings.familyId))
+    .where(and(eq(programs.slug, FLEX_SLUG), eq(bookingItems.status, "confirmed"), inArray(bookings.familyId, familyIds), sql`${families.flexWelcomeSentAt} is not null`))
+    .groupBy(bookings.familyId);
+  const startedAt = started?.value ? new Date(String(started.value).replace(/^"|"$/g, "")).getTime() : null;
+  return new Set(
+    rows
+      .filter((r) => r.first === date)
+      .filter((r) => {
+        const t = new Date(r.sentAt).getTime();
+        return t >= since.getTime() && t !== startedAt;
+      })
+      .map((r) => r.familyId),
+  );
 }
 
 export const WELCOME_STARTED_KEY = "flexWelcome.startedAt";
@@ -237,7 +290,7 @@ async function startWelcomes(db: Executor, bookingId?: string) {
     )`);
 }
 
-async function sendFlexWelcome(db: Executor, familyId: string, date: string, opts: { now: Date; baseUrl?: string }) {
+async function sendFlexWelcome(db: Executor, familyId: string, date: string, opts: { now: Date; baseUrl?: string; when: "today" | "tomorrow" }) {
   const kids = await firstVisitChildren(db, familyId, date);
   if (!kids.length) return false;
   const [first] = await db
@@ -246,8 +299,8 @@ async function sendFlexWelcome(db: Executor, familyId: string, date: string, opt
     .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
     .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
     .where(and(eq(bookings.familyId, familyId), eq(bookingItems.status, "confirmed"), inArray(bookingItems.childId, kids.map((k) => k.childId)), eq(sessions.localDate, date)));
-  // Early Bird starts 30 minutes before the session.
-  if (first?.startsAt && opts.now.getTime() >= new Date(first.startsAt).getTime() - 30 * 60_000) return false;
+  // Early Bird starts 30 minutes before the session (too late to be useful on the day).
+  if (opts.when === "today" && first?.startsAt && opts.now.getTime() >= new Date(first.startsAt).getTime() - 30 * 60_000) return false;
   const [primary] = await db
     .select()
     .from(guardians)
@@ -270,7 +323,11 @@ async function sendFlexWelcome(db: Executor, familyId: string, date: string, opt
       key: "flex_welcome",
       familyId,
       guardianIds: [primary.id],
-      vars: { welcome_letter: welcomeLetter(kids), first_visit_details: firstVisitDetails(kids, opts.baseUrl ?? trustedBaseUrl(), { weekBlock }) },
+      vars: {
+        when: opts.when,
+        welcome_letter: welcomeLetter(kids, opts.when),
+        first_visit_details: firstVisitDetails(kids, opts.baseUrl ?? trustedBaseUrl(), { weekBlock, when: opts.when, date }),
+      },
       related: { type: "family", id: familyId },
     });
     return true;

@@ -14,9 +14,12 @@ export async function GET(req: Request) {
   if (!safeEqual(auth, `Bearer ${secret}`)) return new Response("Unauthorized", { status: 401 });
   const url = new URL(req.url);
   const baseUrl = trustedBaseUrl(url.host);
+  // New Flex families' welcome (their first day is tomorrow) goes first; it doubles as their reminder.
+  const { sendFlexWelcomes } = await import("@/lib/ops/flex-welcome");
+  const welcomes = await sendFlexWelcomes(getDb(), { baseUrl, evening: true });
   const reminders = await sendEveningReminders(getDb(), { baseUrl });
   // This run is at 6pm Pacific (7pm in summer): new Flex families' first-day thank-you goes out now too.
   const { sendFlexThankYous } = await import("@/lib/ops/flex-thank-you");
   const thankYous = await sendFlexThankYous(getDb(), { baseUrl });
-  return Response.json({ ...reminders, flexThankYous: thankYous.sent });
+  return Response.json({ ...reminders, flexWelcomes: welcomes.sent, flexThankYous: thankYous.sent });
 }

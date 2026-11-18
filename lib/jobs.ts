@@ -2,6 +2,7 @@
  * Housekeeping. Correctness never depends on these running (availability already ignores lapsed
  * holds and offers), but they keep records tidy and send time-based messages.
  */
+import { FLEX_SLUG } from "@/lib/booking/flex";
 import { and, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { SYSTEM } from "@/lib/audit";
 import type { DB } from "@/lib/db";
@@ -128,10 +129,15 @@ export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?
         .where(and(eq(messages.templateKey, "booking_reminder"), inArray(messages.relatedId, due.map((d) => d.bookingId)), gte(messages.createdAt, new Date(now.getTime() - 20 * 3600_000))))
     ).map((m) => m.relatedId),
   );
+  // A new Flex family's welcome (sent this evening) already covers their first Flex day.
+  const { familiesWelcomedFor } = await import("@/lib/ops/flex-welcome");
+  const welcomed = await familiesWelcomedFor(db, tomorrow, [...new Set(due.map((d) => d.familyId))], now);
   let sent = 0;
   for (const d of due) {
     if (already.has(d.bookingId)) continue;
-    const rows = (await bookingLines(db, d.bookingId)).filter((r) => r.item.status === "confirmed" && r.session.localDate === tomorrow);
+    const rows = (await bookingLines(db, d.bookingId)).filter(
+      (r) => r.item.status === "confirmed" && r.session.localDate === tomorrow && !(welcomed.has(d.familyId) && r.program.slug === FLEX_SLUG),
+    );
     if (!rows.length) continue;
     const [b] = await db.select().from(bookings).where(eq(bookings.id, d.bookingId));
     await notifyFamily(db, {

@@ -5,7 +5,7 @@ import * as s from "@/lib/db/schema";
 import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
 import { setPolicy } from "@/lib/ops/settings";
 import { sendFlexWelcomes } from "@/lib/ops/flex-welcome";
-import { runHousekeeping } from "@/lib/jobs";
+import { runHousekeeping, sendEveningReminders } from "@/lib/jobs";
 import { safeNextPath } from "@/lib/family-auth";
 import { emailHtml } from "@/lib/notify/html";
 import { addDaysISO, todayLA, zonedDateTime } from "@/lib/time";
@@ -66,7 +66,7 @@ describe("Yalla Flex first-day welcome email", () => {
       expect((await sendFlexWelcomes(db(), { now: morning(), baseUrl: "https://yalla.test" })).sent).toBe(1);
       const m = await onlyWelcome();
       expect(m.toAddress).toBe("jordan.rivera@example.com");
-      expect(m.subject).toBe("Welcome to your first day of Yalla Flex!");
+      expect(m.subject).toBe("Welcome to Yalla Flex! See you today");
       expect(m.body).toContain("Hi Jordan,");
       expect(m.body).toContain(`We’re so glad you and Jane are joining us today! A member of Team Yalla will be onsite to welcome you, show you to the ${name} cohort where Jane will spend their day, and introduce you to our coworking spaces and amenities.`);
       expect(m.body).toContain("Please plan to pick up Jane at 4:30pm.");
@@ -76,7 +76,7 @@ describe("Yalla Flex first-day welcome email", () => {
       expect(m.body).not.toContain("#2");
       expect(m.body).toContain("Network: YallaSanDiego\nPassword: YallaSpaceSD");
       expect(m.body).toContain("[View our parking guide](https://yalla.test/parking)");
-      expect(m.body).toContain("[Reserve a space](https://yalla.test/portal/spaces)");
+      expect(m.body).toContain(`[Reserve a space](https://yalla.test/portal/spaces?date=${day()})`);
       // Coworking is part of the visit.
       expect(m.body).not.toContain("nothing extra to buy");
       expect(m.body).toContain("in our common area at no additional charge, and to book complimentary time in our private phone booth or private offices, subject to availability.");
@@ -235,10 +235,54 @@ describe("Yalla Flex first-day welcome email", () => {
     expect(html.indexOf("Welcome to Yalla. We’re happy you’re here")).toBeLessThan(html.indexOf("A few details for your first visit"));
     expect(html.indexOf("Team Yalla</p>")).toBeLessThan(html.indexOf("A few details for your first visit"));
     expect(html).toContain('href="https://yalla.test/parking"');
-    expect(html).toContain('href="https://yalla.test/portal/spaces"');
+    expect(html).toContain('href="https://yalla.test/portal/spaces?date=');
+    expect(html).toContain('href="https://yalla.test/portal/extras/');
     expect(html).not.toContain("###");
     // Signing in keeps families on their way to either page.
     expect(safeNextPath("/parking")).toBe("/parking");
     expect(safeNextPath("/portal/spaces")).toBe("/portal/spaces");
   });
+
+  it("goes out the evening before (6pm run), worded for tomorrow, and replaces that evening's Flex reminder", async () => {
+    const { sessions, familyId } = await setup();
+    const c = await child(familyId, "Jane", "wildflowers");
+    await book(familyId, [{ sessionId: sessions.wildflowers.id, childId: c.id }]);
+    // A returning family with a Flex day tomorrow still gets their usual reminder.
+    const [f2] = await db().insert(s.families).values({ name: "Back family", flexWelcomeSentAt: new Date("2026-01-01") }).returning();
+    await db().insert(s.guardians).values({ familyId: f2.id, firstName: "Bo", lastName: "Back", email: "bo@example.com", isPrimary: true });
+    const leo = await child(f2.id, "Leo", "sprouts");
+    await book(f2.id, [{ sessionId: sessions.sprouts.id, childId: leo.id }]);
+
+    await db().update(s.families).set({ flexWelcomeSentAt: null }).where(eq(s.families.id, familyId));
+    await db().delete(s.messages).where(eq(s.messages.templateKey, "flex_welcome"));
+    const evening = zonedDateTime(todayLA(), "18:00");
+    expect((await sendFlexWelcomes(db(), { now: evening, evening: true, baseUrl: "https://yalla.test" })).sent).toBe(1);
+    const m = await onlyWelcome();
+    expect(m.subject).toBe("Welcome to Yalla Flex! See you tomorrow");
+    expect(m.body).toContain("are joining us tomorrow!");
+    expect(m.body).toMatch(/### Tomorrow, [A-Z][a-z]+day, [A-Z][a-z]+ \d+/);
+    expect(m.body).toContain("### What to bring for Jane");
+    expect(m.body).toContain(`[Add a second grown-up or other extras](https://yalla.test/portal/extras/${day()})`);
+
+    expect((await sendEveningReminders(db(), { baseUrl: "https://yalla.test", now: evening })).sent).toBe(1);
+    const reminders = await db().select().from(s.messages).where(eq(s.messages.templateKey, "booking_reminder"));
+    expect(reminders.map((r) => r.toAddress)).toEqual(["bo@example.com"]);
+    // The morning run doesn't send it again.
+    expect((await sendFlexWelcomes(db(), { now: morning() })).sent).toBe(0);
+  });
+
+  it("booked after the evening run for tomorrow, or the same morning: sent as soon as the booking is confirmed", async () => {
+    const { sessions, familyId } = await setup();
+    const c = await child(familyId, "Jane", "wildflowers");
+    await book(familyId, [{ sessionId: sessions.wildflowers.id, childId: c.id }]);
+    // Start clean whatever the real clock said when the booking was confirmed.
+    await db().update(s.families).set({ flexWelcomeSentAt: null }).where(eq(s.families.id, familyId));
+    await db().delete(s.messages).where(eq(s.messages.templateKey, "flex_welcome"));
+    // Before 6pm the day before: it waits for the evening run.
+    expect((await sendFlexWelcomes(db(), { now: zonedDateTime(todayLA(), "15:00"), familyIds: [familyId] })).sent).toBe(0);
+    // After 6pm: straight away, for tomorrow.
+    expect((await sendFlexWelcomes(db(), { now: zonedDateTime(todayLA(), "20:30"), familyIds: [familyId] })).sent).toBe(1);
+    expect((await onlyWelcome()).subject).toBe("Welcome to Yalla Flex! See you tomorrow");
+  });
 });
+
