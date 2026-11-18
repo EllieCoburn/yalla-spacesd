@@ -379,6 +379,13 @@
       "when": 1794961878280,
       "tag": "0053_club_camp_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794961879280,
+      "tag": "0054_camp_no_health_record",
+      "breakpoints": true
     }
   ]
 }

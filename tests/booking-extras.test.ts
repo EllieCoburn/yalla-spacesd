@@ -99,4 +99,16 @@ describe("Evening-before reminder", () => {
     expect(m.body).toContain(`[Add them in your Family Portal](https://yalla.test/portal/extras/${tomorrow.localDate})`);
     expect(m.body).not.toMatch(/\{\{/);
   });
+
+  it("leaves the private space line out of camp reminders", async () => {
+    const camp = await program({ slug: "camp-yalla", kind: "camp", name: "Camp Yalla" });
+    const day = await session(camp.id, { capacity: 8 }, 1, "09:00", "15:00");
+    const { familyId, kids } = await familyWith([{ first: "Cy", months: 70 }]);
+    await book(familyId, [{ sessionId: day.id, childId: kids[0].id }]);
+    expect((await sendEveningReminders(db(), { baseUrl: "https://yalla.test", now: zonedDateTime(todayLA(), "18:00") })).sent).toBe(1);
+    const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "booking_reminder"));
+    expect(m.body).not.toContain("private space");
+    expect(m.body).not.toContain("second grown-up");
+    expect(m.body).toContain(`[Add extras in your Family Portal](https://yalla.test/portal/extras/${day.localDate})`);
+  });
 });

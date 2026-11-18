@@ -17,6 +17,7 @@ import { ALL_PERMISSIONS } from "@/lib/auth/permissions";
 import { createSeries, createSession, addBlackout } from "@/lib/ops/schedule";
 import { createFamily, addChild, addGuardian, setPickup, setEmergencyContact } from "@/lib/ops/families";
 import { createMembership } from "@/lib/ops/memberships";
+import { PROGRAM_KINDS } from "@/lib/ops/programs";
 import { createHold, confirmAdminBooking, startCheckout, cancelBooking } from "@/lib/ops/bookings";
 import { createTemplate, addRequirement, submitForm } from "@/lib/ops/forms";
 import { joinWaitlist } from "@/lib/ops/waitlist";
@@ -161,7 +162,8 @@ const forms = {
 };
 await addRequirement(db, admin, { templateId: forms.enrollment.template.id, scope: "all" });
 await addRequirement(db, admin, { templateId: forms.emergency.template.id, scope: "all" });
-await addRequirement(db, admin, { templateId: forms.health.template.id, scope: "all" });
+// Camp doesn’t collect immunization records.
+await addRequirement(db, admin, { templateId: forms.health.template.id, scope: "all", programKinds: PROGRAM_KINDS.map((k) => k.value).filter((k) => k !== "camp") });
 await addRequirement(db, admin, { templateId: forms.photo.template.id, scope: "all" });
 await addRequirement(db, admin, { templateId: forms.weekendWaiver.template.id, scope: "program", programId: weekends.id });
 await addRequirement(db, admin, { templateId: forms.weekendWaiver.template.id, scope: "program", programId: after.id });

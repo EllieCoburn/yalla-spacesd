@@ -145,8 +145,13 @@ export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?
         arrival_instructions: rows[0].program.arrivalInstructions ?? "",
         upgrade_note: [
           "## Make the most of tomorrow",
-          `Need a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](${opts.baseUrl}/portal/spaces?date=${tomorrow})`,
-          `Bringing a second grown-up, or want to add extras? [Add them in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`,
+          // Parents don't stay onsite for camp, so camp-only reminders skip the private-space line.
+          ...(rows.every((r) => r.program.kind === "camp")
+            ? []
+            : [`Need a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](${opts.baseUrl}/portal/spaces?date=${tomorrow})`]),
+          rows.every((r) => r.program.kind === "camp")
+            ? `Want to add Early Bird or a late stay? [Add extras in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`
+            : `Bringing a second grown-up, or want to add extras? [Add them in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`,
         ].join("\n\n"),
       },
       related: { type: "booking", id: d.bookingId },
