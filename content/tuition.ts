@@ -117,24 +117,4 @@ export const discounts = [
   },
 ];
 
-export const workspace = [
-  {
-    name: "Private Desk",
-    rates: [
-      ["Monthly", "$550"],
-      ["Weekly", "$150"],
-      ["Daily", "$35"],
-    ],
-  },
-  {
-    name: "Private Office",
-    rates: [
-      ["Monthly", "$950 – $1,100"],
-      ["Weekly", "$270"],
-      ["Daily", "$55"],
-      ["Half day", "$30"],
-    ],
-  },
-] as const;
-
 export const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
