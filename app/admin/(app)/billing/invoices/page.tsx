@@ -41,7 +41,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             <Empty title="No invoices match">Try a different status or date range.</Empty>
           </div>
         ) : (
-          <Table head={["Invoice", "Family", "For", "Issued", "Total", "Paid (net)", "Balance", "Status"]}>
+          <Table head={["Invoice", "Family", "For", "Issued", "Total", "Paid (net)", "Balance", "Status", "PDF"]}>
             {rows.map(({ i, f, t }) => (
               <tr key={i.id}>
                 <td>
@@ -63,6 +63,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 </td>
                 <td>
                   <Status kind="invoice" value={i.status} />
+                </td>
+                <td>
+                  <a href={`/admin/export/invoice/${i.id}?view`} target="_blank" rel="noopener" className="text-blue hover:underline" aria-label={`PDF of ${i.number}`}>
+                    PDF
+                  </a>
                 </td>
               </tr>
             ))}

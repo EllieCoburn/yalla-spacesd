@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, Disclosure, MoneyField, SelectField, TextField } from "@/components/admin/forms";
 import { RefundForm } from "@/components/admin/billing/RefundForm";
-import { Card, DL, Money, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
+import { btn, Card, DL, Money, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
 import { invoiceDetail } from "@/lib/admin/queries/billing";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
@@ -46,6 +46,16 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             · {i.description} · issued {fmtDateTime(i.issuedAt)}
             {i.dueOn ? ` · due ${fmtDate(i.dueOn)}` : ""}
           </>
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <a href={`/admin/export/invoice/${i.id}?view`} target="_blank" rel="noopener" className={btn.secondary}>
+              View PDF to print
+            </a>
+            <a href={`/admin/export/invoice/${i.id}`} className={btn.secondary}>
+              Download PDF
+            </a>
+          </div>
         }
       />
 
