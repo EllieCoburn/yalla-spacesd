@@ -266,6 +266,15 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
           ) : (
             <p className="mt-4 text-ink-soft">No payments yet.</p>
           )}
+          {canViewBilling ? (
+            <p className="mt-4 text-[0.85rem] text-ink-soft">
+              Payments for bookings, camps, extras and workspace are on your{" "}
+              <Link href="/portal/home?tab=payments" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+                Payments tab
+              </Link>
+              , each with its own invoice PDF.
+            </p>
+          ) : null}
         </section>
       </div>
     </Shell>
