@@ -11,6 +11,7 @@ import { walletSummary } from "@/lib/playpass/wallet";
 import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/portal-preview";
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
+import { familyFlexLists } from "@/lib/ops/what-to-bring";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Family Portal", robots: { index: false } };
@@ -35,6 +36,8 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const signedCopies = g && tab === "forms" ? await familySignedCopies(getDb(), g) : [];
   const walletBalance = g ? (await walletSummary(getDb(), g.familyId)).availableCents : 0;
   const today = todayLA();
+  // Children with upcoming Flex days get a what-to-bring list (private, in the portal only).
+  const flexLists = g ? await familyFlexLists(getDb(), g.familyId, today) : [];
   const tabs = [
     { key: "overview", label: "Overview" },
     { key: "children", label: "Children" },
@@ -187,6 +190,17 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                   </Link>
                 </div>
                 {bookingList(data.upcoming.slice(0, 4), false)}
+                {flexLists.length ? (
+                  <Link href="/portal/what-to-bring" className="mt-5 flex items-center justify-between gap-4 border border-blue/30 bg-blue/[0.04] px-5 py-4 transition-colors hover:border-blue">
+                    <span>
+                      <span className="block text-[0.98rem] text-ink">What to bring for Yalla Flex</span>
+                      <span className="block text-[0.82rem] text-ink-soft">
+                        {flexLists.map((k) => `${k.name} · ${k.cohort}`).join(", ")}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-blue">→</span>
+                  </Link>
+                ) : null}
                 {data.memberships.length ? (
                   <div className="mt-6 border-t border-line pt-5">
                     <p className="eyebrow text-[0.6rem] text-ink-soft">Club Yalla</p>
