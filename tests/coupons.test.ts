@@ -6,6 +6,9 @@ import { invoiceTotals } from "@/lib/ops/billing";
 import { submitPublicBooking } from "@/lib/ops/public-booking";
 import { processEvent } from "@/lib/payments/webhooks";
 import { plainText } from "@/lib/notify/html";
+import { invoicePdf } from "@/lib/billing/invoice-pdf";
+import { PDFDocument } from "pdf-lib";
+import { writeFileSync } from "node:fs";
 import { db, program, reset, session } from "./helpers";
 
 beforeEach(reset);
@@ -83,5 +86,22 @@ describe("Coupon codes", () => {
     // The text version reads cleanly.
     expect(plainText(m.body)).toContain("Coupon CLUBYALLAFAM (50% off) · −$80.00");
     expect(plainText(m.body)).toContain("Total: $80.00");
+  });
+
+  it("makes a US Letter invoice PDF with Yalla's details, every line and the coupon", async () => {
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    const sess = await session(camp.id, { capacity: 4 });
+    await db().insert(s.discounts).values({ code: "CLUBYALLAFAM", name: "Camp rate", kind: "percent", value: 50, programId: camp.id });
+    expect((await book("pdf.family@example.com", sess.id, "clubyallafam")).ok).toBe(true);
+    const { payment } = await invoiceFor("pdf.family@example.com");
+    await processEvent(db(), "test", { id: "evt_p1", type: "payment.succeeded", checkoutRef: payment.checkoutRef!, providerRef: "pi_p", amountCents: payment.amountCents });
+
+    const doc = (await invoicePdf(db(), payment.invoiceId))!;
+    expect(doc.filename).toMatch(/^Yalla-invoice-INV-.+\.pdf$/);
+    const parsed = await PDFDocument.load(doc.bytes);
+    expect(parsed.getPageCount()).toBe(1);
+    expect(parsed.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
+    expect(parsed.getTitle()).toMatch(/^Invoice INV-.+ · Yalla Childcare$/);
+    if (process.env.INVOICE_PDF_OUT) writeFileSync(process.env.INVOICE_PDF_OUT, doc.bytes);
   });
 });

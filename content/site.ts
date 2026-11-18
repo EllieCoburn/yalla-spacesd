@@ -45,3 +45,9 @@ export const announcement: { text: string; short: string; linkLabel: string; hre
   href: "/book?offering=camp",
   until: "2026-12-30",
 };
+
+/** The business as it appears at the top of every invoice PDF (as Yalla supplied it). */
+export const invoiceIssuer = {
+  name: "Yalla Childcare",
+  lines: ["408 Nutmeg Street", "San Diego, CA, 92103", "EIN# 991151503"],
+};

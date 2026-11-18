@@ -403,6 +403,9 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                       <span className={`block text-[0.8rem] ${i.balanceCents > 0 && i.status === "open" ? "text-oxblood" : "text-ink-soft"}`}>
                         {i.status === "void" ? "Void" : i.balanceCents > 0 ? `Balance ${usd(i.balanceCents)}` : "Paid in full"}
                       </span>
+                      <a href={`/portal/invoices/${i.id}/pdf`} className="mt-1 inline-block text-[0.8rem] text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+                        Download PDF
+                      </a>
                     </span>
                   </li>
                 ))}
