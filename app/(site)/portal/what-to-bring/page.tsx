@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Mark } from "@/components/brand/Mark";
 import { PrintList } from "@/components/portal/PrintList";
 import { Button } from "@/components/ui/primitives";
-import { halfDaySkipsRest, whatToBring } from "@/content/flex-what-to-bring";
+import { WEEK_BLOCK_NOTE, halfDaySkipsRest, whatToBring } from "@/content/flex-what-to-bring";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyFlexLists } from "@/lib/ops/what-to-bring";
 import { fmtDate } from "@/lib/time";
@@ -29,7 +29,7 @@ export default async function WhatToBring() {
           What to <em>bring.</em>
         </h1>
         <p className="mt-5 max-w-xl text-ink-soft">
-          Everything your child needs for their Yalla Flex days, for the cohort they’re joining. Please label every item with your child’s name.
+          Everything your child needs for their Yalla Flex days, for the cohort they’re joining. Flex items travel home with your child at the end of each day. Please label every item with your child’s name.
         </p>
 
         {!kids.length ? (
@@ -80,6 +80,8 @@ export default async function WhatToBring() {
                       {k.mixed ? "On half days, leave the rest time items at home." : "Half days don’t need rest time items, so they’re not on this list."}
                     </p>
                   ) : null}
+
+                  {k.weekBlock ? <p className="mt-5 bg-mist/60 p-4 text-[0.9rem] leading-relaxed text-ink">{WEEK_BLOCK_NOTE}</p> : null}
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {list.sections.map((sec) => (

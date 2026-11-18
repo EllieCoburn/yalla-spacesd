@@ -2,6 +2,10 @@
  * What to bring for Yalla Flex, by cohort (from Yalla's "What to Bring" lists). Private: shown only
  * in the Family Portal and in the Flex first-day welcome email, never on public pages.
  *
+ * Flex is booked day by day, so everything travels back and forth each day (nothing is left at
+ * Yalla). A family booked for a week or more in a row may leave the extra clothes, rest time items
+ * and care supplies at Yalla for the week (see WEEK_BLOCK_NOTE).
+ *
  * Half days: Saplings, Sprouts and Wildflowers leave the rest time items at home. Seedlings bring
  * theirs every day, since they're likely to rest in the morning too.
  */
@@ -11,10 +15,9 @@ export type BringList = { cohort: string; sections: BringSection[]; labeling: st
 
 const MEALS_NOTE =
   "Please prepare all meals using best practices for safe food consumption according to your child’s developmental readiness. If needed, refer to the free Guided Solids Experience feature of the Solid Starts App for support in preparing safe meals.";
-const RESTOCK: BringSection = {
-  key: "restock",
-  title: "Restock as needed",
-  note: "Your child’s care team will let you know when supplies are running low.",
+const CARE: BringSection = {
+  key: "care",
+  title: "Diapering and sun care",
   items: [
     { text: "Diapers", short: "Diapers" },
     { text: "Wipes", short: "Wipes" },
@@ -30,11 +33,12 @@ const waterBottle: BringItem = { text: "Water bottle", detail: "Spill-proof and 
 const changeOfClothes: BringItem = { text: "Complete change of clothes", detail: "Including socks and underwear, in a labeled zip bag.", short: "Change of clothes" };
 const threeOutfits: BringItem = {
   text: "Three complete extra outfits, including socks",
-  detail: "These will be sent home in a bag when soiled. It is the family’s responsibility to ensure that three full changes of clothing are always available.",
+  detail: "Soiled clothes are sent home in a bag. Please make sure three full changes of clothing are always in your child’s bag.",
   short: "Three extra outfits",
 };
-const LIVES_NOTE = "Please take home each week for washing.";
-const REST_NOTE = "Please take home used rest time items to wash at least once per week.";
+/** For families booked a week or more in a row (Yalla's weekly routine for items that stay). */
+export const WEEK_BLOCK_NOTE =
+  "Booked for a week or more in a row? The extra clothes, rest time items and diapering supplies can stay at Yalla during your block. Please take them home at the end of each week to wash, and your child’s care team will let you know when supplies run low.";
 
 export const WHAT_TO_BRING: Record<string, BringList> = {
   seedlings: {
@@ -42,7 +46,7 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
     sections: [
       {
         key: "daily",
-        title: "Bring daily",
+        title: "Pack each day",
         items: [
           { text: "Bottles, if applicable", detail: "Premade and ready to be heated and served.", short: "Bottles (if applicable)" },
           { text: "AM snack, PM snack and lunch", detail: "Nutritious and packed in containers that can be plated, stored in the fridge and reheated if needed. " + MEALS_NOTE, short: "AM snack, PM snack and lunch" },
@@ -52,21 +56,26 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
           { text: "Pacifiers, if applicable", short: "Pacifiers (if applicable)" },
         ],
       },
-      RESTOCK,
+      CARE,
       {
-        key: "lives",
-        title: "Items that live at Yalla",
-        note: LIVES_NOTE,
+        key: "clothes",
+        title: "Extra clothes and layers",
         items: [
           {
             text: "Two complete extra outfits, including socks",
-            detail: "These will be sent home in a bag when soiled. It is the family’s responsibility to ensure that two full changes of clothing are always available.",
+            detail: "Soiled clothes are sent home in a bag. Please make sure two full changes of clothing are always in your child’s bag.",
             short: "Two extra outfits",
           },
-          { text: "Crib-sized fitted sheet", short: "Crib-sized fitted sheet" },
-          { text: "Light blanket or sleep sack", detail: "Sleep sack only for crib sleepers.", short: "Light blanket or sleep sack" },
           { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" },
           { text: "Sun hat", short: "Sun hat" },
+        ],
+      },
+      {
+        key: "rest",
+        title: "Rest time items",
+        items: [
+          { text: "Crib-sized fitted sheet", short: "Crib-sized fitted sheet" },
+          { text: "Light blanket or sleep sack", detail: "Sleep sack only for crib sleepers.", short: "Light blanket or sleep sack" },
         ],
       },
     ],
@@ -78,19 +87,18 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
     sections: [
       {
         key: "daily",
-        title: "Bring daily",
-        items: [{ text: "Tote bag or backpack", detail: "To transport daily and weekly items.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
+        title: "Pack each day",
+        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
       },
-      RESTOCK,
+      CARE,
       {
-        key: "lives",
-        title: "Items that live at Yalla",
+        key: "clothes",
+        title: "Extra clothes and layers",
         items: [threeOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
       },
       {
         key: "rest",
         title: "Rest time items",
-        note: REST_NOTE,
         restTime: true,
         items: [
           { text: "Crib-sized fitted sheet", short: "Crib-sized fitted sheet" },
@@ -108,19 +116,18 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
     sections: [
       {
         key: "daily",
-        title: "Bring daily",
-        items: [{ text: "Tote bag or backpack", detail: "To easily transport daily and weekly items.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
+        title: "Pack each day",
+        items: [{ text: "Tote bag or backpack", detail: "To carry everything to and from Yalla each day.", short: "Tote bag or backpack" }, lunch, playShoes, waterBottle, changeOfClothes, outerwear],
       },
-      RESTOCK,
+      CARE,
       {
-        key: "lives",
-        title: "Items that live at Yalla",
+        key: "clothes",
+        title: "Extra clothes and layers",
         items: [threeOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
       },
       {
         key: "rest",
         title: "Rest time items",
-        note: REST_NOTE,
         restTime: true,
         items: [
           { text: "Crib-sized fitted sheet", short: "Crib-sized fitted sheet" },
@@ -136,13 +143,13 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
     sections: [
       {
         key: "daily",
-        title: "Bring daily",
+        title: "Pack each day",
         items: [{ text: "Backpack or tote bag", detail: "Large enough to fit all daily items, labeled with your child’s name.", short: "Backpack or tote bag" }, lunch, playShoes, waterBottle, outerwear],
       },
-      RESTOCK,
+      CARE,
       {
-        key: "lives",
-        title: "Items that live at Yalla",
+        key: "clothes",
+        title: "Extra clothes and layers",
         items: [
           threeOutfits,
           { text: "Small (bath size) personal towel", short: "Small personal towel" },
@@ -154,7 +161,6 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
       {
         key: "rest",
         title: "Rest time items",
-        note: REST_NOTE,
         restTime: true,
         items: [
           { text: "Crib-sized fitted sheet", short: "Crib-sized fitted sheet" },

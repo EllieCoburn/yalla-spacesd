@@ -20,7 +20,7 @@ import { EARLY_BIRD, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@
 import { trustedBaseUrl } from "@/lib/base-url";
 import { fmtTime, todayLA } from "@/lib/time";
 import { getPolicy } from "./settings";
-import { whatToBring } from "@/content/flex-what-to-bring";
+import { WEEK_BLOCK_NOTE, whatToBring } from "@/content/flex-what-to-bring";
 
 export const FRONT_DOOR_CODE = "2252";
 /** Inner door codes by Flex cohort. Seedlings has none, so no line is shown for it. */
@@ -106,10 +106,10 @@ export function welcomeLetter(kids: WelcomeChild[]) {
 
 /** "A few details for your first visit": each child's day, door codes, Wi-Fi, Brightwheel, links. */
 /** Short labels for the email's what-to-bring card (the portal shows the full titles and notes). */
-const BRING_LABEL: Record<string, string> = { daily: "Bring daily", restock: "Restock", lives: "Keep at Yalla", rest: "Rest time" };
+const BRING_LABEL: Record<string, string> = { daily: "Pack each day", care: "Care items", clothes: "Extra clothes", rest: "Rest time" };
 
 /** One what-to-bring card per cohort and day length (children sharing both share a card). */
-export function whatToBringBlocks(kids: WelcomeChild[], baseUrl: string) {
+export function whatToBringBlocks(kids: WelcomeChild[], baseUrl: string, opts: { weekBlock?: boolean } = {}) {
   const groups: { names: string[]; key: string; cohort: string; half: boolean }[] = [];
   for (const k of kids) {
     const g = groups.find((x) => x.key === k.cohort.key && x.half === k.half);
@@ -128,11 +128,12 @@ export function whatToBringBlocks(kids: WelcomeChild[], baseUrl: string) {
       ].join("\n"),
     );
   }
+  if (blocks.length && opts.weekBlock) blocks.push(`~~ ${WEEK_BLOCK_NOTE}`);
   if (blocks.length) blocks.push(`${WHAT_TO_BRING_LABELING} [See the full list, with notes, in your Family Portal](${baseUrl}${WHAT_TO_BRING_PATH}).`);
   return blocks;
 }
 
-export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string) {
+export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string, opts: { weekBlock?: boolean } = {}) {
   const many = kids.length > 1;
   // Each cohort's door code once, in the order the children are listed; Seedlings has no line at all.
   const codes: string[] = [];
@@ -145,7 +146,7 @@ export function firstVisitDetails(kids: WelcomeChild[], baseUrl: string) {
   return [
     "## A few details for your first visit",
     ["### Today", ...kids.map((k) => `${k.name}: ${k.cohort.cohort} · ${k.half ? "Half day" : "Full day"}, ${k.arrives}–${k.pickup} · **Pick up at ${k.pickup}**`)].join("\n"),
-    ...whatToBringBlocks(kids, baseUrl),
+    ...whatToBringBlocks(kids, baseUrl, opts),
     ["### Getting inside", `Front door code: ${FRONT_DOOR_CODE}`, ...codes].join("\n"),
     ["### Connecting to Wi-Fi", `Network: ${WIFI.network}`, `Password: ${WIFI.password}`].join("\n"),
     [
@@ -260,13 +261,16 @@ async function sendFlexWelcome(db: Executor, familyId: string, date: string, opt
     .where(and(eq(families.id, familyId), isNull(families.flexWelcomeSentAt)))
     .returning({ id: families.id });
   if (!claimed) return false;
+  // Booked a week or more in a row: the list says what can stay at Yalla for the week.
+  const { familyFlexLists } = await import("./what-to-bring");
+  const weekBlock = (await familyFlexLists(db, familyId, date)).some((k) => kids.some((c) => c.childId === k.childId) && k.weekBlock);
   try {
     const { notifyFamily } = await import("@/lib/notify");
     await notifyFamily(db, {
       key: "flex_welcome",
       familyId,
       guardianIds: [primary.id],
-      vars: { welcome_letter: welcomeLetter(kids), first_visit_details: firstVisitDetails(kids, opts.baseUrl ?? trustedBaseUrl()) },
+      vars: { welcome_letter: welcomeLetter(kids), first_visit_details: firstVisitDetails(kids, opts.baseUrl ?? trustedBaseUrl(), { weekBlock }) },
       related: { type: "family", id: familyId },
     });
     return true;

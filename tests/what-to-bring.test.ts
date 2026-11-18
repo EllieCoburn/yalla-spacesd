@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { WHAT_TO_BRING, whatToBring } from "@/content/flex-what-to-bring";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { whatToBringBlocks, type WelcomeChild } from "@/lib/ops/flex-welcome";
+import { hasWeekBlock } from "@/lib/ops/what-to-bring";
 
 const kid = (name: string, key: string, half: boolean): WelcomeChild => ({ childId: name, name, cohort: FLEX_GROUPS.find((g) => g.key === key)!, half, arrives: "8:30am", pickup: half ? "12:00pm" : "4:30pm" });
 
@@ -40,4 +41,21 @@ describe("What to bring", () => {
     expect(sprouts).toContain("Rest time: Crib-sized fitted sheet, Light blanket");
     expect(text).toContain("](https://yalla.test/portal/what-to-bring)");
   });
+
+  it("has everything travel each day: nothing 'lives at Yalla' and no weekly restocking", () => {
+    const all = JSON.stringify(WHAT_TO_BRING);
+    expect(all).not.toMatch(/live at Yalla|Restock|each week/i);
+    for (const g of FLEX_GROUPS) expect(whatToBring(g.key, false)!.sections[0].title).toBe("Pack each day");
+  });
+
+  it("spots a week or more in a row (weekends don't break it), and only then adds the stay-at-Yalla note", () => {
+    expect(hasWeekBlock(["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"])).toBe(true);
+    expect(hasWeekBlock(["2026-12-02", "2026-12-03", "2026-12-04", "2026-12-07", "2026-12-08"])).toBe(true);
+    expect(hasWeekBlock(["2026-11-30", "2026-12-01", "2026-12-03", "2026-12-04", "2026-12-07"])).toBe(false);
+    expect(hasWeekBlock(["2026-11-30", "2026-12-01"])).toBe(false);
+    const kids = [kid("Ava", "wildflowers", false)];
+    expect(whatToBringBlocks(kids, "https://yalla.test").join("\n")).not.toContain("week or more");
+    expect(whatToBringBlocks(kids, "https://yalla.test", { weekBlock: true }).join("\n")).toContain("Booked for a week or more in a row?");
+  });
 });
+
