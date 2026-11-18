@@ -96,7 +96,7 @@ describe("staff administration", () => {
     expect(after.permissions).toEqual(["roster.view", "children.care"]);
     const logs = await db().select().from(s.auditLog).where(eq(s.auditLog.action, "staff.role_permissions"));
     expect(logs[0].summary).toMatch(/removed/);
-    const r = await createRole(db(), owner, { name: "Front desk", copyFrom: edu.id });
+    const r = await createRole(db(), owner, { name: "Lobby host", copyFrom: edu.id });
     expect(r.permissions).toEqual(["roster.view", "children.care"]);
   });
 

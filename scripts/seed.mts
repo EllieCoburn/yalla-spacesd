@@ -59,7 +59,7 @@ for (const st of staff) await createStaff(db, SYSTEM, { ...st, password });
 /* Location, cohorts, pools */
 const [loc] = await db
   .insert(s.locations)
-  .values({ name: "Yalla Bankers Hill", address: null, arrivalInstructions: "Please check in at the front desk. (Sample — replace with real arrival details.)" })
+  .values({ name: "Yalla Bankers Hill", address: null, arrivalInstructions: "When you arrive, please check in at the kiosk in our lobby." })
   .returning();
 const cohortDefs = [
   { name: "Seedlings", ratio: "1:4", maxSize: 8, flex: [18000, 9000], tuition: [[5, 280000, 160000], [4, 260000, 130000], [3, 210000, 100000], [2, 140000, 71500], [1, 72000, 37000]] },

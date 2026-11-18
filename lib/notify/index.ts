@@ -544,7 +544,7 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   date: "Mon 2 Nov 2026",
   booking_details: "• Yalla Flex · Mon 2 Nov 8:30am–4:30pm · Ava",
   location: "Yalla Bankers Hill",
-  arrival_instructions: "Please check in at the front desk.",
+  arrival_instructions: "When you arrive, please check in at the kiosk in our lobby.",
   change_summary: "Moved to Tue 3 Nov.",
   refund_note: "If a refund or credit applies, we’ll confirm it separately.",
   child_name: "Ava",
