@@ -209,6 +209,13 @@ export function Checkout({
     null,
   );
   const [pending, start] = useTransition();
+  /** The cart list at the top: open while choosing children and details, folded on Review (which lists everything). */
+  const [cartOpen, setCartOpen] = useState(true);
+  useEffect(() => setCartOpen(step < 2), [step]);
+  // Everything taken out of the cart: nothing left to book.
+  useEffect(() => {
+    if (!sessions.length) onClose();
+  }, [sessions.length, onClose]);
   /** A coupon code, checked on the server before it's shown as applied. */
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<CouponPreview | null>(null);
@@ -695,43 +702,78 @@ export function Checkout({
           ))}
         </div>
 
-        {/* What's being booked (every date, large), so it stays in view through every step. */}
-        {(() => {
-          const dates = [...new Set(sorted.map((x) => x.localDate))];
-          const titles = [...new Set(sorted.map((x) => x.title))];
-          // One program for every date: say it once, and keep each date card compact.
-          const shared = titles.length === 1 ? titles[0] : null;
-          const kids = shared && new Set(sorted.map((x) => spotsOf(x.id))).size === 1 && spotsOf(sorted[0]?.id) > 1 ? spotsOf(sorted[0].id) : null;
-          return (
-            <div className="px-6 pt-5 sm:px-10">
-              <p className="eyebrow text-[0.62rem] text-ink-soft">
-                {dates.length === 1 ? "You’re booking" : `You’re booking ${dates.length} dates`}
-                {shared ? <span className="text-ink"> · {shared}{kids ? ` · ${kids} children` : ""}</span> : null}
-              </p>
-              <div className="mt-2.5 flex max-h-[13.5rem] flex-wrap gap-2 overflow-y-auto">
-                {dates.map((d) => {
-                  const onDay = sorted.filter((x) => x.localDate === d);
-                  return (
-                    <div key={d} className={`border border-blue/40 bg-blue/[0.05] ${shared ? "px-3.5 py-2.5" : "px-4 py-3"}`}>
-                      <p className="text-[0.64rem] tracking-[0.16em] text-blue uppercase">{fmtDate(d, shared && dates.length > 3 ? "EEE" : "EEEE")}</p>
-                      <p className={`display mt-0.5 leading-none text-ink ${shared ? "text-[1.45rem]" : "text-[1.7rem]"}`}>{fmtDate(d, "MMM d")}</p>
-                      {shared
-                        ? null
-                        : onDay.map((x) => (
-                            <p key={x.id} className="mt-1.5 text-[0.76rem] leading-snug text-ink-soft">
-                              {x.title}
-                              {spotsOf(x.id) > 1 ? ` · ${spotsOf(x.id)} children` : ""}
-                            </p>
-                          ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
-
         <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10">
+          {/* The cart: everything being booked, by date, on every step, with a way to take things out. */}
+          {(() => {
+            const dates = [...new Set(sorted.map((x) => x.localDate))];
+            const lineCents = (x: PublicSession) => (x.priceCents ?? 0) * Math.max(1, spotsOf(x.id));
+            const subtotal = sorted.reduce((t, x) => t + lineCents(x), 0);
+            return (
+              <div className="mb-8">
+                <div className="border border-line bg-paper">
+                  <button
+                    type="button"
+                    onClick={() => setCartOpen((o) => !o)}
+                    aria-expanded={cartOpen}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  >
+                    <span className="eyebrow text-[0.62rem] text-ink">
+                      Your cart · {sorted.length} {sorted.length === 1 ? "item" : "items"}
+                      {dates.length > 1 ? ` · ${dates.length} dates` : ""}
+                    </span>
+                    <span className="flex items-center gap-2 text-[0.85rem] text-ink-soft">
+                      {usd(subtotal)}
+                      <svg viewBox="0 0 12 12" aria-hidden className={`h-3 w-3 transition-transform ${cartOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.4">
+                        <path d="M2 4.5l4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  {cartOpen ? (
+                    <div className="max-h-[15rem] overflow-y-auto border-t border-line">
+                      {dates.map((d) => (
+                        <div key={d} className="border-b border-line px-4 py-2.5 last:border-b-0">
+                          <p className="text-[0.64rem] tracking-[0.16em] text-blue uppercase">{fmtDate(d, "EEEE, MMM d")}</p>
+                          <ul className="mt-1">
+                            {sorted
+                              .filter((x) => x.localDate === d)
+                              .map((x) => (
+                                <li key={x.id} className="flex items-center justify-between gap-3 py-1.5">
+                                  <span className="min-w-0">
+                                    <span className="block text-[0.9rem] leading-snug text-ink">{x.title}</span>
+                                    <span className="block text-[0.76rem] text-ink-soft">
+                                      {fmtTime(x.startsAt)} – {fmtTime(x.endsAt)}
+                                      {spotsOf(x.id) > 1 ? ` · ${spotsOf(x.id)} children` : ""}
+                                      {x.priceCents != null ? ` · ${usd(lineCents(x))}` : ""}
+                                    </span>
+                                  </span>
+                                  {onSpots ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => onSpots(x.id, 0)}
+                                      aria-label={`Remove ${x.title} on ${fmtDate(d, "EEEE, MMMM d")}`}
+                                      title="Remove"
+                                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-sand hover:text-oxblood"
+                                    >
+                                      <svg viewBox="0 0 12 12" aria-hidden className="h-3 w-3" stroke="currentColor" strokeWidth="1.4">
+                                        <path d="M2 2l8 8M10 2L2 10" />
+                                      </svg>
+                                    </button>
+                                  ) : null}
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      ))}
+                      <button type="button" onClick={onClose} className="w-full border-t border-line px-4 py-2.5 text-left text-[0.82rem] text-blue hover:bg-sand/60">
+                        + Add more
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })()}
+
           {error ? (
             <div
               role="alert"
@@ -961,7 +1003,7 @@ export function Checkout({
             <div>
               <h2 className="display text-[2rem]">Review</h2>
               <p className="mt-2 text-ink-soft">
-                Choose which child each spot is for.
+                Check each day, choose who it’s for and add any extras. Remove anything you don’t want to book.
               </p>
               {skipped.length ? (
                 <p className="mt-4 border-l-2 border-oxblood/40 pl-3 text-[0.85rem] text-oxblood">
@@ -969,9 +1011,13 @@ export function Checkout({
                   {skipped.map((s) => `${s.title.split(" · ")[0]} on ${fmtDate(s.localDate, "EEE d MMM")}`).join(", ")}.
                 </p>
               ) : null}
-              <ul className="mt-8 divide-y divide-line border-y border-line">
-                {shownSessions.map((s) => (
-                  <li key={s.id} className="py-5">
+              <ul className="mt-6 space-y-3">
+                {shownSessions.map((s, idx) => (
+                  <li key={s.id}>
+                    {idx === 0 || shownSessions[idx - 1].localDate !== s.localDate ? (
+                      <p className={`eyebrow text-[0.62rem] text-blue ${idx === 0 ? "" : "pt-4"} pb-1`}>{fmtDate(s.localDate, "EEEE, MMMM d")}</p>
+                    ) : null}
+                    <div className="border border-line bg-paper p-5">
                     <div className="flex items-baseline justify-between gap-4">
                       <p className="display text-[1.25rem]">{s.title}</p>
                       <span className="font-serif text-[0.95rem]">
@@ -982,15 +1028,29 @@ export function Checkout({
                             : `${usd(s.priceCents)}${spotsOf(s.id) > 1 ? ` × ${spotsOf(s.id)}` : ""}`}
                       </span>
                     </div>
-                    <p className="text-[0.82rem] text-ink-soft">
-                      {fmtDate(s.localDate, "EEEE d MMMM")} ·{" "}
-                      {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
-                    </p>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-[0.82rem] text-ink-soft">
+                        {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
+                      </p>
+                      {onSpots ? (
+                        <button
+                          type="button"
+                          onClick={() => onSpots(s.id, 0)}
+                          aria-label={`Remove ${s.title} on ${fmtDate(s.localDate, "EEEE, MMMM d")}`}
+                          className="inline-flex items-center gap-1.5 text-[0.78rem] text-ink-soft underline-offset-4 hover:text-oxblood hover:underline"
+                        >
+                          <svg viewBox="0 0 12 12" aria-hidden className="h-2.5 w-2.5" stroke="currentColor" strokeWidth="1.4">
+                            <path d="M2 2l8 8M10 2L2 10" />
+                          </svg>
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
                     {spotsOf(s.id) > 0 ? (
                       <div className="mt-3 space-y-2">
                         {Array.from({ length: spotsOf(s.id) }, (_, i) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="w-14 shrink-0 text-[0.75rem] tracking-[0.12em] text-ink-soft uppercase">Spot {i + 1}</span>
+                            <span className="w-14 shrink-0 text-[0.75rem] tracking-[0.12em] text-ink-soft uppercase">{spotsOf(s.id) > 1 ? `Child ${i + 1}` : "For"}</span>
                             <select
                               aria-label={`Child for spot ${i + 1}, ${s.title}`}
                               value={slots[s.id]?.[i] ?? ""}
@@ -1012,15 +1072,17 @@ export function Checkout({
                                   </option>
                                 ))}
                             </select>
-                            {onSpots ? (
+                            {onSpots && spotsOf(s.id) > 1 ? (
                               <button
+                                type="button"
                                 onClick={() => {
                                   setSlots((sl) => ({ ...sl, [s.id]: (sl[s.id] ?? []).filter((_, j) => j !== i) }));
                                   onSpots(s.id, spotsOf(s.id) - 1);
                                 }}
-                                className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline"
+                                aria-label={`Remove child ${i + 1} from ${s.title}`}
+                                className="text-[0.75rem] text-ink-soft underline-offset-4 hover:text-oxblood hover:underline"
                               >
-                                Remove
+                                Remove child
                               </button>
                             ) : null}
                           </div>
@@ -1157,9 +1219,15 @@ export function Checkout({
                             </div>
                           ))
                       : null}
+                    </div>
                   </li>
                 ))}
               </ul>
+              {onSpots ? (
+                <button type="button" onClick={onClose} className="mt-4 text-[0.85rem] text-blue underline-offset-4 hover:underline">
+                  + Add more days
+                </button>
+              ) : null}
 
               {slotProblem ? (
                 <p role="alert" className="mt-5 border-l-2 border-oxblood/50 pl-3 text-[0.88rem] text-oxblood">

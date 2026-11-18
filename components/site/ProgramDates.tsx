@@ -833,7 +833,11 @@ export function ProgramDates({
           onSpots={(sessionId, n) => {
             const s = checkout.sessions.find((x) => x.id === sessionId);
             if (n > 0 && s) addToCart([{ id: s.id, date: s.localDate, label: s.title || s.programName, spots: Math.min(8, n), extras: checkout.extras[s.id] ?? [] }]);
-            else removeFromCart([sessionId]);
+            else {
+              removeFromCart([sessionId]);
+              // Taken out in checkout: untick that day here too, unless another booking that day remains.
+              if (s && !checkout.sessions.some((x) => x.id !== sessionId && x.localDate === s.localDate)) setPicked((p) => p.filter((d) => d !== s.localDate));
+            }
             setCheckout((c) =>
               c
                 ? n > 0
