@@ -552,6 +552,8 @@ export const bookings = pgTable(
     createdByStaffId: text("created_by_staff_id"),
     cancelledAt: ts("cancelled_at"),
     cancelReason: text("cancel_reason"),
+    /** A promo code the family entered at checkout (see lib/ops/promo.ts). */
+    discountId: text("discount_id").references((): AnyPgColumn => discounts.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -796,6 +798,8 @@ export const discounts = pgTable("discounts", {
   kind: text("kind").notNull(), // percent | fixed
   value: integer("value").notNull(), // percent (0-100) or cents
   programId: text("program_id").references(() => programs.id),
+  /** Applies to every program of this kind (e.g. "camp" for all Camp Yalla programs). */
+  programKind: text("program_kind"),
   siblingDiscount: boolean("sibling_discount").notNull().default(false),
   active: boolean("active").notNull().default(true),
   startsOn: date("starts_on"),

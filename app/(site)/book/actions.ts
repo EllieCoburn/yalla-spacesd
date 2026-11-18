@@ -1,7 +1,7 @@
 "use server";
 
 import { getDb, isDbConfigured } from "@/lib/db";
-import { careNeededForBooking, joinPublicWaitlist, previewAgreements, retryCheckout, saveBookingCare, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
+import { careNeededForBooking, checkPromo, joinPublicWaitlist, previewAgreements, retryCheckout, saveBookingCare, signForBooking, submitPublicBooking, type Agreement, type PublicBookingResult } from "@/lib/ops/public-booking";
 import { startCheckout } from "@/lib/ops/bookings";
 import { OpsError } from "@/lib/audit";
 import { getGuardian, requestContext, setFamilyCookie } from "../portal/session";
@@ -19,6 +19,7 @@ export type BookingPayload = {
   children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string | null; medications?: string | null }[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Record<string, string> }[];
+  promoCode?: string | null;
 };
 
 function clip(s: unknown, n = 200) {
@@ -52,12 +53,29 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
         // Answers to online agreements (initials and signatures are drawings, checked again on the server).
         answers: s.answers && typeof s.answers === "object" ? Object.fromEntries(Object.entries(s.answers).slice(0, 80).map(([k, v]) => [clip(k, 60), String(v ?? "").slice(0, 200_100)])) : undefined,
       })),
+      promoCode: payload.promoCode ? clip(payload.promoCode, 40) : null,
       meta: { ip: ctx.ip, userAgent: ctx.userAgent },
       baseUrl: ctx.baseUrl,
     });
   } catch (e) {
     console.error("[public booking failed]", (e as Error).message?.slice(0, 200));
     return { ok: false, code: "error", error: "Something went wrong and nothing was booked. Please try again." };
+  }
+}
+
+export type PromoCheck = { ok: true; code: string; kind: "percent" | "fixed"; value: number; programId: string | null; programKind: string | null } | { ok: false; error: string };
+
+/** "Apply" on the checkout's promo code field: is this code good for these sessions? */
+export async function checkPromoAction(input: { code: string; sessionIds: string[] }): Promise<PromoCheck> {
+  if (!isDbConfigured()) return { ok: false, error: "Promo codes aren’t available yet." };
+  const ctx = await requestContext();
+  if (!(await allow(getDb(), "promoIp", ctx.ip))) return { ok: false, error: "Too many tries. Please wait a little while." };
+  try {
+    const d = await checkPromo(getDb(), clip(input.code, 40), input.sessionIds.slice(0, 60).map((x) => clip(x, 60)));
+    return { ok: true, code: d.code ?? "", kind: d.kind === "fixed" ? "fixed" : "percent", value: d.value, programId: d.programId, programKind: d.programKind };
+  } catch (e) {
+    if (e instanceof OpsError) return { ok: false, error: e.message };
+    throw e;
   }
 }
 

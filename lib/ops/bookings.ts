@@ -18,6 +18,7 @@ import {
   bookings,
   capacityOverrides,
   children,
+  discounts,
   families,
   guardians,
   invoices,
@@ -34,6 +35,7 @@ import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
 import { availabilityFor, lockSessions, publicState } from "./capacity";
 import { blockingPaperwork } from "./forms";
+import { promoLines } from "./promo";
 import { getPolicy } from "./settings";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
@@ -471,6 +473,11 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
       } else lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
     }
   lines.push(...(await siblingDiscountLines(db, rows, b.familyId)), ...familyRateLines(rows));
+  // A promo code entered at checkout comes off after the sibling discount.
+  if (b.discountId) {
+    const [d] = await db.select().from(discounts).where(eq(discounts.id, b.discountId));
+    if (d) lines.push(...promoLines(d, rows, lines));
+  }
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }
 
