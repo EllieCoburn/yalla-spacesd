@@ -8,7 +8,7 @@ import { CtaBand, Facts, Section } from "@/components/site/PageParts";
 import { ContextualFaq } from "@/components/faq/ContextualFaq";
 import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { membershipIncludes, publicCohorts } from "@/content/pricing-public";
+import { publicCohorts } from "@/content/pricing-public";
 import { clubYalla as p } from "@/content/programs";
 import { LoopDivider } from "@/components/brand/LoopDivider";
 
@@ -177,24 +177,21 @@ export default function ClubYallaPage() {
         </div>
       </Section>
 
-      {/* Every membership includes */}
+      {/* Coworking: details live on the coworking page */}
       <section className="roofline-edge bg-blue text-blue">
-        <div className="py-20 text-chalk lg:py-28">
-          <div className="shell grid gap-14 lg:grid-cols-12">
-            <div className="lg:col-span-5">
+        <div className="py-20 text-chalk lg:py-24">
+          <div className="shell grid items-end gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-6">
               <h2 className="display text-[clamp(2.1rem,1.5rem+2vw,3.3rem)]">
-                Every membership <em className="text-mist!">includes.</em>
+                Coworking, <em className="text-mist!">included.</em>
               </h2>
-              <p className="mt-6 text-chalk/75">Communal coworking is part of every membership. Private desks and offices are available for more privacy.</p>
             </div>
-            <ul className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:col-span-7 lg:col-start-6">
-              {membershipIncludes.map((x) => (
-                <li key={x} className="flex items-start gap-4 border-t border-chalk/25 pt-5 text-[1.02rem]">
-                  <Mark name="sun" className="mt-1.5 h-3 w-3 shrink-0 text-chalk" />
-                  {x}
-                </li>
-              ))}
-            </ul>
+            <div className="lg:col-span-5 lg:col-start-8">
+              <p className="text-chalk/80">Every Club Yalla membership includes communal coworking for a parent or guardian, with private desks and offices available too.</p>
+              <Link href="/coworking" className="mt-6 inline-flex items-center gap-3 border-b border-chalk/50 pb-1 text-chalk hover:border-chalk">
+                Explore coworking <Arrow className="h-3 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>

@@ -18,14 +18,3 @@ export const publicCohorts = [
   { name: "Wildflowers", ages: "2½ years to age 5", ratio: "1:8", maxSize: 12 },
 ];
 
-export const membershipIncludes = [
-  "Onsite childcare rooted in the Reggio Emilia and RIE approaches",
-  "Credentialed, exceptional early childhood educators",
-  "Communal coworking access",
-  "High-speed internet",
-  "Complimentary coffee and tea",
-  "Light snacks",
-  "Access to the coworking kitchen",
-  "Unlimited color printing",
-  "Private office and phone booth rental",
-];
