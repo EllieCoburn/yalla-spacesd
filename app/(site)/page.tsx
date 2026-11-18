@@ -5,7 +5,7 @@ import { AvailabilityGlance } from "@/components/booking/AvailabilityGlance";
 import { Facade } from "@/components/brand/Facade";
 import { Mark } from "@/components/brand/Mark";
 import { WindowField } from "@/components/brand/WindowField";
-import { Arrow, Button, Eyebrow, Index } from "@/components/ui/primitives";
+import { Arrow, Button, Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
 import { LoopDivider } from "@/components/brand/LoopDivider";
@@ -20,10 +20,7 @@ export default function Home() {
         <div className="shell grid items-center gap-12 pb-8 lg:grid-cols-12 lg:gap-8 lg:pb-10">
           <div className="lg:col-span-6 xl:col-span-6">
             <Reveal>
-              <Eyebrow>Coworking. Childcare. Community.</Eyebrow>
-            </Reveal>
-            <Reveal delay={120}>
-              <h1 className="display mt-7 text-[clamp(3.1rem,1.6rem+5.4vw,6.6rem)]">
+              <h1 className="display text-[clamp(3.1rem,1.6rem+5.4vw,6.6rem)]">
                 Early childhood, <em>reimagined.</em>
               </h1>
             </Reveal>
