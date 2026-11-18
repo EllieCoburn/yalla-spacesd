@@ -386,6 +386,20 @@
       "when": 1794961879280,
       "tag": "0054_camp_no_health_record",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794971876439,
+      "tag": "0055_flex_thank_you",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794971877439,
+      "tag": "0056_backtoplay_coupon",
+      "breakpoints": true
     }
   ]
 }

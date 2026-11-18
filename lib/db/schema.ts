@@ -365,6 +365,8 @@ export const families = pgTable("families", {
   isSample: boolean("is_sample").notNull().default(false),
   /** When the Yalla Flex first-day welcome email went out (once per family, ever). */
   flexWelcomeSentAt: ts("flex_welcome_sent_at"),
+  /** When the evening-of-first-Flex-day thank-you (with a return-visit code) went out. Once per family. */
+  flexThankYouSentAt: ts("flex_thank_you_sent_at"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   archivedAt: ts("archived_at"),
@@ -803,6 +805,8 @@ export const discounts = pgTable("discounts", {
   startsOn: date("starts_on"),
   endsOn: date("ends_on"),
   maxUses: integer("max_uses"),
+  /** Each family can use the code once (e.g. a thank-you code for a return visit). */
+  oncePerFamily: boolean("once_per_family").notNull().default(false),
   createdAt: createdAt(),
 });
 

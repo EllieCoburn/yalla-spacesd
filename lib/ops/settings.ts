@@ -25,6 +25,13 @@ export const POLICIES = {
     default: "hello@yallaspacesd.com",
     decision: false,
   } as PolicyDef<string>,
+  "notifications.flexThankYou": {
+    group: "Notifications",
+    label: "Send the Yalla Flex first-day thank-you email",
+    help: "At about 6pm on a new Flex family’s first day, they get one thank-you from Team Yalla with the BACKTOPLAY10 code (10% off their next Flex booking, once per family). Not sent if the child was marked absent, or if the code has been turned off in Billing → Discounts.",
+    default: true,
+    decision: false,
+  } as PolicyDef<boolean>,
   "notifications.flexWelcome": {
     group: "Notifications",
     label: "Send the Yalla Flex first-day welcome email",

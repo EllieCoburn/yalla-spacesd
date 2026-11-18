@@ -51,6 +51,7 @@ const HERO: Record<string, string> = {
   booking_confirmation: "hero-rainbow.jpg",
   booking_welcome_team: "hero-rainbow.jpg",
   flex_welcome: "hero-rainbow.jpg",
+  flex_thank_you: "hero-sunflowers.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",
 };
@@ -75,6 +76,7 @@ const BUTTON: Record<string, string> = {
   cohort_drop_in_cancelled: "See upcoming drop-ins",
   staff_invite: "Set your password",
   payment_receipt: "Book more with Yalla",
+  flex_thank_you: "Book your next Flex day",
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -87,6 +89,7 @@ const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
   return body
+    .replace(/^%%\s+(\S+)\s*\|\s*(\S+)$/gm, "Your code: $1 (copy it here: $2)")
     .replace(/^\$\$=\s+(.+?)\s*\|\s*(.+)$/gm, "$1: $2")
     .replace(/^\$\$-?\s+(.+?)\s*\|\s*(.+)$/gm, "$1 · $2")
     .replace(/^>>\s+/gm, "")
@@ -168,6 +171,22 @@ function receiptTable(lines: string[]) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr></table>`;
 }
 
+/**
+ * "%% BACKTOPLAY10 | https://…/coupon/BACKTOPLAY10": a coupon code set apart from everything else:
+ * large, letter-spaced, in a dashed box, with a "Copy code" button (email apps can't copy to the
+ * clipboard themselves, so the button opens a page with a one-tap copy). The code itself is
+ * selectable as one piece too.
+ */
+function couponBlock(code: string, href: string) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 26px;"><tr><td align="center" style="padding:24px 18px;background:${C.mist};border:2px dashed ${C.blue};border-radius:18px;">
+<p style="margin:0 0 6px;font-family:${SANS};font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:${C.soft};">Your code</p>
+<p style="margin:0 0 16px;font-family:'Courier New',Courier,monospace;font-size:30px;font-weight:700;letter-spacing:0.12em;color:${C.ink};-webkit-user-select:all;user-select:all;">${esc(code)}</p>
+<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${C.blue};">
+<a href="${esc(href)}" style="display:inline-block;padding:11px 24px;font-family:${SANS};font-size:14px;letter-spacing:0.03em;color:#ffffff;text-decoration:none;border-radius:999px;">Copy code</a>
+</td></tr></table>
+</td></tr></table>`;
+}
+
 /** ">> Camp Yalla · 4 – 6 years": the thing a team email is about, set large. */
 function subjectLine(text: string, sub?: string) {
   return `<p style="margin:6px 0 ${sub ? "4px" : "16px"};font-family:${SERIF};font-size:24px;line-height:1.25;color:${C.ink};">${inline(text)}</p>${sub ? `<p style="margin:0 0 18px;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.soft};">${inline(sub)}</p>` : ""}`;
@@ -230,6 +249,11 @@ export function bodyHtml(body: string, key: string) {
     }
     if (/^>>\s+/.test(b[0])) {
       push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
+      return;
+    }
+    const coupon = b.length === 1 ? b[0].match(/^%%\s+(\S+)\s*\|\s*(https?:\/\/\S+)$/) : null;
+    if (coupon) {
+      push(couponBlock(coupon[1], coupon[2]));
       return;
     }
     if (b.every((l) => /^\$\$[-=]?\s+/.test(l))) {

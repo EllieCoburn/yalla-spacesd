@@ -28,6 +28,7 @@ export const saveTemplateAction = adminAction("communications.manage", async ({ 
     staff_password_reset: ["link"],
     staff_invite: ["link"],
     flex_welcome: ["welcome_letter", "first_visit_details"],
+    flex_thank_you: ["coupon_code", "coupon_link"],
   };
   const missing = (essentials[key] ?? []).filter((v) => !body.includes(`{{${v}}}`) && !subject.includes(`{{${v}}}`));
   if (missing.length) throw new OpsError("invalid", `Keep these details in the message so families get accurate information: ${missing.map((m) => `{{${m}}}`).join(", ")}.`);

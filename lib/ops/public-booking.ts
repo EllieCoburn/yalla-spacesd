@@ -384,7 +384,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   let couponId: string | null = null;
   if (input.couponCode?.trim()) {
     try {
-      couponId = (await findCoupon(db, input.couponCode, lines.map((l) => l.sessionId))).id;
+      couponId = (await findCoupon(db, input.couponCode, lines.map((l) => l.sessionId), { familyId: input.signedIn?.familyId })).id;
     } catch (e) {
       if (e instanceof OpsError) return { ok: false, code: "coupon", error: e.message };
       throw e;
@@ -511,6 +511,9 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         { agreements: needed },
       );
     }
+
+    // A once-per-family code is checked again now that the family is known (guests too).
+    if (couponId && input.couponCode) await findCoupon(db, input.couponCode, items.map((i) => i.sessionId), { familyId });
 
     // 5. Hold the spots (transactional capacity check) and start payment.
     const hold = await createHold(db, actor, { familyId, items, source: "public" });

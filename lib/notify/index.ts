@@ -53,6 +53,7 @@ export type TemplateKey =
   | "staff_new_booking"
   | "staff_booking_cancelled"
   | "flex_welcome"
+  | "flex_thank_you"
   | "cohort_drop_in"
   | "cohort_drop_in_cancelled";
 
@@ -146,6 +147,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     subject: "Welcome to your first day of Yalla Flex!",
     body: "Hi {{guardian_first_name}},\n\n{{welcome_letter}}\n\nWarmly,\nTeam Yalla\n\n{{first_visit_details}}",
     essential: true,
+    audience: "family",
+  },
+  flex_thank_you: {
+    name: "Yalla Flex first-day thank-you, with a return-visit code (to families)",
+    subject: "Thank you for spending the day with us",
+    body: "Hi {{guardian_first_name}},\n\nThank you for spending the day with us at Yalla! It was lovely getting to know {{child_names}}, and we hope you got to settle in and enjoy some time in the coworking space.\n\nWe’d love to have you both back for another day of work and play. As a little thank-you for joining us, use this code at checkout for 10% off your next Yalla Flex session.\n\n%% {{coupon_code}} | {{coupon_link}}\n\n{{book_link}}\n\nIf there’s anything you’d like us to know about how your first visit felt for either of you, just reply. We’d love to hear from you.\n\nWarmly,\nTeam Yalla",
+    essential: false,
     audience: "family",
   },
   cohort_drop_in: {
@@ -501,6 +509,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_new_booking: ["summary", "details", "reference", "link"],
   staff_booking_cancelled: ["summary", "details", "reference", "link"],
   flex_welcome: ["guardian_first_name", "welcome_letter", "first_visit_details"],
+  flex_thank_you: ["guardian_first_name", "child_names", "coupon_code", "coupon_link", "book_link"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
   application_received: ["name", "details", "explore"],
@@ -540,6 +549,8 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   refund_note: "If a refund or credit applies, we’ll confirm it separately.",
   child_name: "Ava",
   child_names: "Ava",
+  coupon_code: "BACKTOPLAY10",
+  coupon_link: "https://www.yallaspacesd.com/coupon/BACKTOPLAY10",
   welcome_letter: welcomeLetter([SAMPLE_CHILD]),
   first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),
   upgrade_note: "## Make the most of tomorrow\n\nNeed a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](https://www.yallaspacesd.com/portal/spaces)\n\nBringing a second grown-up, or want to add extras? [Add them in your Family Portal](https://www.yallaspacesd.com/portal/home)",

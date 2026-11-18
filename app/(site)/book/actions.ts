@@ -70,7 +70,8 @@ export async function checkCouponAction(code: string, sessionIds: string[]): Pro
   const ctx = await requestContext();
   if (!(await allow(getDb(), "couponIp", ctx.ip))) return { ok: false, error: "Too many tries. Please wait a little while and try again." };
   try {
-    const d = await findCoupon(getDb(), clip(code, 40), (sessionIds ?? []).slice(0, 60).map((s) => clip(s, 60)));
+    const signedIn = await getGuardian();
+    const d = await findCoupon(getDb(), clip(code, 40), (sessionIds ?? []).slice(0, 60).map((s) => clip(s, 60)), { familyId: signedIn?.familyId });
     return { ok: true, coupon: await couponPreview(getDb(), d) };
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, error: e.message };

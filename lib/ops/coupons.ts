@@ -18,7 +18,8 @@ export type CouponPreview = { code: string; kind: "percent" | "fixed"; value: nu
 export const normalizeCode = (code: string) => code.trim().toUpperCase().replace(/\s+/g, "");
 
 /** Finds a usable code for these sessions, or explains why it can't be used. */
-export async function findCoupon(db: Executor, rawCode: string, sessionIds: string[], now = new Date()): Promise<Coupon> {
+export async function findCoupon(db: Executor, rawCode: string, sessionIds: string[], opts: { familyId?: string | null; now?: Date } = {}): Promise<Coupon> {
+  const now = opts.now ?? new Date();
   const code = normalizeCode(rawCode);
   if (!code) throw new OpsError("coupon", "Enter a coupon code.");
   const [d] = await db.select().from(discounts).where(eq(discounts.code, code));
@@ -30,6 +31,15 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
       .from(bookings)
       .where(and(eq(bookings.discountId, d.id), inArray(bookings.status, ["confirmed", "pending_payment", "held"])));
     if (n >= d.maxUses) throw new OpsError("coupon", "That coupon code has been fully used.");
+  }
+  // Some codes are one per family (a thank-you for coming back). A booking still being paid counts.
+  if (d.oncePerFamily && opts.familyId) {
+    const [used] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.discountId, d.id), eq(bookings.familyId, opts.familyId), inArray(bookings.status, ["confirmed", "pending_payment", "held"])))
+      .limit(1);
+    if (used) throw new OpsError("coupon", "Your family has already used this code.");
   }
   if (d.programId && sessionIds.length) {
     const rows = await db.select({ programId: sessions.programId }).from(sessions).where(inArray(sessions.id, sessionIds));

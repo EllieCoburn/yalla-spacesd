@@ -1,4 +1,5 @@
 import { AnnouncementBar, showAnnouncement } from "@/components/site/AnnouncementBar";
+import { CouponFromLink } from "@/components/site/CouponFromLink";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
@@ -12,6 +13,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         {children}
       </main>
       <SiteFooter />
+      <CouponFromLink />
     </>
   );
 }

@@ -14,6 +14,7 @@ import { CheckoutSignIn } from "@/components/booking/CheckoutSignIn";
 import { validateAnswers, type Answers } from "@/lib/forms/fields";
 import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import type { CouponPreview } from "@/lib/ops/coupons";
+import { clearSavedCoupon, savedCoupon } from "@/lib/booking/saved-coupon";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { usd } from "./format";
 import {
@@ -422,6 +423,23 @@ export function Checkout({
       }
     });
   }
+  // A code saved from an email link is applied once, quietly: if it doesn't fit these sessions,
+  // nothing is shown and the family can still type a code themselves.
+  const triedSaved = useRef(false);
+  useEffect(() => {
+    if (triedSaved.current || coupon || !sorted.length) return;
+    const saved = savedCoupon();
+    if (!saved) return;
+    triedSaved.current = true;
+    startCoupon(async () => {
+      const res = await checkCouponAction(saved, sorted.map((s) => s.id));
+      if (res.ok) {
+        setCouponInput(saved);
+        setCoupon(res.coupon);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted.length]);
   // Play Pass balance covers eligible experiences; Yalla credits cover anything left.
   const passUse = Math.min(wallet?.passCents ?? 0, Math.max(0, eligibleTotal - siblingSavingEligible), total);
   const fromPass = passUse + Math.min(wallet?.creditCents ?? 0, total - passUse);
@@ -616,6 +634,7 @@ export function Checkout({
         couponCode: coupon && couponSaving > 0 ? coupon.code : null,
       });
       if (res.ok) {
+        if (coupon && couponSaving > 0) clearSavedCoupon();
         window.location.href = res.url;
         return;
       }
