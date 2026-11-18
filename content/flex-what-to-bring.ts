@@ -90,7 +90,7 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
       {
         key: "clothes",
         title: "Extra clothes and layers",
-        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
+        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }],
       },
       {
         key: "rest",
@@ -119,7 +119,7 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
       {
         key: "clothes",
         title: "Extra clothes and layers",
-        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }, { text: "Swimsuit", short: "Swimsuit" }],
+        items: [extraOutfits, { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" }, { text: "Sun hat", short: "Sun hat" }],
       },
       {
         key: "rest",
@@ -151,7 +151,6 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
           { text: "Small (bath size) personal towel", short: "Small personal towel" },
           { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" },
           { text: "Sun hat", short: "Sun hat" },
-          { text: "Swimsuit", short: "Swimsuit" },
         ],
       },
       {
