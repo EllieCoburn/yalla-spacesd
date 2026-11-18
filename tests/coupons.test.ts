@@ -46,6 +46,19 @@ describe("Coupon codes", () => {
     expect(payment.amountCents).toBe(8000);
   });
 
+  it("takes 50% off a Yalla Flex day with WEMISSEDYOU and charges the card the reduced amount", async () => {
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const day = await session(flex.id, { capacity: 4 });
+    await db().insert(s.discounts).values({ code: "WEMISSEDYOU", name: "We missed you", kind: "percent", value: 50, programId: flex.id });
+
+    const r = await book("missed.family@example.com", day.id, "wemissedyou");
+    expect(r.ok).toBe(true);
+    const { booking, totals, payment } = await invoiceFor("missed.family@example.com");
+    expect(booking.discountId).toBeTruthy();
+    expect(totals.total).toBe(7500);
+    expect(payment.amountCents).toBe(7500);
+  });
+
   it("refuses an unknown code, or a code for another program, without booking anything", async () => {
     const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
     const flex = await program({ name: "Yalla Flex" });

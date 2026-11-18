@@ -421,6 +421,13 @@
       "when": 1795022521314,
       "tag": "0059_flex_waitlist_on",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795022522314,
+      "tag": "0060_missed_you_coupon",
+      "breakpoints": true
     }
   ]
 }
