@@ -129,6 +129,7 @@ export function Checkout({
   guardian: guardianProp,
   savedChildren: savedChildrenProp,
   includeChildren = [],
+  newChildren = [],
   includeExtras = [],
   wallet: walletProp = null,
   sibling = { percent: 0, withPass: false },
@@ -144,6 +145,8 @@ export function Checkout({
   savedChildren: SavedChild[];
   /** Saved children to start ticked (chosen by name on a program page). */
   includeChildren?: string[];
+  /** Children added by name and birthday on a program page who aren't saved yet (ticked, ready for checkout). */
+  newChildren?: { firstName: string; lastName: string; birthDate: string }[];
   /** Per-family extras chosen on a program page (e.g. coworking), on until changed here. */
   includeExtras?: string[];
   /** The signed-in family's Yalla Wallet: Play Pass balance and Yalla credits (null when not signed in). */
@@ -173,7 +176,7 @@ export function Checkout({
   const [step, setStep] = useState(0);
   const [kids, setKids] = useState<ChildDraft[]>(() =>
     savedChildren.length
-      ? savedChildren.map((c) => ({
+      ? savedChildren.map((c): ChildDraft => ({
           key: c.id,
           existingId: c.id,
           firstName: c.preferredName || c.firstName,
@@ -181,7 +184,9 @@ export function Checkout({
           birthDate: c.birthDate,
           ...careFromSaved(c),
           include: includeChildren.includes(c.id),
-        }))
+        })).concat(
+          newChildren.map((c, i): ChildDraft => ({ key: `added-${i + 1}`, existingId: null, firstName: c.firstName, lastName: c.lastName, birthDate: c.birthDate, ...NO_CARE, include: true })),
+        )
       : Array.from({ length: Math.max(1, childrenNeeded(sessions, spots)) }, (_, i) => ({
           key: `new-${i + 1}`,
           existingId: null,

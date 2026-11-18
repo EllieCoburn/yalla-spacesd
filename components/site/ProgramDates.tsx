@@ -23,6 +23,7 @@ export type DateGroup = {
   priceCents: number;
 };
 type Child = { id: string; name: string; birthDate: string };
+type AddedChild = Child & { firstName: string; lastName: string };
 
 const fmt = (date: string, o: Intl.DateTimeFormatOptions) => {
   const [y, m, d] = date.split("-").map(Number);
@@ -93,7 +94,7 @@ export function ProgramDates({
   type CheckoutCtx = { guardian: SignedInGuardian | null; savedChildren: SavedChild[]; wallet: { passCents: number; creditCents: number } | null; sibling: { percent: number; withPass: boolean } };
   const [ctx, setCtx] = useState<CheckoutCtx>({ guardian: null, savedChildren: [], wallet: null, sibling: { percent: 0, withPass: false } });
   /** Checkout opens right here, over the chosen days, rather than on another page. */
-  const [checkout, setCheckout] = useState<{ sessions: PublicSession[]; spots: Record<string, number>; extras: Record<string, string[]>; include: string[]; includeExtras: string[] } | null>(null);
+  const [checkout, setCheckout] = useState<{ sessions: PublicSession[]; spots: Record<string, number>; extras: Record<string, string[]>; include: string[]; newChildren: AddedChild[]; includeExtras: string[] } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [chosenKids, setChosenKids] = useState<string[]>([]);
   /** Bumped when a family signs in from checkout, so the page picks up their children. */
@@ -186,8 +187,31 @@ export function ProgramDates({
     months.length > 2 && months.every(([, list]) => list.length <= 2);
 
   // Signed-in families pick their children by name; each child's group follows their age on the day.
-  const [anonymous, setAnonymous] = useState(false);
-  const byName = !!kids?.length && !anonymous;
+  const byName = !!kids?.length;
+  /** Children added here by name and birthday (not saved to the family yet; checkout saves them). */
+  const [added, setAdded] = useState<AddedChild[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ firstName: "", lastName: "", birthDate: "" });
+  const [addError, setAddError] = useState<string | null>(null);
+  const allKids: Child[] = [...(kids ?? []), ...added];
+  const addChild = () => {
+    const firstName = draft.firstName.trim();
+    const lastName = draft.lastName.trim();
+    if (!firstName || !lastName) return setAddError("Add their first and last name.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.birthDate) || draft.birthDate > today) return setAddError("Add their date of birth.");
+    const c: AddedChild = { id: `new-${Date.now()}`, name: `${firstName} ${lastName}`, firstName, lastName, birthDate: draft.birthDate };
+    setAdded((a) => [...a, c]);
+    // Ticked straight away when they fit one of this program's age groups.
+    if (groupOf(c, picked[0] ?? today)) setChosenKids((k) => [...k, c.id]);
+    setDraft({ firstName: "", lastName: "", birthDate: "" });
+    setAddError(null);
+    setAdding(false);
+    setHint(false);
+  };
+  const removeAdded = (id: string) => {
+    setAdded((a) => a.filter((c) => c.id !== id));
+    setChosenKids((k) => k.filter((x) => x !== id));
+  };
   const groupOf = (c: Child, day: string) => {
     const m = ageInMonths(c.birthDate, day);
     return groups.find(
@@ -195,7 +219,7 @@ export function ProgramDates({
         g.minAge != null && g.maxAge != null && m >= g.minAge && m <= g.maxAge,
     );
   };
-  const pickedKids = (kids ?? []).filter((c) => chosenKids.includes(c.id));
+  const pickedKids = allKids.filter((c) => chosenKids.includes(c.id));
   /** How many children go in each group on a given day. */
   const countsOn = (day: string): Record<string, number> => {
     if (!byName) return counts;
@@ -311,7 +335,7 @@ export function ProgramDates({
       return;
     }
     const who = byName
-      ? `&children=${pickedKids.map((k) => k.id).join(",")}`
+      ? `&children=${pickedKids.filter((k) => !added.some((a) => a.id === k.id)).map((k) => k.id).join(",")}`
       : "";
     const chosenExtras = [...stay, ...(isFlex && half ? ["half"] : []), ...(isFlex && early ? ["early"] : [])];
     // Open checkout over this page, so the chosen days stay in view.
@@ -323,7 +347,8 @@ export function ProgramDates({
         sessions: lines,
         spots: Object.fromEntries(lines.map((s) => [s.id, spotCount.get(s.id) ?? 1])),
         extras: flexExtras.length ? Object.fromEntries(lines.map((s) => [s.id, flexExtras])) : {},
-        include: byName ? pickedKids.map((k) => k.id) : [],
+        include: byName ? pickedKids.filter((k) => !added.some((a) => a.id === k.id)).map((k) => k.id) : [],
+        newChildren: added.filter((a) => chosenKids.includes(a.id)),
         includeExtras: chosenExtras,
       });
       return;
@@ -510,7 +535,8 @@ export function ProgramDates({
         {byName ? (
           <>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {kids!.map((c) => {
+              {allKids.map((c) => {
+                const isAdded = added.some((a) => a.id === c.id);
                 const on = chosenKids.includes(c.id);
                 const day = picked[0] ?? today;
                 const g = groupOf(c, day);
@@ -531,7 +557,7 @@ export function ProgramDates({
                       }`}
                     >
                       <span>
-                        <span className="block text-[0.95rem]">{c.name}</span>
+                        <span className="block text-[0.95rem]">{c.name}{isAdded ? <span className="ml-2 text-[0.72rem] text-blue">New</span> : null}</span>
                         <span className="text-[0.78rem] text-ink-soft">
                           {m >= 0 ? ageText(m) : "Not yet born"} ·{" "}
                           {g
@@ -550,6 +576,11 @@ export function ProgramDates({
                         {on ? "✓" : ""}
                       </span>
                     </button>
+                    {isAdded ? (
+                      <button type="button" onClick={() => removeAdded(c.id)} className="mt-1 ml-1 text-[0.75rem] text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                        Remove {c.name.split(" ")[0]}
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}
@@ -563,14 +594,40 @@ export function ProgramDates({
               {familyRate && !hint
                 ? " Siblings on the same evening get the family rate."
                 : ""}{" "}
-              <button
-                type="button"
-                onClick={() => setAnonymous(true)}
-                className="text-blue underline-offset-4 hover:underline"
-              >
-                Booking for someone not listed?
-              </button>
             </p>
+            {adding ? (
+              <div className="mt-4 rounded-xl border border-ink/15 bg-paper p-4">
+                <p className="text-[0.9rem]">Add another child</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <label className="text-[0.78rem] text-ink-soft">
+                    First name
+                    <input value={draft.firstName} onChange={(e) => setDraft((d) => ({ ...d, firstName: e.target.value }))} autoComplete="off" className="mt-1 block h-10 w-full rounded-lg border border-ink/20 bg-chalk px-3 text-[0.95rem] text-ink" />
+                  </label>
+                  <label className="text-[0.78rem] text-ink-soft">
+                    Last name
+                    <input value={draft.lastName} onChange={(e) => setDraft((d) => ({ ...d, lastName: e.target.value }))} autoComplete="off" className="mt-1 block h-10 w-full rounded-lg border border-ink/20 bg-chalk px-3 text-[0.95rem] text-ink" />
+                  </label>
+                  <label className="text-[0.78rem] text-ink-soft">
+                    Date of birth
+                    <input type="date" max={today} value={draft.birthDate} onChange={(e) => setDraft((d) => ({ ...d, birthDate: e.target.value }))} className="mt-1 block h-10 w-full rounded-lg border border-ink/20 bg-chalk px-3 text-[0.95rem] text-ink" />
+                  </label>
+                </div>
+                {addError ? <p className="mt-2 text-[0.8rem] text-oxblood">{addError}</p> : null}
+                <div className="mt-3 flex gap-3">
+                  <button type="button" onClick={addChild} className="h-10 rounded-full bg-ink px-5 text-[0.85rem] text-chalk hover:bg-blue">
+                    Add child
+                  </button>
+                  <button type="button" onClick={() => { setAdding(false); setAddError(null); }} className="h-10 rounded-full border border-ink/20 px-5 text-[0.85rem] hover:border-ink">
+                    Cancel
+                  </button>
+                </div>
+                <p className="mt-2 text-[0.75rem] text-ink-soft">They’re added to your Family Portal when you check out.</p>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAdding(true)} className="mt-3 text-[0.85rem] text-blue underline-offset-4 hover:underline">
+                + Add another child
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -636,18 +693,7 @@ export function ProgramDates({
               {familyRate
                 ? " Siblings on the same evening get the family rate."
                 : ""}
-              {kids?.length ? (
-                <>
-                  {" "}
-                  <button
-                    type="button"
-                    onClick={() => setAnonymous(false)}
-                    className="text-blue underline-offset-4 hover:underline"
-                  >
-                    Choose your children by name
-                  </button>
-                </>
-              ) : null}
+
             </p>
           </>
         )}
@@ -826,6 +872,7 @@ export function ProgramDates({
           guardian={ctx.guardian}
           savedChildren={ctx.savedChildren}
           includeChildren={checkout.include}
+          newChildren={checkout.newChildren}
           includeExtras={checkout.includeExtras}
           wallet={ctx.wallet}
           sibling={ctx.sibling}
