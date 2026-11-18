@@ -12,6 +12,7 @@ import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/po
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
 import { familyCampLists, familyFlexLists } from "@/lib/ops/what-to-bring";
+import { ensureCheckinCode } from "@/lib/ops/checkin";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Family Portal", robots: { index: false } };
@@ -39,6 +40,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   // Children with upcoming Flex days get a what-to-bring list (private, in the portal only).
   const flexLists = g ? await familyFlexLists(getDb(), g.familyId, today) : [];
   const campLists = g ? await familyCampLists(getDb(), g.familyId, today) : [];
+  const checkinCode = g ? await ensureCheckinCode(getDb(), g.familyId) : null;
   const tabs = [
     { key: "overview", label: "Overview" },
     { key: "children", label: "Children" },
@@ -212,6 +214,19 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                     </span>
                     <span aria-hidden className="text-blue">→</span>
                   </Link>
+                ) : null}
+                {checkinCode ? (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border border-line bg-paper px-5 py-4">
+                    <span>
+                      <span className="block text-[0.98rem] text-ink">Your family’s check-in code</span>
+                      <span className="block max-w-md text-[0.82rem] text-ink-soft">
+                        Enter it at the kiosk in our lobby to check in and out for camp, weekend sessions and Happenings. Yalla Flex and Club Yalla check in with Brightwheel.
+                      </span>
+                    </span>
+                    <span className="display text-[2rem] tracking-[0.18em] text-blue" aria-label={`Check-in code ${checkinCode.split("").join(" ")}`}>
+                      {checkinCode}
+                    </span>
+                  </div>
                 ) : null}
                 {data.memberships.length ? (
                   <div className="mt-6 border-t border-line pt-5">

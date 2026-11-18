@@ -577,7 +577,7 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   welcome_letter: welcomeLetter([SAMPLE_CHILD]),
   first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),
   camp_letter: campWelcomeLetter([SAMPLE_CAMPER], "tomorrow"),
-  camp_details: campDayDetails([SAMPLE_CAMPER], "https://www.yallaspacesd.com", { when: "tomorrow", date: "2026-11-25" }),
+  camp_details: campDayDetails([SAMPLE_CAMPER], "https://www.yallaspacesd.com", { when: "tomorrow", date: "2026-11-25", code: "4817" }),
   upgrade_note: "## Make the most of tomorrow\n\nNeed a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](https://www.yallaspacesd.com/portal/spaces)\n\nBringing a second grown-up, or want to add extras? [Add them in your Family Portal](https://www.yallaspacesd.com/portal/home)",
   team: "Wildflower team",
   cohort: "Wildflowers",

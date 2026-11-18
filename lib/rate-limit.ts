@@ -22,6 +22,8 @@ export const LIMITS = {
   couponIp: { limit: 20, windowSec: 15 * 60 },
   bookingEmail: { limit: 10, windowSec: 60 * 60 },
   waitlistIp: { limit: 15, windowSec: 60 * 60 },
+  /** Check-in codes entered at the lobby kiosk (per kiosk session): plenty for a busy morning, far too few to guess codes. */
+  kioskCode: { limit: 60, windowSec: 10 * 60 },
   questionIp: { limit: 10, windowSec: 60 * 60 },
   playPassIp: { limit: 10, windowSec: 60 * 60 },
   emailCheckIp: { limit: 30, windowSec: 60 * 60 },

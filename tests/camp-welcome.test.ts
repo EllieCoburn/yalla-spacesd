@@ -74,6 +74,11 @@ describe("Camp Yalla first-day welcome email", () => {
     expect(m.body).toContain("Front door code: 2252");
     expect(m.body.match(/door code:/g)).toHaveLength(1);
     expect(m.body).toContain("kiosk in our lobby");
+    // Camp checks in with the family's 4-digit code, not Brightwheel.
+    const [fam] = await db().select().from(s.families).where(eq(s.families.id, familyId));
+    expect(fam.checkinCode).toMatch(/^\d{4}$/);
+    expect(m.body).toContain(`Your family’s check-in code: **${fam.checkinCode}**`);
+    expect(m.body).not.toMatch(/Brightwheel/i);
     // Parents don't stay for camp: no Wi-Fi, coworking or private spaces.
     expect(m.body).not.toMatch(/Wi-Fi|Network:|coworking|private office|Reserve a space/i);
     expect(m.body).toContain(`[Add Early Bird or a late stay](${BASE}/portal/extras/${day()})`);

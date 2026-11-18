@@ -18,6 +18,7 @@ import { expireCredits } from "@/lib/playpass/wallet";
 import { applyPlayPassSchedules } from "@/lib/playpass/changes";
 import { ensureFlexDays } from "@/lib/ops/flex";
 import { addDaysISO, fmtDate, todayLA } from "@/lib/time";
+import { ensureCheckinCode, usesCheckinCode } from "@/lib/ops/checkin";
 
 export type HousekeepingResult = { expiredHolds: number; expiredOffers: number; membershipChanges: number; offers: number; reminders: number };
 
@@ -106,7 +107,7 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
             program: rows[0].program.name,
             date: fmtDate(rows[0].session.localDate),
             booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
-            arrival_instructions: rows[0].program.arrivalInstructions ?? "",
+            arrival_instructions: await arrivalText(db, rows, d.familyId),
           },
           related: { type: "booking", id: d.bookingId },
         });
@@ -122,6 +123,17 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
  * The evening before: a reminder for every booking with a session tomorrow (San Diego date), once
  * per booking, with a nudge to reserve a private space and to add a second grown-up or extras.
  */
+/** The program's arrival note, and for everything but Flex and Club Yalla the family's kiosk check-in code. */
+async function arrivalText(db: DB, rows: { program: { slug: string; kind: string; arrivalInstructions: string | null } }[], familyId: string) {
+  const code = rows.some((r) => usesCheckinCode(r.program)) ? await ensureCheckinCode(db, familyId) : null;
+  return [
+    rows[0].program.arrivalInstructions ?? "",
+    ...(code ? [`Your family’s check-in code: **${code}**`, "Enter it at the kiosk in our lobby to check in, and again at pickup to check out."] : []),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?: Date }) {
   const now = opts.now ?? new Date();
   const tomorrow = addDaysISO(todayLA(now), 1);
@@ -162,7 +174,7 @@ export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?
         program: rows[0].program.name,
         date: fmtDate(tomorrow, "EEEE, MMMM d"),
         booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
-        arrival_instructions: rows[0].program.arrivalInstructions ?? "",
+        arrival_instructions: await arrivalText(db, rows, d.familyId),
         upgrade_note: [
           "## Make the most of tomorrow",
           // Parents don't stay onsite for camp, so camp-only reminders skip the private-space line.

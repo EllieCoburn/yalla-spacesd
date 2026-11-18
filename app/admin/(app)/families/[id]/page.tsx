@@ -16,6 +16,7 @@ import { addChildAction, addGuardianAction, archiveFamilyAction, purgeTestDataAc
 import { familyTestDataCounts } from "@/lib/ops/test-data";
 import { portalStatusByEmail } from "@/lib/family-auth";
 import { familySignedCopies } from "@/lib/ops/forms";
+import { ensureCheckinCode } from "@/lib/ops/checkin";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
@@ -36,6 +37,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   const signedOnFile = can(staff, "forms.documents") ? (await familySignedCopies(getDb(), { familyId: d.family.id, guardianId: "", canViewSensitive: true })).filter((c) => c.kind === "policy") : [];
   const portal = await portalStatusByEmail(getDb(), d.guardians.map((g) => g.email));
   const primary = d.guardians.find((g) => g.isPrimary) ?? d.guardians[0];
+  const checkinCode = await ensureCheckinCode(getDb(), d.family.id);
 
   return (
     <>
@@ -50,6 +52,9 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
             <span>
               Family since {fmtDate(d.family.createdAt.toISOString().slice(0, 10), "MMMM yyyy")}
               {primary ? ` · ${primary.email}` : ""}
+            </span>
+            <span title="Entered at the lobby kiosk for camp, weekend sessions and Happenings">
+              · Check-in code <strong className="tracking-[0.12em] text-ink">{checkinCode}</strong>
             </span>
           </span>
         }

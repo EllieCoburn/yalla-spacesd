@@ -367,6 +367,8 @@ export const families = pgTable("families", {
   flexWelcomeSentAt: ts("flex_welcome_sent_at"),
   /** When this family's Camp Yalla first-day welcome went out (once per family). */
   campWelcomeSentAt: ts("camp_welcome_sent_at"),
+  /** The family's 4-digit check-in code for the lobby kiosk (everything except Flex and Club Yalla). */
+  checkinCode: text("checkin_code").unique(),
   /** When the evening-of-first-Flex-day thank-you (with a return-visit code) went out. Once per family. */
   flexThankYouSentAt: ts("flex_thank_you_sent_at"),
   createdAt: createdAt(),
@@ -636,6 +638,16 @@ export const capacityOverrides = pgTable("capacity_overrides", {
   staffId: text("staff_id").notNull(),
   extraSpots: integer("extra_spots").notNull(),
   reason: text("reason").notNull(),
+  createdAt: createdAt(),
+});
+
+/** The lobby kiosk's check-in screen, opened by staff from Admin for one day (see lib/ops/checkin.ts). */
+export const kioskSessions = pgTable("kiosk_sessions", {
+  id: id(),
+  tokenHash: text("token_hash").notNull().unique(),
+  startedBy: text("started_by").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  revokedAt: ts("revoked_at"),
   createdAt: createdAt(),
 });
 

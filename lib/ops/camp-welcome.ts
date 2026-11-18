@@ -1,7 +1,9 @@
 /**
  * The Camp Yalla first-day welcome: one warm letter from Team Yalla per family, with everything for
- * their first camp day (drop-off and pickup, what to bring, the front door code, checking in at the
- * lobby kiosk, parking and extras). It is also that evening's "see you tomorrow" reminder for camp.
+ * their first camp day (drop-off and pickup, what to bring, the front door code, the family's check-in
+ * code for the lobby kiosk, parking and extras). It is also that evening's "see you tomorrow" reminder
+ * for camp. Camp doesn't use Brightwheel: families check in at the kiosk with their 4-digit code
+ * (lib/ops/checkin.ts).
  *
  * Works like the Yalla Flex welcome (lib/ops/flex-welcome.ts):
  * - A family's first camp day is the earliest day they have confirmed Camp Yalla care.
@@ -19,6 +21,7 @@ import { trustedBaseUrl } from "@/lib/base-url";
 import { addDaysISO, fmtDate, fmtTime, todayLA, zonedDateTime } from "@/lib/time";
 import { getPolicy } from "./settings";
 import { CAMP_FOOD_NOTE, campGroupFor, campWhatToBring, type CampGroup } from "@/content/camp-what-to-bring";
+import { ensureCheckinCode } from "./checkin";
 import { EVENING_SEND, FRONT_DOOR_CODE, PARKING_PATH, WHAT_TO_BRING_PATH, joinNames } from "./flex-welcome";
 
 const CAMP_KIND = "camp";
@@ -65,7 +68,6 @@ export function campWelcomeLetter(kids: CampChild[], when: "today" | "tomorrow" 
   return [
     `We’re so glad ${names} ${many ? "are" : "is"} joining us at Camp Yalla ${when}! A member of Team Yalla will be there at drop-off to welcome you and show ${names} to ${where}.`,
     `Our team looks forward to getting to know ${names}—their interests, their ${many ? "personalities" : "personality"}, and the little things that help them feel at home. We’ll follow their lead as they play, explore and make new friends.`,
-    `You’ll receive updates through Brightwheel during the day. If you haven’t accepted your invitation yet, you can do that whenever you have a moment. We’re happy to help you get connected.`,
     `Please plan to pick up ${pickup}. Our team will share a little about their day before you head home.`,
     `Welcome to Camp Yalla. We’re happy you’re here, and we can’t wait for a day full of play.`,
   ].join("\n\n");
@@ -101,7 +103,7 @@ export function campBringBlocks(kids: CampChild[], baseUrl: string) {
 }
 
 /** "A few details for camp": each child's day, what to bring, the front door, check-in, links. */
-export function campDayDetails(kids: CampChild[], baseUrl: string, opts: { when?: "today" | "tomorrow"; date?: string } = {}) {
+export function campDayDetails(kids: CampChild[], baseUrl: string, opts: { when?: "today" | "tomorrow"; date?: string; code: string }) {
   const many = kids.length > 1;
   const who = joinNames(kids.map((k) => k.name));
   return [
@@ -112,8 +114,8 @@ export function campDayDetails(kids: CampChild[], baseUrl: string, opts: { when?
     ].join("\n"),
     ...campBringBlocks(kids, baseUrl),
     ["### Getting inside", `Front door code: ${FRONT_DOOR_CODE}`].join("\n"),
-    ["### Checking in", `• Check ${many ? "your children" : "your child"} in and out at the kiosk in our lobby. Each caregiver has their own check-in code in the Brightwheel app.`].join("\n"),
-    `You don’t need to set up Brightwheel before camp. If your account isn’t ready yet, our team will check ${who} in and help you get connected.`,
+    ["### Checking in", `Your family’s check-in code: **${opts.code}**`].join("\n"),
+    `When you arrive, enter this code at the kiosk in our lobby and tap ${many ? "each child’s name" : `${who}’s name`} to check in. Use it again at pickup to check out. It’s the same code for camp, weekend sessions and Happenings, and it’s always in your [Family Portal](${baseUrl}/portal/home).`,
     [
       "### Parking and extras",
       `• [View our parking guide](${baseUrl}${PARKING_PATH})`,
@@ -257,7 +259,7 @@ async function sendCampWelcome(db: Executor, familyId: string, date: string, opt
       vars: {
         when: opts.when,
         camp_letter: campWelcomeLetter(kids, opts.when),
-        camp_details: campDayDetails(kids, opts.baseUrl ?? trustedBaseUrl(), { when: opts.when, date }),
+        camp_details: campDayDetails(kids, opts.baseUrl ?? trustedBaseUrl(), { when: opts.when, date, code: await ensureCheckinCode(db, familyId) }),
       },
       related: { type: "family", id: familyId },
     });
