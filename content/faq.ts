@@ -383,12 +383,32 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "what-is-camp",
     category: "bookings",
-    pages: { camp: 2 },
+    pages: { camp: 1 },
     order: 30,
     status: "published",
     question: "What is Camp Yalla?",
     answer:
       "Camp days for children 18 months to 10 years, planned with the same care as every Yalla day: unhurried, hands-on and full of discovery. Camp runs 9:00am to 3:00pm, with optional Early Bird care from 8:00am and a late stay until 4:30pm. Book the days that suit your family until 30 minutes before camp begins, or until the day is full; [see camp dates](/programs/camp-yalla).",
+  },
+  {
+    id: "camp-ages",
+    category: "bookings",
+    pages: { camp: 2 },
+    order: 32,
+    status: "published",
+    question: "What ages is Camp Yalla for?",
+    answer:
+      "Camp Yalla is for children 18 months to 10 years, in three age groups: **18 months – 3 years**, **4 – 7 years** and **8 – 10 years**. Each child joins the group for their age on the camp day, and when you book we’ll only offer the group that fits.",
+  },
+  {
+    id: "happenings-ages",
+    category: "bookings",
+    pages: { happenings: 2 },
+    order: 41,
+    status: "published",
+    question: "What ages are Happenings for?",
+    answer:
+      "- **Immersive Play Sessions**: 3 – 8 years\n- **Weekend Play Sessions**: 18 months – 10 years\n- **After Hours Evenings**: 18 months – 10 years\n\nPop-ups and gatherings list their ages with each event. When you book, we’ll only offer sessions that fit your child’s age.",
   },
   {
     id: "camp-day",
@@ -413,7 +433,7 @@ export const DEFAULT_FAQS: Faq[] = [
   {
     id: "ages-by-offering",
     category: "bookings",
-    pages: { camp: 1, happenings: 2 },
+    // The general FAQ page only: program pages answer for their own ages.
     order: 50,
     status: "published",
     question: "What ages are eligible for each offering?",
