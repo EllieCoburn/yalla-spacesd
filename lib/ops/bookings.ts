@@ -17,6 +17,7 @@ import {
   bookingItems,
   bookings,
   capacityOverrides,
+  discounts,
   children,
   families,
   guardians,
@@ -35,6 +36,7 @@ import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
 import { availabilityFor, lockSessions, publicState } from "./capacity";
 import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
+import { couponLine } from "./coupons";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 import { addonsFor, validAddons } from "@/lib/booking/addons";
@@ -471,6 +473,13 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
       } else lines.push({ kind: "charge", description: `${a.label} (${a.time}) · ${describeLine(r)}`, unitCents: a.priceCents, bookingItemId: r.item.id });
     }
   lines.push(...(await siblingDiscountLines(db, rows, b.familyId)), ...familyRateLines(rows));
+  // A coupon code entered at checkout comes off the sessions it covers.
+  if (b.discountId) {
+    const [d] = await db.select().from(discounts).where(eq(discounts.id, b.discountId));
+    const eligible = new Set(rows.filter((r) => d && (!d.programId || d.programId === r.program.id)).map((r) => r.item.id));
+    const line = d ? couponLine(d, lines, eligible) : null;
+    if (line) lines.push(line);
+  }
   return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
 }
 

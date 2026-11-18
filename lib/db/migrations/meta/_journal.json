@@ -365,6 +365,20 @@
       "when": 1794948746807,
       "tag": "0051_booking_extras",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794961877280,
+      "tag": "0052_booking_coupon",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794961878280,
+      "tag": "0053_club_camp_coupon",
+      "breakpoints": true
     }
   ]
 }

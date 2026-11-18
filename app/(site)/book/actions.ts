@@ -13,12 +13,14 @@ import { mayViewStatus } from "@/lib/booking-access";
 import { allow, throttle } from "@/lib/rate-limit";
 import { requestMagicLink, safeNextPath, signInWithPassword } from "@/lib/family-auth";
 import { CARE_REQUIRED, findGuardianByEmail } from "@/lib/ops/families";
+import { couponPreview, findCoupon, type CouponPreview } from "@/lib/ops/coupons";
 
 export type BookingPayload = {
   guardian: { firstName: string; lastName: string; email: string; phone?: string };
   children: { key: string; existingId?: string | null; firstName: string; lastName: string; birthDate: string; allergies?: string | null; medications?: string | null }[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Record<string, string> }[];
+  couponCode?: string | null;
 };
 
 function clip(s: unknown, n = 200) {
@@ -54,10 +56,25 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
       })),
       meta: { ip: ctx.ip, userAgent: ctx.userAgent },
       baseUrl: ctx.baseUrl,
+      couponCode: payload.couponCode ? clip(payload.couponCode, 40) : null,
     });
   } catch (e) {
     console.error("[public booking failed]", (e as Error).message?.slice(0, 200));
     return { ok: false, code: "error", error: "Something went wrong and nothing was booked. Please try again." };
+  }
+}
+
+/** Checks a coupon code for the sessions in the basket, so checkout can show the saving. */
+export async function checkCouponAction(code: string, sessionIds: string[]): Promise<{ ok: true; coupon: CouponPreview } | { ok: false; error: string }> {
+  if (!isDbConfigured()) return { ok: false, error: "Coupons aren’t available right now." };
+  const ctx = await requestContext();
+  if (!(await allow(getDb(), "couponIp", ctx.ip))) return { ok: false, error: "Too many tries. Please wait a little while and try again." };
+  try {
+    const d = await findCoupon(getDb(), clip(code, 40), (sessionIds ?? []).slice(0, 60).map((s) => clip(s, 60)));
+    return { ok: true, coupon: await couponPreview(getDb(), d) };
+  } catch (e) {
+    if (e instanceof OpsError) return { ok: false, error: e.message };
+    throw e;
   }
 }
 

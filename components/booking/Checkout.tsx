@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   agreementsAction,
+  checkCouponAction,
   portalEmailCheckAction,
   submitBookingAction,
 } from "@/app/(site)/book/actions";
@@ -12,6 +13,7 @@ import { AgreementFields } from "@/components/booking/AgreementFields";
 import { CheckoutSignIn } from "@/components/booking/CheckoutSignIn";
 import { validateAnswers, type Answers } from "@/lib/forms/fields";
 import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
+import type { CouponPreview } from "@/lib/ops/coupons";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { usd } from "./format";
 import {
@@ -206,6 +208,11 @@ export function Checkout({
     null,
   );
   const [pending, start] = useTransition();
+  /** A coupon code, checked on the server before it's shown as applied. */
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [checkingCoupon, startCoupon] = useTransition();
   /** Optional extras chosen per session and child, e.g. Camp Yalla Early Bird. */
   const [extras, setExtras] = useState<
     Record<string, Record<string, string[]>>
@@ -391,7 +398,30 @@ export function Checkout({
     siblingSaving += off;
     if (g.eligible) siblingSavingEligible += off;
   }
-  const total = grossTotal - siblingSaving;
+  // Coupon: off the sessions it covers (after any sibling discount), mirroring the invoice line.
+  const couponFits = (s: PublicSession) => !!coupon && (!coupon.programIds || coupon.programIds.includes(s.programId));
+  const couponBase =
+    sorted.reduce((sum, s) => {
+      const l = lines.find((x) => x.sessionId === s.id);
+      if (!l || !couponFits(s)) return sum;
+      return sum + (s.bookingUnit === "per_child" ? childrenTotal(s) : (s.priceCents ?? 0)) + sessionAddonsCents(s.kind, s.programSlug, l.childKeys.map((k) => l.addons[k] ?? []));
+    }, 0) -
+    [...siblingByDay.entries()]
+      .filter(([k]) => coupon && (!coupon.programIds || coupon.programIds.includes(k.split("|")[0])))
+      .reduce((sum, [, g]) => sum + [...g.prices].sort((a, b) => b - a).slice(1).reduce((t, p) => t + Math.round((p * sibling.percent) / 100), 0), 0);
+  const couponSaving = !coupon || couponBase <= 0 ? 0 : coupon.kind === "percent" ? Math.round((couponBase * coupon.value) / 100) : Math.min(coupon.value, couponBase);
+  const total = grossTotal - siblingSaving - couponSaving;
+  function applyCoupon() {
+    setCouponError(null);
+    startCoupon(async () => {
+      const res = await checkCouponAction(couponInput, sorted.map((s) => s.id));
+      if (res.ok) setCoupon(res.coupon);
+      else {
+        setCoupon(null);
+        setCouponError(res.error);
+      }
+    });
+  }
   // Play Pass balance covers eligible experiences; Yalla credits cover anything left.
   const passUse = Math.min(wallet?.passCents ?? 0, Math.max(0, eligibleTotal - siblingSavingEligible), total);
   const fromPass = passUse + Math.min(wallet?.creditCents ?? 0, total - passUse);
@@ -583,6 +613,7 @@ export function Checkout({
           consent: !!signatures[sigKey(a)]?.consent,
           answers: a.fields ? formAnswers[sigKey(a)] : undefined,
         })),
+        couponCode: coupon && couponSaving > 0 ? coupon.code : null,
       });
       if (res.ok) {
         window.location.href = res.url;
@@ -1116,16 +1147,78 @@ export function Checkout({
                   {slotProblem}
                 </p>
               ) : null}
-              {siblingSaving > 0 ? (
+              <div className="mt-6 border-t border-line pt-5">
+                <label htmlFor="coupon" className="eyebrow text-[0.6rem] text-ink-soft">
+                  Coupon code
+                </label>
+                {coupon ? (
+                  <p className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[0.92rem]">
+                    <span>
+                      <span className="font-medium">{coupon.code}</span> · {coupon.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoupon(null);
+                        setCouponInput("");
+                      }}
+                      className="text-[0.85rem] text-ink-soft underline underline-offset-4 hover:text-ink"
+                    >
+                      Remove
+                    </button>
+                  </p>
+                ) : (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      id="coupon"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (couponInput.trim()) applyCoupon();
+                        }
+                      }}
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      placeholder="Enter code"
+                      className="h-11 min-w-0 flex-1 border border-line bg-chalk px-3 text-[0.95rem] uppercase placeholder:normal-case"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={!couponInput.trim() || checkingCoupon}
+                      className="h-11 shrink-0 rounded-full border border-ink px-5 text-[0.88rem] transition-colors hover:bg-ink hover:text-chalk disabled:opacity-40"
+                    >
+                      {checkingCoupon ? "Checking…" : "Apply"}
+                    </button>
+                  </div>
+                )}
+                {couponError ? (
+                  <p role="alert" className="mt-2 text-[0.85rem] text-oxblood">
+                    {couponError}
+                  </p>
+                ) : null}
+                {coupon && !couponSaving ? <p className="mt-2 text-[0.85rem] text-ink-soft">This code doesn’t apply to the sessions you’ve chosen.</p> : null}
+              </div>
+              {siblingSaving > 0 || couponSaving > 0 ? (
                 <dl className="mt-6 space-y-1.5 text-[0.95rem]">
                   <div className="flex justify-between">
                     <dt className="text-ink-soft">Before discount</dt>
                     <dd>{usd(grossTotal)}</dd>
                   </div>
-                  <div className="flex justify-between text-blue">
-                    <dt>Sibling discount ({sibling.percent}% off each additional child)</dt>
-                    <dd>−{usd(siblingSaving)}</dd>
-                  </div>
+                  {siblingSaving > 0 ? (
+                    <div className="flex justify-between text-blue">
+                      <dt>Sibling discount ({sibling.percent}% off each additional child)</dt>
+                      <dd>−{usd(siblingSaving)}</dd>
+                    </div>
+                  ) : null}
+                  {couponSaving > 0 ? (
+                    <div className="flex justify-between text-blue">
+                      <dt>Coupon {coupon?.code}</dt>
+                      <dd>−{usd(couponSaving)}</dd>
+                    </div>
+                  ) : null}
                 </dl>
               ) : null}
               {fromPass > 0 ? (

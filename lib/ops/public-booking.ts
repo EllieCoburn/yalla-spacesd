@@ -40,6 +40,7 @@ import { notifyFamily } from "@/lib/notify";
 import { addonsFor } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
+import { findCoupon } from "./coupons";
 import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, CARE_REQUIRED, careAnswered, careValid, createFamily, findGuardianByEmail, phoneProblem, recordCareAnswers, updateChild } from "./families";
@@ -365,6 +366,8 @@ export type PublicBookingInput = {
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Answers }[];
   meta: { ip?: string; userAgent?: string };
   baseUrl: string;
+  /** A coupon code entered at checkout (optional). */
+  couponCode?: string | null;
 };
 
 export type PublicBookingResult =
@@ -377,6 +380,16 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   // Every child's known allergies and medications are asked before payment.
   if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
     return { ok: false, code: "care", error: CARE_REQUIRED };
+  // A coupon is checked before anything is created, so a bad code books nothing.
+  let couponId: string | null = null;
+  if (input.couponCode?.trim()) {
+    try {
+      couponId = (await findCoupon(db, input.couponCode, lines.map((l) => l.sessionId))).id;
+    } catch (e) {
+      if (e instanceof OpsError) return { ok: false, code: "coupon", error: e.message };
+      throw e;
+    }
+  }
 
   // 1. Who is booking?
   let familyId: string;
@@ -511,6 +524,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
             signedForThisBooking.map((x) => x.submissionId),
           ),
         );
+    if (couponId) await db.update(bookings).set({ discountId: couponId }).where(eq(bookings.id, hold.booking.id));
     if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}${bookingStatusPath(hold.booking.reference)}`, reference: hold.booking.reference };
     const checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
     return { ok: true, url: checkout.url, reference: hold.booking.reference };

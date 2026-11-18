@@ -19,6 +19,7 @@ export const LIMITS = {
   staffResetEmail: { limit: 3, windowSec: 60 * 60 },
   staffResetIp: { limit: 20, windowSec: 60 * 60 },
   bookingIp: { limit: 15, windowSec: 60 * 60 },
+  couponIp: { limit: 20, windowSec: 15 * 60 },
   bookingEmail: { limit: 10, windowSec: 60 * 60 },
   waitlistIp: { limit: 15, windowSec: 60 * 60 },
   questionIp: { limit: 10, windowSec: 60 * 60 },

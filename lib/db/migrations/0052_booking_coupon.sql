@@ -1,0 +1,2 @@
+ALTER TABLE "bookings" ADD COLUMN "discount_id" text;--> statement-breakpoint
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_discount_id_discounts_id_fk" FOREIGN KEY ("discount_id") REFERENCES "public"."discounts"("id") ON DELETE no action ON UPDATE no action;

@@ -552,6 +552,8 @@ export const bookings = pgTable(
     createdByStaffId: text("created_by_staff_id"),
     cancelledAt: ts("cancelled_at"),
     cancelReason: text("cancel_reason"),
+    /** A coupon code the family entered at checkout (Billing → Discounts). */
+    discountId: text("discount_id").references((): AnyPgColumn => discounts.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
