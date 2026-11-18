@@ -1,11 +1,14 @@
 /**
- * Invoice PDFs families download from the Family Portal: US Letter (8.5 × 11 in), with Yalla's
- * name, address and EIN in the top left, who was billed, every line with its price, discounts,
- * totals, payments and refunds. Plain and complete, so it works as a record for taxes or a
- * dependent care account.
+ * Invoice PDFs families download from the Family Portal: US Letter (8.5 × 11 in), in Yalla's
+ * brand (logo, Lora and DM Sans, periwinkle and ink), with Yalla's name, address and EIN in the
+ * top left, who was billed, every line with its price, discounts, totals, payments and refunds.
+ * Complete enough to file for taxes or a dependent care account.
  */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import fontkit from "@pdf-lib/fontkit";
 import { and, asc, eq } from "drizzle-orm";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import type { Executor } from "@/lib/db";
 import { bookings, families, guardians, invoiceLines, invoices, payments, refunds } from "@/lib/db/schema";
 import { checkoutLabel } from "@/lib/ops/bookings";
@@ -16,24 +19,37 @@ import { invoiceIssuer } from "@/content/site";
 const W = 612; // 8.5in
 const H = 792; // 11in
 const M = 54; // 0.75in margins
-const INK = rgb(0.16, 0.17, 0.27);
-const SOFT = rgb(0.4, 0.41, 0.48);
-const LINE = rgb(0.85, 0.84, 0.82);
-const BLUE = rgb(0.376, 0.396, 0.949);
+const hex = (h: string) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
+// Yalla's palette (app/globals.css).
+const INK = hex("#292c45");
+const SOFT = hex("#5a5d74");
+const BLUE = hex("#6065f2");
+const SAND = hex("#ebe6dc");
+const MIST = hex("#e7e5f1");
+const LINE = hex("#d6cfc3");
+const OXBLOOD = hex("#673e46");
 
 const usd = (c: number) => (c < 0 ? "-" : "") + "$" + (Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "long", day: "numeric" });
 
-/** The standard PDF fonts only cover Western characters: swap the typographic ones we use. */
+/** Fonts and the logo, read once per server instance. */
+let assets: Promise<{ lora: Buffer; loraItalic: Buffer; sans: Buffer; logo: Buffer }> | null = null;
+function loadAssets() {
+  const dir = path.join(process.cwd(), "lib/billing/assets");
+  assets ??= Promise.all(["Lora-Variable.ttf", "Lora-Italic-Variable.ttf", "DMSans-Variable.ttf", "yalla-logo.png"].map((f) => readFile(path.join(dir, f)))).then(([lora, loraItalic, sans, logo]) => ({ lora, loraItalic, sans, logo }));
+  return assets;
+}
+
+/** Any character a font can't draw becomes a plain stand-in rather than breaking the PDF. */
 function clean(s: string, font: PDFFont) {
-  const swapped = s.replace(/[−‐‑]/g, "-").replace(/[“”]/g, '"').replace(/ /g, " ");
+  const swapped = s.replace(/ /g, " ");
   let out = "";
   for (const ch of swapped) {
     try {
       font.encodeText(ch);
       out += ch;
     } catch {
-      out += "?";
+      out += ch === "−" ? "-" : "?";
     }
   }
   return out;
@@ -64,84 +80,113 @@ export async function invoicePdf(db: Executor, invoiceId: string) {
   const pays = (await db.select().from(payments).where(eq(payments.invoiceId, invoiceId)).orderBy(asc(payments.createdAt))).filter((p) => p.status === "succeeded");
   const refs = (await db.select().from(refunds).where(eq(refunds.invoiceId, invoiceId)).orderBy(asc(refunds.createdAt))).filter((r) => r.status === "succeeded");
   const t = (await invoiceTotals(db, [invoiceId])).get(invoiceId)!;
+  // What was bought, in words families recognize, with the booking reference for their records.
+  const service = inv.bookingId ? (await checkoutLabel(db, inv.bookingId)).name : (inv.description ?? "Childcare services");
+  const ref = inv.bookingId ? (await db.select({ reference: bookings.reference }).from(bookings).where(eq(bookings.id, inv.bookingId)))[0]?.reference : null;
 
+  const a = await loadAssets();
   const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
   pdf.setTitle(`Invoice ${inv.number} · ${invoiceIssuer.name}`);
   pdf.setAuthor(invoiceIssuer.name);
   pdf.setSubject(`Invoice ${inv.number}`);
   pdf.setCreator(invoiceIssuer.name);
-  const reg = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const serif = await pdf.embedFont(a.lora, { subset: true });
+  const serifItalic = await pdf.embedFont(a.loraItalic, { subset: true });
+  const sans = await pdf.embedFont(a.sans, { subset: true });
+  const logo: PDFImage = await pdf.embedPng(a.logo);
 
   let page: PDFPage = pdf.addPage([W, H]);
   let y = H - M;
-  const text = (s: string, x: number, yy: number, o: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; align?: "left" | "right" } = {}) => {
-    const font = o.font ?? reg;
+  type Opt = { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; align?: "left" | "right"; spacing?: number };
+  const text = (s: string, x: number, yy: number, o: Opt = {}) => {
+    const font = o.font ?? sans;
     const size = o.size ?? 10;
     const str = clean(s, font);
+    const color = o.color ?? INK;
+    if (o.spacing) {
+      // Letter-spaced labels ("BILL TO"), the way the site sets its eyebrows: drawn a letter at a time.
+      const chars = [...str];
+      const width = chars.reduce((w, c) => w + font.widthOfTextAtSize(c, size), 0) + o.spacing * (chars.length - 1);
+      let cx = o.align === "right" ? x - width : x;
+      for (const c of chars) {
+        page.drawText(c, { x: cx, y: yy, size, font, color });
+        cx += font.widthOfTextAtSize(c, size) + o.spacing;
+      }
+      return;
+    }
     const dx = o.align === "right" ? x - font.widthOfTextAtSize(str, size) : x;
-    page.drawText(str, { x: dx, y: yy, size, font, color: o.color ?? INK });
+    page.drawText(str, { x: dx, y: yy, size, font, color });
   };
-  const rule = (yy: number, color = LINE, thickness = 0.75) => page.drawLine({ start: { x: M, y: yy }, end: { x: W - M, y: yy }, thickness, color });
+  const eyebrow = (s: string, x: number, yy: number, align: "left" | "right" = "left") => text(s.toUpperCase(), x, yy, { size: 7.5, color: BLUE, spacing: 1, align });
+  const rule = (yy: number, color = LINE, thickness = 0.75, x1 = M, x2 = W - M) => page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness, color });
 
-  // ── Header: the issuer, top left, exactly as Yalla supplied it.
-  text(`Invoice #${inv.number}`, M, y - 12, { size: 12, color: SOFT });
-  text(invoiceIssuer.name, M, y - 36, { size: 20, font: bold });
-  invoiceIssuer.lines.forEach((l, i) => text(l, M, y - 56 - i * 15, { size: 11, color: SOFT }));
+  // A periwinkle band across the top edge, like the site's announcement bar.
+  page.drawRectangle({ x: 0, y: H - 10, width: W, height: 10, color: BLUE });
 
-  // Top right: what this is and where it stands.
-  const status = inv.status === "void" ? "VOID" : t.balance <= 0 && t.total > 0 ? "PAID" : t.total === 0 ? "NO CHARGE" : "AMOUNT DUE";
-  text("INVOICE", W - M, y - 14, { size: 18, font: bold, align: "right" });
-  text(status, W - M, y - 32, { size: 10, font: bold, color: status === "PAID" ? BLUE : status === "VOID" ? SOFT : rgb(0.4, 0.24, 0.27), align: "right" });
-  const meta: [string, string][] = [
-    ["Invoice number", inv.number],
+  // ── Header: the issuer, top left, exactly as Yalla supplied it; the logo top right.
+  text(`Invoice #${inv.number}`, M, y - 14, { size: 11, color: SOFT });
+  text(invoiceIssuer.name, M, y - 40, { size: 24, font: serif });
+  invoiceIssuer.lines.forEach((l, i) => text(l, M, y - 60 - i * 15, { size: 10.5, color: SOFT }));
+  const logoH = 82;
+  const logoW = (logo.width / logo.height) * logoH;
+  page.drawImage(logo, { x: W - M - logoW, y: y - logoH + 4, width: logoW, height: logoH });
+  y -= Math.max(60 + (invoiceIssuer.lines.length - 1) * 15 + 10, logoH) + 22;
+
+  // ── The invoice at a glance: status, dates and amount, in a soft mist panel.
+  const status = inv.status === "void" ? "Void" : t.balance <= 0 && t.total > 0 ? "Paid in full" : t.total === 0 ? "No charge" : "Amount due";
+  const facts: [string, string][] = [
     ["Date issued", day(inv.issuedAt)],
     ...(inv.dueOn ? ([["Due", fmtDate(inv.dueOn, "MMMM d, yyyy")]] as [string, string][]) : []),
-    ...(inv.periodStart && inv.periodEnd ? ([["Service period", `${fmtDate(inv.periodStart, "MMM d, yyyy")} - ${fmtDate(inv.periodEnd, "MMM d, yyyy")}`]] as [string, string][]) : []),
     ...(pays.length ? ([["Date paid", day(pays[pays.length - 1].succeededAt ?? pays[pays.length - 1].createdAt)]] as [string, string][]) : []),
+    ...(inv.periodStart && inv.periodEnd ? ([["Service period", `${fmtDate(inv.periodStart, "MMM d")} – ${fmtDate(inv.periodEnd, "MMM d, yyyy")}`]] as [string, string][]) : []),
   ];
-  meta.forEach(([k, v], i) => {
-    text(k, W - M - 150, y - 54 - i * 14, { size: 9, color: SOFT });
-    text(v, W - M, y - 54 - i * 14, { size: 9, align: "right" });
+  const panelH = 64;
+  page.drawRectangle({ x: M, y: y - panelH, width: W - 2 * M, height: panelH, color: MIST });
+  const colW = (W - 2 * M - 40) / (facts.length + 1);
+  facts.forEach(([k, v], i) => {
+    eyebrow(k, M + 20 + i * colW, y - 24);
+    text(v, M + 20 + i * colW, y - 42, { size: 11 });
   });
-  y -= Math.max(56 + invoiceIssuer.lines.length * 15, 54 + meta.length * 14) + 20;
-  rule(y);
+  eyebrow(status, W - M - 20, y - 24, "right");
+  text(usd(inv.status === "void" ? 0 : t.balance > 0 ? t.balance : t.total), W - M - 20, y - 46, { size: 20, font: serif, align: "right", color: status === "Amount due" ? OXBLOOD : INK });
+  y -= panelH + 28;
 
-  // ── Bill to.
-  y -= 22;
-  text("BILL TO", M, y, { size: 8, font: bold, color: SOFT });
-  text("FOR", M + 270, y, { size: 8, font: bold, color: SOFT });
-  y -= 15;
+  // ── Bill to, and what it was for.
+  const half = M + (W - 2 * M) / 2 + 10;
+  eyebrow("Bill to", M, y);
+  eyebrow("For", half, y);
+  y -= 17;
   const billTo = [primary ? `${primary.firstName} ${primary.lastName}` : (fam?.name ?? ""), fam?.name && primary ? fam.name : "", primary?.email ?? "", primary?.phone ?? ""].filter(Boolean);
-  billTo.forEach((l, i) => text(l, M, y - i * 14, { size: 10, font: i === 0 ? bold : reg }));
-  // What was bought, in words families recognize, with the booking reference for their records.
-  const service = inv.bookingId ? (await checkoutLabel(db, inv.bookingId)).name : (inv.description ?? "Childcare services");
-  const ref = inv.bookingId ? (await db.select({ reference: bookings.reference }).from(bookings).where(eq(bookings.id, inv.bookingId)))[0]?.reference : null;
-  const forLines = [...wrap(clean(service, reg), reg, 10, W - M - (M + 270)), ...(ref ? [`Booking reference ${ref}`] : [])];
-  forLines.forEach((l, i) => text(l, M + 270, y - i * 14, { size: 10 }));
-  y -= Math.max(billTo.length, forLines.length) * 14 + 18;
+  billTo.forEach((l, i) => text(l, M, y - i * 14, i === 0 ? { size: 12, font: serif } : { size: 10, color: SOFT }));
+  const forLines = wrap(clean(service, serif), serif, 12, W - M - half);
+  forLines.forEach((l, i) => text(l, half, y - i * 15, { size: 12, font: serif }));
+  if (ref) text(`Booking reference ${ref}`, half, y - forLines.length * 15, { size: 10, color: SOFT });
+  y -= Math.max(billTo.length * 14, forLines.length * 15 + (ref ? 14 : 0)) + 22;
 
   // ── Line items.
   const colQty = W - M - 170;
-  const colUnit = W - M - 90;
-  const colAmt = W - M;
-  const descW = colQty - 30 - M;
+  const colUnit = W - M - 92;
+  const colAmt = W - M - 12;
+  const descW = colQty - 40 - M;
   const tableHeader = () => {
-    page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: rgb(0.95, 0.94, 0.92) });
-    text("DESCRIPTION", M + 8, y, { size: 8, font: bold, color: SOFT });
-    text("QTY", colQty, y, { size: 8, font: bold, color: SOFT, align: "right" });
-    text("UNIT PRICE", colUnit, y, { size: 8, font: bold, color: SOFT, align: "right" });
-    text("AMOUNT", colAmt - 8, y, { size: 8, font: bold, color: SOFT, align: "right" });
-    y -= 24;
+    page.drawRectangle({ x: M, y: y - 8, width: W - 2 * M, height: 24, color: SAND });
+    text("DESCRIPTION", M + 12, y, { size: 7.5, color: INK, spacing: 1 });
+    text("QTY", colQty, y, { size: 7.5, color: INK, spacing: 1, align: "right" });
+    text("UNIT PRICE", colUnit, y, { size: 7.5, color: INK, spacing: 1, align: "right" });
+    text("AMOUNT", colAmt, y, { size: 7.5, color: INK, spacing: 1, align: "right" });
+    y -= 30;
   };
   const newPage = () => {
     page = pdf.addPage([W, H]);
+    page.drawRectangle({ x: 0, y: H - 10, width: W, height: 10, color: BLUE });
     y = H - M;
-    text(`${invoiceIssuer.name} · Invoice #${inv.number} (continued)`, M, y - 10, { size: 9, color: SOFT });
-    y -= 34;
+    text(`${invoiceIssuer.name} · Invoice #${inv.number}`, M, y - 10, { size: 9, color: SOFT });
+    text("continued", W - M, y - 10, { size: 9, font: serifItalic, color: BLUE, align: "right" });
+    y -= 36;
   };
   const ensure = (needed: number) => {
-    if (y - needed < M + 40) {
+    if (y - needed < M + 50) {
       newPage();
       return true;
     }
@@ -150,73 +195,87 @@ export async function invoicePdf(db: Executor, invoiceId: string) {
   tableHeader();
   const kindLabel: Record<string, string> = { discount: "Discount", fee: "Fee", tax: "Tax", adjustment: "Adjustment" };
   for (const l of lines) {
-    const desc = wrap(clean(l.description, reg), reg, 10, descW);
+    const desc = wrap(clean(l.description, sans), sans, 10, descW);
     const h = desc.length * 13 + (kindLabel[l.kind] ? 11 : 0) + 14;
     if (ensure(h)) tableHeader();
     const color = l.kind === "discount" ? BLUE : INK;
-    desc.forEach((d, i) => text(d, M + 8, y - i * 13, { size: 10, color }));
-    if (kindLabel[l.kind]) text(kindLabel[l.kind], M + 8, y - desc.length * 13, { size: 7.5, color: SOFT });
+    desc.forEach((d, i) => text(d, M + 12, y - i * 13, { size: 10, color }));
+    if (kindLabel[l.kind]) text(kindLabel[l.kind], M + 12, y - desc.length * 13, { size: 7.5, font: serifItalic, color: SOFT });
     text(String(l.quantity), colQty, y, { size: 10, align: "right", color });
     text(usd(l.unitCents), colUnit, y, { size: 10, align: "right", color });
-    text(usd(l.amountCents), colAmt - 8, y, { size: 10, align: "right", color });
+    text(usd(l.amountCents), colAmt, y, { size: 10, align: "right", color });
     // The divider sits under the row's last line (or its small label), then the next row starts.
-    const bottom = y - (desc.length - 1) * 13 - (kindLabel[l.kind] ? 11 : 0) - 8;
-    page.drawLine({ start: { x: M, y: bottom }, end: { x: W - M, y: bottom }, thickness: 0.5, color: LINE });
-    y = bottom - 16;
+    const bottom = y - (desc.length - 1) * 13 - (kindLabel[l.kind] ? 11 : 0) - 9;
+    rule(bottom, LINE, 0.5);
+    y = bottom - 17;
   }
 
-  // ── Totals, right aligned.
-  const totals: [string, number, boolean?][] = [["Subtotal", t.charges]];
+  // ── Totals, right aligned; the balance in a sand panel.
+  const tx = W - M - 240;
+  const totals: [string, number][] = [["Subtotal", t.charges]];
   if (t.discounts) totals.push(["Discounts", t.discounts]);
   if (t.tax) totals.push(["Tax", t.tax]);
   if (t.adjustments) totals.push(["Adjustments", t.adjustments]);
-  totals.push(["Total", t.total, true]);
-  if (t.walletApplied) totals.push(["Paid from Play Pass", -t.walletApplied]);
-  if (t.creditApplied - t.walletApplied > 0) totals.push(["Paid from Yalla Wallet credit", -(t.creditApplied - t.walletApplied)]);
-  if (t.paid) totals.push(["Payments received", -t.paid]);
-  if (t.refunded) totals.push(["Refunded", t.refunded]);
-  totals.push([inv.status === "void" ? "Balance (void)" : "Balance due", Math.max(t.balance, 0), true]);
-  ensure(totals.length * 18 + 20);
-  y -= 8;
-  for (const [label, cents, strong] of totals) {
-    if (strong) {
-      page.drawLine({ start: { x: W - M - 230, y: y + 13 }, end: { x: W - M, y: y + 13 }, thickness: 0.75, color: INK });
-    }
-    text(label, W - M - 230, y, { size: strong ? 11 : 10, font: strong ? bold : reg });
-    text(usd(cents), colAmt - 8, y, { size: strong ? 11 : 10, font: strong ? bold : reg, align: "right" });
-    y -= strong ? 22 : 17;
+  const after: [string, number][] = [];
+  if (t.walletApplied) after.push(["Paid from Play Pass", -t.walletApplied]);
+  if (t.creditApplied - t.walletApplied > 0) after.push(["Paid from Yalla Wallet credit", -(t.creditApplied - t.walletApplied)]);
+  if (t.paid) after.push(["Payments received", -t.paid]);
+  if (t.refunded) after.push(["Refunded", t.refunded]);
+  ensure((totals.length + after.length) * 17 + 90);
+  y -= 6;
+  for (const [label, cents] of totals) {
+    text(label, tx, y, { size: 10, color: label === "Discounts" ? BLUE : SOFT });
+    text(usd(cents), colAmt, y, { size: 10, align: "right", color: label === "Discounts" ? BLUE : INK });
+    y -= 17;
   }
+  rule(y + 9, INK, 0.75, tx, W - M);
+  y -= 8;
+  text("Total", tx, y, { size: 13, font: serif });
+  text(usd(t.total), colAmt, y, { size: 13, font: serif, align: "right" });
+  y -= 22;
+  for (const [label, cents] of after) {
+    text(label, tx, y, { size: 10, color: SOFT });
+    text(usd(cents), colAmt, y, { size: 10, align: "right" });
+    y -= 17;
+  }
+  y -= 10;
+  page.drawRectangle({ x: tx - 12, y: y - 11, width: W - M - tx + 12, height: 30, color: SAND });
+  text(inv.status === "void" ? "Balance (void)" : "Balance due", tx, y, { size: 12, font: serif });
+  text(usd(Math.max(t.balance, 0)), colAmt, y, { size: 13, font: serif, align: "right" });
+  y -= 40;
 
   // ── Payments and refunds.
   if (pays.length || refs.length) {
-    ensure(40 + (pays.length + refs.length) * 15);
-    y -= 14;
-    text("PAYMENT HISTORY", M, y, { size: 8, font: bold, color: SOFT });
-    y -= 6;
+    ensure(46 + (pays.length + refs.length) * 16);
+    y -= 8;
+    eyebrow("Payment history", M, y);
+    y -= 8;
     rule(y);
-    y -= 15;
+    y -= 16;
     const method: Record<string, string> = { card: "Card", offline_cash: "Cash", offline_check: "Check", offline_other: "Other", credit: "Yalla Wallet credit" };
     for (const p of pays) {
       text(day(p.succeededAt ?? p.createdAt), M, y, { size: 10 });
-      text(`Payment · ${method[p.method] ?? p.method}`, M + 150, y, { size: 10 });
-      text(usd(p.amountCents), colAmt - 8, y, { size: 10, align: "right" });
-      y -= 15;
+      text(`Payment · ${method[p.method] ?? p.method}`, M + 150, y, { size: 10, color: SOFT });
+      text(usd(p.amountCents), colAmt, y, { size: 10, align: "right" });
+      y -= 16;
     }
     for (const r of refs) {
       text(day(r.createdAt), M, y, { size: 10 });
-      text("Refund", M + 150, y, { size: 10 });
-      text(usd(-r.amountCents), colAmt - 8, y, { size: 10, align: "right" });
-      y -= 15;
+      text("Refund", M + 150, y, { size: 10, color: SOFT });
+      text(usd(-r.amountCents), colAmt, y, { size: 10, align: "right" });
+      y -= 16;
     }
   }
 
-  // ── Footer on every page.
+  // ── Footer on every page: a warm thank-you and how to reach Yalla.
   const pages = pdf.getPages();
   pages.forEach((pg, i) => {
     page = pg;
-    rule(M + 22);
-    text(`Thank you for choosing Yalla. Questions about this invoice: hello@yallaspacesd.com · 619.775.4008`, M, M + 8, { size: 8, color: SOFT });
-    text(`Page ${i + 1} of ${pages.length}`, W - M, M + 8, { size: 8, color: SOFT, align: "right" });
+    rule(M + 30, BLUE, 1);
+    text("Thank you for being part of Yalla.", M, M + 12, { size: 11, font: serifItalic, color: BLUE });
+    text("Questions about this invoice? hello@yallaspacesd.com · 619.775.4008", M, M - 2, { size: 8, color: SOFT });
+    text(`Page ${i + 1} of ${pages.length}`, W - M, M + 12, { size: 8, color: SOFT, align: "right" });
+    text("yallaspacesd.com", W - M, M - 2, { size: 8, color: SOFT, align: "right" });
   });
 
   return { bytes: await pdf.save(), filename: `Yalla-invoice-${inv.number}.pdf`, familyId: inv.familyId };
