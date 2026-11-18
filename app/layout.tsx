@@ -7,8 +7,9 @@ const lora = Lora({ subsets: ["latin"], style: ["normal", "italic"], variable: "
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.yallaspacesd.com"),
   title: {
-    default: "Yalla",
+    default: "Yalla Childcare & Coworking · San Diego",
     template: "%s · Yalla",
   },
   description:

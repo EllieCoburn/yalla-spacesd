@@ -10,7 +10,11 @@ import { Reveal } from "@/components/ui/Reveal";
 import { otherPrograms } from "@/content/programs";
 import { LoopDivider } from "@/components/brand/LoopDivider";
 
-export const metadata: Metadata = { title: "Home" };
+export const metadata: Metadata = {
+  // The name Google shows for the home page.
+  title: { absolute: "Yalla Childcare & Coworking · San Diego" },
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
