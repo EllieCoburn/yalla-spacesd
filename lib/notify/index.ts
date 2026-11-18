@@ -53,6 +53,7 @@ export type TemplateKey =
   | "staff_new_booking"
   | "staff_booking_cancelled"
   | "flex_welcome"
+  | "waitlist_update"
   | "flex_thank_you"
   | "cohort_drop_in"
   | "cohort_drop_in_cancelled";
@@ -257,8 +258,15 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
   waitlist_offer: {
     name: "Waitlist offer",
-    subject: "A spot opened up: {{program}} on {{date}}",
-    body: "Hi {{guardian_first_name}},\n\nGood news — a spot has opened for {{child_names}}:\n\n{{booking_details}}\n\nWe’re holding it for you until {{offer_expires}}. To accept, complete your booking here:\n{{offer_link}}\n\nIf it doesn’t suit, no action is needed and we’ll offer it to the next family.\n\nTeam Yalla",
+    subject: "A spot is open for {{child_names}}: {{program}} on {{date}}",
+    body: "Hi {{guardian_first_name}},\n\nGood news! A spot just opened for {{child_names}}, so you’ve come off the waitlist.\n\n{{booking_details}}\n\n{{waitlist_note}}\n\n{{offer_link}}\n\nNothing is charged until you check out. If this day no longer works, no need to do anything.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  waitlist_update: {
+    name: "Waitlist update: spot booked by another family",
+    subject: "An update on the Yalla Flex waitlist for {{date}}",
+    body: "Hi {{guardian_first_name}},\n\n{{update}}\n\n{{book_link}}\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -484,7 +492,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   payment_receipt: ["guardian_first_name", "service", "invoice_number", "amount", "paid_at", "receipt", "line_items", "balance", "book_link"],
   payment_failed: ["guardian_first_name", "invoice_number", "amount", "reason", "hold_until"],
   payment_request: ["guardian_first_name", "invoice_number", "amount", "line_items", "payment_link"],
-  waitlist_offer: ["guardian_first_name", "program", "date", "child_names", "booking_details", "offer_expires", "offer_link"],
+  waitlist_offer: ["guardian_first_name", "program", "date", "child_names", "booking_details", "waitlist_note", "offer_expires", "offer_link"],
+  waitlist_update: ["guardian_first_name", "date", "update", "book_link"],
   membership_update: ["guardian_first_name", "child_name", "membership_summary"],
   staff_password_reset: ["name", "link"],
   staff_invite: ["name", "invited_by", "role", "link"],
@@ -550,6 +559,8 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   child_name: "Ava",
   child_names: "Ava",
   coupon_code: "BACKTOPLAY10",
+  waitlist_note: "~~ There is currently more than one family on the waitlist for this spot. You have 15 minutes to check out before the next family is given the opportunity to book it.",
+  update: "The Yalla Flex spot for Ava on Wednesday, November 25 was booked by another family on the waitlist, so we’ve placed you back on the waitlist for that day. If another spot opens, we’ll email you right away.",
   coupon_link: "https://www.yallaspacesd.com/coupon/BACKTOPLAY10",
   welcome_letter: welcomeLetter([SAMPLE_CHILD]),
   first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),

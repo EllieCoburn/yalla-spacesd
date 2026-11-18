@@ -6,7 +6,7 @@
  */
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
-import type { Executor } from "@/lib/db";
+import type { DB, Executor } from "@/lib/db";
 import { blackoutDates, bookingItems, flexDays, programs, sessions, settings } from "@/lib/db/schema";
 import { EARLY_BIRD, FLEX_GROUPS, FLEX_HOURS, FLEX_SLUG, flexGroupFor, flexTitle, parseWeekly, type WeeklyVacancies } from "@/lib/booking/flex";
 import { addDaysISO, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
@@ -168,6 +168,11 @@ export async function adjustFlexSpots(db: Executor, actor: Actor, sessionId: str
     return s;
   }
   await db.update(sessions).set({ capacity: next }).where(eq(sessions.id, s.id));
+  // A released spot goes straight to the next family on that day's waitlist.
+  if (next > s.capacity) {
+    const { nudgeWaitlist } = await import("./waitlist-chain");
+    await nudgeWaitlist(db as DB, [s.id]);
+  }
   const g = flexGroupFor(s.minAgeMonths);
   await audit(db, actor, { action: "flex.spots", entityType: "session", entityId: s.id, summary: `Yalla Flex ${g?.label ?? ""} on ${s.localDate}: ${s.capacity} → ${next} spot${next === 1 ? "" : "s"}` });
   return { ...s, capacity: next };
@@ -205,6 +210,10 @@ export async function setWeeklyVacancies(db: Executor, actor: Actor, next: Weekl
       await db.update(sessions).set({ capacity: cap }).where(eq(sessions.id, s.id));
       changed++;
     }
+  }
+  if (changed) {
+    const { nudgeWaitlist } = await import("./waitlist-chain");
+    await nudgeWaitlist(db as DB);
   }
   await audit(db, actor, { action: "flex.weekly", entityType: "program", entityId: p.id, summary: `Updated Yalla Flex weekly vacancies (${changed} upcoming day${changed === 1 ? "" : "s"} changed)`, changes: { before, after: clean } });
   return { changed };

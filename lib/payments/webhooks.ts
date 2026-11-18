@@ -117,7 +117,8 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
       };
       if (b && ["held", "pending_payment"].includes(b.status) && b.holdExpiresAt && b.holdExpiresAt > new Date()) {
         const until = later(b.createdAt, b.holdExpiresAt);
-        [b] = await db.update(bookings).set({ status: "held", holdExpiresAt: until }).where(eq(bookings.id, b.id)).returning();
+        // A Flex waitlist offer keeps its own end time (booking closes for the day); back to "held" frees the spot for others to check out.
+        [b] = await db.update(bookings).set({ status: "held", holdExpiresAt: b.waitlistChainId ? b.holdExpiresAt : until }).where(eq(bookings.id, b.id)).returning();
         await db.update(walletReservations).set({ expiresAt: until }).where(sql`${walletReservations.bookingId} = ${b.id} AND ${walletReservations.status} = 'held'`);
       }
       let spaceHold: Date | null = null;

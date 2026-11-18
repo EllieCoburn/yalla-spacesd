@@ -48,11 +48,19 @@ export async function occupancyFor(db: Executor, sessionIds: string[], now = new
           b.status = 'requested'
           OR (b.status IN ('held', 'pending_payment') AND b.hold_expires_at > ${now.toISOString()}::timestamptz)
         )
+        -- Offers inside an open Flex waitlist spot are counted once, as the spot (below).
+        AND NOT EXISTS (SELECT 1 FROM waitlist_chains wc WHERE wc.id = b.waitlist_chain_id AND wc.status = 'open' AND wc.closes_at > ${now.toISOString()}::timestamptz)
       ), 0) AS held
     FROM booking_items bi
     JOIN bookings b ON b.id = bi.booking_id
     WHERE bi.session_id = ANY(${ids})
     GROUP BY bi.session_id`);
+  // Flex spots reserved for the waitlist until booking closes for the day.
+  const chains = await db.execute<{ session_id: string; spots: number }>(sql`
+    SELECT session_id, SUM(spots) AS spots FROM waitlist_chains
+    WHERE status = 'open' AND closes_at > ${now.toISOString()}::timestamptz AND session_id = ANY(${ids})
+    GROUP BY session_id`);
+  const waitlistHeld = new Map([...chains].map((r) => [r.session_id, n(r.spots)]));
 
   const members = await db.execute<{ session_id: string; members: number }>(sql`
     SELECT s.id AS session_id, COUNT(m.id) AS members
@@ -82,6 +90,10 @@ export async function occupancyFor(db: Executor, sessionIds: string[], now = new
       o.booked = n(r.booked);
       o.held = n(r.held);
     }
+  }
+  for (const [sid, spots] of waitlistHeld) {
+    const o = out.get(sid);
+    if (o) o.held += spots;
   }
   for (const r of members) {
     const o = out.get(r.session_id);

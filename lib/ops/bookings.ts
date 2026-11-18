@@ -18,6 +18,7 @@ import {
   bookings,
   capacityOverrides,
   discounts,
+  waitlistChains,
   children,
   families,
   guardians,
@@ -241,6 +242,10 @@ export type HoldInput = {
   /** Admin only: proceed despite paperwork that blocks booking. */
   acknowledgePaperwork?: boolean;
   holdMinutes?: number;
+  /** A Yalla Flex waitlist offer inside a reserved spot: the spot is already set aside for it. */
+  waitlistChainId?: string;
+  /** Hold until this time (waitlist offers last until booking closes for the day). */
+  holdUntil?: Date;
   now?: Date;
 };
 
@@ -277,9 +282,13 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
     if (cf.length) throw new OpsError("conflict", cf[0].message, { problems: cf });
 
     const avail = await availabilityFor(tx, [...prep.sessionsById.keys()], now);
+    // A waitlist offer draws on its reserved spot rather than on what's left for everyone else.
+    const [chain] = input.waitlistChainId ? await tx.select().from(waitlistChains).where(eq(waitlistChains.id, input.waitlistChainId)) : [];
+    if (input.waitlistChainId && (!chain || chain.status !== "open")) throw new OpsError("invalid", "This waitlist spot is no longer available.");
     const shortfalls: { sessionId: string; needed: number; remaining: number }[] = [];
     for (const [sid, needed] of prep.spotsBySession) {
       const a = avail.get(sid)!;
+      if (chain && chain.sessionId === sid && needed <= chain.spots) continue;
       if (needed > a.remaining) shortfalls.push({ sessionId: sid, needed, remaining: a.remaining });
     }
     const overrides: { sessionId: string; extra: number }[] = [];
@@ -314,8 +323,9 @@ export async function createHold(db: DB, actor: Actor, input: HoldInput) {
         familyId: input.familyId,
         status: [...prep.programsById.values()].some((p) => p.bookingMode === "request") && input.source === "public" ? "requested" : "held",
         source: input.source,
-        holdExpiresAt: new Date(now.getTime() + holdMinutes * 60_000),
+        holdExpiresAt: input.holdUntil ?? new Date(now.getTime() + holdMinutes * 60_000),
         createdByStaffId: actor.type === "staff" ? actor.id : null,
+        waitlistChainId: input.waitlistChainId ?? null,
       })
       .returning();
 
@@ -504,6 +514,12 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     });
     if (missing.length) throw new OpsError("paperwork", `Please complete before paying: ${[...new Set(missing.map((m) => m.title))].join(", ")}.`, { blocking: missing });
   }
+  // A Flex waitlist spot: any family offered it may book it, but only one can be paying at a time.
+  if (b.waitlistChainId) {
+    const { chainCheckoutBlock } = await import("./waitlist-chain");
+    const blocked = await chainCheckoutBlock(db, b.waitlistChainId, b.id);
+    if (blocked) throw new OpsError(blocked.code, blocked.message);
+  }
   let [inv] = await db.select().from(invoices).where(and(eq(invoices.bookingId, b.id), ne(invoices.status, "void")));
   if (!inv) inv = await invoiceForBooking(db, actor, b.id);
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
@@ -533,7 +549,8 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     customerEmail: primary?.email,
     successUrl: `${urls.base}${bookingStatusPath(b.reference)}`,
     cancelUrl: `${urls.base}${bookingStatusPath(b.reference, { cancelled: "1" })}`,
-    expiresAt: b.holdExpiresAt,
+    // A waitlist offer's checkout lasts the shortest time allowed, so an unfinished payment soon frees the spot for the next family.
+    expiresAt: b.waitlistChainId ? new Date(Date.now() + 31 * 60_000) : b.holdExpiresAt,
     idempotencyKey: idem,
   });
   await db.insert(payments).values({
@@ -766,8 +783,24 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     await audit(tx, actor, { action: "booking.confirm", entityType: "booking", entityId: b.id, summary: `Confirmed ${b.reference} (${opts.reason})` });
     // Close the waitlist loop if this was an accepted offer.
     await tx.update(waitlistEntries).set({ status: "accepted", updatedAt: now }).where(eq(waitlistEntries.offerBookingId, b.id));
-    return { status: "confirmed" as const, changed: true, familyId: b.familyId };
+    // A Flex waitlist spot: it's taken now, and the other families' offers for it end.
+    if (b.waitlistChainId) {
+      await tx.update(waitlistChains).set({ status: "booked", bookedBookingId: b.id, nextHandoffAt: null, updatedAt: now }).where(eq(waitlistChains.id, b.waitlistChainId));
+      await tx
+        .update(bookings)
+        .set({ status: "expired", holdExpiresAt: now, updatedAt: now })
+        .where(and(eq(bookings.waitlistChainId, b.waitlistChainId), ne(bookings.id, b.id), inArray(bookings.status, ["held", "pending_payment"])));
+    }
+    return { status: "confirmed" as const, changed: true, familyId: b.familyId, chainId: b.waitlistChainId };
   });
+  if (result.status === "confirmed" && result.changed && "chainId" in result && result.chainId) {
+    try {
+      const { afterChainBooked } = await import("./waitlist-chain");
+      await afterChainBooked(db, result.chainId, bookingId, now);
+    } catch (e) {
+      console.error("[waitlist courtesy failed]", (e as Error).message?.slice(0, 160));
+    }
+  }
   if (result.status === "confirmed" && result.changed) {
     // The team hears about every booking right away, however it was made.
     try {
@@ -921,6 +954,11 @@ export async function cancelBooking(db: DB, actor: Actor, input: { bookingId: st
     });
     return { booking: b, sessionIds: [...new Set(target.map((i) => i.sessionId))], itemIds: target.map((i) => i.id) };
   });
+  // A freed Flex spot goes straight to the next family on the waitlist.
+  {
+    const { nudgeWaitlist } = await import("./waitlist-chain");
+    await nudgeWaitlist(db, released.sessionIds);
+  }
   if (input.notify) {
     await notifyFamily(db, {
       key: "booking_cancellation",

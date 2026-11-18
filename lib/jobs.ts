@@ -32,6 +32,11 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
     console.error("[flex welcome run failed]", (e as Error).message?.slice(0, 160));
   }
   const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
+  // The Flex waitlist's safety net: close finished days, hand spots on, offer any new openings.
+  {
+    const { advanceWaitlistChains } = await import("@/lib/ops/waitlist-chain");
+    await advanceWaitlistChains(db, { now, baseUrl: opts.baseUrl }).catch((e) => console.error("[flex waitlist]", (e as Error).message?.slice(0, 160)));
+  }
   const expiredOffers = (await expireOffers(db, now)).length;
   const membershipChanges = await applyDueChanges(db, SYSTEM);
   // Cancellation credits are valid 24 months; record any that have lapsed.

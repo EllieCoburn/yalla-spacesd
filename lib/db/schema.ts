@@ -556,6 +556,8 @@ export const bookings = pgTable(
     cancelReason: text("cancel_reason"),
     /** A coupon code the family entered at checkout (Billing → Discounts). */
     discountId: text("discount_id").references((): AnyPgColumn => discounts.id),
+    /** A Yalla Flex waitlist offer: the spot is reserved for the chain, not this booking (see waitlist_chains). */
+    waitlistChainId: text("waitlist_chain_id"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -679,6 +681,8 @@ export const waitlistEntries = pgTable(
     offeredAt: ts("offered_at"),
     offerExpiresAt: ts("offer_expires_at"),
     offerBookingId: text("offer_booking_id"),
+    /** The Yalla Flex waitlist spot this family was offered (see waitlist_chains). */
+    chainId: text("chain_id"),
     notes: text("notes"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -1449,3 +1453,28 @@ export const rateEvents = pgTable(
   },
   (t) => [index("rate_events_lookup_idx").on(t.bucket, t.keyHash, t.createdAt)],
 );
+
+/**
+ * A Yalla Flex spot that opened while families were waiting. It's reserved for the waitlist until
+ * booking closes for the day (8:00am): each family in line is offered it in turn, 15 minutes apart,
+ * and any family offered it can book it while it's still open. Capacity counts the chain's spots
+ * once, whichever families hold offers.
+ */
+export const waitlistChains = pgTable(
+  "waitlist_chains",
+  {
+    id: id(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id),
+    spots: integer("spots").notNull().default(1),
+    status: text("status").notNull().default("open"), // open | booked | closed
+    nextHandoffAt: ts("next_handoff_at"),
+    closesAt: ts("closes_at").notNull(),
+    bookedBookingId: text("booked_booking_id"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("waitlist_chains_session_idx").on(t.sessionId), index("waitlist_chains_status_idx").on(t.status)],
+);
+

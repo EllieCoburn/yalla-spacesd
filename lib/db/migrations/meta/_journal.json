@@ -407,6 +407,13 @@
       "when": 1794971878439,
       "tag": "0057_arrival_kiosk",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795022520314,
+      "tag": "0058_waitlist_chains",
+      "breakpoints": true
     }
   ]
 }

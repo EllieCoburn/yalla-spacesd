@@ -24,7 +24,7 @@ export const saveTemplateAction = adminAction("communications.manage", async ({ 
     booking_cancellation: ["booking_details"],
     payment_receipt: ["invoice_number", "amount"],
     payment_request: ["payment_link", "amount"],
-    waitlist_offer: ["offer_link", "offer_expires"],
+    waitlist_offer: ["offer_link"],
     staff_password_reset: ["link"],
     staff_invite: ["link"],
     flex_welcome: ["welcome_letter", "first_visit_details"],

@@ -13,6 +13,7 @@ import { fmtDateTime } from "@/lib/time";
 import { acceptOfferAction } from "../../actions";
 import { PrivateLinkNotice } from "@/components/booking/PrivateLinkNotice";
 import { mayViewStatus } from "@/lib/booking-access";
+import { advanceWaitlistChains, chainStatusForBooking } from "@/lib/ops/waitlist-chain";
 
 export const metadata: Metadata = { title: "Your waitlist offer", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export default async function Offer({ params, searchParams }: { params: Promise<
   const { ref } = await params;
   const { error, k } = await searchParams;
   if (!isDbConfigured()) notFound();
+  // Keep the Flex waitlist moving (hand-offs, closing at 8am) whenever someone opens an offer.
+  await advanceWaitlistChains(getDb()).catch(() => null);
   const v = await bookingStatusView(getDb(), ref);
   if (!v || v.source !== "waitlist" || !(await mayViewStatus("offer", ref, k, v.familyId))) return <PrivateLinkNotice what="offer" />;
   const open = (v.status === "held" || v.status === "pending_payment") && !!v.holdExpiresAt && new Date(v.holdExpiresAt) > new Date();
@@ -29,6 +32,9 @@ export default async function Offer({ params, searchParams }: { params: Promise<
   const toSign = row ? await agreementsForBooking(getDb(), row.id) : [];
   // Each child's allergies and medications are asked first, if we don't have them.
   const care = row ? await careNeededForBooking(getDb(), row.id) : [];
+  // A Flex waitlist spot: shared by the families offered it until someone books it or the day closes.
+  const [own] = await getDb().select({ id: bookings.id }).from(bookings).where(eq(bookings.reference, ref));
+  const chain = own ? await chainStatusForBooking(getDb(), own.id) : null;
 
   return (
     <section className="pt-32 pb-28 lg:pt-40">
@@ -42,12 +48,33 @@ export default async function Offer({ params, searchParams }: { params: Promise<
               </h1>
               <p className="mt-4 text-ink-soft">This offer has been accepted and confirmed.</p>
             </>
+          ) : open && chain ? (
+            <>
+              <h1 className="display mt-8 text-[clamp(2.4rem,1.8rem+2vw,3.4rem)]">
+                A spot is open <em>for you.</em>
+              </h1>
+              <p className="mt-4 text-ink-soft">Book now to claim it. Nothing is charged until you check out.</p>
+            </>
           ) : open ? (
             <>
               <h1 className="display mt-8 text-[clamp(2.4rem,1.8rem+2vw,3.4rem)]">
                 A spot opened <em>for you.</em>
               </h1>
               <p className="mt-4 text-ink-soft">We’re holding it until {fmtDateTime(v.holdExpiresAt!)}. Nothing is charged until you accept and pay.</p>
+            </>
+          ) : chain?.status === "booked" ? (
+            <>
+              <h1 className="display mt-8 text-[clamp(2.4rem,1.8rem+2vw,3.4rem)]">
+                This spot <em>has been booked.</em>
+              </h1>
+              <p className="mt-4 text-ink-soft">Another family on the waitlist booked it first. If you’re still on the waitlist for this day, we’ll email you right away if another spot opens.</p>
+            </>
+          ) : chain ? (
+            <>
+              <h1 className="display mt-8 text-[clamp(2.4rem,1.8rem+2vw,3.4rem)]">
+                Booking for this day <em>has closed.</em>
+              </h1>
+              <p className="mt-4 text-ink-soft">Flex booking closes at 8:00am on the day. We’d love to see you on another day.</p>
             </>
           ) : (
             <>
@@ -75,7 +102,7 @@ export default async function Offer({ params, searchParams }: { params: Promise<
             <form action={acceptOfferAction}>
               <input type="hidden" name="reference" value={v.reference} />
               <input type="hidden" name="k" value={k ?? ""} />
-              <button className="h-12 rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">Accept and pay</button>
+              <button className="h-12 rounded-full bg-ink px-7 text-[0.9rem] text-chalk hover:bg-blue">{chain ? "Book spot now" : "Accept and pay"}</button>
             </form>
           ) : null}
           <Link href="/book" className="inline-flex h-12 items-center rounded-full border border-ink/25 px-7 text-[0.9rem] hover:border-ink">

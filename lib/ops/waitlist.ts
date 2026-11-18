@@ -3,7 +3,8 @@
  * spot is reserved while the family decides and released automatically if they don't. Nothing is
  * charged or confirmed until the family completes checkout.
  */
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { FLEX_SLUG } from "@/lib/booking/flex";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB } from "@/lib/db";
 import { bookings, programs, sessions, waitlistEntries } from "@/lib/db/schema";
@@ -65,6 +66,7 @@ export async function makeOffer(db: DB, actor: Actor, input: { entryId: string; 
       child_names: rows.map((r) => r.child?.preferredName || r.child?.firstName).filter(Boolean).join(" and ") || "your family",
       booking_details: rows.map((r) => `• ${describeLine(r)}`).join("\n"),
       offer_expires: fmtDateTime(expires),
+      waitlist_note: `We’re holding it for you until ${fmtDateTime(expires)}.`,
       offer_link: `${input.baseUrl}${offerPath(hold.booking.reference)}`,
     },
     related: { type: "booking", id: hold.booking.id },
@@ -88,7 +90,8 @@ export async function expireOffers(db: DB, now = new Date()) {
   const lapsed = await db
     .update(waitlistEntries)
     .set({ status: "expired", updatedAt: now })
-    .where(and(eq(waitlistEntries.status, "offered"), sql`${waitlistEntries.offerExpiresAt} < ${now.toISOString()}::timestamptz`))
+    // Flex waitlist offers stay open until their spot is booked or the day closes (see waitlist-chain).
+    .where(and(eq(waitlistEntries.status, "offered"), isNull(waitlistEntries.chainId), sql`${waitlistEntries.offerExpiresAt} < ${now.toISOString()}::timestamptz`))
     .returning();
   return lapsed;
 }
@@ -100,7 +103,7 @@ export async function autoOffer(db: DB, actor: Actor, sessionIds: string[], base
     const [s] = await db.select().from(sessions).where(eq(sessions.id, sid));
     if (!s) continue;
     const [p] = await db.select().from(programs).where(eq(programs.id, s.programId));
-    if (!p.waitlistAutoOffer) continue;
+    if (!p.waitlistAutoOffer || p.slug === FLEX_SLUG) continue;
     let remaining = (await availabilityFor(db, [sid])).get(sid)!.remaining;
     const queue = await db
       .select()
