@@ -1,5 +1,6 @@
 "use client";
 
+import { publicCohorts } from "@/content/pricing-public";
 import { useState } from "react";
 import type { Cohort } from "@/content/tuition";
 
@@ -115,10 +116,13 @@ export function TuitionExplorer({
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_15rem]">
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-4">
             <p className="display text-[2.2rem]">{c.name}</p>
             <p className="font-serif text-ink-soft italic">{timeLabel}</p>
           </div>
+          {publicCohorts.find((p) => p.name === c.name)?.ages ? (
+            <p className="mt-1 text-[1rem] text-ink-soft">Ages {publicCohorts.find((p) => p.name === c.name)!.ages}</p>
+          ) : null}
 
           {day === "custom" ? (
             <div className="mt-6 space-y-6 bg-mist/60 p-5 sm:p-6">
