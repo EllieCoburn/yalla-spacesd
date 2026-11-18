@@ -365,6 +365,8 @@ export const families = pgTable("families", {
   isSample: boolean("is_sample").notNull().default(false),
   /** When the Yalla Flex first-day welcome email went out (once per family, ever). */
   flexWelcomeSentAt: ts("flex_welcome_sent_at"),
+  /** When this family's Camp Yalla first-day welcome went out (once per family). */
+  campWelcomeSentAt: ts("camp_welcome_sent_at"),
   /** When the evening-of-first-Flex-day thank-you (with a return-visit code) went out. Once per family. */
   flexThankYouSentAt: ts("flex_thank_you_sent_at"),
   createdAt: createdAt(),

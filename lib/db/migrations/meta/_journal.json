@@ -428,6 +428,13 @@
       "when": 1795022522314,
       "tag": "0060_missed_you_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795022523314,
+      "tag": "0061_camp_welcome",
+      "breakpoints": true
     }
   ]
 }

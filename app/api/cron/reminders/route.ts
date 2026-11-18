@@ -17,9 +17,12 @@ export async function GET(req: Request) {
   // New Flex families' welcome (their first day is tomorrow) goes first; it doubles as their reminder.
   const { sendFlexWelcomes } = await import("@/lib/ops/flex-welcome");
   const welcomes = await sendFlexWelcomes(getDb(), { baseUrl, evening: true });
+  // New camp families' welcome (their first camp day is tomorrow), which doubles as their reminder.
+  const { sendCampWelcomes } = await import("@/lib/ops/camp-welcome");
+  const campWelcomes = await sendCampWelcomes(getDb(), { baseUrl, evening: true }).catch(() => ({ sent: 0 }));
   const reminders = await sendEveningReminders(getDb(), { baseUrl });
   // This run is at 6pm Pacific (7pm in summer): new Flex families' first-day thank-you goes out now too.
   const { sendFlexThankYous } = await import("@/lib/ops/flex-thank-you");
   const thankYous = await sendFlexThankYous(getDb(), { baseUrl });
-  return Response.json({ ...reminders, flexWelcomes: welcomes.sent, flexThankYous: thankYous.sent });
+  return Response.json({ ...reminders, flexWelcomes: welcomes.sent, campWelcomes: campWelcomes.sent, flexThankYous: thankYous.sent });
 }

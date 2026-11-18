@@ -31,6 +31,12 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   } catch (e) {
     console.error("[flex welcome run failed]", (e as Error).message?.slice(0, 160));
   }
+  try {
+    const { sendCampWelcomes } = await import("@/lib/ops/camp-welcome");
+    await sendCampWelcomes(db, { now, baseUrl: opts.baseUrl });
+  } catch (e) {
+    console.error("[camp welcome run failed]", (e as Error).message?.slice(0, 160));
+  }
   const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
   // The Flex waitlist's safety net: close finished days, hand spots on, offer any new openings.
   {
@@ -137,11 +143,14 @@ export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?
   // A new Flex family's welcome (sent this evening) already covers their first Flex day.
   const { familiesWelcomedFor } = await import("@/lib/ops/flex-welcome");
   const welcomed = await familiesWelcomedFor(db, tomorrow, [...new Set(due.map((d) => d.familyId))], now);
+  // Likewise a new camp family's welcome covers their first camp day.
+  const { campFamiliesWelcomedFor } = await import("@/lib/ops/camp-welcome");
+  const campWelcomed = await campFamiliesWelcomedFor(db, tomorrow, [...new Set(due.map((d) => d.familyId))], now);
   let sent = 0;
   for (const d of due) {
     if (already.has(d.bookingId)) continue;
     const rows = (await bookingLines(db, d.bookingId)).filter(
-      (r) => r.item.status === "confirmed" && r.session.localDate === tomorrow && !(welcomed.has(d.familyId) && r.program.slug === FLEX_SLUG),
+      (r) => r.item.status === "confirmed" && r.session.localDate === tomorrow && !(welcomed.has(d.familyId) && r.program.slug === FLEX_SLUG) && !(campWelcomed.has(d.familyId) && r.program.kind === "camp"),
     );
     if (!rows.length) continue;
     const [b] = await db.select().from(bookings).where(eq(bookings.id, d.bookingId));
@@ -161,7 +170,7 @@ export async function sendEveningReminders(db: DB, opts: { baseUrl: string; now?
             ? []
             : [`Need a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](${opts.baseUrl}/portal/spaces?date=${tomorrow})`]),
           rows.every((r) => r.program.kind === "camp")
-            ? `Want to add Early Bird or a late stay? [Add extras in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`
+            ? `Want to add Early Bird or a late stay? [Add extras in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})\n\nPacking for camp? [See what to bring](${opts.baseUrl}/portal/what-to-bring)`
             : `Bringing a second grown-up, or want to add extras? [Add them in your Family Portal](${opts.baseUrl}/portal/extras/${tomorrow})`,
         ].join("\n\n"),
       },

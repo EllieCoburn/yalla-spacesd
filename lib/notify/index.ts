@@ -9,6 +9,8 @@
  */
 import { firstVisitDetails, welcomeLetter, type WelcomeChild } from "@/lib/ops/flex-welcome";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { campDayDetails, campWelcomeLetter, type CampChild } from "@/lib/ops/camp-welcome";
+import { CAMP_GROUPS } from "@/content/camp-what-to-bring";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { guardians, messages, messageTemplates } from "@/lib/db/schema";
@@ -53,6 +55,7 @@ export type TemplateKey =
   | "staff_new_booking"
   | "staff_booking_cancelled"
   | "flex_welcome"
+  | "camp_welcome"
   | "waitlist_update"
   | "flex_thank_you"
   | "cohort_drop_in"
@@ -147,6 +150,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "Yalla Flex first-day welcome (to families)",
     subject: "Welcome to Yalla Flex! See you {{when}}",
     body: "Hi {{guardian_first_name}},\n\n{{welcome_letter}}\n\nWarmly,\nTeam Yalla\n\n{{first_visit_details}}",
+    essential: true,
+    audience: "family",
+  },
+  camp_welcome: {
+    name: "Camp Yalla first-day welcome (to families)",
+    subject: "Welcome to Camp Yalla! See you {{when}}",
+    body: "Hi {{guardian_first_name}},\n\n{{camp_letter}}\n\nWarmly,\nTeam Yalla\n\n{{camp_details}}",
     essential: true,
     audience: "family",
   },
@@ -518,6 +528,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   staff_new_booking: ["summary", "details", "reference", "link"],
   staff_booking_cancelled: ["summary", "details", "reference", "link"],
   flex_welcome: ["guardian_first_name", "when", "welcome_letter", "first_visit_details"],
+  camp_welcome: ["guardian_first_name", "when", "camp_letter", "camp_details"],
   flex_thank_you: ["guardian_first_name", "child_names", "coupon_code", "coupon_link", "book_link"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
@@ -525,6 +536,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   event_received: ["name", "details", "occasion", "for_occasion", "preferred_date", "explore"],
 };
 
+const SAMPLE_CAMPER: CampChild = { childId: "sample", name: "Ava", group: CAMP_GROUPS[1], arrives: "9:00am", pickup: "3:00pm" };
 const SAMPLE_CHILD: WelcomeChild = { childId: "sample", name: "Ava", cohort: FLEX_GROUPS[3], half: false, arrives: "8:30am", pickup: "4:30pm" };
 
 export const SAMPLE_VARIABLES: Record<string, string> = {
@@ -564,6 +576,8 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   coupon_link: "https://www.yallaspacesd.com/coupon/BACKTOPLAY10",
   welcome_letter: welcomeLetter([SAMPLE_CHILD]),
   first_visit_details: firstVisitDetails([SAMPLE_CHILD], "https://www.yallaspacesd.com"),
+  camp_letter: campWelcomeLetter([SAMPLE_CAMPER], "tomorrow"),
+  camp_details: campDayDetails([SAMPLE_CAMPER], "https://www.yallaspacesd.com", { when: "tomorrow", date: "2026-11-25" }),
   upgrade_note: "## Make the most of tomorrow\n\nNeed a private space? Private offices and desks to rent, and complimentary time in our phone booth. [See what’s available](https://www.yallaspacesd.com/portal/spaces)\n\nBringing a second grown-up, or want to add extras? [Add them in your Family Portal](https://www.yallaspacesd.com/portal/home)",
   team: "Wildflower team",
   cohort: "Wildflowers",

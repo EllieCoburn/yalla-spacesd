@@ -51,6 +51,7 @@ const HERO: Record<string, string> = {
   booking_confirmation: "hero-rainbow.jpg",
   booking_welcome_team: "hero-rainbow.jpg",
   flex_welcome: "hero-rainbow.jpg",
+  camp_welcome: "hero-sunflowers.jpg",
   flex_thank_you: "hero-sunflowers.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",

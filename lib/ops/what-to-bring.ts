@@ -64,3 +64,26 @@ export async function familyFlexLists(db: Executor, familyId: string, today = to
   for (const k of out.values()) k.weekBlock = hasWeekBlock(dates.get(k.childId) ?? []);
   return [...out.values()];
 }
+
+export type CampChildList = { childId: string; name: string; groupKey: string; group: string; nextDate: string };
+
+/** One Camp Yalla list per child with an upcoming camp day, for the age group of their next camp day. */
+export async function familyCampLists(db: Executor, familyId: string, today = todayLA()): Promise<CampChildList[]> {
+  const { campGroupFor } = await import("@/content/camp-what-to-bring");
+  const rows = await db
+    .select({ session: sessions, child: children })
+    .from(bookingItems)
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .innerJoin(children, eq(children.id, bookingItems.childId))
+    .where(and(eq(bookings.familyId, familyId), eq(programs.kind, "camp"), inArray(bookingItems.status, ["confirmed", "held"]), eq(bookings.status, "confirmed"), gte(sessions.localDate, today)))
+    .orderBy(asc(sessions.startsAt));
+  const out = new Map<string, CampChildList>();
+  for (const r of rows) {
+    const g = campGroupFor(r.session.minAgeMonths);
+    if (!g || out.has(r.child.id)) continue;
+    out.set(r.child.id, { childId: r.child.id, name: (r.child.preferredName || r.child.firstName).trim(), groupKey: g.key, group: g.label, nextDate: r.session.localDate });
+  }
+  return [...out.values()];
+}

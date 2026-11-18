@@ -832,6 +832,14 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     } catch (e) {
       console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
     }
+    // Likewise a new camp family booking their first camp day after the 6pm run.
+    try {
+      const { sendCampWelcomes } = await import("./camp-welcome");
+      const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
+      if (bk) await sendCampWelcomes(db, { familyIds: [bk.familyId], bookingId });
+    } catch (e) {
+      console.error("[camp welcome failed]", (e as Error).message?.slice(0, 160));
+    }
   }
   if (result.status === "confirmed" && result.changed && opts.notify !== false) {
     const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));

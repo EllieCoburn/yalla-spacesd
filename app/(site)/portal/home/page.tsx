@@ -11,7 +11,7 @@ import { walletSummary } from "@/lib/playpass/wallet";
 import { PORTAL_OPEN_PREVIEW, previewGuardian, samplePortalData } from "@/lib/portal-preview";
 import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
-import { familyFlexLists } from "@/lib/ops/what-to-bring";
+import { familyCampLists, familyFlexLists } from "@/lib/ops/what-to-bring";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Family Portal", robots: { index: false } };
@@ -38,6 +38,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const today = todayLA();
   // Children with upcoming Flex days get a what-to-bring list (private, in the portal only).
   const flexLists = g ? await familyFlexLists(getDb(), g.familyId, today) : [];
+  const campLists = g ? await familyCampLists(getDb(), g.familyId, today) : [];
   const tabs = [
     { key: "overview", label: "Overview" },
     { key: "children", label: "Children" },
@@ -196,6 +197,17 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                       <span className="block text-[0.98rem] text-ink">What to bring for Yalla Flex</span>
                       <span className="block text-[0.82rem] text-ink-soft">
                         {flexLists.map((k) => `${k.name} · ${k.cohort}`).join(", ")}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-blue">→</span>
+                  </Link>
+                ) : null}
+                {campLists.length ? (
+                  <Link href="/portal/what-to-bring#camp" className="mt-3 flex items-center justify-between gap-4 border border-blue/30 bg-blue/[0.04] px-5 py-4 transition-colors hover:border-blue">
+                    <span>
+                      <span className="block text-[0.98rem] text-ink">What to bring for Camp Yalla</span>
+                      <span className="block text-[0.82rem] text-ink-soft">
+                        {campLists.map((k) => `${k.name} · ${k.group}`).join(", ")}
                       </span>
                     </span>
                     <span aria-hidden className="text-blue">→</span>

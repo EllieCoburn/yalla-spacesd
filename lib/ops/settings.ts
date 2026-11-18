@@ -39,6 +39,13 @@ export const POLICIES = {
     default: true,
     decision: false,
   } as PolicyDef<boolean>,
+  "notifications.campWelcome": {
+    group: "Notifications",
+    label: "Send the Camp Yalla first-day welcome email",
+    help: "The evening before a new camp family’s first camp day (about 6pm), they get one welcome letter from Team Yalla with drop-off and pickup times, what to bring for each child’s age group, the front door code, kiosk check-in, parking and extras. It replaces that evening’s reminder for their camp day. Families who book later (that evening or the same morning) get it as soon as they book.",
+    default: true,
+    decision: false,
+  } as PolicyDef<boolean>,
   "notifications.membershipEmails": {
     group: "Notifications",
     label: "Send membership messages to",
