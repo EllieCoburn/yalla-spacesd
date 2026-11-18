@@ -44,7 +44,7 @@ export default function MembershipPage() {
         </div>
       </Section>
 
-      <Section>
+      <Section className="pb-8! lg:pb-10!">
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Index n="02">Fees, discounts & upgrades</Index>
@@ -96,11 +96,15 @@ export default function MembershipPage() {
                 </div>
               ))}
             </div>
+            <Link href="/coworking" className="mt-6 inline-flex items-center gap-3 border-b border-ink/30 pb-1 text-[0.95rem] text-ink hover:border-blue hover:text-blue">
+              Learn more about coworking at Yalla <Arrow className="h-3 w-4" />
+            </Link>
           </div>
         </div>
       </Section>
 
       <CtaBand
+        tight
         title={
           <>
             Begin with <em>an application.</em>
