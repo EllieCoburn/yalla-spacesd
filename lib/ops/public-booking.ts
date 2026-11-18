@@ -680,6 +680,8 @@ export async function bookingStatusView(db: Executor, reference: string) {
     source: b.source,
     holdExpiresAt: b.holdExpiresAt?.toISOString() ?? null,
     lines: rows.map((r) => ({ id: r.item.id, sessionId: r.session.id, label: describeLine(r), status: r.item.status, priceCents: r.item.priceCents })),
+    /** Flex and camp come with a packing list in the Family Portal. */
+    hasPackingList: rows.some((r) => r.program.slug === "yalla-flex" || r.program.kind === "camp"),
     totalCents: total,
     balanceCents: balance,
     walletCents: [...totals.values()].reduce((s, t) => s + t.walletApplied, 0),

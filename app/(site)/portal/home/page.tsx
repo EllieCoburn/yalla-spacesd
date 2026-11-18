@@ -50,6 +50,8 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
     { key: "forms", label: "Forms", count: outstanding.length },
     ...(data.billing ? [{ key: "payments", label: "Payments" }] : []),
     { key: "spaces", label: "Book a Space", href: "/portal/spaces" },
+    // Packing lists are there from the moment a Flex or camp booking is confirmed.
+    ...(flexLists.length || campLists.length ? [{ key: "bring", label: "What to bring", href: "/portal/what-to-bring" }] : []),
   ];
   // Guides and policies (parking, illness policy and more) live in the resource hub below, not here.
 
@@ -341,6 +343,17 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               <div className="border border-line bg-paper p-7">
                 <p className="display text-[1.6rem]">Upcoming</p>
                 {bookingList(data.upcoming, true)}
+                {flexLists.length || campLists.length ? (
+                  <Link href="/portal/what-to-bring" className="mt-5 flex items-center justify-between gap-4 border border-blue/30 bg-blue/[0.04] px-5 py-4 transition-colors hover:border-blue">
+                    <span>
+                      <span className="block text-[0.98rem] text-ink">What to bring</span>
+                      <span className="block text-[0.82rem] text-ink-soft">
+                        {[...flexLists.map((k) => `${k.name} · Yalla Flex`), ...campLists.map((k) => `${k.name} · Camp Yalla`)].join(", ")}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-blue">→</span>
+                  </Link>
+                ) : null}
                 <p className="mt-6 text-[0.78rem] text-ink-soft">Cancel at least 24 hours ahead and what you paid returns to your Yalla Wallet as credit. Club Yalla days are managed with the Yalla team.</p>
               </div>
               <div className="border border-line bg-paper p-7">

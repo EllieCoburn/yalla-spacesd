@@ -646,7 +646,11 @@ async function confirmationVars(db: Executor, bookingId: string) {
   const address = loc?.address?.trim() || site.address.value || "";
   const placeName = loc?.name ?? "Yalla";
   const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Childcare & Coworking, ${address}`)})` : placeName;
-  const summary = [...sessionBlocks(rows), ...(pay ? [pay] : []), `Where: ${where}\nReference: ${b.reference}`, ...(arrival.trim() ? [`~~ ${arrival.trim().replace(/\s*\n+\s*/g, " ")}`] : [])].join("\n\n");
+  // Flex and camp have packing lists, in the Family Portal from the moment the booking is confirmed.
+  const packing = rows.some((r) => r.program.slug === "yalla-flex" || r.program.kind === "camp")
+    ? [`[See what to bring in your Family Portal](${await siteBase()}/portal/what-to-bring)`]
+    : [];
+  const summary = [...sessionBlocks(rows), ...(pay ? [pay] : []), `Where: ${where}\nReference: ${b.reference}`, ...(arrival.trim() ? [`~~ ${arrival.trim().replace(/\s*\n+\s*/g, " ")}`] : []), ...packing].join("\n\n");
   return {
     reference: b.reference,
     program: [...new Set(rows.map((r) => r.program.name))].join(", "),

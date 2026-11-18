@@ -155,6 +155,12 @@ export default async function Confirmation({ params, searchParams }: { params: P
               View in Family Portal
             </Link>
           ) : null}
+          {/* A first booking opens the portal through the card above, which shows the list on its overview. */}
+          {v.status === "confirmed" && v.hasPackingList && !claim ? (
+            <Link href={signedIn ? "/portal/what-to-bring" : "/portal?signin=1&next=/portal/what-to-bring"} className="inline-flex h-12 items-center rounded-full border border-ink/25 px-7 text-[0.9rem] hover:border-ink">
+              See what to bring
+            </Link>
+          ) : null}
           <Link href="/book" className="inline-flex h-12 items-center rounded-full border border-ink/25 px-7 text-[0.9rem] hover:border-ink">
             {v.status === "confirmed" ? "Book more" : "Back to booking"}
           </Link>
