@@ -74,6 +74,7 @@ const BUTTON: Record<string, string> = {
   cohort_drop_in: "See upcoming drop-ins",
   cohort_drop_in_cancelled: "See upcoming drop-ins",
   staff_invite: "Set your password",
+  payment_receipt: "Book more with Yalla",
 };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -86,6 +87,8 @@ const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
   return body
+    .replace(/^\$\$=\s+(.+?)\s*\|\s*(.+)$/gm, "$1: $2")
+    .replace(/^\$\$-?\s+(.+?)\s*\|\s*(.+)$/gm, "$1 · $2")
     .replace(/^>>\s+/gm, "")
     .replace(/^~~\s+/gm, "")
     .replace(/^!!\s+(.+?)\s*\|\s*(.+)$/gm, "$1 $2")
@@ -135,6 +138,30 @@ function detailsCard(lines: string[]) {
       if (m)
         return `<tr><td valign="top" width="120" style="width:120px;padding:7px 16px 7px 0;font-family:${SANS};font-size:13px;line-height:1.5;letter-spacing:0.02em;color:${C.soft};white-space:nowrap;">${esc(m[1])}</td><td valign="top" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};">${inline(m[2])}</td></tr>`;
       return `<tr><td colspan="2" style="padding:7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${C.ink};">${inline(l)}</td></tr>`;
+    })
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;background:${C.sand};border-radius:18px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr></table>`;
+}
+
+/**
+ * An itemized receipt: "$$ Item | $160.00" rows, "$$- Discount | −$80.00" discount rows (in blue)
+ * and "$$= Total | $80.00" totals (bold, with a rule above each one that follows other rows).
+ */
+function receiptTable(lines: string[]) {
+  let prev = "";
+  const rows = lines
+    .map((l) => {
+      const m = l.match(/^\$\$([-=]?)\s+(.+?)\s*\|\s*(.+)$/);
+      if (!m) return "";
+      const [, kind, label, amount] = m;
+      const total = kind === "=";
+      const rule = total && prev !== "=" ? `border-top:1px solid ${C.line};` : "";
+      prev = kind;
+      const color = kind === "-" ? C.blue : C.ink;
+      const weight = total ? "font-weight:600;" : "";
+      const pad = rule ? "12px" : "7px";
+      return `<tr><td valign="top" style="${rule}padding:${pad} 16px 7px 0;font-family:${SANS};font-size:15px;line-height:1.5;color:${color};${weight}">${inline(label)}</td><td valign="top" align="right" style="${rule}padding:${pad} 0 7px;font-family:${SANS};font-size:15px;line-height:1.5;color:${color};white-space:nowrap;${weight}">${esc(amount)}</td></tr>`;
     })
     .join("");
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;background:${C.sand};border-radius:18px;"><tr><td style="padding:18px 22px;">
@@ -203,6 +230,10 @@ export function bodyHtml(body: string, key: string) {
     }
     if (/^>>\s+/.test(b[0])) {
       push(subjectLine(b[0].replace(/^>>\s+/, ""), b[1]));
+      return;
+    }
+    if (b.every((l) => /^\$\$[-=]?\s+/.test(l))) {
+      push(receiptTable(b));
       return;
     }
     if (b.every((l) => /^(!!|~~)\s+/.test(l))) {

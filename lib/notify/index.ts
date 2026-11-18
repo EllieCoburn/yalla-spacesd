@@ -234,11 +234,12 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   },
   payment_receipt: {
     name: "Payment receipt",
-    subject: "Receipt for invoice {{invoice_number}}",
-    body: "Hi {{guardian_first_name}},\n\nThank you — we received {{amount}} on {{paid_at}} for invoice {{invoice_number}}.\n\n{{line_items}}\n\nRemaining balance: {{balance}}\n\nTeam Yalla",
+    subject: "Your Yalla receipt: {{service}}",
+    body: "Hi {{guardian_first_name}},\n\nThank you! We’ve received your payment of {{amount}} for {{service}}. Here’s everything it covers.\n\n{{receipt}}\n\nInvoice: {{invoice_number}}\nPaid: {{paid_at}}\n\n## Need to book additional offerings?\n\nYalla Flex days, camps and Happenings are added as they open, and you can book more anytime.\n\n{{book_link}}\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "billing",
   },
+
   payment_failed: {
     name: "Failed payment notice",
     subject: "We couldn’t process your payment for {{invoice_number}}",
@@ -472,7 +473,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   booking_change: ["guardian_first_name", "reference", "change_summary", "booking_details"],
   booking_cancellation: ["guardian_first_name", "reference", "booking_summary", "refund_summary", "book_link", "policy_link", "booking_details", "refund_note"],
   forms_missing: ["guardian_first_name", "child_name", "missing_forms"],
-  payment_receipt: ["guardian_first_name", "invoice_number", "amount", "paid_at", "line_items", "balance"],
+  payment_receipt: ["guardian_first_name", "service", "invoice_number", "amount", "paid_at", "receipt", "line_items", "balance", "book_link"],
   payment_failed: ["guardian_first_name", "invoice_number", "amount", "reason", "hold_until"],
   payment_request: ["guardian_first_name", "invoice_number", "amount", "line_items", "payment_link"],
   waitlist_offer: ["guardian_first_name", "program", "date", "child_names", "booking_details", "offer_expires", "offer_link"],
@@ -550,6 +551,8 @@ export const SAMPLE_VARIABLES: Record<string, string> = {
   amount: "$150.00",
   paid_at: "Mon 2 Nov 2026, 9:00am",
   line_items: "Yalla Flex · Mon 2 Nov",
+  service: "Camp Yalla · Wed, Nov 25",
+  receipt: "$$ Camp Yalla · Wed 25 Nov 9:00am–3:00pm · Robin | $160.00\n$$ Early Bird (8:00 – 9:00am) · Camp Yalla · Wed 25 Nov · Robin | $20.00\n$$ Camp Yalla · Wed 25 Nov 9:00am–3:00pm · Sam | $160.00\n$$= Subtotal | $340.00\n$$- Sibling discount (10%) · Sam | −$16.00\n$$- Coupon CLUBYALLAFAM (50% off) | −$162.00\n$$= Total | $162.00\n$$- Paid by card | −$162.00\n$$= Remaining balance | $0.00",
   balance: "$0.00",
   reason: "Card declined",
   hold_until: "Mon 2 Nov 2026, 9:30am",

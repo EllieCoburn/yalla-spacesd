@@ -13,7 +13,7 @@ import type { DB } from "@/lib/db";
 import { bookings, invoices, payments, refunds, spaceReservationGroups, spaceReservations, walletReservations, webhookEvents } from "@/lib/db/schema";
 import { getPolicy } from "@/lib/ops/settings";
 import { notifyFamily } from "@/lib/notify";
-import { refreshInvoiceStatus, invoiceTotals, usd } from "@/lib/ops/billing";
+import { refreshInvoiceStatus, usd } from "@/lib/ops/billing";
 import { confirmBooking } from "@/lib/ops/bookings";
 import { confirmSpaceGroup } from "@/lib/spaces/engine";
 import { applyMembershipEvent, membershipDispute } from "@/lib/playpass/membership";
@@ -86,11 +86,12 @@ async function apply(db: DB, evt: NormalizedEvent): Promise<string> {
         await applyPaidExtras(db, inv.id);
       }
       if (!changed) return "already processed";
-      const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+      const { receiptVars } = await import("@/lib/ops/receipts");
+      const { trustedBaseUrl } = await import("@/lib/base-url");
       await notifyFamily(db, {
         key: "payment_receipt",
         familyId: inv.familyId,
-        vars: { invoice_number: inv.number, amount: usd(changed.amountCents), paid_at: fmtDateTime(new Date()), line_items: inv.description ?? "", balance: usd(Math.max(t.balance, 0)) },
+        vars: await receiptVars(db, inv.id, { paidCents: evt.amountCents || changed.amountCents, baseUrl: trustedBaseUrl() }),
         related: { type: "invoice", id: inv.id },
       });
       return "payment recorded";
