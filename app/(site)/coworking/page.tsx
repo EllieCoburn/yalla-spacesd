@@ -22,8 +22,8 @@ export const dynamic = "force-dynamic";
 const EXTRA_ADULT = "$25";
 
 const included = [
-  { program: "Yalla Flex", how: "Included with every Flex session. A parent stays onsite and works from our coworking space while their child is in care.", href: "/programs/yalla-flex" },
   { program: "Club Yalla", how: "Included with membership. Parents work onsite in our coworking space on their Club Yalla days.", href: "/club-yalla" },
+  { program: "Yalla Flex", how: "Included with every Flex session. A parent stays onsite and works from our coworking space while their child is in care.", href: "/programs/yalla-flex" },
   { program: "Yalla Happenings", how: "Optional. Some Happenings offer coworking as an add-on for the grown-up who stays.", href: "/programs/yalla-happenings" },
 ];
 
