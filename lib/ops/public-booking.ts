@@ -38,6 +38,9 @@ import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
 import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
 import { addonsFor } from "@/lib/booking/addons";
+import { FAMILY_RATE } from "@/lib/booking/family-rate";
+import { promoMatches } from "@/lib/booking/promo";
+import { findPromo, toRule } from "./promo";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
@@ -363,6 +366,8 @@ export type PublicBookingInput = {
   children: (ChildRef & { lastName: string; birthDate: string; allergies?: string | null; medications?: string | null })[];
   lines: { sessionId: string; childKeys: string[]; addons?: Record<string, string[]> }[];
   signatures: { templateId: string; childKey: string | null; signatureText?: string; consent: boolean; answers?: Answers }[];
+  /** A promo code typed at checkout (optional). */
+  promoCode?: string | null;
   meta: { ip?: string; userAgent?: string };
   baseUrl: string;
 };
@@ -377,6 +382,17 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   // Every child's known allergies and medications are asked before payment.
   if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
     return { ok: false, code: "care", error: CARE_REQUIRED };
+
+  // A promo code is checked before anything is created, so a typo never leaves a hold behind.
+  let promoId: string | null = null;
+  if (input.promoCode?.trim()) {
+    try {
+      promoId = (await checkPromo(db, input.promoCode, lines.map((l) => l.sessionId))).id;
+    } catch (e) {
+      if (e instanceof OpsError) return { ok: false, code: e.code, error: e.message };
+      throw e;
+    }
+  }
 
   // 1. Who is booking?
   let familyId: string;
@@ -501,6 +517,7 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
 
     // 5. Hold the spots (transactional capacity check) and start payment.
     const hold = await createHold(db, actor, { familyId, items, source: "public" });
+    if (promoId) await db.update(bookings).set({ discountId: promoId }).where(eq(bookings.id, hold.booking.id));
     if (signedForThisBooking.length)
       await db
         .update(formSubmissions)
@@ -962,3 +979,17 @@ export async function saveBookingCare(db: Executor, bookingId: string, answers: 
   }
 }
 
+
+/* ───────────────────────── Promo codes ───────────────────────── */
+
+/** A promo code that applies to at least one of these sessions, or an OpsError("promo"). */
+export async function checkPromo(db: Executor, code: string, sessionIds: string[]) {
+  const d = await findPromo(db, code);
+  const rule = toRule(d);
+  const progs = sessionIds.length
+    ? await db.select({ id: programs.id, kind: programs.kind }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(inArray(sessions.id, sessionIds))
+    : [];
+  if (!progs.some((p) => p.kind !== FAMILY_RATE.kind && promoMatches(rule, p)))
+    throw new OpsError("promo", rule.programKind === "camp" ? "That code is for Camp Yalla sessions." : "That code doesn’t apply to these sessions.");
+  return d;
+}

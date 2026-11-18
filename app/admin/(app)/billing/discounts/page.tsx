@@ -13,7 +13,7 @@ import { discountAction } from "../actions";
 
 export const metadata = { title: "Discounts" };
 
-function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null }; programOptions: { value: string; label: string }[] }) {
+function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; programKind: string | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null }; programOptions: { value: string; label: string }[] }) {
   return (
     <>
       {d ? <input type="hidden" name="id" value={d.id} /> : null}
@@ -22,7 +22,7 @@ function DiscountFields({ d, programOptions }: { d?: { id: string; code: string 
         <TextField name="code" label="Promo code (optional)" defaultValue={d?.code} hint="Leave empty for staff-applied discounts." />
         <SelectField name="kind" label="Type" defaultValue={d?.kind ?? "percent"} options={[{ value: "percent", label: "Percent off" }, { value: "fixed", label: "Fixed amount off" }]} />
         <TextField name="value" label="Value" required defaultValue={d ? (d.kind === "fixed" ? (d.value / 100).toFixed(2) : d.value) : ""} hint="Percent (1–100) or dollars for fixed." />
-        <SelectField name="programId" label="Applies to" defaultValue={d?.programId ?? ""} options={[{ value: "", label: "All programs" }, ...programOptions]} />
+        <SelectField name="programId" label="Applies to" defaultValue={d?.programId ?? (d?.programKind ? `kind:${d.programKind}` : "")} options={[{ value: "", label: "All programs" }, { value: "kind:camp", label: "All Camp Yalla programs" }, ...programOptions]} />
         <TextField name="maxUses" label="Max uses (optional)" type="number" defaultValue={d?.maxUses} />
         <TextField name="startsOn" label="Starts" type="date" defaultValue={d?.startsOn} />
         <TextField name="endsOn" label="Ends" type="date" defaultValue={d?.endsOn} />
@@ -47,7 +47,7 @@ export default async function DiscountsPage() {
           <Link href="/admin/settings?tab=policies" className="underline">
             Settings → Policies
           </Link>
-          . Promo codes are recorded here; applying them at public checkout is part of the booking flow configuration.
+          . Families enter promo codes in the Coupon code box at checkout (codes aren’t case-sensitive). Extras and After Hours family-rate evenings aren’t discounted.
         </Notice>
       </div>
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -63,7 +63,7 @@ export default async function DiscountsPage() {
                   <td className="font-medium">{d.name}</td>
                   <td className="font-mono text-[0.8rem]">{d.code ?? "—"}</td>
                   <td>{d.kind === "percent" ? `${d.value}%` : <Money cents={d.value} />}</td>
-                  <td>{p?.name ?? "All programs"}</td>
+                  <td>{p?.name ?? (d.programKind === "camp" ? "All Camp Yalla programs" : d.programKind ? `All ${d.programKind} programs` : "All programs")}</td>
                   <td className="text-[0.8rem] text-ink-soft">{d.startsOn || d.endsOn ? `${d.startsOn ? fmtDate(d.startsOn, "d MMM") : "…"} – ${d.endsOn ? fmtDate(d.endsOn, "d MMM yyyy") : "…"}` : "Any time"}</td>
                   <td>{d.active ? <Pill tone="positive" icon="check">Active</Pill> : <Pill tone="muted" icon="minus">Inactive</Pill>}</td>
                   <td className="min-w-[14rem]">

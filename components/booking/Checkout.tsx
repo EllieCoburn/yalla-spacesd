@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   agreementsAction,
+  checkPromoAction,
   portalEmailCheckAction,
   submitBookingAction,
 } from "@/app/(site)/book/actions";
@@ -20,6 +21,7 @@ import {
   familyRateTotal,
 } from "@/lib/booking/family-rate";
 import { addonsFor, sessionAddonsCents } from "@/lib/booking/addons";
+import { promoMatches, promoSavings, type PromoRule } from "@/lib/booking/promo";
 
 export type SavedChild = {
   id: string;
@@ -168,6 +170,11 @@ export function Checkout({
   const [mustSignIn, setMustSignIn] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [step, setStep] = useState(0);
+  /** Promo code: what's typed, and the code once the server has accepted it. */
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<Omit<PromoRule, "name"> | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [checkingPromo, startPromo] = useTransition();
   const [kids, setKids] = useState<ChildDraft[]>(() =>
     savedChildren.length
       ? savedChildren.map((c) => ({
@@ -391,7 +398,29 @@ export function Checkout({
     siblingSaving += off;
     if (g.eligible) siblingSavingEligible += off;
   }
-  const total = grossTotal - siblingSaving;
+  // Promo code: off each matching session price after the sibling discount (extras excluded).
+  // Mirrors lib/ops/promo.ts; the invoice has the final say.
+  const promoPrices: number[] = [];
+  if (promo) {
+    const byGroup = new Map<string, number[]>();
+    for (const s of sorted) {
+      const keys = lines.find((l) => l.sessionId === s.id)?.childKeys ?? [];
+      if (!keys.length || s.kind === FAMILY_RATE.kind || !s.priceCents || !promoMatches(promo, { id: s.programId, kind: s.kind })) continue;
+      if (s.bookingUnit !== "per_child") {
+        promoPrices.push(s.priceCents);
+        continue;
+      }
+      const k = `${s.programId}|${s.localDate}`;
+      byGroup.set(k, [...(byGroup.get(k) ?? []), ...keys.map((c) => unitPrice(s, c))]);
+    }
+    for (const [k, prices] of byGroup)
+      [...prices]
+        .sort((a, b) => b - a)
+        .forEach((p, i) => promoPrices.push(siblingByDay.has(k) && i > 0 ? p - Math.round((p * sibling.percent) / 100) : p));
+  }
+  const promoSaving = promo ? promoSavings(promo, promoPrices).reduce((a, b) => a + b, 0) : 0;
+  const promoUnused = !!promo && promoPrices.length === 0;
+  const total = grossTotal - siblingSaving - promoSaving;
   // Play Pass balance covers eligible experiences; Yalla credits cover anything left.
   const passUse = Math.min(wallet?.passCents ?? 0, Math.max(0, eligibleTotal - siblingSavingEligible), total);
   const fromPass = passUse + Math.min(wallet?.creditCents ?? 0, total - passUse);
@@ -583,6 +612,7 @@ export function Checkout({
           consent: !!signatures[sigKey(a)]?.consent,
           answers: a.fields ? formAnswers[sigKey(a)] : undefined,
         })),
+        promoCode: promo && !promoUnused ? promo.code : null,
       });
       if (res.ok) {
         window.location.href = res.url;
@@ -591,6 +621,20 @@ export function Checkout({
       setError({ text: res.error, devLink: res.devLink });
       if (res.agreements) setAgreements(res.agreements);
       if (res.code === "capacity" || res.code === "closed") onRefresh();
+      if (res.code === "promo") setPromo(null);
+    });
+  }
+
+  function applyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoError(null);
+    startPromo(async () => {
+      const res = await checkPromoAction({ code, sessionIds: lines.map((l) => l.sessionId) });
+      if (res.ok) {
+        setPromo({ code: res.code, kind: res.kind, value: res.value, programId: res.programId, programKind: res.programKind });
+        setPromoInput("");
+      } else setPromoError(res.error);
     });
   }
 
@@ -1116,16 +1160,78 @@ export function Checkout({
                   {slotProblem}
                 </p>
               ) : null}
-              {siblingSaving > 0 ? (
+              <div className="mt-6">
+                <p className="text-[0.82rem] text-ink-soft">Coupon code</p>
+                {promo ? (
+                  <div className="mt-2 flex items-center justify-between gap-3 border border-line px-3 py-2 text-[0.92rem]">
+                    <span>
+                      <span className="font-mono tracking-wide">{promo.code}</span>{" "}
+                      <span className="text-blue">
+                        {promo.kind === "percent" ? `${promo.value}% off` : `${usd(promo.value)} off`}
+                        {promo.programKind === "camp" ? " Camp Yalla" : ""}
+                      </span>
+                    </span>
+                    <button type="button" onClick={() => setPromo(null)} className="text-[0.82rem] text-ink-soft underline underline-offset-4">
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    className="mt-2 flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      applyPromo();
+                    }}
+                  >
+                    <input
+                      value={promoInput}
+                      onChange={(e) => {
+                        setPromoInput(e.target.value);
+                        setPromoError(null);
+                      }}
+                      placeholder="Enter code"
+                      aria-label="Coupon code"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="min-w-0 flex-1 border border-line bg-transparent px-3 py-2 text-[0.92rem] uppercase placeholder:normal-case"
+                    />
+                    <button type="submit" disabled={!promoInput.trim() || checkingPromo || !lines.length} className="border border-ink px-4 py-2 text-[0.88rem] disabled:opacity-40">
+                      {checkingPromo ? "Checking…" : "Apply"}
+                    </button>
+                  </form>
+                )}
+                {promoError ? (
+                  <p role="alert" className="mt-2 text-[0.82rem] text-oxblood">
+                    {promoError}
+                  </p>
+                ) : promoUnused ? (
+                  <p className="mt-2 text-[0.82rem] text-ink-soft">
+                    {promo?.programKind === "camp" ? "This code is for Camp Yalla sessions." : "This code doesn’t apply to the sessions you’ve chosen."}
+                  </p>
+                ) : null}
+              </div>
+              {siblingSaving > 0 || promoSaving > 0 ? (
                 <dl className="mt-6 space-y-1.5 text-[0.95rem]">
                   <div className="flex justify-between">
                     <dt className="text-ink-soft">Before discount</dt>
                     <dd>{usd(grossTotal)}</dd>
                   </div>
-                  <div className="flex justify-between text-blue">
-                    <dt>Sibling discount ({sibling.percent}% off each additional child)</dt>
-                    <dd>−{usd(siblingSaving)}</dd>
-                  </div>
+                  {siblingSaving > 0 ? (
+                    <div className="flex justify-between text-blue">
+                      <dt>Sibling discount ({sibling.percent}% off each additional child)</dt>
+                      <dd>−{usd(siblingSaving)}</dd>
+                    </div>
+                  ) : null}
+                  {promoSaving > 0 && promo ? (
+                    <div className="flex justify-between text-blue">
+                      <dt>
+                        Coupon {promo.code}
+                        {promo.kind === "percent" ? ` (${promo.value}% off${promo.programKind === "camp" ? " camp" : ""})` : ""}
+                      </dt>
+                      <dd>−{usd(promoSaving)}</dd>
+                    </div>
+                  ) : null}
                 </dl>
               ) : null}
               {fromPass > 0 ? (

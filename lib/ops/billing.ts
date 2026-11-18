@@ -421,6 +421,7 @@ export async function saveDiscount(
     kind: "percent" | "fixed";
     value: number;
     programId?: string | null;
+    programKind?: string | null;
     active: boolean;
     startsOn?: string | null;
     endsOn?: string | null;
@@ -442,6 +443,7 @@ export async function saveDiscount(
     kind: input.kind,
     value: input.value,
     programId: input.programId || null,
+    programKind: input.programId ? null : input.programKind || null,
     active: input.active,
     startsOn: input.startsOn || null,
     endsOn: input.endsOn || null,
