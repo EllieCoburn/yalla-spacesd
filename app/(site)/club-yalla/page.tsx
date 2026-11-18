@@ -225,8 +225,7 @@ export default function ClubYallaPage() {
           </>
         }
         body="Applications are accepted year-round, first come, first served, depending on cohort availability."
-        primary={{ href: "/membership", label: "View Club Yalla rates" }}
-        secondary={{ href: "/apply", label: "Apply for Club Yalla" }}
+        primary={{ href: "/apply", label: "Apply for Club Yalla" }}
       />
     </>
   );
