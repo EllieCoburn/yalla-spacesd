@@ -148,7 +148,6 @@ export const WHAT_TO_BRING: Record<string, BringList> = {
         title: "Extra clothes and layers",
         items: [
           extraOutfits,
-          { text: "Small (bath size) personal towel", short: "Small personal towel" },
           { text: "Zip-up jacket or sweater", short: "Zip-up jacket or sweater" },
           { text: "Sun hat", short: "Sun hat" },
         ],
