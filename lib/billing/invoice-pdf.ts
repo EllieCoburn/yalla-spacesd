@@ -10,7 +10,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { and, asc, eq } from "drizzle-orm";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import type { Executor } from "@/lib/db";
-import { bookings, families, guardians, invoiceLines, invoices, payments, refunds } from "@/lib/db/schema";
+import { bookings, families, guardians, invoiceLines, invoices, payments, playPassCharges, playPassPlans, refunds } from "@/lib/db/schema";
 import { checkoutLabel } from "@/lib/ops/bookings";
 import { invoiceTotals } from "@/lib/ops/billing";
 import { fmtDate } from "@/lib/time";
@@ -71,18 +71,64 @@ function wrap(text: string, font: PDFFont, size: number, width: number) {
   return lines.length ? lines : [""];
 }
 
-export async function invoicePdf(db: Executor, invoiceId: string) {
+/** Everything an invoice PDF shows, from a booking invoice or a Play Pass payment alike. */
+type InvoiceDoc = {
+  inv: { number: string; status: string; issuedAt: Date; dueOn: string | null; periodStart: string | null; periodEnd: string | null; familyId: string };
+  lines: { kind: string; description: string; quantity: number; unitCents: number; amountCents: number }[];
+  pays: { succeededAt: Date | null; createdAt: Date; method: string; amountCents: number }[];
+  refs: { createdAt: Date; amountCents: number }[];
+  t: { charges: number; discounts: number; tax: number; adjustments: number; total: number; walletApplied: number; creditApplied: number; paid: number; refunded: number; balance: number };
+  service: string;
+  ref: string | null;
+  refLabel?: string;
+};
+
+async function invoiceDoc(db: Executor, invoiceId: string): Promise<InvoiceDoc | null> {
   const [inv] = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
   if (!inv) return null;
-  const [fam] = await db.select().from(families).where(eq(families.id, inv.familyId));
-  const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, inv.familyId), eq(guardians.isPrimary, true)));
   const lines = await db.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, invoiceId)).orderBy(asc(invoiceLines.createdAt));
   const pays = (await db.select().from(payments).where(eq(payments.invoiceId, invoiceId)).orderBy(asc(payments.createdAt))).filter((p) => p.status === "succeeded");
   const refs = (await db.select().from(refunds).where(eq(refunds.invoiceId, invoiceId)).orderBy(asc(refunds.createdAt))).filter((r) => r.status === "succeeded");
   const t = (await invoiceTotals(db, [invoiceId])).get(invoiceId)!;
   // What was bought, in words families recognize, with the booking reference for their records.
   const service = inv.bookingId ? (await checkoutLabel(db, inv.bookingId)).name : (inv.description ?? "Childcare services");
-  const ref = inv.bookingId ? (await db.select({ reference: bookings.reference }).from(bookings).where(eq(bookings.id, inv.bookingId)))[0]?.reference : null;
+  const ref = inv.bookingId ? ((await db.select({ reference: bookings.reference }).from(bookings).where(eq(bookings.id, inv.bookingId)))[0]?.reference ?? null) : null;
+  return { inv, lines, pays, refs, t, service, ref };
+}
+
+/** Play Pass membership payments are charged by Stripe each month: each paid one gets an invoice too. */
+async function playPassDoc(db: Executor, chargeId: string): Promise<InvoiceDoc | null> {
+  const [c] = await db.select().from(playPassCharges).where(eq(playPassCharges.id, chargeId));
+  if (!c || !["paid", "refunded", "disputed"].includes(c.status)) return null;
+  const [plan] = c.planId ? await db.select().from(playPassPlans).where(eq(playPassPlans.id, c.planId)) : [];
+  const what = { initial: "first month", renewal: "monthly renewal", upgrade: "upgrade", resume: "return from pause" }[c.reason] ?? "membership payment";
+  const service = `${plan?.name ?? "Play Pass"} membership · ${what}`;
+  const period = c.periodStart ? ` · from ${fmtDate(c.periodStart, "MMM d, yyyy")}` : "";
+  const refunded = c.refundedCents;
+  return {
+    inv: { number: `PP-${c.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`, status: "paid", issuedAt: c.createdAt, dueOn: null, periodStart: null, periodEnd: null, familyId: c.familyId },
+    lines: [{ kind: "charge", description: `${service}${period}`, quantity: 1, unitCents: c.amountCents, amountCents: c.amountCents }],
+    pays: [{ succeededAt: c.createdAt, createdAt: c.createdAt, method: "card", amountCents: c.amountCents }],
+    refs: refunded ? [{ createdAt: c.updatedAt, amountCents: refunded }] : [],
+    t: { charges: c.amountCents, discounts: 0, tax: 0, adjustments: 0, total: c.amountCents, walletApplied: 0, creditApplied: 0, paid: c.amountCents, refunded, balance: 0 },
+    service,
+    ref: null,
+  };
+}
+
+export async function invoicePdf(db: Executor, invoiceId: string) {
+  const doc = await invoiceDoc(db, invoiceId);
+  return doc ? renderInvoice(db, doc) : null;
+}
+
+export async function playPassChargePdf(db: Executor, chargeId: string) {
+  const doc = await playPassDoc(db, chargeId);
+  return doc ? renderInvoice(db, doc) : null;
+}
+
+async function renderInvoice(db: Executor, { inv, lines, pays, refs, t, service, ref, refLabel = "Booking reference" }: InvoiceDoc) {
+  const [fam] = await db.select().from(families).where(eq(families.id, inv.familyId));
+  const [primary] = await db.select().from(guardians).where(and(eq(guardians.familyId, inv.familyId), eq(guardians.isPrimary, true)));
 
   const a = await loadAssets();
   const pdf = await PDFDocument.create();
@@ -161,7 +207,7 @@ export async function invoicePdf(db: Executor, invoiceId: string) {
   billTo.forEach((l, i) => text(l, M, y - i * 14, i === 0 ? { size: 12, font: serif } : { size: 10, color: SOFT }));
   const forLines = wrap(clean(service, serif), serif, 12, W - M - half);
   forLines.forEach((l, i) => text(l, half, y - i * 15, { size: 12, font: serif }));
-  if (ref) text(`Booking reference ${ref}`, half, y - forLines.length * 15, { size: 10, color: SOFT });
+  if (ref) text(`${refLabel} ${ref}`, half, y - forLines.length * 15, { size: 10, color: SOFT });
   y -= Math.max(billTo.length * 14, forLines.length * 15 + (ref ? 14 : 0)) + 22;
 
   // ── Line items.

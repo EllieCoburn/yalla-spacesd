@@ -36,7 +36,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Invoice PDFs read Yalla's fonts and logo from disk at runtime.
-  outputFileTracingIncludes: { "/portal/invoices/[id]/pdf": ["./lib/billing/assets/**"] },
+  outputFileTracingIncludes: { "/portal/invoices/[id]/pdf": ["./lib/billing/assets/**"], "/portal/play-pass/receipts/[id]/pdf": ["./lib/billing/assets/**"] },
   images: { formats: ["image/avif", "image/webp"] },
   async headers() {
     return [

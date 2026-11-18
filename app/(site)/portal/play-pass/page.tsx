@@ -41,6 +41,7 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
   }
   const db = getDb();
   const { sub, plan, nextPlan, wallet, activity, charges } = await familyPlayPass(db, g.familyId);
+  const canViewBilling = g.canViewBilling;
   const plans = await offeredPlans(db);
   const live = sub && (sub.status === "active" || sub.status === "past_due");
   const endsOn = sub?.nextRenewalOn ? fmtDate(sub.nextRenewalOn, "MMMM d") : null;
@@ -253,6 +254,11 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
                     <span className={`block text-[0.72rem] ${c.status === "failed" ? "text-oxblood" : "text-ink-soft"}`}>
                       {c.status === "paid" ? "Paid" : c.status === "pending" ? "Processing" : c.status === "failed" ? "Didn’t go through" : c.status === "refunded" ? `Refunded ${usd(c.refundedCents)}` : "Disputed"}
                     </span>
+                    {["paid", "refunded", "disputed"].includes(c.status) && canViewBilling ? (
+                      <a href={`/portal/play-pass/receipts/${c.id}/pdf`} className="block text-[0.72rem] text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
+                        Download PDF
+                      </a>
+                    ) : null}
                   </span>
                 </li>
               ))}
