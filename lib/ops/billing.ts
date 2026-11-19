@@ -421,6 +421,8 @@ export async function saveDiscount(
     kind: "percent" | "fixed";
     value: number;
     programId?: string | null;
+    /** Several programs (none: every program). Takes the place of programId. */
+    programIds?: string[];
     active: boolean;
     startsOn?: string | null;
     endsOn?: string | null;
@@ -442,7 +444,8 @@ export async function saveDiscount(
     name: input.name.trim(),
     kind: input.kind,
     value: input.value,
-    programId: input.programId || null,
+    programId: input.programIds ? (input.programIds.length === 1 ? input.programIds[0] : null) : input.programId || null,
+    programIds: input.programIds && input.programIds.length > 1 ? input.programIds : null,
     active: input.active,
     startsOn: input.startsOn || null,
     endsOn: input.endsOn || null,

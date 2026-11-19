@@ -519,6 +519,13 @@
       "when": 1795107742202,
       "tag": "0073_camp_may_31_2027",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795107904046,
+      "tag": "0074_phoenix_house_coupon",
+      "breakpoints": true
     }
   ]
 }

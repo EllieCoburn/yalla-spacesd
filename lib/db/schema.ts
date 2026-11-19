@@ -838,6 +838,8 @@ export const discounts = pgTable("discounts", {
   kind: text("kind").notNull(), // percent | fixed
   value: integer("value").notNull(), // percent (0-100) or cents
   programId: text("program_id").references(() => programs.id),
+  /** The programs a code covers when it's more than one (e.g. Yalla Flex and Camp Yalla). Empty or null with no programId: every program. */
+  programIds: text("program_ids").array(),
   siblingDiscount: boolean("sibling_discount").notNull().default(false),
   active: boolean("active").notNull().default(true),
   startsOn: date("starts_on"),

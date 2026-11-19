@@ -18,6 +18,12 @@ export type CouponPreview = { code: string; kind: "percent" | "fixed"; value: nu
 export const normalizeCode = (code: string) => code.trim().toUpperCase().replace(/\s+/g, "");
 
 /** Finds a usable code for these sessions, or explains why it can't be used. */
+/** The programs a code covers, or null for every program. */
+export function couponPrograms(d: Pick<Coupon, "programId" | "programIds">): string[] | null {
+  if (d.programIds?.length) return d.programIds;
+  return d.programId ? [d.programId] : null;
+}
+
 export async function findCoupon(db: Executor, rawCode: string, sessionIds: string[], opts: { familyId?: string | null; now?: Date } = {}): Promise<Coupon> {
   const now = opts.now ?? new Date();
   const code = normalizeCode(rawCode);
@@ -41,20 +47,22 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
       .limit(1);
     if (used) throw new OpsError("coupon", "Your family has already used this code.");
   }
-  if (d.programId && sessionIds.length) {
+  const covered = couponPrograms(d);
+  if (covered && sessionIds.length) {
     const rows = await db.select({ programId: sessions.programId }).from(sessions).where(inArray(sessions.id, sessionIds));
-    if (!rows.some((r) => r.programId === d.programId)) {
-      const [p] = await db.select({ name: programs.name }).from(programs).where(eq(programs.id, d.programId));
-      throw new OpsError("coupon", `That code is for ${p?.name ?? "another program"} only.`);
+    if (!rows.some((r) => covered.includes(r.programId))) {
+      const names = (await db.select({ name: programs.name }).from(programs).where(inArray(programs.id, covered))).map((p) => p.name).sort();
+      throw new OpsError("coupon", `That code is for ${names.length ? names.join(" and ") : "another program"} only.`);
     }
   }
   return d;
 }
 
 export async function couponPreview(db: Executor, d: Coupon): Promise<CouponPreview> {
-  const [p] = d.programId ? await db.select({ name: programs.name }).from(programs).where(eq(programs.id, d.programId)) : [];
+  const covered = couponPrograms(d);
+  const names = covered ? (await db.select({ name: programs.name }).from(programs).where(inArray(programs.id, covered))).map((p) => p.name).sort() : [];
   const amount = d.kind === "percent" ? `${d.value}% off` : `$${(d.value / 100).toFixed(d.value % 100 ? 2 : 0)} off`;
-  return { code: d.code!, kind: d.kind as "percent" | "fixed", value: d.value, programIds: d.programId ? [d.programId] : null, label: `${amount}${p ? ` ${p.name}` : ""}` };
+  return { code: d.code!, kind: d.kind as "percent" | "fixed", value: d.value, programIds: covered, label: `${amount}${names.length ? ` ${names.join(" and ")}` : ""}` };
 }
 
 /**

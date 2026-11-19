@@ -13,7 +13,7 @@ import { discountAction } from "../actions";
 
 export const metadata = { title: "Discounts" };
 
-function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null; oncePerFamily: boolean }; programOptions: { value: string; label: string }[] }) {
+function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; programIds: string[] | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null; oncePerFamily: boolean }; programOptions: { value: string; label: string }[] }) {
   return (
     <>
       {d ? <input type="hidden" name="id" value={d.id} /> : null}
@@ -22,11 +22,19 @@ function DiscountFields({ d, programOptions }: { d?: { id: string; code: string 
         <TextField name="code" label="Promo code (optional)" defaultValue={d?.code} hint="Leave empty for staff-applied discounts." />
         <SelectField name="kind" label="Type" defaultValue={d?.kind ?? "percent"} options={[{ value: "percent", label: "Percent off" }, { value: "fixed", label: "Fixed amount off" }]} />
         <TextField name="value" label="Value" required defaultValue={d ? (d.kind === "fixed" ? (d.value / 100).toFixed(2) : d.value) : ""} hint="Percent (1–100) or dollars for fixed." />
-        <SelectField name="programId" label="Applies to" defaultValue={d?.programId ?? ""} options={[{ value: "", label: "All programs" }, ...programOptions]} />
         <TextField name="maxUses" label="Max uses (optional)" type="number" defaultValue={d?.maxUses} />
         <TextField name="startsOn" label="Starts" type="date" defaultValue={d?.startsOn} />
         <TextField name="endsOn" label="Ends" type="date" defaultValue={d?.endsOn} />
       </div>
+      <fieldset className="rounded-lg border border-ink/10 p-3">
+        <legend className="px-1 text-[0.78rem] font-medium text-ink">Applies to</legend>
+        <p className="mb-2 text-[0.75rem] text-ink-soft">Tick one or more programs. Leave all unticked for every program.</p>
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          {programOptions.map((o) => (
+            <Checkbox key={o.value} name="programIds" value={o.value} label={o.label} defaultChecked={(d?.programIds?.length ? d.programIds : d?.programId ? [d.programId] : []).includes(o.value)} />
+          ))}
+        </div>
+      </fieldset>
       <Checkbox name="oncePerFamily" label="Once per family (each family can use the code one time)" defaultChecked={d?.oncePerFamily ?? false} />
       <Checkbox name="active" label="Active" defaultChecked={d?.active ?? true} />
     </>
@@ -64,7 +72,7 @@ export default async function DiscountsPage() {
                   <td className="font-medium">{d.name}</td>
                   <td className="font-mono text-[0.8rem]">{d.code ?? "—"}</td>
                   <td>{d.kind === "percent" ? `${d.value}%` : <Money cents={d.value} />}</td>
-                  <td>{p?.name ?? "All programs"}</td>
+                  <td>{d.programIds?.length ? d.programIds.map((id) => programOptions.find((o) => o.value === id)?.label ?? "—").join(", ") : (p?.name ?? "All programs")}</td>
                   <td className="text-[0.8rem] text-ink-soft">{d.startsOn || d.endsOn ? `${d.startsOn ? fmtDate(d.startsOn, "d MMM") : "…"} – ${d.endsOn ? fmtDate(d.endsOn, "d MMM yyyy") : "…"}` : "Any time"}</td>
                   <td>{d.active ? <Pill tone="positive" icon="check">Active</Pill> : <Pill tone="muted" icon="minus">Inactive</Pill>}</td>
                   <td className="min-w-[14rem]">
