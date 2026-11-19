@@ -398,7 +398,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What ages is Camp Yalla for?",
     answer:
-      "Camp Yalla is for children 18 months to 10 years, in three age groups: **18 months – 3 years**, **4 – 7 years** and **8 – 10 years**. Each child joins the group for their age on the camp day, and when you book we’ll only offer the group that fits.",
+      "Camp Yalla has three age groups:\n\n- **18 months – 3 years**\n- **4 – 7 years**\n- **8 – 10 years**\n\nEach child joins the group for their age on the camp day.",
   },
   {
     id: "happenings-ages",

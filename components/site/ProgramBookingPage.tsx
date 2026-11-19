@@ -27,6 +27,8 @@ type Page = {
   horizonDays: number;
   familyRate?: boolean;
   goodToKnow: { label: string; lines: ReactNode[] }[];
+  /** Shown in the header under the facts, e.g. camp's three age groups. */
+  ageGroups?: string[];
   after?: ReactNode;
   /** A calmer header: a short lede, the ways to book side by side, one button and a rates link. */
   hero?: {
@@ -47,27 +49,6 @@ const AGE_GROUPS = (priceCents: number): DateGroup[] => [
 ];
 
 
-const questions = {
-  label: "Questions?",
-  lines: [
-    <>
-      <Link
-        href="/faq"
-        className="underline underline-offset-4 hover:text-blue"
-      >
-        Read the FAQ
-      </Link>{" "}
-      or{" "}
-      <Link
-        href="/book-a-tour"
-        className="underline underline-offset-4 hover:text-blue"
-      >
-        book a tour
-      </Link>
-      .
-    </>,
-  ],
-};
 
 /** The programs families book date by date share one layout: the essentials, then pick and book. */
 export const BOOKING_PAGES: Record<string, Page> = {
@@ -94,13 +75,7 @@ export const BOOKING_PAGES: Record<string, Page> = {
     groups: AGE_GROUPS(16000),
     // Every camp day the team has posted in Admin, up to a year ahead.
     horizonDays: 365,
-    goodToKnow: [
-      {
-        label: "Age groups",
-        lines: ["18 months – 3 years", "4 – 7 years", "8 – 10 years"],
-      },
-      questions,
-    ],
+    goodToKnow: [],
   },
   drop_in: {
     title: (
@@ -254,6 +229,16 @@ export function ProgramBookingPage({ p }: { p: ProgramContent }) {
                   </div>
                 ))}
               </dl>
+              {page.ageGroups?.length ? (
+                <div className="mt-6 flex flex-wrap items-center gap-2">
+                  <span className="eyebrow mr-1 text-[0.6rem] text-ink-soft">Age groups</span>
+                  {page.ageGroups.map((g) => (
+                    <span key={g} className="rounded-full border border-ink/15 bg-paper px-3.5 py-1.5 text-[0.88rem] text-ink">
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               {page.priceNote ? (
                 <p className="mt-4 max-w-xl border-l-2 border-blue/40 pl-3 text-[0.92rem] leading-relaxed text-ink">
                   {page.priceNote}
