@@ -10,7 +10,7 @@ import { bookingItems, bookings, families, programs, sessions } from "@/lib/db/s
 import { familyEmail } from "@/lib/playpass/admin";
 import { familyPlayPass } from "@/lib/playpass/membership";
 import { allocationsWithUse } from "@/lib/playpass/wallet";
-import { fmtDate, fmtTime } from "@/lib/time";
+import { fmtDate, fmtTime, localDateOf } from "@/lib/time";
 import { adjustWalletAction, courtesyCreditAction, recordOfferChoiceAction, simulateRenewalAction } from "../actions";
 import { familyOffers, bonusFor } from "@/lib/ops/yalla-cancellations";
 
@@ -81,7 +81,7 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
               { label: "Reserved at checkout", value: <Money cents={wallet.reservedCents} /> },
               { label: "Ledger balance", value: <Money cents={wallet.balanceCents} /> },
               { label: "Joined", value: sub ? `${fmtDate(sub.startDate)} (${sub.prorationDays}/${sub.monthDays} days first month)` : "—" },
-              { label: "Terms accepted", value: sub ? `${sub.termsVersion} · ${fmtDate(sub.termsAcceptedAt.toISOString().slice(0, 10))}` : "—" },
+              { label: "Terms accepted", value: sub ? `${sub.termsVersion} · ${fmtDate(localDateOf(sub.termsAcceptedAt))}` : "—" },
               { label: "Billed through", value: sub ? (sub.provider === "stripe" ? `Stripe ${sub.subscriptionRef ?? ""}` : "Test mode") : "—" },
             ]}
           />
@@ -151,7 +151,7 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
             <Table dense head={["Date", "Entry", "Amount"]}>
               {activity.map((e) => (
                 <tr key={e.id}>
-                  <td className="whitespace-nowrap">{fmtDate(e.createdAt.toISOString().slice(0, 10), "d MMM")}</td>
+                  <td className="whitespace-nowrap">{fmtDate(localDateOf(e.createdAt), "d MMM")}</td>
                   <td>
                     {KIND[e.kind] ?? e.kind}
                     <span className="block text-[0.75rem] text-ink-soft">
@@ -206,7 +206,7 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
               <Table dense head={["Date", "Type", "Amount", "Status"]}>
                 {charges.map((c) => (
                   <tr key={c.id}>
-                    <td>{fmtDate(c.createdAt.toISOString().slice(0, 10), "d MMM yyyy")}</td>
+                    <td>{fmtDate(localDateOf(c.createdAt), "d MMM yyyy")}</td>
                     <td>{c.reason}</td>
                     <td>
                       <Money cents={c.amountCents} />

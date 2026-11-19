@@ -5,7 +5,7 @@
 import { and, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { auditLog, bookingItems, bookings, children, families, invoices, payments, programs, refunds, scheduledCharges, sessions, waitlistEntries, attendanceRecords } from "@/lib/db/schema";
-import { addDaysISO, zonedDateTime } from "@/lib/time";
+import { addDaysISO, sessionPhase, todayLA, zonedDateTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
 import { invoiceTotals } from "./billing";
 import { outstandingForChildren } from "./forms";
@@ -75,10 +75,56 @@ export async function expectedChildIds(db: Executor, date: string, endDate = dat
   return [...ids];
 }
 
+/**
+ * Who is coming on a day, judged against the clock (Pacific time):
+ * - booked: every child with a confirmed booking or a Club Yalla day;
+ * - stillExpected: children with a session that hasn't ended yet who haven't arrived, been picked
+ *   up or been marked absent (on a past day nobody is still expected; on a future day everyone is);
+ * - hereNow: checked in and not yet picked up;
+ * - came: checked in at some point.
+ */
+export async function dayPresence(db: Executor, date: string, now = new Date()) {
+  const visits: { childId: string; sessionId: string; startsAt: Date; endsAt: Date }[] = [];
+  const booked = await db
+    .select({ childId: bookingItems.childId, sessionId: sessions.id, startsAt: sessions.startsAt, endsAt: sessions.endsAt })
+    .from(bookingItems)
+    .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .where(and(eq(bookingItems.status, "confirmed"), eq(sessions.localDate, date)));
+  for (const r of booked) if (r.childId) visits.push({ childId: r.childId, sessionId: r.sessionId, startsAt: r.startsAt, endsAt: r.endsAt });
+  const clubSessions = await db
+    .select({ s: sessions })
+    .from(sessions)
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .where(and(eq(programs.kind, "membership"), eq(sessions.localDate, date), eq(sessions.status, "scheduled")));
+  for (const { s } of clubSessions) {
+    if (!s.cohortId) continue;
+    for (const m of await membershipsForCohortDay(db, s.cohortId, s.programId, s.localDate)) visits.push({ childId: m.c.id, sessionId: s.id, startsAt: s.startsAt, endsAt: s.endsAt });
+  }
+  const att = visits.length
+    ? await db
+        .select({ childId: attendanceRecords.childId, sessionId: attendanceRecords.sessionId, status: attendanceRecords.status })
+        .from(attendanceRecords)
+        .where(inArray(attendanceRecords.sessionId, [...new Set(visits.map((v) => v.sessionId))]))
+    : [];
+  const statusOf = new Map(att.map((a) => [`${a.childId}:${a.sessionId}`, a.status]));
+  const out = { booked: new Set<string>(), stillExpected: new Set<string>(), hereNow: new Set<string>(), came: new Set<string>() };
+  for (const v of visits) {
+    out.booked.add(v.childId);
+    const st = statusOf.get(`${v.childId}:${v.sessionId}`) ?? "expected";
+    if (st === "checked_in") out.hereNow.add(v.childId);
+    if (st === "checked_in" || st === "checked_out") out.came.add(v.childId);
+    if (st === "expected" && sessionPhase(v, now) !== "ended") out.stillExpected.add(v.childId);
+  }
+  // Someone here now isn't "still expected" for a later session that day.
+  for (const id of out.hereNow) out.stillExpected.delete(id);
+  return out;
+}
+
 export async function dashboard(db: Executor, f: DashboardFilter, opts: { money: boolean; paperwork: boolean }) {
   const today = await daySessions(db, f);
   const expectedFamilies = new Set<string>();
   const expectedIds = await expectedChildIds(db, f.date);
+  const presence = await dayPresence(db, f.date);
   if (expectedIds.length) for (const r of await db.select({ familyId: children.familyId }).from(children).where(inArray(children.id, expectedIds))) expectedFamilies.add(r.familyId);
 
   // Nearly full in the next 14 days.
@@ -165,6 +211,7 @@ export async function dashboard(db: Executor, f: DashboardFilter, opts: { money:
   return {
     today,
     expectedChildren: expectedIds.length,
+    presence: { stillExpected: presence.stillExpected.size, hereNow: presence.hereNow.size, came: presence.came.size, booked: presence.booked.size, isToday: f.date === todayLA(), isPast: f.date < todayLA() },
     expectedFamilies: expectedFamilies.size,
     nearlyFull,
     recentBookings,

@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { inLA } from "@/lib/time";
 import { dashboard } from "@/lib/ops/dashboard";
 import { cartSummary } from "@/lib/ops/carts";
-import { addDaysISO, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
+import { addDaysISO, fmtDate, fmtDateTime, fmtTime, nowLA, phaseText, sessionPhase, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Today" };
 
@@ -42,7 +42,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     <>
       <PageHeader
         title={isToday ? `Good ${hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening"}, ${staff.name.split(" ")[0]}` : fmtDate(date, "EEEE d MMMM")}
-        subtitle={isToday ? `Here’s ${fmtDate(date, "EEEE d MMMM")} at Yalla.` : "Viewing another day."}
+        subtitle={isToday ? `Here’s ${fmtDate(date, "EEEE d MMMM")} at Yalla. It’s ${nowLA()} Pacific time; all times are Pacific.` : `Viewing another day. All times are Pacific.`}
         actions={
           <div className="flex items-center gap-1">
             <Link className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-[0.82rem] hover:border-ink/40" href={q({ date: addDaysISO(date, -1) })} aria-label="Previous day">
@@ -107,8 +107,30 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Expected children" value={d.expectedChildren} sub={`${d.expectedFamilies} families · bookings and Club Yalla`} href={can(staff, "roster.view") ? `/admin/roster${q({ date })}` : undefined} />
-        <Stat label="Checked in" value={`${checkedIn}`} sub={`of ${d.expectedChildren} expected · capacity ${capacityTotal}`} href={can(staff, "roster.view") ? `/admin/roster${q({ date })}` : undefined} />
+        {d.presence.isPast ? (
+          <Stat label="Children who came" value={d.presence.came} sub={`of ${d.presence.booked} booked · ${d.expectedFamilies} families`} href={can(staff, "roster.view") ? `/admin/roster${q({ date })}` : undefined} />
+        ) : (
+          <Stat
+            label={d.presence.isToday ? "Still expected today" : "Expected"}
+            value={d.presence.isToday ? d.presence.stillExpected : d.presence.booked}
+            sub={
+              d.presence.isToday
+                ? d.presence.stillExpected
+                  ? `Haven’t arrived yet · ${d.presence.booked} booked today`
+                  : d.presence.booked
+                    ? `Everyone’s arrived or their session is over · ${d.presence.booked} booked today`
+                    : "Nobody booked today"
+                : `${d.expectedFamilies} families · bookings and Club Yalla`
+            }
+            href={can(staff, "roster.view") ? `/admin/roster${q({ date })}` : undefined}
+          />
+        )}
+        <Stat
+          label={d.presence.isToday ? "Here now" : "Checked in"}
+          value={d.presence.isToday ? d.presence.hereNow : `${checkedIn}`}
+          sub={d.presence.isToday ? `${d.presence.came} came today · capacity ${capacityTotal}` : `of ${d.expectedChildren} booked · capacity ${capacityTotal}`}
+          href={can(staff, "roster.view") ? `/admin/roster${q({ date })}` : undefined}
+        />
         {can(staff, "forms.view") ? (
           <Stat
             label="Paperwork issues"
@@ -145,19 +167,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <ul className="divide-y divide-ink/6">
                 {d.today.map((t) => (
                   <li key={t.session.id}>
-                    <Link href={`/admin/sessions/${t.session.id}`} className="grid gap-3 px-5 py-3.5 transition-colors hover:bg-mist/30 sm:grid-cols-[6.5rem_1fr_9rem_7rem] sm:items-center">
+                    <Link href={`/admin/sessions/${t.session.id}`} className="grid gap-3 px-5 py-3.5 transition-colors hover:bg-mist/30 sm:grid-cols-[7.5rem_1fr_8rem_11.5rem] sm:items-center">
                       <span className="text-[0.85rem] tabular-nums text-ink-soft">
                         {fmtTime(t.session.startsAt)}–{fmtTime(t.session.endsAt)}
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-[0.9rem] font-medium text-ink">{t.session.title ?? t.program.name}</span>
                         <span className="text-[0.78rem] text-ink-soft">
-                          {t.expected} expected · {t.checkedIn} in{t.absent ? ` · ${t.absent} absent` : ""}
+                          {sessionPhase(t.session) === "ended"
+                            ? `${t.checkedIn} came${t.absent ? ` · ${t.absent} absent` : ""}${t.expected - t.checkedIn - t.absent > 0 ? ` · ${t.expected - t.checkedIn - t.absent} not checked in` : ""}`
+                            : `${t.expected} booked · ${t.checkedIn} in${t.absent ? ` · ${t.absent} absent` : ""}`}
                           {t.availability.occupancy.members ? ` · ${t.availability.occupancy.members} members` : ""}
                         </span>
                       </span>
                       <Capacity used={t.availability.occupancy.used} capacity={t.availability.effectiveCapacity} remaining={t.availability.remaining} />
-                      <span className="sm:text-right">{t.session.status !== "scheduled" ? <Status kind="session" value={t.session.status} /> : null}</span>
+                      <span className="sm:text-right">
+                        {t.session.status !== "scheduled" ? (
+                          <Status kind="session" value={t.session.status} />
+                        ) : isToday ? (
+                          <PhasePill session={t.session} />
+                        ) : null}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -300,5 +330,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       </div>
     </>
+  );
+}
+
+/** Today's sessions: when they start, that they're running, or that they're over (Pacific time). */
+function PhasePill({ session }: { session: { startsAt: Date; endsAt: Date } }) {
+  const p = sessionPhase(session);
+  return (
+    <Pill tone={p === "live" ? "positive" : p === "upcoming" ? "info" : "muted"} icon={p === "live" ? "dot" : p === "upcoming" ? "clock" : "check"}>
+      {phaseText(session)}
+    </Pill>
   );
 }

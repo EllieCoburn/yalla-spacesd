@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { loadDay, loadMonth } from "@/app/admin/(app)/calendar/actions";
 import type { CalendarChild, CalendarDaySession, CalendarProgram, CalendarSession } from "@/lib/admin/queries/calendar";
 import { monthGrid } from "@/lib/admin/calendar-grid";
-import { eachDate, fmtDate, fmtTime } from "@/lib/time";
+import { eachDate, fmtDate, fmtTime, phaseText, sessionPhase } from "@/lib/time";
 
 /**
  * The enrollment calendar. Months and days load in the background and are kept, so moving between
@@ -552,7 +552,7 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
               })}
             </div>
           ) : null}
-          {current ? <GroupView key={current.id} s={current} /> : null}
+          {current ? <GroupView key={current.id} s={current} today={today} /> : null}
         </>
       )}
     </aside>
@@ -562,7 +562,9 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
 /** "Weekend Play · AM play session · 4 – 7 years" → "4 – 7 years". */
 const groupLabel = (s: CalendarSession) => s.title.split(" · ").pop() ?? s.title;
 
-function GroupView({ s }: { s: CalendarDaySession }) {
+function GroupView({ s, today }: { s: CalendarDaySession; today: string }) {
+  const phase = sessionPhase(s);
+  const ended = phase === "ended";
   const t = toneOf(s.remaining, s.effectiveCapacity);
   const allergies = s.children.filter((c) => c.allergies).length;
   const forms = s.children.filter((c) => c.formsMissing).length;
@@ -573,7 +575,8 @@ function GroupView({ s }: { s: CalendarDaySession }) {
           <div className="min-w-0">
             <p className="truncate text-[0.95rem] font-medium text-ink">{s.title}</p>
             <p className="text-[0.78rem] text-ink-soft">
-              {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
+              {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)} <span className="text-ink-soft/70">Pacific</span>
+              {s.date === today ? <span className={`ml-2 font-medium ${phase === "live" ? "text-[#2c6447]" : phase === "ended" ? "text-ink-soft" : "text-blue"}`}>· {phaseText(s)}</span> : null}
             </p>
           </div>
           {s.effectiveCapacity ? (
@@ -597,7 +600,7 @@ function GroupView({ s }: { s: CalendarDaySession }) {
       {s.children.length ? (
         <ul className="mt-4 max-h-[min(60vh,34rem)] divide-y divide-ink/[0.06] overflow-y-auto border-t border-ink/[0.07]">
           {s.children.map((c) => (
-            <ChildRow key={c.childId} c={c} />
+            <ChildRow key={c.childId} c={c} ended={ended} />
           ))}
         </ul>
       ) : (
@@ -634,8 +637,9 @@ function GroupView({ s }: { s: CalendarDaySession }) {
   );
 }
 
-function ChildRow({ c }: { c: CalendarChild }) {
-  const a = ATTEND[c.attendance];
+function ChildRow({ c, ended }: { c: CalendarChild; ended: boolean }) {
+  // Once the session is over, a child who never arrived isn't "expected" any more.
+  const a = ATTEND[c.attendance] ?? (ended && c.attendance === "expected" ? { label: "Not checked in", cls: "bg-ink/5 text-ink-soft" } : undefined);
   return (
     <li>
       <Link href={`/admin/families/${c.familyId}`} className="flex items-start gap-3 px-5 py-2.5 transition-colors hover:bg-[#f7f6fb]">

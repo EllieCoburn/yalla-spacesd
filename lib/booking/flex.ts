@@ -1,3 +1,4 @@
+import { zonedDateTime } from "@/lib/time";
 /**
  * Yalla Flex fills vacancies in Yalla's core cohorts. Each weekday has one session per age group,
  * and every group is full until staff release a spot (Admin → Yalla Flex), for an absence or an
@@ -49,4 +50,9 @@ export function parseWeekly(raw: unknown): WeeklyVacancies {
     });
   }
   return out;
+}
+
+/** A Yalla Flex day's hours as instants (Pacific time), for "starts / in session / ended" labels. */
+export function flexDayWindow(localDate: string) {
+  return { startsAt: zonedDateTime(localDate, FLEX_HOURS.start), endsAt: zonedDateTime(localDate, FLEX_HOURS.end) };
 }

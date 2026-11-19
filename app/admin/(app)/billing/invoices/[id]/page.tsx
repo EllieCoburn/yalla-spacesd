@@ -7,7 +7,7 @@ import { invoiceDetail } from "@/lib/admin/queries/billing";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
-import { fmtDate, fmtDateTime } from "@/lib/time";
+import { fmtDate, fmtDateTime, localDateOf } from "@/lib/time";
 import { adjustmentAction, applyCreditAction, deleteInvoiceAction, offlinePaymentAction, paymentLinkAction, voidAction } from "../../actions";
 
 export const metadata = { title: "Invoice" };
@@ -77,7 +77,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                     <Money cents={l.amountCents} />
                   </td>
                   <td className="text-[0.75rem] whitespace-nowrap text-ink-soft">
-                    {l.createdBy ?? ""} · {fmtDate(l.createdAt.toISOString().slice(0, 10), "d MMM")}
+                    {l.createdBy ?? ""} · {fmtDate(localDateOf(l.createdAt), "d MMM")}
                   </td>
                 </tr>
               ))}

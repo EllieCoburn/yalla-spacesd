@@ -21,7 +21,7 @@ import { bookings, children, families, familyAuthTokens, familyInvites, familySe
 import { validLinkKey } from "@/lib/links";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { teamRecipients } from "@/lib/ops/team-notices";
-import { fmtDate } from "@/lib/time";
+import { fmtDate, todayLA } from "@/lib/time";
 import { allow } from "@/lib/rate-limit";
 
 export const FAMILY_LINK_MS = 20 * 60 * 1000;
@@ -272,7 +272,7 @@ export async function registerFamilyAccount(db: DB, input: NewAccount & { invite
   const problem = familyPasswordProblem(input.password);
   if (problem) throw new OpsError("invalid", problem);
   const kids = input.children.filter((c) => c.firstName.trim() || c.lastName?.trim() || c.birthDate);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLA();
   for (const c of kids) {
     if (!c.firstName.trim() || !c.lastName?.trim() || !DATE.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
     if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);

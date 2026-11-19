@@ -4,9 +4,9 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { staffUsers } from "@/lib/db/schema";
-import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { FLEX_GROUPS, flexDayWindow } from "@/lib/booking/flex";
 import { careSentence, dayPhrase, upcomingDropIns } from "@/lib/ops/team-notices";
-import { ageLabel, fmtDate, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, phaseText, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Drop-ins" };
 
@@ -43,7 +43,7 @@ export default async function DropIns() {
           {[...byDate].map(([date, list]) => {
             const phrase = dayPhrase(date, today);
             return (
-              <Card key={date} title={`${phrase.startsWith("on ") ? "" : `${phrase[0].toUpperCase()}${phrase.slice(1)} · `}${fmtDate(date, "EEEE, MMMM d")}`}>
+              <Card key={date} title={`${phrase.startsWith("on ") ? "" : `${phrase[0].toUpperCase()}${phrase.slice(1)} · `}${fmtDate(date, "EEEE, MMMM d")}`} actions={date === today ? <span className="text-[0.8rem] text-ink-soft">{phaseText(flexDayWindow(date))}</span> : undefined}>
                 <ul className="divide-y divide-ink/8">
                   {list.map((r) => (
                     <li key={r.itemId} className="py-3 first:pt-0 last:pb-0">

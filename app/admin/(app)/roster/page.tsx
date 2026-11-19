@@ -10,7 +10,7 @@ import { ActionForm, TextField } from "@/components/admin/forms";
 import { waiveLateFeeAction } from "./actions";
 import { roster } from "@/lib/ops/attendance";
 import { daySessions } from "@/lib/ops/dashboard";
-import { addDaysISO, fmtDate, fmtTime, todayLA } from "@/lib/time";
+import { addDaysISO, fmtDate, fmtTime, nowLA, phaseText, sessionPhase, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Roster" };
 
@@ -29,12 +29,14 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
   const expected = r?.children.filter((c) => c.expected || c.attendance?.status === "checked_in" || c.attendance?.status === "checked_out") ?? [];
   const notExpected = r?.children.filter((c) => !expected.includes(c)) ?? [];
   const canManage = can(staff, "attendance.manage");
+  const ended = r ? sessionPhase(r.session) === "ended" : false;
+  const notArrived = expected.filter((c) => !c.attendance || c.attendance.status === "expected").length;
 
   return (
     <>
       <PageHeader
         title="Roster"
-        subtitle={fmtDate(date, "EEEE d MMMM yyyy")}
+        subtitle={`${fmtDate(date, "EEEE d MMMM yyyy")} · ${date === todayLA() ? `it’s ${nowLA()} Pacific` : "times are Pacific"}`}
         actions={
           <div className="flex items-center gap-1">
             <Link className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-[0.82rem] hover:border-ink/40" href={q({ date: addDaysISO(date, -1) })} aria-label="Previous day">
@@ -95,6 +97,9 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                 <span className="block text-[0.78rem] text-ink-soft tabular-nums">
                   {fmtTime(l.session.startsAt)}–{fmtTime(l.session.endsAt)} · {l.checkedIn}/{l.expected} in
                 </span>
+                {date === todayLA() ? (
+                  <span className={`mt-1 block text-[0.74rem] font-medium ${sessionPhase(l.session) === "live" ? "text-[#2c6447]" : sessionPhase(l.session) === "ended" ? "text-ink-soft" : "text-blue"}`}>{phaseText(l.session)}</span>
+                ) : null}
                 {l.session.status !== "scheduled" ? (
                   <span className="mt-1 block">
                     <Status kind="session" value={l.session.status} />
@@ -112,8 +117,12 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                     {r.session.title ?? r.program.name}
                   </h2>
                   <p className="text-[0.85rem] text-ink-soft">
-                    {fmtTime(r.session.startsAt)}–{fmtTime(r.session.endsAt)} · {expected.length} expected · {expected.filter((c) => c.attendance?.status === "checked_in").length} here now ·{" "}
+                    <span className="font-medium text-ink">
+                      {fmtTime(r.session.startsAt)} – {fmtTime(r.session.endsAt)}
+                    </span>
+                    {ended ? " · ended" : sessionPhase(r.session) === "live" ? " · in session" : ""} · {expected.length} booked · {expected.filter((c) => c.attendance?.status === "checked_in").length} here now ·{" "}
                     {expected.filter((c) => c.attendance?.status === "checked_out").length} gone home
+                    {ended && notArrived ? ` · ${notArrived} not checked in` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -142,7 +151,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
               ) : (
                 <ul className="grid gap-3 xl:grid-cols-2">
                   {expected.map((c) => (
-                    <RosterCard key={c.childId} c={c} sessionId={r.session.id} canManage={canManage} showBookings={can(staff, "bookings.view")} />
+                    <RosterCard key={c.childId} c={c} sessionId={r.session.id} canManage={canManage} showBookings={can(staff, "bookings.view")} ended={ended} />
                   ))}
                 </ul>
               )}

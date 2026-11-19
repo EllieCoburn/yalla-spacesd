@@ -38,10 +38,12 @@ function Mini({ action, sessionId, childId, children }: { action: Act; sessionId
 
 const time = (d: Date | string | null | undefined) => (d ? new Date(d).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" }) : "");
 
-export function RosterCard({ c, sessionId, canManage, showBookings }: { c: RosterChild; sessionId: string; canManage: boolean; showBookings: boolean }) {
+export function RosterCard({ c, sessionId, canManage, showBookings, ended = false }: { c: RosterChild; sessionId: string; canManage: boolean; showBookings: boolean; ended?: boolean }) {
   const [mode, setMode] = useState<"idle" | "checkout" | "absent">("idle");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const status = c.attendance?.status ?? (c.expected ? "expected" : "absent");
+  // After the session ends, a child who never arrived isn't "expected" any more (staff can still record a late check-in).
+  const shown = status === "expected" && ended ? "not_checked_in" : status;
   const allergies = c.care?.allergies;
   // Informational forms (e.g. photo preferences) don't affect attendance, so they stay off the roster.
   const paperwork = c.paperwork?.filter((p) => p.enforcement !== "informational") ?? [];
@@ -80,7 +82,7 @@ export function RosterCard({ c, sessionId, canManage, showBookings }: { c: Roste
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Status kind="attendance" value={status} />
+          <Status kind="attendance" value={shown} />
           <span className="text-[0.75rem] text-ink-soft tabular-nums">
             {c.attendance?.checkedInAt ? `In ${time(c.attendance.checkedInAt)}` : ""}
             {c.attendance?.checkedOutAt ? ` · Out ${time(c.attendance.checkedOutAt)}` : ""}

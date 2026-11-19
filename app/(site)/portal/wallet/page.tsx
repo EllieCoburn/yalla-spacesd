@@ -7,7 +7,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { familyOffers, bonusFor } from "@/lib/ops/yalla-cancellations";
 import { allocationsWithUse, walletActivity, walletSummary } from "@/lib/playpass/wallet";
 import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
-import { fmtDate, todayLA } from "@/lib/time";
+import { fmtDate, todayLA, localDateOf } from "@/lib/time";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Yalla Wallet", robots: { index: false } };
@@ -154,7 +154,7 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
                   <span className={`tabular-nums ${e.amountCents > 0 ? "text-blue" : ""}`}>
                     {e.amountCents > 0 ? "+" : ""}
                     {usd(e.amountCents)}
-                    <span className="ml-3 text-[0.78rem] text-ink-soft">{fmtDate(e.createdAt.toISOString().slice(0, 10), "MMM d")}</span>
+                    <span className="ml-3 text-[0.78rem] text-ink-soft">{fmtDate(localDateOf(e.createdAt), "MMM d")}</span>
                   </span>
                 </li>
               ))}

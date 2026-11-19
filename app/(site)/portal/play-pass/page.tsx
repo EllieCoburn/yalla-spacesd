@@ -8,7 +8,7 @@ import { billingPortalAction } from "@/app/(site)/play-passes/actions";
 import { getDb, isDbConfigured } from "@/lib/db";
 import { familyPlayPass, offeredPlans } from "@/lib/playpass/membership";
 import { PORTAL_OPEN_PREVIEW } from "@/lib/portal-preview";
-import { addDaysISO, fmtDate, todayLA } from "@/lib/time";
+import { addDaysISO, fmtDate, todayLA, localDateOf } from "@/lib/time";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "My Play Pass", robots: { index: false } };
@@ -228,7 +228,7 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
                   </span>
                   <span className="shrink-0 text-right">
                     <span className={e.amountCents > 0 ? "text-blue" : ""}>{e.amountCents > 0 ? `+${usd(e.amountCents)}` : usd(e.amountCents)}</span>
-                    <span className="block text-[0.72rem] text-ink-soft">{fmtDate(e.createdAt.toISOString().slice(0, 10), "MMM d")}</span>
+                    <span className="block text-[0.72rem] text-ink-soft">{fmtDate(localDateOf(e.createdAt), "MMM d")}</span>
                   </span>
                 </li>
               ))}
@@ -247,7 +247,7 @@ export default async function MyPlayPass({ searchParams }: { searchParams: Promi
                 <li key={c.id} className="flex items-baseline justify-between gap-4 py-3 text-[0.9rem]">
                   <span>
                     {c.reason === "initial" ? "First month" : c.reason === "renewal" ? "Monthly renewal" : c.reason === "upgrade" ? "Upgrade" : c.reason === "resume" ? "Back from your pause" : "Payment"}
-                    <span className="block text-[0.78rem] text-ink-soft">{fmtDate(c.createdAt.toISOString().slice(0, 10), "MMM d, yyyy")}</span>
+                    <span className="block text-[0.78rem] text-ink-soft">{fmtDate(localDateOf(c.createdAt), "MMM d, yyyy")}</span>
                   </span>
                   <span className="text-right">
                     {usd(c.amountCents)}

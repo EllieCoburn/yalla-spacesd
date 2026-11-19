@@ -33,7 +33,7 @@ import {
 } from "@/lib/db/schema";
 import { requestMagicLink, guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { activeProvider } from "@/lib/payments/provider";
-import { ageInMonths, fmtDate } from "@/lib/time";
+import { ageInMonths, fmtDate, todayLA } from "@/lib/time";
 import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
 import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
@@ -253,7 +253,7 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
   if (!blockingTemplates.size) return [];
   // Per-child forms narrowed by age (e.g. one Flex agreement per age group) apply only to children who
   // fit. Saved children are checked against their record; new children by the birth date entered.
-  const today = firstDay ?? new Date().toISOString().slice(0, 10);
+  const today = firstDay ?? todayLA();
   const forChild = (templateId: string, c: ChildRef) =>
     reqs
       .filter((r) => r.t.id === templateId)

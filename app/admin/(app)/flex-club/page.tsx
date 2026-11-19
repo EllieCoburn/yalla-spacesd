@@ -8,10 +8,10 @@ import { OpsList } from "@/components/admin/ops/OpsList";
 import { opsList, opsOpenCounts } from "@/lib/ops/ops-requests";
 import { getDb } from "@/lib/db";
 import { children, cohorts, families, guardians, memberships } from "@/lib/db/schema";
-import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { FLEX_GROUPS, flexDayWindow } from "@/lib/booking/flex";
 import { WEEKDAY } from "@/lib/ops/memberships";
 import { careSentence, dayPhrase, upcomingDropIns } from "@/lib/ops/team-notices";
-import { ageLabel, fmtDate, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, phaseText, sessionPhase, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Club Yalla operations" };
 
@@ -62,7 +62,7 @@ export default async function FlexClubPage({ searchParams }: { searchParams: Pro
       <PageHeader title="Club Yalla operations" subtitle="Club Yalla at a glance, who’s coming to Yalla Flex, every family’s contact card and forms, and what’s needed around the building." />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Club Yalla members" value={activeMembers.length} sub={members.length > activeMembers.length ? `+ ${members.length - activeMembers.length} starting soon or paused` : "active"} href="/admin/flex-club" />
-        <Stat label="Flex today" value={flexToday} sub={fmtDate(today, "EEEE d MMMM")} href="/admin/flex-club?tab=flex" />
+        <Stat label="Flex today" value={flexToday} sub={flexToday ? `${phaseText(flexDayWindow(today))} · Pacific` : fmtDate(today, "EEEE d MMMM")} href="/admin/flex-club?tab=flex" />
         {openCounts ? (
           <>
             <Stat label="Supplies needed" value={openCounts.supply.n} sub={openCounts.supply.urgent ? `${openCounts.supply.urgent} urgent` : "on the list"} href="/admin/flex-club?tab=supplies" tone={openCounts.supply.urgent ? "warning" : undefined} />
@@ -113,7 +113,12 @@ function FlexTab({ rows, today, days }: { rows: DropIn[]; today: string; days: n
               <Card
                 key={date}
                 title={`${phrase.startsWith("on ") ? "" : `${phrase[0].toUpperCase()}${phrase.slice(1)} · `}${fmtDate(date, "EEEE, MMMM d")}`}
-                actions={<span className="text-[0.8rem] text-ink-soft">{list.length} {list.length === 1 ? "child" : "children"}</span>}
+                actions={
+                  <span className="text-[0.8rem] text-ink-soft">
+                    {date === today ? <span className={`mr-2 font-medium ${sessionPhase(flexDayWindow(date)) === "live" ? "text-[#2c6447]" : sessionPhase(flexDayWindow(date)) === "ended" ? "text-ink-soft" : "text-blue"}`}>{phaseText(flexDayWindow(date))} ·</span> : null}
+                    {list.length} {list.length === 1 ? "child" : "children"}
+                  </span>
+                }
                 padded={false}
               >
                 {FLEX_GROUPS.filter((g) => list.some((r) => r.cohort.key === g.key)).map((g) => (

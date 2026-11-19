@@ -12,7 +12,7 @@ import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-clu
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
-import { ageLabel, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, fmtDateTime, todayLA, localDateOf } from "@/lib/time";
 import { addChildAction, addGuardianAction, archiveFamilyAction, purgeTestDataAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
 import { familyTestDataCounts } from "@/lib/ops/test-data";
 import { portalStatusByEmail } from "@/lib/family-auth";
@@ -55,7 +55,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
             {d.family.isSample ? <Pill tone="muted">Sample data</Pill> : null}
             {d.memberships.some((m) => ["active", "upcoming", "paused"].includes(m.m.status)) ? <Pill tone="info" icon="check">Club Yalla</Pill> : null}
             <span>
-              Family since {fmtDate(d.family.createdAt.toISOString().slice(0, 10), "MMMM yyyy")}
+              Family since {fmtDate(localDateOf(d.family.createdAt), "MMMM yyyy")}
               {primary ? ` · ${primary.email}` : ""}
             </span>
             <span title="Entered at the lobby kiosk for camp, weekend sessions and Happenings">
@@ -292,7 +292,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                           {c.childName ? <span className="text-ink-soft"> · {c.childName}</span> : null}
                         </p>
                         <p className="text-[0.74rem] text-ink-soft">
-                          Signed {fmtDate(c.signedAt.toISOString().slice(0, 10), "d MMM yyyy")}
+                          Signed {fmtDate(localDateOf(c.signedAt), "d MMM yyyy")}
                           {c.signerName ? ` by ${c.signerName}` : ""}
                           {c.bookingReference ? ` · booking ${c.bookingReference}` : ""}
                         </p>
@@ -330,7 +330,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                         <span className="min-w-0">
                           <span className="block truncate text-[0.84rem] text-ink">{inv.description ?? inv.number}</span>
                           <span className="text-[0.74rem] text-ink-soft">
-                            {inv.number} · {fmtDate(inv.issuedAt.toISOString().slice(0, 10), "d MMM yyyy")} · total <Money cents={inv.totals.total} />
+                            {inv.number} · {fmtDate(localDateOf(inv.issuedAt), "d MMM yyyy")} · total <Money cents={inv.totals.total} />
                             {inv.totals.refunded ? (
                               <>
                                 {" "}

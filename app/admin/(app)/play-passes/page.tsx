@@ -9,7 +9,7 @@ import { playPassPlans, programs } from "@/lib/db/schema";
 import { getPolicy } from "@/lib/ops/settings";
 import { paymentsStatus } from "@/lib/payments/provider";
 import { financialReport, memberList, outstandingBalances, overview } from "@/lib/playpass/admin";
-import { fmtDate, todayLA } from "@/lib/time";
+import { fmtDate, todayLA, localDateOf } from "@/lib/time";
 import { eligibilityAction, newPlanAction } from "./actions";
 
 export const metadata = { title: "Play Passes" };
@@ -210,7 +210,7 @@ export default async function PlayPassesAdmin({ searchParams }: { searchParams: 
                   <td>
                     <Money cents={p.allocationCents} />
                   </td>
-                  <td>{p.retiredAt ? fmtDate(p.retiredAt.toISOString().slice(0, 10)) : "—"}</td>
+                  <td>{p.retiredAt ? fmtDate(localDateOf(p.retiredAt)) : "—"}</td>
                 </tr>
               ))}
             </Table>

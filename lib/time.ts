@@ -70,3 +70,24 @@ export function ageLabel(birthDate: string, onDate: string): string {
   const rem = months % 12;
   return rem ? `${years} yr ${rem} mo` : `${years} yr`;
 }
+
+/** Where a session is right now: not started, running, or over. */
+export type SessionPhase = "upcoming" | "live" | "ended";
+
+export function sessionPhase(s: { startsAt: Date | string; endsAt: Date | string }, now = new Date()): SessionPhase {
+  const start = new Date(s.startsAt).getTime();
+  const end = new Date(s.endsAt).getTime();
+  const t = now.getTime();
+  return t < start ? "upcoming" : t < end ? "live" : "ended";
+}
+
+/** "Starts 8:30am", "In session until 4:30pm", "Ended at 4:30pm" (Pacific time). */
+export function phaseText(s: { startsAt: Date | string; endsAt: Date | string }, now = new Date()): string {
+  const p = sessionPhase(s, now);
+  return p === "upcoming" ? `Starts ${fmtTime(s.startsAt)}` : p === "live" ? `In session until ${fmtTime(s.endsAt)}` : `Ended at ${fmtTime(s.endsAt)}`;
+}
+
+/** The current time in Los Angeles, e.g. "7:02pm". */
+export function nowLA(now = new Date()): string {
+  return fmtTime(now);
+}

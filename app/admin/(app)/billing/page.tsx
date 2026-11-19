@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { paymentsStatus } from "@/lib/payments/provider";
-import { fmtDate } from "@/lib/time";
+import { fmtDate, localDateOf } from "@/lib/time";
 import { Status } from "@/components/admin/ui";
 
 export const metadata = { title: "Billing" };
@@ -85,7 +85,7 @@ export default async function BillingOverview({ searchParams }: { searchParams: 
                         {r.f.name} · {r.i.description}
                       </span>
                       <span className="text-[0.75rem] text-ink-soft">
-                        {r.i.number} · issued {fmtDate(r.i.issuedAt.toISOString().slice(0, 10), "d MMM")}
+                        {r.i.number} · issued {fmtDate(localDateOf(r.i.issuedAt), "d MMM")}
                       </span>
                     </span>
                     <span className="flex items-center gap-3">
