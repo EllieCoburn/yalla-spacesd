@@ -299,7 +299,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
       {/* The month in numbers */}
       <dl className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-ink/[0.08] shadow-[0_0_0_1px_rgba(41,44,69,0.08)] sm:grid-cols-4">
         {[
-          { label: "Children booked", value: totals.children, sub: totals.days ? `across ${totals.days} day${totals.days === 1 ? "" : "s"}` : "nothing scheduled" },
+          { label: "Spots booked", value: totals.children, sub: totals.days ? `across ${totals.days} day${totals.days === 1 ? "" : "s"}` : "nothing scheduled" },
           { label: "Spots open", value: totals.open, sub: totals.full ? `${totals.full} group${totals.full === 1 ? "" : "s"} full` : "no groups full", tone: totals.open ? "text-[#2c6447]" : "" },
           { label: "Paying now", value: totals.paying, sub: "spots held at checkout" },
           { label: "Waitlist", value: totals.waiting, sub: totals.waiting ? "waiting for a spot" : "no one waiting" },
@@ -455,7 +455,8 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
   const [tab, setTab] = useState<string | null>(null);
   const slot = slots.find((x) => x.key === slotKeyChosen) ?? slots[0];
   const current = slot?.sessions.find((s) => s.id === tab) ?? slot?.sessions[0];
-  const coming = list.reduce((n, s) => n + s.children.length, 0);
+  // Each child once, even when they come to two sessions that day.
+  const coming = new Set(list.flatMap((s) => s.children.map((c) => c.childId))).size;
 
   return (
     <aside className="rounded-2xl bg-white shadow-[0_0_0_1px_rgba(41,44,69,0.08),0_8px_30px_-12px_rgba(41,44,69,0.12)]">
