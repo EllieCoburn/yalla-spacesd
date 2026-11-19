@@ -10,6 +10,7 @@ import { inArray } from "drizzle-orm";
 import { format } from "date-fns";
 import { inLA } from "@/lib/time";
 import { dashboard } from "@/lib/ops/dashboard";
+import { cartSummary } from "@/lib/ops/carts";
 import { addDaysISO, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Today" };
@@ -33,6 +34,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const famIds = d.paperwork.map((p) => p.familyId);
   const kidNames = new Map((kidIds.length ? await db.select().from(children).where(inArray(children.id, kidIds)) : []).map((c) => [c.id, `${c.preferredName || c.firstName} ${c.lastName}`]));
   const famNames = new Map((famIds.length ? await db.select().from(families).where(inArray(families.id, famIds)) : []).map((f) => [f.id, f.name]));
+  const carts = can(staff, "bookings.view") && isToday ? await cartSummary(db) : null;
   const hour = Number(format(new Date(), "H", { in: inLA }));
 
   return (
@@ -206,6 +208,39 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
 
         <div className="space-y-6">
+          {carts ? (
+            <Card title="Carts & checkouts" actions={<Link href="/admin/carts" className="text-blue">Open →</Link>} padded={false}>
+              <div className="grid grid-cols-3 divide-x divide-ink/6 border-b border-ink/6">
+                {[
+                  { label: "Open carts", value: carts.openCarts, href: "/admin/carts" },
+                  { label: "Checking out", value: carts.inProgress, href: "/admin/carts?view=abandoned" },
+                  { label: "Abandoned this week", value: carts.abandoned, href: "/admin/carts?view=abandoned&days=7" },
+                ].map((x) => (
+                  <Link key={x.label} href={x.href} className="px-4 py-3 hover:bg-mist/30">
+                    <span className="block text-[1.4rem] leading-tight font-semibold tabular-nums text-ink">{x.value}</span>
+                    <span className="text-[0.72rem] text-ink-soft">{x.label}</span>
+                  </Link>
+                ))}
+              </div>
+              {carts.top.length ? (
+                <ul className="divide-y divide-ink/6">
+                  {carts.top.map((t) => (
+                    <li key={t.session.id}>
+                      <Link href={`/admin/sessions/${t.session.id}`} className="flex items-center justify-between gap-3 px-5 py-2.5 hover:bg-mist/30">
+                        <span className="min-w-0">
+                          <span className="block truncate text-[0.86rem] text-ink">{t.session.name}</span>
+                          <span className="text-[0.74rem] text-ink-soft">{fmtDate(t.session.localDate, "EEE d MMM")} · {fmtTime(t.session.startsAt)}</span>
+                        </span>
+                        <span className="shrink-0 text-[0.78rem] text-ink-soft tabular-nums">in {t.carts} cart{t.carts === 1 ? "" : "s"}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-5 py-3 text-[0.82rem] text-ink-soft">Nothing in carts right now.</p>
+              )}
+            </Card>
+          ) : null}
           {can(staff, "bookings.view") ? (
             <Card title="New bookings · last 7 days" actions={<Link href="/admin/bookings" className="text-blue">All →</Link>} padded={false}>
               {d.recentBookings.length === 0 ? (

@@ -15,6 +15,7 @@ const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin/kiosk", label: "Check-in kiosk", icon: "roster", group: "Daily", perm: "attendance.manage" },
   { href: "/admin/inbox", label: "Inbox", icon: "inbox", group: "Daily", perm: "families.view", mobile: true },
   { href: "/admin/bookings", label: "Bookings", icon: "bookings", group: "Daily", perm: "bookings.view", mobile: true },
+  { href: "/admin/carts", label: "Carts & checkouts", icon: "bookings", group: "Daily", perm: "bookings.view" },
   { href: "/admin/waitlist", label: "Waitlist", icon: "waitlist", group: "Daily", perm: "bookings.view" },
   { href: "/admin/spaces", label: "Space reservations", icon: "spaces", group: "Daily", perm: "spaces.view" },
   { href: "/admin/families", label: "Families", icon: "families", group: "People", perm: "families.view", mobile: true },

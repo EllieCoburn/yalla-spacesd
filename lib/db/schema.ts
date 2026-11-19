@@ -593,6 +593,26 @@ export const bookingItems = pgTable(
 );
 
 /**
+ * Carts: what visitors have added on the public site but not booked yet, so staff can see demand
+ * (Admin → Carts & checkouts). The id is a random one the visitor's browser makes; nothing personal
+ * is kept unless the visitor is signed in to the Family Portal, when the cart is linked to their
+ * family. A cart left alone for 7 days is removed (the browser forgets it then too).
+ */
+export type SavedCartItem = { id: string; spots: number; extras: string[]; flexible?: boolean };
+
+export const carts = pgTable(
+  "carts",
+  {
+    id: text("id").primaryKey(),
+    familyId: text("family_id").references(() => families.id, { onDelete: "set null" }),
+    items: jsonb("items").$type<SavedCartItem[]>().notNull().default(sql`'[]'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("carts_updated_idx").on(t.updatedAt)],
+);
+
+/**
  * Extras a family adds to a day already booked (e.g. a second grown-up coworking), from the Family
  * Portal. Each is paid by its own invoice and joins the booking item once that payment succeeds.
  */
