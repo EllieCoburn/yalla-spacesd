@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, DL, Notice, PageHeader, Pill } from "@/components/admin/ui";
 import { submissionDetail } from "@/lib/admin/queries/families";
-import { requirePermission } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
+import { canOpenSubmission, flexClubOnly } from "@/lib/auth/flex-club";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { fmtDate, fmtDateTime } from "@/lib/time";
@@ -14,12 +15,15 @@ import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity
 export const metadata = { title: "Submission" };
 
 export default async function SubmissionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ recorded?: string }> }) {
-  const staff = await requirePermission("forms.view");
+  const staff = await requireStaff();
   const { id } = await params;
+  // Flex & Club Yalla operations staff may open forms for Flex and Club Yalla families only.
+  if (!(await canOpenSubmission(getDb(), staff, id))) redirect("/admin/forbidden?need=forms.view");
+  const scoped = flexClubOnly(staff);
   const sp = await searchParams;
   const d = await submissionDetail(getDb(), id);
   if (!d) notFound();
-  const docs = can(staff, "forms.documents");
+  const docs = can(staff, "forms.documents") || scoped;
   const { s, t, v, f, c } = d;
   const isCurrent = t.currentVersionId === v.id;
   // Online forms: answers keyed by field, read against the exact version that was signed.
@@ -30,7 +34,7 @@ export default async function SubmissionPage({ params, searchParams }: { params:
   return (
     <>
       <PageHeader
-        back={{ href: `/admin/forms/${t.id}`, label: t.title }}
+        back={scoped ? { href: `/admin/families/${f.id}`, label: f.name } : { href: `/admin/forms/${t.id}`, label: t.title }}
         title={`${t.title} · v${v.version}`}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">

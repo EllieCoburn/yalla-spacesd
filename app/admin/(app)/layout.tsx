@@ -6,9 +6,11 @@ import type { Permission } from "@/lib/auth/permissions";
 import { notificationsMode } from "@/lib/notify";
 import { paymentsStatus } from "@/lib/payments/provider";
 import { searchAll } from "./search-action";
+import { flexClubOnly } from "@/lib/auth/flex-club";
 
 const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin", label: "Today", icon: "today", group: "Daily", perm: "dashboard.view", mobile: true },
+  { href: "/admin/flex-club", label: "Flex & Club Yalla", icon: "memberships", group: "Daily", perm: "flexclub.view", mobile: true },
   { href: "/admin/drop-ins", label: "Drop-ins", icon: "roster", group: "Daily", perm: "dropins.view", mobile: true },
   { href: "/admin/roster", label: "Roster", icon: "roster", group: "Daily", perm: "roster.view", mobile: true },
   { href: "/admin/calendar", label: "Calendar", icon: "roster", group: "Daily", perm: "roster.view" },
@@ -46,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </div>
   );
   return (
-    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName }} banners={banners} search={searchAll} signOut={signOut}>
+    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName }} banners={flexClubOnly(staff) ? null : banners} search={searchAll} signOut={signOut}>
       {children}
     </Shell>
   );

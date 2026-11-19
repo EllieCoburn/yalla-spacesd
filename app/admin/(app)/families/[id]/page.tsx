@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { EmergencyList, PickupList } from "@/components/admin/families/ContactForms";
 import { GuardianFields } from "@/components/admin/families/GuardianForm";
 import { NotesPanel } from "@/components/admin/families/Notes";
@@ -7,7 +7,8 @@ import { PaperworkList, PaperworkSummary } from "@/components/admin/families/Pap
 import { ActionForm, Checkbox, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Money, Notice, PageHeader, Pill, Status } from "@/components/admin/ui";
 import { familyProfile } from "@/lib/admin/queries/families";
-import { requirePermission } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
+import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-club";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
@@ -20,8 +21,12 @@ import { ensureCheckinCode } from "@/lib/ops/checkin";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
-  const staff = await requirePermission("families.view");
+  const me = await requireStaff();
   const { id } = await params;
+  // Flex & Club Yalla operations staff open only Flex and Club Yalla families, read-only.
+  if (!(await canOpenFamily(getDb(), me, id))) redirect("/admin/forbidden?need=families.view");
+  const scoped = flexClubOnly(me);
+  const staff = asFamilyViewer(me);
   const sp = await searchParams;
   const d = await familyProfile(getDb(), staff, id);
   // Owners can permanently delete a test family's bookings and invoices.
@@ -42,7 +47,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   return (
     <>
       <PageHeader
-        back={{ href: "/admin/families", label: "Families" }}
+        back={scoped ? { href: "/admin/flex-club?tab=families", label: "Flex & Club Yalla" } : { href: "/admin/families", label: "Families" }}
         title={d.family.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -93,12 +98,15 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      <Pill tone={g.portalAccess ? "positive" : "muted"} icon={g.portalAccess ? "check" : "x"}>Portal</Pill>
-                      <Pill tone={g.canBook ? "positive" : "muted"} icon={g.canBook ? "check" : "x"}>Booking</Pill>
-                      <Pill tone={g.canViewBilling ? "positive" : "muted"} icon={g.canViewBilling ? "check" : "x"}>Billing</Pill>
-                      <Pill tone={g.canViewSensitive ? "positive" : "muted"} icon={g.canViewSensitive ? "check" : "x"}>Care info</Pill>
-                    </div>
+                    {/* Each adult's Family Portal access (not shown to Flex & Club Yalla operations staff). */}
+                    {!scoped ? (
+                      <div className="flex flex-wrap gap-1">
+                        <Pill tone={g.portalAccess ? "positive" : "muted"} icon={g.portalAccess ? "check" : "x"}>Portal</Pill>
+                        <Pill tone={g.canBook ? "positive" : "muted"} icon={g.canBook ? "check" : "x"}>Booking</Pill>
+                        <Pill tone={g.canViewBilling ? "positive" : "muted"} icon={g.canViewBilling ? "check" : "x"}>Billing</Pill>
+                        <Pill tone={g.canViewSensitive ? "positive" : "muted"} icon={g.canViewSensitive ? "check" : "x"}>Care info</Pill>
+                      </div>
+                    ) : null}
                   </div>
                   {(() => {
                     const st = portal.get(g.email.toLowerCase());
@@ -190,7 +198,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
           </Card>
 
           {/* Memberships */}
-          {can(staff, "memberships.view") ? (
+          {can(staff, "memberships.view") || scoped ? (
             <Card title="Club Yalla memberships" actions={can(staff, "memberships.manage") ? <Link href={`/admin/memberships/new?family=${d.family.id}`} className="text-blue">Start membership</Link> : null} padded={false}>
               {d.memberships.length === 0 ? (
                 <p className="px-5 py-4 text-[0.85rem] text-ink-soft">No memberships.</p>
@@ -198,7 +206,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                 <ul className="divide-y divide-ink/6">
                   {d.memberships.map(({ m, c, co }) => (
                     <li key={m.id}>
-                      <Link href={`/admin/memberships/${m.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 hover:bg-mist/30">
+                      <Link href={scoped ? "#" : `/admin/memberships/${m.id}`} className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${scoped ? "pointer-events-none" : "hover:bg-mist/30"}`}>
                         <span>
                           <span className="block text-[0.88rem] text-ink">
                             {c.preferredName || c.firstName} · {co.name}
