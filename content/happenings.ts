@@ -67,7 +67,7 @@ export const HAPPENING_TYPES: {
     ],
     notes: [
       "Siblings: $85 for up to three children, +$25 for each additional child, applied automatically.",
-      "Separate age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years.",
+      "Separate age groups: 18 months – 3 years (up to 16 children), 4 – 7 years (up to 10) and 8 – 10 years (up to 10).",
     ],
   },
   {
