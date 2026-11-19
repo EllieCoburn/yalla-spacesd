@@ -512,6 +512,13 @@
       "when": 1795104214294,
       "tag": "0072_ops_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1795107742202,
+      "tag": "0073_camp_may_31_2027",
+      "breakpoints": true
     }
   ]
 }
