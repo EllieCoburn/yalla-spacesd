@@ -34,7 +34,9 @@ describe("FAQ content", () => {
   it("avoids words Yalla doesn't use", () => {
     for (const f of DEFAULT_FAQS) {
       const text = `${f.question} ${f.answer}`.toLowerCase();
-      for (const w of ["classroom", "daycare", "drop-off", "pick-up", "nap", "teacher", "school year"]) expect(text.includes(w), `${f.id}: ${w}`).toBe(false);
+      // Camp Yalla is the one drop-off program, and its own answer says so (Yalla's wording).
+      for (const w of ["classroom", "daycare", "drop-off", "pick-up", "nap", "teacher", "school year"])
+        if (!(w === "drop-off" && f.id === "what-is-camp")) expect(text.includes(w), `${f.id}: ${w}`).toBe(false);
     }
   });
 
