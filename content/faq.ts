@@ -388,7 +388,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "What is Camp Yalla?",
     answer:
-      "Camp Yalla is our drop-off program for children ages 18 months to 10 years, offered on select days when school or childcare is closed. We plan camp around the ages of the children joining us. For our youngest campers, that might mean a morning mixing mud in the play garden. For an older group, it might mean having the better part of an afternoon to finish something they’ve been building together.\n\nCamp runs from 9:00 am to 3:00 pm, with optional Early Bird care starting at 8:00 am and the option to stay until 4:30 pm. You can book one day at a time, including the morning of camp. If space is available, booking stays open until 30 minutes before camp begins.\n\n[See upcoming camp dates →](/programs/camp-yalla#dates)",
+      "Camp Yalla is our play-based camp for children ages 18 months to 10 years, offered on select days when local schools and childcare programs are closed. We follow a daily rhythm that gives children a sense of what comes next and plenty of time to decide what they’d like to do. They might build a fort with a friend, head out on a make-believe adventure, or spend the morning making mud pies in the play garden. We come together for stories, morning and afternoon snack, and lunch. We provide both snacks, and families pack lunch.\n\nCamp runs from 9:00 am to 3:00 pm, with Early Bird care from 8:00 am and the option to stay until 4:30 pm. Book the days that work for your family.\n\n[See upcoming camp dates →](/programs/camp-yalla#dates)",
   },
   {
     id: "camp-ages",
