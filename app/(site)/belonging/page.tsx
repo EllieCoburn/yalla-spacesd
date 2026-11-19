@@ -126,9 +126,9 @@ export default function BelongingPage() {
 
           <div className="mt-16 grid grid-cols-6 gap-3 sm:gap-5 lg:mt-24">
             {[
-              { src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
-              { src: "/photos/collage-wall.jpg", alt: "A collaborative cardboard collage on the play garden fence", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
-              { src: "/photos/painting-wall-child.jpg", alt: "A child painting at the outdoor painting wall", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
+              { src: "/photos/chalk-together.jpg", alt: "Children side by side, drawing in chalk on one shared sheet of paper", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/sunflowers.jpg", alt: "Sunflowers gathered on a long table in a Yalla play space", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
+              { src: "/photos/painting.jpg", alt: "Two children painting together with bright colors on shared palettes", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
             ].map((img, i) => (
               <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
                 <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 50vw" className="object-cover" />

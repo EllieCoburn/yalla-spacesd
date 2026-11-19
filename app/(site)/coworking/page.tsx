@@ -87,7 +87,7 @@ export default async function CoworkingPage() {
           </>
         }
         lede="Our coworking common areas are included in the cost of your child’s session, so you can settle in and get things done while your child plays nearby."
-        image={{ src: "/photos/cowork-atrium.webp", alt: "The coworking atrium at Yalla, with long shared desks" }}
+        image={{ src: "/photos/cowork-entry.webp", alt: "The glass-paned double doors into the Yalla coworking space" }}
       />
 
       {/* What's included */}

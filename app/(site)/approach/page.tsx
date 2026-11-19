@@ -48,7 +48,7 @@ export default function ApproachPage() {
           </>
         }
         lede="Yalla’s approach to care is rooted in the Reggio Emilia and RIE traditions: play-based, relationship-led and unhurried. Here is what we believe, and where those beliefs come from."
-        image={{ src: "/photos/collage-wall.jpg", alt: "A wall of children’s collage work" }}
+        image={{ src: "/photos/watercolor-lines.jpg", alt: "A child brushing teal watercolor over their own pen drawing" }}
       />
 
       {/* Our philosophy */}
@@ -105,7 +105,7 @@ export default function ApproachPage() {
             </div>
             <div className="lg:col-span-5 lg:col-start-8">
               <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] bg-sand">
-                <Image src="/photos/paint-closeup.jpg" alt="Small hands working with paint" fill sizes="(min-width:1024px) 34vw, 90vw" className="object-cover" />
+                <Image src="/photos/paint-closeup.jpg" alt="A child painting a large wall mural in glowing blues, greens and yellows" fill sizes="(min-width:1024px) 34vw, 90vw" className="object-cover" />
               </div>
             </div>
           </div>
