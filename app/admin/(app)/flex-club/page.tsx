@@ -235,7 +235,14 @@ function ClubTab({ rows, today }: { rows: MemberRow[]; today: string }) {
   );
 }
 
+/** "7328743368" → "(732) 874-3368"; anything else is shown as entered. */
+function phone(v: string) {
+  const d = v.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : v;
+}
+
 async function FamiliesTab({ scope, q }: { scope: Map<string, { flex: boolean; club: boolean }>; q: string }) {
+  const today = todayLA();
   const ids = [...scope.keys()];
   const db = getDb();
   const [fams, gs, kids] = ids.length
@@ -269,10 +276,9 @@ async function FamiliesTab({ scope, q }: { scope: Map<string, { flex: boolean; c
         <Card padded={false}>
           <ul className="divide-y divide-ink/6">
             {list.map(({ f, gs: g, kids: k, tags }) => {
-              const primary = g[0];
               return (
                 <li key={f.id}>
-                  <Link href={`/admin/families/${f.id}`} className="grid gap-2 px-5 py-3.5 hover:bg-mist/30 sm:grid-cols-[1.2fr_1.4fr_1fr] sm:items-center">
+                  <Link href={`/admin/families/${f.id}`} className="grid gap-3 px-5 py-4 hover:bg-mist/30 sm:grid-cols-[1fr_1.5fr_1.1fr] sm:items-start">
                     <span>
                       <span className="block font-medium text-ink">{f.name}</span>
                       <span className="mt-1 flex gap-1.5">
@@ -281,19 +287,35 @@ async function FamiliesTab({ scope, q }: { scope: Map<string, { flex: boolean; c
                       </span>
                     </span>
                     <span className="text-[0.82rem] text-ink-soft">
-                      {primary ? (
-                        <>
-                          <span className="block text-ink">
-                            {primary.firstName} {primary.lastName}
+                      <span className="mb-1 block text-[0.66rem] font-semibold tracking-[0.12em] text-ink-soft/80 uppercase">{g.length > 1 ? "Parents" : "Parent"}</span>
+                      {g.length ? (
+                        g.slice(0, 2).map((x, i) => (
+                          <span key={x.id} className={`block ${i ? "mt-1.5" : ""}`}>
+                            <span className="block text-ink">
+                              {x.firstName} {x.lastName}
+                              {x.relationship && !/^(parent|guardian)$/i.test(x.relationship.trim()) ? <span className="text-ink-soft"> · {x.relationship}</span> : null}
+                            </span>
+                            {x.email}
+                            {x.phone ? ` · ${phone(x.phone)}` : ""}
                           </span>
-                          {primary.email}
-                          {primary.phone ? ` · ${primary.phone}` : ""}
-                        </>
+                        ))
                       ) : (
-                        "No guardian on file"
+                        "No parent on file"
                       )}
                     </span>
-                    <span className="text-[0.82rem] text-ink-soft">{k.map((c) => c.preferredName || c.firstName).join(", ") || "—"}</span>
+                    <span className="text-[0.82rem] text-ink-soft">
+                      <span className="mb-1 block text-[0.66rem] font-semibold tracking-[0.12em] text-ink-soft/80 uppercase">{k.length === 1 ? "Child" : "Children"}</span>
+                      {k.length
+                        ? k.map((c) => (
+                            <span key={c.id} className="block">
+                              <span className="text-ink">
+                                {c.preferredName || c.firstName} {c.lastName}
+                              </span>
+                              <span> · {ageLabel(c.birthDate, today)}</span>
+                            </span>
+                          ))
+                        : "—"}
+                    </span>
                   </Link>
                 </li>
               );
