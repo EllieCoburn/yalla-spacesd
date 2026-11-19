@@ -12,7 +12,7 @@ import { db, family, owner, program, reset, session } from "./helpers";
 
 beforeEach(reset);
 
-const role = DEFAULT_ROLES.find((r) => r.key === "flex_club_ops")!;
+const role = DEFAULT_ROLES.find((r) => r.key === "club_ops_director")!;
 const ops: StaffContext = { id: "ops", email: "ops@example.com", name: "Ops", roleKey: role.key, roleName: role.name, permissions: role.permissions, mfaEnabled: true, sessionId: "x", mfaVerified: true };
 const ownerStaff: StaffContext = { ...ops, roleKey: "owner", permissions: ALL_PERMISSIONS };
 
@@ -91,5 +91,36 @@ describe("Flex & Club Yalla operations access", () => {
     // An uploaded document with no form behind it follows its family too.
     const [upload] = await db().insert(s.documents).values({ familyId: campFam.family.id, filename: "x.pdf", mimeType: "application/pdf", size: 1, data: Buffer.from("x") }).returning();
     expect(await canOpenDocument(db(), ops, upload.id)).toBe(false);
+  });
+});
+
+describe("supplies and maintenance lists", () => {
+  it("adds, moves along, closes, reopens and removes items", async () => {
+    const { addOpsRequest, opsList, opsOpenCounts, removeOpsRequest, setOpsStatus } = await import("@/lib/ops/ops-requests");
+    const me = { type: "staff" as const, id: "ops", name: "Olivia" };
+    await expect(addOpsRequest(db(), me, { kind: "supply", title: "  " })).rejects.toThrow();
+    const wipes = await addOpsRequest(db(), me, { kind: "supply", title: "Wipes", quantity: "3 packs", location: "Sprouts" });
+    await addOpsRequest(db(), me, { kind: "supply", title: "Paper towels", urgency: "urgent" });
+    const sink = await addOpsRequest(db(), me, { kind: "maintenance", title: "Sink drips", location: "Saplings room", urgency: "bogus" });
+    expect(wipes.status).toBe("needed");
+    expect(sink.status).toBe("reported");
+    expect(sink.urgency).toBe("normal");
+
+    let supplies = await opsList(db(), "supply");
+    expect(supplies.open.map((r) => r.title)).toEqual(["Paper towels", "Wipes"]); // urgent first
+    expect(await opsOpenCounts(db())).toEqual({ supply: { n: 2, urgent: 1 }, maintenance: { n: 1, urgent: 0 } });
+
+    await setOpsStatus(db(), me, wipes.id, "ordered");
+    await setOpsStatus(db(), me, wipes.id, "received");
+    supplies = await opsList(db(), "supply");
+    expect(supplies.open.map((r) => r.title)).toEqual(["Paper towels"]);
+    expect(supplies.closed[0]).toMatchObject({ title: "Wipes", closedByName: "Olivia" });
+    await expect(setOpsStatus(db(), me, wipes.id, "fixed")).rejects.toThrow(); // not a supply step
+
+    await setOpsStatus(db(), me, wipes.id, "needed"); // reopen
+    expect((await opsList(db(), "supply")).open).toHaveLength(2);
+    await removeOpsRequest(db(), me, sink.id);
+    expect((await opsList(db(), "maintenance")).open).toHaveLength(0);
+    expect(can(ops, "ops.lists")).toBe(true);
   });
 });

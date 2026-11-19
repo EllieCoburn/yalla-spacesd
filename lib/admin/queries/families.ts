@@ -432,7 +432,7 @@ export async function submissionDetail(db: Executor, id: string) {
 }
 
 /**
- * Private document access: staff with forms.documents, or Flex & Club Yalla operations staff for those
+ * Private document access: staff with forms.documents, or Club Yalla operations staff for those
  * families' forms only (lib/auth/flex-club.ts). Every download is audited.
  */
 export async function openDocument(db: Executor, staff: StaffContext | null, documentId: string) {

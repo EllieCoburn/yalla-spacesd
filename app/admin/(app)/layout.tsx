@@ -10,7 +10,7 @@ import { flexClubOnly } from "@/lib/auth/flex-club";
 
 const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin", label: "Today", icon: "today", group: "Daily", perm: "dashboard.view", mobile: true },
-  { href: "/admin/flex-club", label: "Flex & Club Yalla", icon: "memberships", group: "Daily", perm: "flexclub.view", mobile: true },
+  { href: "/admin/flex-club", label: "Club Yalla operations", icon: "memberships", group: "Daily", perm: "flexclub.view", mobile: true },
   { href: "/admin/drop-ins", label: "Drop-ins", icon: "roster", group: "Daily", perm: "dropins.view", mobile: true },
   { href: "/admin/roster", label: "Roster", icon: "roster", group: "Daily", perm: "roster.view", mobile: true },
   { href: "/admin/calendar", label: "Calendar", icon: "roster", group: "Daily", perm: "roster.view" },

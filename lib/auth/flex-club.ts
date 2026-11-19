@@ -1,5 +1,5 @@
 /**
- * Yalla Flex & Club Yalla operations access (permission "flexclub.view").
+ * Club Yalla operations access (permission "flexclub.view").
  *
  * Staff with this permission, but without the wider "families.view", can open only the families who
  * use Yalla Flex or Club Yalla: their contact card, children, care details and forms. Nothing about
@@ -21,7 +21,7 @@ const LIVE_MEMBERSHIP = ["active", "upcoming", "paused"];
 const LIVE_BOOKING = ["confirmed", "held", "requested", "pending_payment"];
 const LOOKBACK_DAYS = 90;
 
-/** True when this person sees Flex & Club Yalla families only (not every family). */
+/** True when this person sees Club Yalla and Flex families only (not every family). */
 export const flexClubOnly = (staff: StaffContext) => !can(staff, "families.view") && can(staff, "flexclub.view");
 
 /** Every family in scope, with which of the two programs they use. */
@@ -55,7 +55,7 @@ export async function canOpenFamily(db: Executor, staff: StaffContext, familyId:
 }
 
 /**
- * For pages a Flex & Club Yalla person may open: the permissions to render that one family with. They
+ * For pages a Club Yalla operations person may open: the permissions to render that one family with. They
  * see contact details, care information and forms (read-only), and never bookings, billing, messages,
  * memberships' prices or the record history.
  */

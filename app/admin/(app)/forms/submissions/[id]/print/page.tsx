@@ -15,7 +15,7 @@ export const metadata = { title: "Print signed agreement" };
 export default async function PrintSubmission({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff();
   const { id } = await params;
-  // Flex & Club Yalla operations staff may print forms for Flex and Club Yalla families only.
+  // Club Yalla operations staff may print forms for Flex and Club Yalla families only.
   if (!(await canOpenSubmission(getDb(), staff, id))) notFound();
   if (!can(staff, "forms.documents") && !flexClubOnly(staff)) notFound();
   const record = await SignedRecord({ db: getDb(), submissionId: id });

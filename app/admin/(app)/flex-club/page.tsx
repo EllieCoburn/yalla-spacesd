@@ -3,6 +3,9 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { Card, Empty, FilterBar, FilterField, inputCls, PageHeader, Pill, Stat, Tabs } from "@/components/admin/ui";
 import { flexClubFamilies } from "@/lib/auth/flex-club";
 import { requirePermission } from "@/lib/auth/session";
+import { can } from "@/lib/auth/staff";
+import { OpsList } from "@/components/admin/ops/OpsList";
+import { opsList, opsOpenCounts } from "@/lib/ops/ops-requests";
 import { getDb } from "@/lib/db";
 import { children, cohorts, families, guardians, memberships } from "@/lib/db/schema";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
@@ -10,21 +13,23 @@ import { WEEKDAY } from "@/lib/ops/memberships";
 import { careSentence, dayPhrase, upcomingDropIns } from "@/lib/ops/team-notices";
 import { ageLabel, fmtDate, todayLA } from "@/lib/time";
 
-export const metadata = { title: "Flex & Club Yalla" };
+export const metadata = { title: "Club Yalla operations" };
 
 /**
- * Yalla Flex & Club Yalla operations: who's coming to Flex, Club Yalla at a glance, and the families
- * of both. Nothing about bookings, billing or messages; family cards open read-only.
+ * Club Yalla operations: Club Yalla at a glance, who's coming to Yalla Flex, the families of both, and
+ * the supplies and maintenance lists. Nothing about bookings, billing or messages; family cards open
+ * read-only.
  */
 export default async function FlexClubPage({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string; q?: string }> }) {
-  await requirePermission("flexclub.view");
+  const staff = await requirePermission("flexclub.view");
+  const lists = can(staff, "ops.lists");
   const sp = await searchParams;
-  const tab = sp.tab === "club" || sp.tab === "families" ? sp.tab : "flex";
+  const tab = ["flex", "families", ...(lists ? ["supplies", "maintenance"] : [])].includes(sp.tab ?? "") ? sp.tab! : "club";
   const days = [7, 14, 28].includes(Number(sp.days)) ? Number(sp.days) : 14;
   const db = getDb();
   const today = todayLA();
 
-  const [dropIns, scope, members] = await Promise.all([
+  const [dropIns, scope, members, openCounts] = await Promise.all([
     upcomingDropIns(db, { cohorts: null, days }),
     flexClubFamilies(db),
     db
@@ -35,29 +40,47 @@ export default async function FlexClubPage({ searchParams }: { searchParams: Pro
       .innerJoin(families, eq(families.id, memberships.familyId))
       .where(inArray(memberships.status, ["active", "upcoming", "paused"]))
       .orderBy(asc(cohorts.sortOrder), asc(children.firstName)),
+    lists ? opsOpenCounts(db) : null,
   ]);
   const flexToday = dropIns.filter((d) => d.date === today).length;
   const activeMembers = members.filter((r) => r.m.status === "active");
   const tabs = [
-    { key: "flex", label: "Coming to Flex", href: "/admin/flex-club", count: dropIns.length },
-    { key: "club", label: "Club Yalla", href: "/admin/flex-club?tab=club", count: members.length },
+    { key: "club", label: "Club Yalla", href: "/admin/flex-club", count: members.length },
+    { key: "flex", label: "Coming to Flex", href: "/admin/flex-club?tab=flex", count: dropIns.length },
     { key: "families", label: "Families", href: "/admin/flex-club?tab=families", count: scope.size },
+    ...(openCounts
+      ? [
+          { key: "supplies", label: "Supplies", href: "/admin/flex-club?tab=supplies", count: openCounts.supply.n },
+          { key: "maintenance", label: "Maintenance", href: "/admin/flex-club?tab=maintenance", count: openCounts.maintenance.n },
+        ]
+      : []),
   ];
+  const list = tab === "supplies" || tab === "maintenance" ? await opsList(db, tab === "supplies" ? "supply" : "maintenance") : null;
 
   return (
     <>
-      <PageHeader title="Yalla Flex & Club Yalla" subtitle="Who’s coming, Club Yalla at a glance, and every Flex and Club Yalla family’s contact card and forms." />
+      <PageHeader title="Club Yalla operations" subtitle="Club Yalla at a glance, who’s coming to Yalla Flex, every family’s contact card and forms, and what’s needed around the building." />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Flex today" value={flexToday} sub={fmtDate(today, "EEEE d MMMM")} href="/admin/flex-club" />
-        <Stat label={`Flex · next ${days} days`} value={dropIns.length} sub={`${new Set(dropIns.map((d) => d.child.id)).size} children`} href="/admin/flex-club" />
-        <Stat label="Club Yalla members" value={activeMembers.length} sub={members.length > activeMembers.length ? `+ ${members.length - activeMembers.length} starting soon or paused` : "active"} href="/admin/flex-club?tab=club" />
-        <Stat label="Families" value={scope.size} sub="Flex and Club Yalla" href="/admin/flex-club?tab=families" />
+        <Stat label="Club Yalla members" value={activeMembers.length} sub={members.length > activeMembers.length ? `+ ${members.length - activeMembers.length} starting soon or paused` : "active"} href="/admin/flex-club" />
+        <Stat label="Flex today" value={flexToday} sub={fmtDate(today, "EEEE d MMMM")} href="/admin/flex-club?tab=flex" />
+        {openCounts ? (
+          <>
+            <Stat label="Supplies needed" value={openCounts.supply.n} sub={openCounts.supply.urgent ? `${openCounts.supply.urgent} urgent` : "on the list"} href="/admin/flex-club?tab=supplies" tone={openCounts.supply.urgent ? "warning" : undefined} />
+            <Stat label="Maintenance" value={openCounts.maintenance.n} sub={openCounts.maintenance.urgent ? `${openCounts.maintenance.urgent} urgent` : "open items"} href="/admin/flex-club?tab=maintenance" tone={openCounts.maintenance.urgent ? "critical" : undefined} />
+          </>
+        ) : (
+          <>
+            <Stat label={`Flex · next ${days} days`} value={dropIns.length} sub={`${new Set(dropIns.map((d) => d.child.id)).size} children`} href="/admin/flex-club?tab=flex" />
+            <Stat label="Families" value={scope.size} sub="Club Yalla and Flex" href="/admin/flex-club?tab=families" />
+          </>
+        )}
       </div>
       <Tabs tabs={tabs} current={tab} />
 
       {tab === "flex" ? <FlexTab rows={dropIns} today={today} days={days} /> : null}
       {tab === "club" ? <ClubTab rows={members} today={today} /> : null}
       {tab === "families" ? <FamiliesTab scope={scope} q={(sp.q ?? "").trim()} /> : null}
+      {list ? <OpsList kind={tab === "supplies" ? "supply" : "maintenance"} open={list.open} closed={list.closed} /> : null}
     </>
   );
 }
@@ -73,7 +96,7 @@ function FlexTab({ rows, today, days }: { rows: DropIn[]; today: string; days: n
         {[7, 14, 28].map((d) => (
           <Link
             key={d}
-            href={`/admin/flex-club?days=${d}`}
+            href={`/admin/flex-club?tab=flex&days=${d}`}
             className={`rounded-full px-3.5 py-1.5 ${d === days ? "bg-ink text-chalk" : "border border-ink/15 bg-white text-ink-soft hover:border-ink/40"}`}
           >
             Next {d} days

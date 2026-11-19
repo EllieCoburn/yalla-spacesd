@@ -23,7 +23,7 @@ import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const me = await requireStaff();
   const { id } = await params;
-  // Flex & Club Yalla operations staff open only Flex and Club Yalla families, read-only.
+  // Club Yalla operations staff open only Flex and Club Yalla families, read-only.
   if (!(await canOpenFamily(getDb(), me, id))) redirect("/admin/forbidden?need=families.view");
   const scoped = flexClubOnly(me);
   const staff = asFamilyViewer(me);
@@ -47,7 +47,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   return (
     <>
       <PageHeader
-        back={scoped ? { href: "/admin/flex-club?tab=families", label: "Flex & Club Yalla" } : { href: "/admin/families", label: "Families" }}
+        back={scoped ? { href: "/admin/flex-club?tab=families", label: "Club Yalla operations" } : { href: "/admin/families", label: "Families" }}
         title={d.family.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -98,7 +98,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                         ) : null}
                       </p>
                     </div>
-                    {/* Each adult's Family Portal access (not shown to Flex & Club Yalla operations staff). */}
+                    {/* Each adult's Family Portal access (not shown to Club Yalla operations staff). */}
                     {!scoped ? (
                       <div className="flex flex-wrap gap-1">
                         <Pill tone={g.portalAccess ? "positive" : "muted"} icon={g.portalAccess ? "check" : "x"}>Portal</Pill>

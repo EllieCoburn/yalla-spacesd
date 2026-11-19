@@ -23,7 +23,7 @@ function Stamp({ at, by }: { at: Date | null; by: string | null }) {
 export default async function ChildPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireStaff();
   const { id } = await params;
-  // Flex & Club Yalla operations staff open only children in Flex and Club Yalla families, read-only.
+  // Club Yalla operations staff open only children in Flex and Club Yalla families, read-only.
   const [kid] = await getDb().select({ familyId: childrenTable.familyId }).from(childrenTable).where(eq(childrenTable.id, id));
   if (!kid) notFound();
   if (!(await canOpenFamily(getDb(), me, kid.familyId))) redirect("/admin/forbidden?need=families.view");
@@ -176,7 +176,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
             </Card>
           ) : null}
 
-          {/* Attendance covers every program, so Flex & Club Yalla operations staff don't see it. */}
+          {/* Attendance covers every program, so Club Yalla operations staff don't see it. */}
           {!scoped ? (
             <Card title="Attendance history" padded={false}>
               {d.attendance.length === 0 ? (

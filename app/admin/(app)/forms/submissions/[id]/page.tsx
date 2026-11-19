@@ -17,7 +17,7 @@ export const metadata = { title: "Submission" };
 export default async function SubmissionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ recorded?: string }> }) {
   const staff = await requireStaff();
   const { id } = await params;
-  // Flex & Club Yalla operations staff may open forms for Flex and Club Yalla families only.
+  // Club Yalla operations staff may open forms for Flex and Club Yalla families only.
   if (!(await canOpenSubmission(getDb(), staff, id))) redirect("/admin/forbidden?need=forms.view");
   const scoped = flexClubOnly(staff);
   const sp = await searchParams;
