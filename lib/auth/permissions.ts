@@ -37,6 +37,16 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: "Club Yalla operations",
+    items: [
+      {
+        key: "flexclub.view",
+        label: "Club Yalla & Flex operations: Club Yalla at a glance, who’s coming to Flex, and those families’ contact cards, care details and forms (read-only; no bookings, billing or messages)",
+      },
+      { key: "ops.lists", label: "Supplies and maintenance lists: add what’s needed and mark it done" },
+    ],
+  },
+  {
     group: "Workspaces",
     items: [
       { key: "spaces.view", label: "View workspace reservations, including who booked" },
@@ -153,6 +163,13 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
     name: "Cohort team",
     description: "Only the Yalla Flex drop-ins coming to their own cohort, with each child’s allergies and medical notes. Nothing else.",
     permissions: ["dropins.view"],
+  },
+  {
+    key: "club_ops_director",
+    name: "Club Yalla Operations Director",
+    description:
+      "Club Yalla at a glance, who’s coming to Yalla Flex, contact cards, care details and forms for Club Yalla and Flex families only, and the supplies and maintenance lists. No bookings, billing, messages or other programs.",
+    permissions: ["flexclub.view", "ops.lists"],
   },
   {
     key: "billing",

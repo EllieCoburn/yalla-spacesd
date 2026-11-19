@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { EmergencyList, PickupList } from "@/components/admin/families/ContactForms";
 import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
@@ -7,7 +7,10 @@ import { ActionForm, Disclosure, SelectField, TextArea, TextField } from "@/comp
 import { Card, DL, Empty, LinkButton, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
 import { updateChildAction } from "@/app/admin/(app)/families/actions";
 import { childProfile } from "@/lib/admin/queries/families";
-import { requirePermission } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
+import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-club";
+import { children as childrenTable } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
@@ -18,8 +21,14 @@ function Stamp({ at, by }: { at: Date | null; by: string | null }) {
 }
 
 export default async function ChildPage({ params }: { params: Promise<{ id: string }> }) {
-  const staff = await requirePermission("families.view");
+  const me = await requireStaff();
   const { id } = await params;
+  // Club Yalla operations staff open only children in Flex and Club Yalla families, read-only.
+  const [kid] = await getDb().select({ familyId: childrenTable.familyId }).from(childrenTable).where(eq(childrenTable.id, id));
+  if (!kid) notFound();
+  if (!(await canOpenFamily(getDb(), me, kid.familyId))) redirect("/admin/forbidden?need=families.view");
+  const scoped = flexClubOnly(me);
+  const staff = asFamilyViewer(me);
   const d = await childProfile(getDb(), staff, id);
   if (!d) notFound();
   const c = d.child;
@@ -167,27 +176,30 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
             </Card>
           ) : null}
 
-          <Card title="Attendance history" padded={false}>
-            {d.attendance.length === 0 ? (
-              <p className="px-5 py-4 text-[0.85rem] text-ink-soft">No check-ins recorded yet.</p>
-            ) : (
-              <Table head={["Date", "Session", "Status", "In", "Out", "Collected by", "Notes"]} dense>
-                {d.attendance.map((a) => (
-                  <tr key={a.a.id}>
-                    <td className="whitespace-nowrap">{fmtDate(a.s.localDate, "EEE d MMM yyyy")}</td>
-                    <td>{a.s.title ?? a.p.name}</td>
-                    <td>
-                      <Status kind="attendance" value={a.a.status} />
-                    </td>
-                    <td className="tabular-nums">{a.a.checkedInAt ? fmtTime(a.a.checkedInAt) : "—"}</td>
-                    <td className="tabular-nums">{a.a.checkedOutAt ? fmtTime(a.a.checkedOutAt) : "—"}</td>
-                    <td>{d.canCare ? (a.a.collectedByName ?? "—") : "—"}</td>
-                    <td className="max-w-[16rem] text-[0.8rem] text-ink-soft">{a.a.notes ?? ""}</td>
-                  </tr>
-                ))}
-              </Table>
-            )}
-          </Card>
+          {/* Attendance covers every program, so Club Yalla operations staff don't see it. */}
+          {!scoped ? (
+            <Card title="Attendance history" padded={false}>
+              {d.attendance.length === 0 ? (
+                <p className="px-5 py-4 text-[0.85rem] text-ink-soft">No check-ins recorded yet.</p>
+              ) : (
+                <Table head={["Date", "Session", "Status", "In", "Out", "Collected by", "Notes"]} dense>
+                  {d.attendance.map((a) => (
+                    <tr key={a.a.id}>
+                      <td className="whitespace-nowrap">{fmtDate(a.s.localDate, "EEE d MMM yyyy")}</td>
+                      <td>{a.s.title ?? a.p.name}</td>
+                      <td>
+                        <Status kind="attendance" value={a.a.status} />
+                      </td>
+                      <td className="tabular-nums">{a.a.checkedInAt ? fmtTime(a.a.checkedInAt) : "—"}</td>
+                      <td className="tabular-nums">{a.a.checkedOutAt ? fmtTime(a.a.checkedOutAt) : "—"}</td>
+                      <td>{d.canCare ? (a.a.collectedByName ?? "—") : "—"}</td>
+                      <td className="max-w-[16rem] text-[0.8rem] text-ink-soft">{a.a.notes ?? ""}</td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
+            </Card>
+          ) : null}
 
           <Card title="Notes about this child">
             <NotesPanel familyId={d.family.id} childId={c.id} notes={d.notes} canWrite={manage} canCare={d.canCare} />
@@ -201,7 +213,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
             </Card>
           ) : null}
 
-          {can(staff, "memberships.view") ? (
+          {can(staff, "memberships.view") || scoped ? (
             <Card title="Club Yalla" padded={false}>
               {d.memberships.length === 0 ? (
                 <p className="px-5 py-4 text-[0.85rem] text-ink-soft">Not a member.</p>
@@ -209,7 +221,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                 <ul className="divide-y divide-ink/6">
                   {d.memberships.map(({ m, co }) => (
                     <li key={m.id}>
-                      <Link href={`/admin/memberships/${m.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-mist/30">
+                      <Link href={scoped ? "#" : `/admin/memberships/${m.id}`} className={`flex items-center justify-between gap-3 px-5 py-3 ${scoped ? "pointer-events-none" : "hover:bg-mist/30"}`}>
                         <span>
                           <span className="block text-[0.86rem] text-ink">
                             {co.name} · {m.weekdays.map((w) => WEEKDAY[w]).join(", ")}

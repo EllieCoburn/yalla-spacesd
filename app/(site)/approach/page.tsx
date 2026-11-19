@@ -48,7 +48,7 @@ export default function ApproachPage() {
           </>
         }
         lede="Yalla’s approach to care is rooted in the Reggio Emilia and RIE traditions: play-based, relationship-led and unhurried. Here is what we believe, and where those beliefs come from."
-        image={{ src: "/photos/collage-wall.jpg", alt: "A wall of children’s collage work" }}
+        image={{ src: "/photos/watercolor-lines.jpg", alt: "A child brushing teal watercolor over their own pen drawing" }}
       />
 
       {/* Our philosophy */}
@@ -105,7 +105,7 @@ export default function ApproachPage() {
             </div>
             <div className="lg:col-span-5 lg:col-start-8">
               <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] bg-sand">
-                <Image src="/photos/paint-closeup.jpg" alt="Small hands working with paint" fill sizes="(min-width:1024px) 34vw, 90vw" className="object-cover" />
+                <Image src="/photos/paint-closeup.jpg" alt="A child painting a large wall mural in glowing blues, greens and yellows" fill sizes="(min-width:1024px) 34vw, 90vw" className="object-cover" />
               </div>
             </div>
           </div>
@@ -120,6 +120,32 @@ export default function ApproachPage() {
           </ul>
         </div>
       </Section>
+
+      {/* In Loris Malaguzzi's words */}
+      <section className="bg-mist py-20 lg:py-32" aria-label="A quote from Loris Malaguzzi">
+        <div className="shell">
+          <Reveal as="figure" className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-12 lg:gap-10">
+            <span aria-hidden className="display block h-12 text-[6rem] leading-[0.85] text-blue select-none lg:col-span-2 lg:-mt-6 lg:h-auto lg:text-right lg:text-[11rem] lg:leading-none">
+              “
+            </span>
+            <div className="lg:col-span-9">
+              <blockquote>
+                <p className="display text-[clamp(1.55rem,1.05rem+1.9vw,2.65rem)] leading-[1.28] text-balance text-ink">
+                  To make a lovable school, industrious, inventive, liveable, documentable and communicable, a place of research, learning, re-cognition and reflection,
+                  where children, teachers and families feel well – <em className="text-blue">is our point of arrival.</em>
+                </p>
+              </blockquote>
+              <figcaption className="mt-10 flex items-center gap-4">
+                <span className="h-px w-12 bg-blue/50" aria-hidden="true" />
+                <span>
+                  <span className="block font-serif text-[1.15rem] text-ink">Loris Malaguzzi</span>
+                  <span className="eyebrow mt-1 block text-[0.62rem] text-ink-soft">Founder, Reggio Emilia</span>
+                </span>
+              </figcaption>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
       {/* RIE */}
       <Section tone="paper">

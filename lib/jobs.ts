@@ -54,6 +54,11 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   await ensureFlexDays(db);
   // Security housekeeping: rate-limit records, used or expired sign-in and reset links, and ended sessions.
   await pruneSecurityRecords(db, now);
+  // Carts left alone for a week (the browser forgets them then too).
+  {
+    const { pruneCarts } = await import("@/lib/ops/carts");
+    await pruneCarts(db, now);
+  }
 
   // Offer freed spots to waiting families (only programs with automatic offers enabled).
   const waiting = await db

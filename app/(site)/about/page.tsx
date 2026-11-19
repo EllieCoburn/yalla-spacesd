@@ -66,12 +66,12 @@ export default function AboutPage() {
 
           <div className="mt-14 grid grid-cols-6 gap-3 sm:gap-5">
             {[
-              { src: "/photos/painting-table.jpg", alt: "A toddler painting with brushes and bright colors outdoors", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:row-span-2 sm:aspect-auto" },
-              { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
-              { src: "/photos/tulle.jpg", alt: "A child exploring embroidered tulle in the sunlight", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full" },
+              { src: "/photos/sunflower-study.jpg", alt: "Children painting their own sunflowers beside fresh sunflowers, a Van Gogh print and a picture book about his flowers", className: "col-span-6 aspect-[16/10] sm:col-span-4 sm:row-span-2 sm:aspect-auto", position: "object-[center_70%] sm:object-center" },
+              { src: "/photos/disco-ball.jpg", alt: "A toddler reaching for a mirrored ball that scatters light across the wall", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2", position: "" },
+              { src: "/photos/tulle.jpg", alt: "A child exploring embroidered tulle in the sunlight", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:aspect-square sm:rounded-full", position: "" },
             ].map((img, i) => (
               <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
-                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 50vw, 100vw" className="object-cover" />
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 50vw, 100vw" className={`object-cover ${img.position}`} />
               </Reveal>
             ))}
           </div>
@@ -87,13 +87,13 @@ export default function AboutPage() {
               {
                 title: "Room to explore, indoors and out",
                 body: "From art and sensory experiences to movement, imaginative play, and outdoor exploration, Yalla offers children opportunities to engage with the world in meaningful ways. Our indoor and outdoor spaces support a wide range of experiences, with activities and environments thoughtfully adapted to the ages, interests, and needs of each group.",
-                img: { src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" },
+                img: { src: "/photos/park-lawn.jpg", alt: "The wide lawns of Balboa Park, a short stroll from Yalla" },
                 shape: "rounded-full",
               },
               {
                 title: "Spaces that bring people together",
                 body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our space includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
-                img: { src: "/photos/cowork-atrium.webp", alt: "The coworking atrium with long shared desks and hanging textile art" },
+                img: { src: "/photos/cowork-loft.jpg", alt: "The balcony looking down over the long shared table in the coworking space" },
                 shape: "rounded-full",
               },
             ].map((c, i) => (
@@ -107,16 +107,6 @@ export default function AboutPage() {
             ))}
           </div>
 
-          <div className="mt-14 grid grid-cols-6 gap-3 sm:gap-5">
-            {[
-              { src: "/photos/cowork-desk.webp", alt: "A quiet desk for two by the balcony", className: "col-span-3 aspect-[3/4] sm:col-span-2" },
-              { src: "/photos/cowork-kitchen.webp", alt: "The bright coworking kitchen with a long counter by the windows", className: "col-span-3 aspect-[3/4] sm:col-span-4 sm:aspect-auto" },
-            ].map((img, i) => (
-              <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
-                <Image src={img.src} alt={img.alt} fill sizes="(min-width:1024px) 60vw, 50vw" className="object-cover" />
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 

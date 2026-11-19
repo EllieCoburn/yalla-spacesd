@@ -431,10 +431,14 @@ export async function submissionDetail(db: Executor, id: string) {
   return { ...row, document: doc ?? null, recordedBy: recorder?.name ?? null };
 }
 
-/** Private document access: only staff with forms.documents; every download is audited. */
+/**
+ * Private document access: staff with forms.documents, or Club Yalla operations staff for those
+ * families' forms only (lib/auth/flex-club.ts). Every download is audited.
+ */
 export async function openDocument(db: Executor, staff: StaffContext | null, documentId: string) {
   if (!staffReady(staff)) return { status: 401 as const };
-  if (!can(staff, "forms.documents")) return { status: 403 as const };
+  const { canOpenDocument } = await import("@/lib/auth/flex-club");
+  if (!(await canOpenDocument(db, staff, documentId))) return { status: 403 as const };
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
   if (!doc) return { status: 404 as const };
   await audit(db, staffActor(staff), { action: "documents.download", entityType: "document", entityId: doc.id, summary: `Downloaded ${doc.filename}` });

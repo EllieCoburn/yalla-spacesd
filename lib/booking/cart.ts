@@ -3,6 +3,10 @@
  * is kept on their device, so they can read the FAQ or another page and pick up where they left off
  * from the cart button in the header. Only the choice of sessions is kept here: children's details,
  * contact details and agreements are never stored in the browser.
+ *
+ * A copy of the same selection (session ids, spots and extras, under a random cart id) is sent to
+ * Yalla so staff can see what's in carts (Admin → Carts & checkouts). It's anonymous unless the
+ * visitor is signed in to the Family Portal.
  */
 export type CartItem = {
   /** Session id. */
@@ -18,6 +22,7 @@ export type CartItem = {
 };
 
 const KEY = "yalla.cart.v1";
+const ID_KEY = "yalla.cart.id";
 const EVENT = "yalla:cart";
 /** A cart left alone this long is cleared. */
 const TTL_MS = 7 * 24 * 3600_000;
@@ -45,6 +50,37 @@ export function writeCart(items: CartItem[]) {
     /* Private browsing or storage turned off: the cart just isn't kept. */
   }
   window.dispatchEvent(new Event(EVENT));
+  syncCart();
+}
+
+function cartId(): string | null {
+  try {
+    let id = window.localStorage.getItem(ID_KEY);
+    if (!id || !/^[A-Za-z0-9_-]{16,64}$/.test(id)) {
+      id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
+      window.localStorage.setItem(ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+let syncTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Sends Yalla a copy of the cart shortly after it changes (several quick changes send once). Also
+ * called when a page opens with something in the cart, so a family who signs in is linked to it.
+ */
+export function syncCart(delayMs = 1200) {
+  if (typeof window === "undefined") return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const id = cartId();
+    if (!id) return;
+    const items = readCart().map(({ id: sessionId, spots, extras, flexible }) => ({ id: sessionId, spots, extras, flexible }));
+    fetch("/api/cart", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cartId: id, items }), keepalive: true }).catch(() => {});
+  }, delayMs);
 }
 
 /** Adds (or updates) items, keeping everything else already in the cart. */

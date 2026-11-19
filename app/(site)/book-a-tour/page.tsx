@@ -27,7 +27,7 @@ export default function BookATourPage() {
           </>
         }
         lede="Explore our indoor play spaces, wander through the play garden, and take a look around our coworking spaces. We’d love to hear about your family, answer your questions, and help you picture your days at Yalla."
-        image={{ src: "/photos/garden-doorway.jpg", alt: "Toddlers at an open door looking out to the sunny play garden" }}
+        image={{ src: "/photos/garden.jpg", alt: "The shaded play garden at Yalla, with trees and a picnic table" }}
       />
 
       <section className="pb-20 lg:pb-32">

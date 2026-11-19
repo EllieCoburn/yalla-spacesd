@@ -18,7 +18,8 @@ export default async function DropIns() {
   const staff = await requirePermission("dropins.view");
   const db = getDb();
   const [me] = await db.select({ flexCohorts: staffUsers.flexCohorts }).from(staffUsers).where(eq(staffUsers.id, staff.id));
-  const everyCohort = can(staff, "roster.view");
+  // Anyone who can view daily rosters, and Club Yalla operations, see every cohort.
+  const everyCohort = can(staff, "roster.view") || can(staff, "flexclub.view");
   const mine = me?.flexCohorts ?? [];
   const cohorts = everyCohort ? null : mine;
   const rows = await upcomingDropIns(db, { cohorts, days: 21 });

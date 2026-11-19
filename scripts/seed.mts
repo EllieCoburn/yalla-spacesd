@@ -112,11 +112,11 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: club.id, title: `Club Yalla · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
-// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007 and 0013 migrations do the same in production).
+// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007, 0013 and 0069 migrations do the same in production).
 const weekendGroups = [
-  { label: "18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
-  { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 12 },
-  { label: "7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 14 },
+  { label: "18 months – 3 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 16 },
+  { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 95, capacity: 10 },
+  { label: "8 – 10 years", minAgeMonths: 96, maxAgeMonths: 131, capacity: 10 },
 ];
 const [weekendMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, weekends.id), isNotNull(s.scheduleSeries.monthWeek)));
 if (!weekendMonthly)
@@ -124,11 +124,11 @@ if (!weekendMonthly)
     for (const [name, startTime, endTime] of [["AM play session", "09:00", "12:00"], ["PM play session", "13:00", "16:00"]])
       for (const g of weekendGroups)
         await createSeries(db, admin, { programId: weekends.id, title: `Weekend Play · ${name} · ${g.label}`, weekdays: [6], monthWeek, startTime, endTime, startsOn: start, endsOn: addDaysISO(today, 365), capacity: g.capacity, hardCapacity: g.capacity, minAgeMonths: g.minAgeMonths, maxAgeMonths: g.maxAgeMonths, priceCents: 6000, locationId: loc.id });
-// After Hours: second Friday of each month, three age groups (the 0003 migration does the same in production).
+// After Hours: second Friday of each month, three age groups (the 0003, 0014 and 0070 migrations do the same in production).
 const afterHoursGroups = [
-  { title: "After Hours · 18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
-  { title: "After Hours · 4 – 6 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 8 },
-  { title: "After Hours · 7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 10 },
+  { title: "After Hours · 18 months – 3 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 16 },
+  { title: "After Hours · 4 – 7 years", minAgeMonths: 48, maxAgeMonths: 95, capacity: 10 },
+  { title: "After Hours · 8 – 10 years", minAgeMonths: 96, maxAgeMonths: 131, capacity: 10 },
 ];
 const [afterHoursMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, after.id), isNotNull(s.scheduleSeries.monthWeek)));
 if (!afterHoursMonthly)

@@ -593,6 +593,26 @@ export const bookingItems = pgTable(
 );
 
 /**
+ * Carts: what visitors have added on the public site but not booked yet, so staff can see demand
+ * (Admin → Carts & checkouts). The id is a random one the visitor's browser makes; nothing personal
+ * is kept unless the visitor is signed in to the Family Portal, when the cart is linked to their
+ * family. A cart left alone for 7 days is removed (the browser forgets it then too).
+ */
+export type SavedCartItem = { id: string; spots: number; extras: string[]; flexible?: boolean };
+
+export const carts = pgTable(
+  "carts",
+  {
+    id: text("id").primaryKey(),
+    familyId: text("family_id").references(() => families.id, { onDelete: "set null" }),
+    items: jsonb("items").$type<SavedCartItem[]>().notNull().default(sql`'[]'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("carts_updated_idx").on(t.updatedAt)],
+);
+
+/**
  * Extras a family adds to a day already booked (e.g. a second grown-up coworking), from the Family
  * Portal. Each is paid by its own invoice and joins the booking item once that payment succeeds.
  */
@@ -1492,3 +1512,30 @@ export const waitlistChains = pgTable(
   (t) => [index("waitlist_chains_session_idx").on(t.sessionId), index("waitlist_chains_status_idx").on(t.status)],
 );
 
+
+/**
+ * Club Yalla operations lists (Admin → Club Yalla operations): supplies to buy and maintenance to fix.
+ * Supplies go needed → ordered → received; maintenance goes reported → in_progress → fixed.
+ */
+export const opsRequests = pgTable(
+  "ops_requests",
+  {
+    id: id(),
+    kind: text("kind").notNull(), // supply | maintenance
+    title: text("title").notNull(),
+    /** Supplies: how many or how much ("2 boxes", "a gallon"). */
+    quantity: text("quantity"),
+    /** Where it's needed or where the problem is (a room, a cohort, the play garden). */
+    location: text("location"),
+    notes: text("notes"),
+    urgency: text("urgency").notNull().default("normal"), // normal | soon | urgent
+    status: text("status").notNull(),
+    createdById: text("created_by_id"),
+    createdByName: text("created_by_name").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    closedAt: ts("closed_at"),
+    closedByName: text("closed_by_name"),
+  },
+  (t) => [index("ops_requests_kind_idx").on(t.kind, t.status)],
+);
