@@ -185,6 +185,32 @@ body,
     opacity: 0;
   }
 }
+/* Admin enrollment calendar: months slide in from the side they came from. */
+@keyframes cal-next {
+  from {
+    transform: translateX(28px);
+    opacity: 0;
+  }
+}
+@keyframes cal-prev {
+  from {
+    transform: translateX(-28px);
+    opacity: 0;
+  }
+}
+@keyframes cal-load {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[cal-"] {
+    animation: none !important;
+  }
+}
 @keyframes rise {
   from {
     transform: translateY(10px);
