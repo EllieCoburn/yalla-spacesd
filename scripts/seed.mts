@@ -112,11 +112,11 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: club.id, title: `Club Yalla · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
-// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007 and 0013 migrations do the same in production).
+// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007, 0013 and 0069 migrations do the same in production).
 const weekendGroups = [
-  { label: "18 months – 4 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 8 },
-  { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 83, capacity: 12 },
-  { label: "7 – 10 years", minAgeMonths: 84, maxAgeMonths: 131, capacity: 14 },
+  { label: "18 months – 3 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 16 },
+  { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 95, capacity: 10 },
+  { label: "8 – 10 years", minAgeMonths: 96, maxAgeMonths: 131, capacity: 10 },
 ];
 const [weekendMonthly] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(and(eq(s.scheduleSeries.programId, weekends.id), isNotNull(s.scheduleSeries.monthWeek)));
 if (!weekendMonthly)

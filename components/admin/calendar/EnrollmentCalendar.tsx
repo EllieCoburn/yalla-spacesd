@@ -38,13 +38,39 @@ const leftLabel = (remaining: number, cap: number) => (cap <= 0 ? "" : remaining
 const shortProgram = (name: string) =>
   name.replace(/\bYalla\b/g, "").replace(/\b(Play )?Sessions?\b/g, "").replace(/\bEvenings?\b/g, "").replace(/\s+/g, " ").trim() || name;
 
-/** For "Everything": one row per program for the day, its age groups added together. */
-function byProgram(list: CalendarSession[]): CalendarSession[] {
-  const names = [...new Set(list.map((s) => s.programName))];
-  return names.map((name) => {
-    const g = list.filter((s) => s.programName === name);
+const KIND_ORDER: Record<string, number> = { camp: 0, drop_in: 1, happening: 2, parents_night: 3, nature: 4 };
+const bySchedule = (a: CalendarSession, b: CalendarSession) =>
+  (KIND_ORDER[a.programKind] ?? 9) - (KIND_ORDER[b.programKind] ?? 9) || a.programName.localeCompare(b.programName) || +new Date(a.startsAt) - +new Date(b.startsAt);
+
+/** A program's sessions that start together (e.g. Weekend Play's 9am groups) form one time slot. */
+const slotKey = (s: CalendarSession) => `${s.programName}|${+new Date(s.startsAt)}`;
+/** "9:00am" → "9am", "1:30pm" → "1:30pm". */
+const shortTime = (d: Date) => fmtTime(d).replace(":00", "");
+
+type Slot<T extends CalendarSession = CalendarSession> = { key: string; label: string; sessions: T[]; total: CalendarSession };
+
+/**
+ * A day's sessions as time slots, in a steady order (Camp, Flex, Happenings, then the rest). Each slot
+ * adds up only the age groups that run at the same time, never a morning and an afternoon together.
+ */
+function slotsOf<T extends CalendarSession>(list: T[], { withProgram, compact = false }: { withProgram: boolean; compact?: boolean }): Slot<T>[] {
+  const sorted = [...list].sort(bySchedule);
+  const keys = [...new Set(sorted.map(slotKey))];
+  const perProgram = new Map<string, number>();
+  for (const k of keys) perProgram.set(k.split("|")[0], (perProgram.get(k.split("|")[0]) ?? 0) + 1);
+  return keys.map((key) => {
+    const g = sorted.filter((s) => slotKey(s) === key);
     const sum = (k: "booked" | "held" | "used" | "effectiveCapacity" | "remaining" | "waiting" | "capacity") => g.reduce((n, s) => n + s[k], 0);
-    return { ...g[0], id: `${g[0].date}-${name}`, group: shortProgram(name), booked: sum("booked"), held: sum("held"), used: sum("used"), effectiveCapacity: sum("effectiveCapacity"), remaining: sum("remaining"), waiting: sum("waiting"), capacity: sum("capacity") };
+    const name = g[0].programName;
+    const timed = (perProgram.get(name) ?? 0) > 1;
+    const start = new Date(g[0].startsAt);
+    // In a day square, "Weekend AM" fits where "Weekend · 9am" wouldn't (when that's enough to tell them apart).
+    const halves = keys.filter((k) => k.startsWith(`${name}|`)).map((k) => Number(fmtTime(new Date(Number(k.split("|")[1]))).match(/[ap]m$/)?.[0] === "pm"));
+    const ampm = compact && new Set(halves).size === halves.length ? (fmtTime(start).endsWith("pm") ? " PM" : " AM") : null;
+    const when = ampm ?? ` · ${shortTime(start)}`;
+    const label = withProgram ? `${shortProgram(name)}${timed ? when : ""}` : shortTime(start);
+    const total: CalendarSession = { ...g[0], id: key, group: label, booked: sum("booked"), held: sum("held"), used: sum("used"), effectiveCapacity: sum("effectiveCapacity"), remaining: sum("remaining"), waiting: sum("waiting"), capacity: sum("capacity") };
+    return { key, label, sessions: g, total };
   });
 }
 
@@ -302,7 +328,10 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           <div key={`${program}|${month}`} className={`grid grid-cols-7 ${dir > 0 ? "animate-[cal-next_0.4s_var(--ease-soft)]" : dir < 0 ? "animate-[cal-prev_0.4s_var(--ease-soft)]" : "animate-[fade_0.3s_var(--ease-soft)]"}`}>
             {dates.map((d, i) => {
               const raw = byDate.get(d) ?? [];
-              const rows = program === "all" ? byProgram(raw) : raw;
+              // Camp and Flex: one row per age group. Happenings and Everything: one row per time slot.
+              const daySlots = slotsOf(raw, { withProgram: true, compact: true });
+              const perGroup = program === "camp" || program === "flex";
+              const rows = perGroup && daySlots.length === 1 ? daySlots[0].sessions : daySlots.map((x) => x.total);
               const out = d < grid.first || d > grid.last;
               const sel = d === date;
               const isToday = d === today;
@@ -310,6 +339,9 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
               const open = raw.reduce((n, s) => n + s.remaining, 0);
               const cap = raw.reduce((n, s) => n + s.effectiveCapacity, 0);
               const tone = raw.length ? toneOf(open, cap) : "none";
+              // One total only makes sense when everything that day runs at the same time.
+              const oneSlot = daySlots.length === 1;
+              const allFull = raw.length > 0 && raw.every((s) => s.effectiveCapacity > 0 && s.remaining <= 0);
               const coming = raw.reduce((n, s) => n + s.booked, 0);
               return (
                 <button
@@ -335,26 +367,26 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                     >
                       {Number(d.slice(8))}
                     </span>
-                    {raw.length && !out ? (
+                    {raw.length && !out && (oneSlot || allFull) ? (
                       <span className={`hidden rounded-full px-2 py-0.5 text-[0.66rem] whitespace-nowrap font-medium tabular-nums sm:inline ${TONE_BG[tone]} ${past ? "opacity-60" : ""}`}>{tone === "full" ? "Full" : `${open} open`}</span>
                     ) : null}
                   </span>
                   {/* Phones: one dot and the spots open. */}
                   {raw.length ? (
                     <span className={`mt-auto flex items-center gap-1 sm:hidden ${out ? "opacity-40" : ""}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${TONE_BAR[tone]}`} />
-                      <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{tone === "full" ? "Full" : open}</span>
+                      <span className={`h-1.5 w-1.5 rounded-full ${TONE_BAR[allFull ? "full" : tone]}`} />
+                      {oneSlot || allFull ? <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{allFull ? "Full" : open}</span> : <span className="text-[0.66rem] text-ink-soft">{daySlots.length}</span>}
                     </span>
                   ) : null}
                   {rows.length ? (
                     <span className={`mt-2 hidden flex-col gap-1.5 sm:flex ${out ? "opacity-40" : past ? "opacity-70" : ""}`}>
-                      {rows.slice(0, 4).map((s) => {
+                      {rows.slice(0, 6).map((s) => {
                         const t = toneOf(s.remaining, s.effectiveCapacity);
                         return (
                           <span key={s.id} className="block">
-                            {program === "all" ? (
+                            {!perGroup || daySlots.length > 1 ? (
                               <>
-                                <span className="flex min-w-0 items-center gap-1.5 text-[0.7rem] leading-tight text-ink">
+                                <span className="flex min-w-0 items-center gap-1 text-[0.68rem] leading-tight tracking-[-0.01em] text-ink">
                                   <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${KIND_DOT[s.programKind] ?? "bg-ink/40"}`} />
                                   <span className="truncate">{s.group}</span>
                                 </span>
@@ -375,7 +407,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                           </span>
                         );
                       })}
-                      {rows.length > 4 ? <span className="text-[0.66rem] text-ink-soft">+{rows.length - 4} more</span> : null}
+                      {rows.length > 6 ? <span className="text-[0.66rem] text-ink-soft">+{rows.length - 6} more</span> : null}
                     </span>
                   ) : null}
                 </button>
@@ -417,14 +449,13 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
 }
 
 function DayPanel({ date, program, today, data }: { date: string | null; program: CalendarProgram; today: string; data: CalendarDaySession[] | undefined }) {
-  const [tab, setTab] = useState<string | null>(null);
   const list = data ?? [];
-  // In "Everything", sessions nobody has booked are counted, not listed.
-  const shown = program === "all" ? list.filter((s) => s.used > 0) : list;
-  const hiddenEmpty = list.length - shown.length;
-  const current = shown.find((s) => s.id === tab) ?? shown[0];
+  const slots = slotsOf(list, { withProgram: program === "all" || program === "happenings" || new Set(list.map((s) => s.programName)).size > 1 });
+  const [slotKeyChosen, setSlot] = useState<string | null>(null);
+  const [tab, setTab] = useState<string | null>(null);
+  const slot = slots.find((x) => x.key === slotKeyChosen) ?? slots[0];
+  const current = slot?.sessions.find((s) => s.id === tab) ?? slot?.sessions[0];
   const coming = list.reduce((n, s) => n + s.children.length, 0);
-  const open = list.reduce((n, s) => n + s.remaining, 0);
 
   return (
     <aside className="rounded-2xl bg-white shadow-[0_0_0_1px_rgba(41,44,69,0.08),0_8px_30px_-12px_rgba(41,44,69,0.12)]">
@@ -433,8 +464,17 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
         <h2 className="display mt-1 text-[1.5rem] leading-tight text-ink">{date ? fmtDate(date, "EEEE d MMMM") : "Choose a day"}</h2>
         {date && data && list.length ? (
           <p className="mt-1 text-[0.82rem] text-ink-soft">
-            <span className="font-medium text-ink">{coming}</span> coming · <span className={`font-medium ${open ? "text-[#2c6447]" : "text-[#8a2333]"}`}>{open ? `${open} spot${open === 1 ? "" : "s"} open` : "fully booked"}</span>
-            {list.length > 1 ? ` · ${list.length} groups` : ""}
+            <span className="font-medium text-ink">{coming}</span> {coming === 1 ? "child" : "children"} coming
+            {slots.length === 1 ? (
+              <>
+                {" · "}
+                <span className={`font-medium ${slots[0].total.remaining ? "text-[#2c6447]" : "text-[#8a2333]"}`}>
+                  {slots[0].total.remaining ? `${slots[0].total.remaining} of ${slots[0].total.effectiveCapacity} spots open` : "fully booked"}
+                </span>
+              </>
+            ) : (
+              ` · ${slots.length} sessions`
+            )}
           </p>
         ) : null}
       </div>
@@ -450,16 +490,49 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
             </div>
           ))}
         </div>
-      ) : !shown.length ? (
+      ) : !slot ? (
         <div className="px-5 py-10 text-center">
-          <p className="text-[0.92rem] text-ink">{hiddenEmpty ? "No one booked yet" : "Nothing scheduled"}</p>
-          <p className="mt-1 text-[0.8rem] text-ink-soft">{hiddenEmpty ? `${hiddenEmpty} session${hiddenEmpty === 1 ? "" : "s"} open for booking.` : "Pick another day, or add sessions from the schedule."}</p>
+          <p className="text-[0.92rem] text-ink">Nothing scheduled</p>
+          <p className="mt-1 text-[0.8rem] text-ink-soft">Pick another day, or add sessions from the schedule.</p>
         </div>
       ) : (
         <>
-          {shown.length > 1 ? (
+          {/* Sessions that day (time slots), each with its own spots left. */}
+          {slots.length > 1 ? (
+            <div className="border-b border-ink/[0.07] px-5 py-3">
+              <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl bg-ink/[0.05] p-1" role="tablist" aria-label="Sessions">
+                {slots.map((x) => {
+                  const t = toneOf(x.total.remaining, x.total.effectiveCapacity);
+                  const active = x.key === slot.key;
+                  return (
+                    <button
+                      key={x.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => {
+                        setSlot(x.key);
+                        setTab(null);
+                      }}
+                      className={`min-w-[5.5rem] shrink-0 rounded-lg px-3 py-1.5 text-left transition-all duration-200 ${active ? "bg-white shadow-[0_1px_3px_rgba(41,44,69,0.14)]" : "hover:bg-white/50"}`}
+                    >
+                      <span className="flex items-center gap-1.5 text-[0.78rem] leading-tight font-medium whitespace-nowrap text-ink">
+                        <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${KIND_DOT[x.total.programKind] ?? "bg-ink/40"}`} />
+                        {x.label}
+                      </span>
+                      <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${TONE_TEXT[t]}`}>
+                        {x.total.effectiveCapacity ? `${x.total.used}/${x.total.effectiveCapacity} · ${leftLabel(x.total.remaining, x.total.effectiveCapacity)}` : `${x.total.booked} booked`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          {/* Age groups in that session. */}
+          {slot.sessions.length > 1 ? (
             <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-5 pt-4" role="tablist" aria-label="Groups">
-              {shown.map((s) => {
+              {slot.sessions.map((s) => {
                 const t = toneOf(s.remaining, s.effectiveCapacity);
                 const active = s.id === current?.id;
                 return (
@@ -471,20 +544,22 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
                     onClick={() => setTab(s.id)}
                     className={`shrink-0 rounded-xl px-3 py-2 text-left transition-all duration-200 ${active ? "bg-ink text-chalk" : "bg-ink/[0.04] text-ink hover:bg-ink/[0.08]"}`}
                   >
-                    <span className="block text-[0.78rem] leading-tight font-medium">{program === "all" ? s.title : shortGroup(s.group)}</span>
-                    <span className={`block text-[0.68rem] tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
+                    <span className="block text-[0.78rem] leading-tight font-medium whitespace-nowrap">{shortGroup(groupLabel(s))}</span>
+                    <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
                   </button>
                 );
               })}
             </div>
           ) : null}
-          {current ? <GroupView s={current} /> : null}
-          {hiddenEmpty ? <p className="px-5 pb-4 text-[0.75rem] text-ink-soft">{hiddenEmpty} more session{hiddenEmpty === 1 ? "" : "s"} with no one booked yet.</p> : null}
+          {current ? <GroupView key={current.id} s={current} /> : null}
         </>
       )}
     </aside>
   );
 }
+
+/** "Weekend Play · AM play session · 4 – 7 years" → "4 – 7 years". */
+const groupLabel = (s: CalendarSession) => s.title.split(" · ").pop() ?? s.title;
 
 function GroupView({ s }: { s: CalendarDaySession }) {
   const t = toneOf(s.remaining, s.effectiveCapacity);
