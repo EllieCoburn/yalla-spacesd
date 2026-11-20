@@ -35,6 +35,7 @@ export type TemplateKey =
   | "family_sign_in"
   | "family_confirm_email"
   | "family_invite"
+  | "family_added"
   | "booking_welcome_team"
   | "booking_confirmed_team"
   | "space_confirmation"
@@ -329,6 +330,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     essential: true,
     audience: "family",
   },
+  family_added: {
+    name: "Added to the Family Portal by Team Yalla",
+    subject: "Team Yalla has added you to the Family Portal",
+    body: "# Welcome to your Family Portal\n\nHi {{name}},\n\nTeam Yalla has added your family to the Yalla Family Portal. Use the button below to set up your account and choose a password. Your family’s details are already there, and you’ll find booking, forms and all of our family resources in one place.\n\n{{held_note}}{{link}}\n\nThis link is just for you and works once, for 14 days. If it expires, reply to this email and we’ll send a new one.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
   family_sign_in: {
     name: "Family Portal sign-in link",
     subject: "Your Yalla Family Portal sign-in link",
@@ -510,6 +518,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   family_sign_in: ["guardian_first_name", "link"],
   family_confirm_email: ["guardian_first_name", "purchase_summary", "link"],
   family_invite: ["name", "link", "held_note"],
+  family_added: ["name", "link", "held_note"],
   booking_welcome_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "link"],
   booking_confirmed_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "portal_link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],

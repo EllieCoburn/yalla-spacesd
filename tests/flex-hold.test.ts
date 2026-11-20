@@ -63,13 +63,16 @@ describe("Yalla Flex cohort holds", () => {
     expect(audits.map((a) => a.action)).toEqual(expect.arrayContaining(["family.flex_hold", "family.flex_hold_release"]));
   });
 
-  it("refuses an unknown cohort, and the invitation says the child's place is kept", async () => {
+  it("refuses an unknown cohort, and the email explains the hold", async () => {
     const { fam, child } = await setup();
     await expect(setFlexHold(db(), owner, child.id, "nursery")).rejects.toThrow(/Choose a Yalla Flex cohort/);
     await setFlexHold(db(), owner, child.id, "seedlings");
     await inviteToPortal(db(), owner, { email: fam.guardian.email, name: `${fam.guardian.firstName} ${fam.guardian.lastName}` }, "http://localhost");
-    const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_invite"));
-    expect(m.body).toContain("kept their place in Seedlings for Yalla Flex");
-    expect(m.body).toContain("Mila");
+    // A family Team Yalla added gets the "added you" email, with a paragraph for each held child.
+    const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_added"));
+    expect(m.subject).toBe("Team Yalla has added you to the Family Portal");
+    expect(m.body).toContain("Mila has been assigned to the Seedlings cohort");
+    expect(m.body).toContain("vacancies for Mila’s assigned room only");
+    expect(m.body).toContain("Please always view availability while signed in");
   });
 });

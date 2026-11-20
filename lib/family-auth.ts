@@ -202,14 +202,18 @@ export async function inviteDetails(db: Executor, token: string) {
  */
 export async function inviteToPortal(db: DB, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null }, baseUrl: string) {
   const { email, name, existing, link } = await createInvite(db, actor, input, baseUrl);
-  // A family invited with children already held in a Yalla Flex cohort hears that their place is kept.
+  // A family Team Yalla added in Admin gets the "added you" email; anyone else, the general invitation.
+  // Each child held in a Yalla Flex cohort gets a paragraph explaining the hold.
   const held = existing?.familyId
     ? (await db.select({ first: children.firstName, preferred: children.preferredName, hold: children.flexHold }).from(children).where(and(eq(children.familyId, existing.familyId), isNotNull(children.flexHold)))).map((c) => ({ name: c.preferred || c.first, cohort: flexHoldName(c.hold) }))
     : [];
-  const held_note = held.length
-    ? `We’ve already added ${held.map((h) => h.name).join(" and ")} to your account and kept their place${held.length === 1 ? "" : "s"} in ${[...new Set(held.map((h) => h.cohort))].join(" and ")} for Yalla Flex, so you can keep booking days with the teachers and friends you know.\n\n`
-    : "";
-  await notifyStaff(db, { key: "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link, held_note }, relatedType: "invite", relatedId: existing?.familyId });
+  const held_note = held
+    .map(
+      (h) =>
+        `**${h.name} has been assigned to the ${h.cohort} cohort**, and our system overrides ${h.name}’s age for Yalla Flex. When you book while signed in to your Family Portal, you’ll see vacancies for ${h.name}’s assigned room only. Once you and Team Yalla agree it’s time for ${h.name} to age up, we’ll release the override on your account.\n\nPlease always view availability while signed in to your Family Portal, so you see exactly what’s available for ${h.name}.\n\n`,
+    )
+    .join("");
+  await notifyStaff(db, { key: existing ? "family_added" : "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link, held_note }, relatedType: "invite", relatedId: existing?.familyId });
   await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
   return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
 }
