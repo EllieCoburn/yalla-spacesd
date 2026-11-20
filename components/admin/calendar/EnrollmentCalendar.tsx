@@ -171,6 +171,26 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
     if (date) void fetchDay(program, date).catch(() => {});
   }, [program, date, fetchDay]);
 
+  // Fresh numbers: when you come back to this tab (e.g. after changing a session's spots) and every
+  // minute while it's open, reload what's on screen, so manual changes show straight away.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      months.current.delete(`${program}|${month}`);
+      if (date) days.current.delete(`${program}|${date}`);
+      void fetchMonth(program, month).catch(() => {});
+      if (date) void fetchDay(program, date).catch(() => {});
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    const t = setInterval(refresh, STALE_MS);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+      clearInterval(t);
+    };
+  }, [program, month, date, fetchMonth, fetchDay]);
+
   // Keep the address bar in step without reloading, so the view can be shared or bookmarked.
   useEffect(() => {
     const p = new URLSearchParams({ month, program, ...(date ? { date } : {}) });
@@ -236,11 +256,15 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
   }, [goMonth, grid.prev, grid.next, today]);
 
   const inMonth = (sessions ?? []).filter((s) => s.date >= grid.first && s.date <= grid.last);
+  // Spots still open only counts sessions that haven't ended: a past day's empty places can't be booked.
+  const ahead = inMonth.filter((s) => sessionPhase(s) !== "ended");
   const totals = {
     children: inMonth.reduce((n, s) => n + s.booked, 0),
-    open: inMonth.reduce((n, s) => n + s.remaining, 0),
+    open: ahead.reduce((n, s) => n + s.remaining, 0),
+    aheadDays: new Set(ahead.map((s) => s.date)).size,
+    over: inMonth.length > 0 && ahead.length === 0,
     days: new Set(inMonth.map((s) => s.date)).size,
-    full: inMonth.filter((s) => s.effectiveCapacity > 0 && s.remaining <= 0).length,
+    full: ahead.filter((s) => s.effectiveCapacity > 0 && s.remaining <= 0).length,
     paying: inMonth.reduce((n, s) => n + s.held, 0),
     waiting: inMonth.reduce((n, s) => n + s.waiting, 0),
   };
@@ -300,7 +324,14 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
       <dl className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-ink/[0.08] shadow-[0_0_0_1px_rgba(41,44,69,0.08)] sm:grid-cols-4">
         {[
           { label: "Spots booked", value: totals.children, sub: totals.days ? `across ${totals.days} day${totals.days === 1 ? "" : "s"}` : "nothing scheduled" },
-          { label: "Spots open", value: totals.open, sub: totals.full ? `${totals.full} group${totals.full === 1 ? "" : "s"} full` : "no groups full", tone: totals.open ? "text-[#2c6447]" : "" },
+          {
+            label: "Spots still open",
+            value: totals.open,
+            sub: totals.over
+              ? "this month’s sessions are over"
+              : `${totals.aheadDays ? `across ${totals.aheadDays} day${totals.aheadDays === 1 ? "" : "s"} to come` : "nothing to come"}${totals.full ? ` · ${totals.full} group${totals.full === 1 ? "" : "s"} full` : ""}`,
+            tone: totals.open ? "text-[#2c6447]" : "",
+          },
           { label: "Paying now", value: totals.paying, sub: "spots held at checkout" },
           { label: "Waitlist", value: totals.waiting, sub: totals.waiting ? "waiting for a spot" : "no one waiting" },
         ].map((x) => (
@@ -342,6 +373,8 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
               // One total only makes sense when everything that day runs at the same time.
               const oneSlot = daySlots.length === 1;
               const allFull = raw.length > 0 && raw.every((s) => s.effectiveCapacity > 0 && s.remaining <= 0);
+              // A day whose sessions have all ended: its empty places can't be booked any more.
+              const dayOver = raw.length > 0 && raw.every((s) => sessionPhase(s) === "ended");
               const coming = raw.reduce((n, s) => n + s.booked, 0);
               return (
                 <button
@@ -367,15 +400,17 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                     >
                       {Number(d.slice(8))}
                     </span>
-                    {raw.length && !out && (oneSlot || allFull) ? (
+                    {raw.length && !out && dayOver ? (
+                      <span className="hidden rounded-full bg-ink/5 px-2 py-0.5 text-[0.66rem] font-medium whitespace-nowrap text-ink-soft tabular-nums sm:inline">{coming} booked</span>
+                    ) : raw.length && !out && (oneSlot || allFull) ? (
                       <span className={`hidden rounded-full px-2 py-0.5 text-[0.66rem] whitespace-nowrap font-medium tabular-nums sm:inline ${TONE_BG[tone]} ${past ? "opacity-60" : ""}`}>{tone === "full" ? "Full" : `${open} open`}</span>
                     ) : null}
                   </span>
                   {/* Phones: one dot and the spots open. */}
                   {raw.length ? (
                     <span className={`mt-auto flex items-center gap-1 sm:hidden ${out ? "opacity-40" : ""}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${TONE_BAR[allFull ? "full" : tone]}`} />
-                      {oneSlot || allFull ? <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{allFull ? "Full" : open}</span> : <span className="text-[0.66rem] text-ink-soft">{daySlots.length}</span>}
+                      <span className={`h-1.5 w-1.5 rounded-full ${dayOver ? "bg-ink/25" : TONE_BAR[allFull ? "full" : tone]}`} />
+                      {dayOver ? <span className="text-[0.66rem] text-ink-soft tabular-nums">{coming}</span> : oneSlot || allFull ? <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{allFull ? "Full" : open}</span> : <span className="text-[0.66rem] text-ink-soft">{daySlots.length}</span>}
                     </span>
                   ) : null}
                   {rows.length ? (
@@ -469,8 +504,12 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
             {slots.length === 1 ? (
               <>
                 {" · "}
-                <span className={`font-medium ${slots[0].total.remaining ? "text-[#2c6447]" : "text-[#8a2333]"}`}>
-                  {slots[0].total.remaining ? `${slots[0].total.remaining} of ${slots[0].total.effectiveCapacity} spots open` : "fully booked"}
+                <span className={`font-medium ${sessionPhase(slots[0].total) === "ended" ? "text-ink-soft" : slots[0].total.remaining ? "text-[#2c6447]" : "text-[#8a2333]"}`}>
+                  {sessionPhase(slots[0].total) === "ended"
+                    ? "this session is over"
+                    : slots[0].total.remaining
+                      ? `${slots[0].total.remaining} of ${slots[0].total.effectiveCapacity} spots open`
+                      : "fully booked"}
                 </span>
               </>
             ) : (
@@ -522,7 +561,7 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
                         {x.label}
                       </span>
                       <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${TONE_TEXT[t]}`}>
-                        {x.total.effectiveCapacity ? `${x.total.used}/${x.total.effectiveCapacity} · ${leftLabel(x.total.remaining, x.total.effectiveCapacity)}` : `${x.total.booked} booked`}
+                        {sessionPhase(x.total) === "ended" ? `${x.total.booked} booked · over` : x.total.effectiveCapacity ? `${x.total.used}/${x.total.effectiveCapacity} · ${leftLabel(x.total.remaining, x.total.effectiveCapacity)}` : `${x.total.booked} booked`}
                       </span>
                     </button>
                   );
@@ -546,7 +585,7 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
                     className={`shrink-0 rounded-xl px-3 py-2 text-left transition-all duration-200 ${active ? "bg-ink text-chalk" : "bg-ink/[0.04] text-ink hover:bg-ink/[0.08]"}`}
                   >
                     <span className="block text-[0.78rem] leading-tight font-medium whitespace-nowrap">{shortGroup(groupLabel(s))}</span>
-                    <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
+                    <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{sessionPhase(s) === "ended" ? `${s.booked} booked` : leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
                   </button>
                 );
               })}
@@ -581,8 +620,8 @@ function GroupView({ s, today }: { s: CalendarDaySession; today: string }) {
           </div>
           {s.effectiveCapacity ? (
             <p className="shrink-0 text-right">
-              <span className={`block text-[1.6rem] leading-none font-semibold tabular-nums ${TONE_TEXT[t]}`}>{s.remaining <= 0 ? "Full" : s.remaining}</span>
-              <span className="text-[0.7rem] text-ink-soft">{s.remaining <= 0 ? `${s.used} of ${s.effectiveCapacity}` : `spot${s.remaining === 1 ? "" : "s"} left of ${s.effectiveCapacity}`}</span>
+              <span className={`block text-[1.6rem] leading-none font-semibold tabular-nums ${ended ? "text-ink-soft" : TONE_TEXT[t]}`}>{ended ? s.booked : s.remaining <= 0 ? "Full" : s.remaining}</span>
+              <span className="text-[0.7rem] text-ink-soft">{ended ? `booked of ${s.effectiveCapacity} · over` : s.remaining <= 0 ? `${s.used} of ${s.effectiveCapacity}` : `spot${s.remaining === 1 ? "" : "s"} left of ${s.effectiveCapacity}`}</span>
             </p>
           ) : null}
         </div>
