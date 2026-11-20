@@ -112,10 +112,11 @@ export const addChildAction = adminAction("families.manage", async ({ db, actor,
     preferredName: str("preferredName"),
     birthDate: str("birthDate"),
     cohortId: nullable(str("cohortId")),
-    flexHold: nullable(str("flexHold")),
     allergies: care ? str("allergies") : undefined,
     careNotes: care ? str("careNotes") : undefined,
   });
+  // A Yalla Flex cohort hold goes through setFlexHold, so a family who already has an account is emailed.
+  if (!res.existed && str("flexHold")) await setFlexHold(db, actor, res.child.id, str("flexHold"), { baseUrl: trustedBaseUrl((await headers()).get("host")) });
   return res.existed ? `${res.child.firstName} is already on this family’s record — no duplicate was created.` : `${res.child.firstName} added.`;
 });
 
@@ -198,7 +199,8 @@ export const purgeTestDataAction = adminAction("staff.manage", async ({ db, acto
 /** Hold a child in a Yalla Flex cohort, or release the hold (empty value). */
 export const flexHoldAction = adminAction("families.manage", async ({ db, actor, str }) => {
   const hold = str("flexHold") || null;
-  const c = await setFlexHold(db, actor, str("childId"), hold);
+  const c = await setFlexHold(db, actor, str("childId"), hold, { baseUrl: trustedBaseUrl((await headers()).get("host")) });
   const name = c.preferredName || c.firstName;
-  return hold ? `${name} is held in ${flexHoldName(hold)} for Yalla Flex.` : `Released. ${name} can now book the Flex group that fits their age.`;
+  if (!hold) return `Released. ${name} can now book the Flex group that fits their age.`;
+  return `${name} is held in ${flexHoldName(hold)} for Yalla Flex.${c.notified ? " We’ve emailed the family to let them know." : " The family will hear about it when you invite them to the Family Portal."}`;
 });

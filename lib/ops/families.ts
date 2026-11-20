@@ -12,7 +12,7 @@ import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { audit, diff, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
 import { authorizedPickups, children, emergencyContacts, families, familyNotes, guardians } from "@/lib/db/schema";
-import { flexHoldName, isFlexHoldKey } from "@/lib/booking/flex-hold";
+import { flexHoldName, heldParagraph, isFlexHoldKey } from "@/lib/booking/flex-hold";
 
 const clean = (s?: string | null) => (s ?? "").trim();
 
@@ -263,11 +263,11 @@ export async function searchFamilies(db: Executor, q: string, limit = 25) {
  * Holds a child in one Yalla Flex cohort (or releases the hold with null). Staff only: while held, the
  * child books that cohort's Flex days whatever their age, and no other Flex cohort.
  */
-export async function setFlexHold(db: Executor, actor: Actor, childId: string, hold: string | null) {
+export async function setFlexHold(db: Executor, actor: Actor, childId: string, hold: string | null, opts: { baseUrl?: string } = {}) {
   if (hold !== null && !isFlexHoldKey(hold)) throw new OpsError("invalid", "Choose a Yalla Flex cohort.");
   const [c] = await db.select().from(children).where(eq(children.id, childId));
   if (!c) throw new OpsError("not_found", "Child not found.");
-  if ((c.flexHold ?? null) === hold) return c;
+  if ((c.flexHold ?? null) === hold) return { ...c, notified: 0 };
   const [u] = await db
     .update(children)
     .set({ flexHold: hold, flexHoldSetAt: hold ? new Date() : null, flexHoldSetBy: hold ? actor.name : null })
@@ -281,5 +281,23 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
     summary: hold ? `Held ${name} in ${flexHoldName(hold)} for Yalla Flex` : `Released ${name}’s Yalla Flex hold in ${flexHoldName(c.flexHold)}`,
     changes: { flexHold: { from: c.flexHold, to: hold } },
   });
-  return u;
+  // Families who already have a portal account hear about a new or changed hold straight away.
+  // (Families without one learn about it in the "Team Yalla has added you" invitation.)
+  let notified = 0;
+  if (hold && opts.baseUrl) {
+    const withAccount = (await db.select().from(guardians).where(eq(guardians.familyId, c.familyId))).filter((g) => g.portalAccess && (g.passwordHash || g.emailVerifiedAt));
+    if (withAccount.length) {
+      const { notifyFamily } = await import("@/lib/notify");
+      const cohort = flexHoldName(hold) ?? hold;
+      await notifyFamily(db, {
+        key: "flex_hold_notice",
+        familyId: c.familyId,
+        guardianIds: withAccount.map((g) => g.id),
+        vars: { child_name: name, cohort, held_note: heldParagraph(name, cohort), link: `${opts.baseUrl}/programs/yalla-flex` },
+        related: { type: "child", id: childId },
+      });
+      notified = withAccount.length;
+    }
+  }
+  return { ...u, notified };
 }

@@ -36,6 +36,7 @@ export type TemplateKey =
   | "family_confirm_email"
   | "family_invite"
   | "family_added"
+  | "flex_hold_notice"
   | "booking_welcome_team"
   | "booking_confirmed_team"
   | "space_confirmation"
@@ -337,6 +338,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     essential: true,
     audience: "family",
   },
+  flex_hold_notice: {
+    name: "Yalla Flex cohort assigned (families with an account)",
+    subject: "{{child_name}} has been assigned to the {{cohort}} cohort",
+    body: "# {{child_name}} is staying in {{cohort}}\n\nHi {{guardian_first_name}},\n\n{{held_note}}{{link}}\n\nQuestions? Just reply to this email.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
   family_sign_in: {
     name: "Family Portal sign-in link",
     subject: "Your Yalla Family Portal sign-in link",
@@ -519,6 +527,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   family_confirm_email: ["guardian_first_name", "purchase_summary", "link"],
   family_invite: ["name", "link", "held_note"],
   family_added: ["name", "link", "held_note"],
+  flex_hold_notice: ["guardian_first_name", "child_name", "cohort", "held_note", "link"],
   booking_welcome_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "link"],
   booking_confirmed_team: ["guardian_first_name", "reference", "program", "date", "booking_summary", "booking_details", "location", "arrival_instructions", "portal_link"],
   space_confirmation: ["guardian_first_name", "reference", "workspace", "when", "amount"],

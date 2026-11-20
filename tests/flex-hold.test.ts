@@ -75,4 +75,21 @@ describe("Yalla Flex cohort holds", () => {
     expect(m.body).toContain("vacancies for Mila’s assigned room only");
     expect(m.body).toContain("Please always view availability while signed in");
   });
+
+  it("a family who already has an account is emailed when their child is held (not when released)", async () => {
+    const { fam, child } = await setup();
+    await setFlexHold(db(), owner, child.id, "seedlings", { baseUrl: "http://localhost" });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(0); // no account yet
+
+    await db().update(s.guardians).set({ portalAccess: true, passwordHash: "x" }).where(eq(s.guardians.id, fam.guardian.id));
+    const r = await setFlexHold(db(), owner, child.id, "saplings", { baseUrl: "http://localhost" });
+    expect(r.notified).toBe(1);
+    const [m] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"));
+    expect(m.subject).toBe("Mila has been assigned to the Saplings cohort");
+    expect(m.body).toContain("vacancies for Mila’s assigned room only");
+    expect(m.body).not.toContain("invitation");
+
+    await setFlexHold(db(), owner, child.id, null, { baseUrl: "http://localhost" });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(1);
+  });
 });

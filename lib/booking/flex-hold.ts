@@ -31,3 +31,7 @@ export function flexEligibility(input: { isFlex: boolean; minAge: number | null;
   }
   return ageFits(input.age, input.ages) ? { ok: true, held: false } : { ok: false, reason: "age" };
 }
+
+/** The paragraph families read about a held child (the "added you" email and the hold notice). */
+export const heldParagraph = (name: string, cohort: string) =>
+  `**${name} has been assigned to the ${cohort} cohort**, and our system overrides ${name}’s age for Yalla Flex. When you book while signed in to your Family Portal, you’ll see vacancies for ${name}’s assigned room only. Once you and Team Yalla agree it’s time for ${name} to age up, we’ll release the override on your account.\n\nPlease always view availability while signed in to your Family Portal, so you see exactly what’s available for ${name}.\n\n`;

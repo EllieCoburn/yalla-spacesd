@@ -12,7 +12,7 @@
  * What a guardian can see follows their own flags (billing, sensitive care information).
  * Cookie handling lives in app/(site)/portal/session.ts.
  */
-import { flexHoldName } from "@/lib/booking/flex-hold";
+import { flexHoldName, heldParagraph } from "@/lib/booking/flex-hold";
 import { and, desc, eq, gt, inArray, isNull, ne, sql, isNotNull } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
@@ -207,12 +207,7 @@ export async function inviteToPortal(db: DB, actor: Actor, input: { email: strin
   const held = existing?.familyId
     ? (await db.select({ first: children.firstName, preferred: children.preferredName, hold: children.flexHold }).from(children).where(and(eq(children.familyId, existing.familyId), isNotNull(children.flexHold)))).map((c) => ({ name: c.preferred || c.first, cohort: flexHoldName(c.hold) }))
     : [];
-  const held_note = held
-    .map(
-      (h) =>
-        `**${h.name} has been assigned to the ${h.cohort} cohort**, and our system overrides ${h.name}’s age for Yalla Flex. When you book while signed in to your Family Portal, you’ll see vacancies for ${h.name}’s assigned room only. Once you and Team Yalla agree it’s time for ${h.name} to age up, we’ll release the override on your account.\n\nPlease always view availability while signed in to your Family Portal, so you see exactly what’s available for ${h.name}.\n\n`,
-    )
-    .join("");
+  const held_note = held.map((h) => heldParagraph(h.name, h.cohort ?? "")).join("");
   await notifyStaff(db, { key: existing ? "family_added" : "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link, held_note }, relatedType: "invite", relatedId: existing?.familyId });
   await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
   return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
