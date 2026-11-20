@@ -2,9 +2,9 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { guardians } from "@/lib/db/schema";
+import { familyInvites, guardians } from "@/lib/db/schema";
 import { inviteToPortal } from "@/lib/family-auth";
 import { adminAction, type ActionState } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
@@ -215,7 +215,17 @@ export const flexHoldAction = adminAction("families.manage", async ({ db, actor,
   const c = await setFlexHold(db, actor, str("childId"), hold, { baseUrl: trustedBaseUrl((await headers()).get("host")) });
   const name = c.preferredName || c.firstName;
   if (!hold) return `Released. ${name} can now book the Flex group that fits their age.`;
-  return `${name} is held in ${flexHoldName(hold)} for Yalla Flex.${c.notified ? " We’ve emailed the family to let them know." : " The family will hear about it when you invite them to the Family Portal."}`;
+  const held = `${name} is held in ${flexHoldName(hold)} for Yalla Flex.`;
+  if (c.unchanged) return `${held} Nothing changed, so no email was sent.`;
+  if (c.notified) return `${held} We’ve emailed the family to let them know.`;
+  // Not in the Family Portal yet: say whether an invitation is already waiting for them.
+  const emails = (await db.select({ email: guardians.email }).from(guardians).where(eq(guardians.familyId, c.familyId))).map((g) => g.email.toLowerCase());
+  const [pending] = emails.length
+    ? await db.select({ id: familyInvites.id }).from(familyInvites).where(and(inArray(familyInvites.email, emails), isNull(familyInvites.usedAt), gt(familyInvites.expiresAt, new Date()))).limit(1)
+    : [];
+  return pending
+    ? `${held} This family hasn’t set up their Family Portal account yet, and the invitation they already have doesn’t mention the hold. Use “Send a new invitation” on the family page and the new one will explain it.`
+    : `${held} This family isn’t in the Family Portal yet. When you invite them, the invitation will explain the hold.`;
 });
 
 /** Remove a child from the family (kept on record) or restore them. */

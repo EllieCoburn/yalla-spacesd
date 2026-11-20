@@ -92,4 +92,13 @@ describe("Yalla Flex cohort holds", () => {
     await setFlexHold(db(), owner, child.id, null, { baseUrl: "http://localhost" });
     expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(1);
   });
+
+  it("re-saving the same hold sends nothing", async () => {
+    const { fam, child } = await setup();
+    await db().update(s.guardians).set({ portalAccess: true, emailVerifiedAt: new Date() }).where(eq(s.guardians.id, fam.guardian.id));
+    expect((await setFlexHold(db(), owner, child.id, "seedlings", { baseUrl: "http://localhost" })).notified).toBe(1);
+    const again = await setFlexHold(db(), owner, child.id, "seedlings", { baseUrl: "http://localhost" });
+    expect(again).toMatchObject({ notified: 0, unchanged: true });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(1);
+  });
 });

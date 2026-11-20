@@ -267,7 +267,7 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
   if (hold !== null && !isFlexHoldKey(hold)) throw new OpsError("invalid", "Choose a Yalla Flex cohort.");
   const [c] = await db.select().from(children).where(eq(children.id, childId));
   if (!c) throw new OpsError("not_found", "Child not found.");
-  if ((c.flexHold ?? null) === hold) return { ...c, notified: 0 };
+  if ((c.flexHold ?? null) === hold) return { ...c, notified: 0, unchanged: true };
   const [u] = await db
     .update(children)
     .set({ flexHold: hold, flexHoldSetAt: hold ? new Date() : null, flexHoldSetBy: hold ? actor.name : null })
@@ -281,8 +281,8 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
     summary: hold ? `Held ${name} in ${flexHoldName(hold)} for Yalla Flex` : `Released ${name}’s Yalla Flex hold in ${flexHoldName(c.flexHold)}`,
     changes: { flexHold: { from: c.flexHold, to: hold } },
   });
-  // Families who already have a portal account hear about a new or changed hold straight away.
-  // (Families without one learn about it in the "Team Yalla has added you" invitation.)
+  // Families who already have a Family Portal account hear about a new or changed hold straight
+  // away. Families who don't learn about it in their invitation to the portal.
   let notified = 0;
   if (hold && opts.baseUrl) {
     const withAccount = (await db.select().from(guardians).where(eq(guardians.familyId, c.familyId))).filter((g) => g.portalAccess && (g.passwordHash || g.emailVerifiedAt));
@@ -299,7 +299,7 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
       notified = withAccount.length;
     }
   }
-  return { ...u, notified };
+  return { ...u, notified, unchanged: false };
 }
 
 /**
