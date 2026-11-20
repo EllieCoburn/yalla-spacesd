@@ -37,15 +37,10 @@ const chapters: Chapter[] = [
       "We do not believe that belonging should depend on a person’s ability to conform to a single model of participation, communication, or behavior.",
       "For children, this means approaching developing skills and challenging moments with curiosity, compassion, and individualized support. For adults, it means respecting different needs, perspectives, communication styles, and ways of participating in community life.",
       <>
-        Yalla voluntarily draws upon professional guidance from the 
-        <a href="https://www.naeyc.org/about-us" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue" target="_blank" rel="noopener noreferrer">
-          National Association for the Education of Young Children (NAEYC)
-        </a> 
-        and the 
-        <a href="https://www.dec-sped.org/about-us" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue" target="_blank" rel="noopener noreferrer">
-          Division for Early Childhood (DEC)
-        </a>
-        , including principles of equitable access, developmentally appropriate practice, and meaningful participation.
+        Yalla voluntarily draws upon professional guidance from the{" "}
+        <a href="https://www.naeyc.org/about-us" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue" target="_blank" rel="noopener noreferrer">National Association for the Education of Young Children (NAEYC)</a> and the{" "}
+        <a href="https://www.dec-sped.org/about-us" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue" target="_blank" rel="noopener noreferrer">Division for Early Childhood (DEC)</a>, including principles of equitable access,
+        developmentally appropriate practice, and meaningful participation.
       </>,
       "We value collaboration, thoughtful accommodations, open communication, and a shared responsibility to maintain a safe, supportive environment for everyone.",
     ],
