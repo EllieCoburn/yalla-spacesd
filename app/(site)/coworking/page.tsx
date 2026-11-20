@@ -205,7 +205,7 @@ export default async function CoworkingPage() {
           <div className="lg:col-span-6 lg:col-start-7">
             <Index n="03">Included with care</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
-              Your workspace, <em>already included.</em>
+              Pull up a chair, <em>it’s yours.</em>
             </h2>
           <p className="mt-6 text-[1.05rem] text-ink-soft">
             Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of{" "}
