@@ -93,13 +93,13 @@ export default function AboutPage() {
               {
                 title: "Spaces that bring people together",
                 body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our space includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
-                img: { src: "/photos/cowork-loft.jpg", alt: "The balcony looking down over the long shared table in the coworking space" },
+                img: { src: "/photos/lounge.jpg", alt: "The lounge at Yalla: a pale blue sofa, two green velvet chairs and a vase of white tulips", position: "object-[50%_62%]" },
                 shape: "rounded-full",
               },
             ].map((c, i) => (
               <Reveal key={c.title} delay={i * 90}>
                 <div className={`relative aspect-square overflow-hidden bg-sand ${c.shape}`}>
-                  <Image src={c.img.src} alt={c.img.alt} fill sizes="(min-width:768px) 30vw, 90vw" className="object-cover" />
+                  <Image src={c.img.src} alt={c.img.alt} fill sizes="(min-width:768px) 30vw, 90vw" className={`object-cover ${"position" in c.img ? c.img.position : ""}`} />
                 </div>
                 <h3 className="display mt-8 text-[1.7rem]">{c.title}</h3>
                 <p className="mt-3 text-ink-soft">{c.body}</p>
