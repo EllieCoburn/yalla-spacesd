@@ -228,6 +228,15 @@ export const flexHoldAction = adminAction("families.manage", async ({ db, actor,
     : `${held} This family isn’t in the Family Portal yet. When you invite them, the invitation will explain the hold.`;
 });
 
+/** Email the family about a child's Flex hold that's already in place. */
+export const flexHoldNoticeAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const { resendFlexHoldNotice } = await import("@/lib/ops/families");
+  const r = await resendFlexHoldNotice(db, actor, str("childId"), trustedBaseUrl((await headers()).get("host")));
+  return r.via === "hold_email"
+    ? `Sent. The family has the email explaining the hold.`
+    : `Sent. This family hasn’t set up their Family Portal account yet, so we emailed ${r.email} a new invitation that explains the hold. Any earlier invitation link no longer works.`;
+});
+
 /** Remove a child from the family (kept on record) or restore them. */
 export const childRemovedAction = adminAction("families.manage", async ({ db, actor, str }) => {
   const removed = str("removed") === "1";

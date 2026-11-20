@@ -101,4 +101,17 @@ describe("Yalla Flex cohort holds", () => {
     expect(again).toMatchObject({ notified: 0, unchanged: true });
     expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(1);
   });
+
+  it("staff can email the family about a hold already in place: hold email with an account, a new invitation without", async () => {
+    const { fam, child } = await setup();
+    await setFlexHold(db(), owner, child.id, "seedlings");
+    const { resendFlexHoldNotice } = await import("@/lib/ops/families");
+    expect(await resendFlexHoldNotice(db(), owner, child.id, "http://localhost")).toMatchObject({ via: "invitation" });
+    const [inv] = await db().select().from(s.messages).where(eq(s.messages.templateKey, "family_added"));
+    expect(inv.body).toContain("Mila has been assigned to the Seedlings cohort");
+
+    await db().update(s.guardians).set({ portalAccess: true, passwordHash: "x" }).where(eq(s.guardians.id, fam.guardian.id));
+    expect(await resendFlexHoldNotice(db(), owner, child.id, "http://localhost")).toMatchObject({ via: "hold_email", count: 1 });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "flex_hold_notice"))).toHaveLength(1);
+  });
 });

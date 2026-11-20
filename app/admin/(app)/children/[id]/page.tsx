@@ -5,7 +5,7 @@ import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
 import { ActionForm, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
-import { childRemovedAction, deleteChildAction, flexHoldAction, updateChildAction } from "@/app/admin/(app)/families/actions";
+import { childRemovedAction, deleteChildAction, flexHoldAction, flexHoldNoticeAction, updateChildAction } from "@/app/admin/(app)/families/actions";
 import { childHistory } from "@/lib/ops/families";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { flexHoldName } from "@/lib/booking/flex-hold";
@@ -127,6 +127,16 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                   >
                     <input type="hidden" name="childId" value={c.id} />
                     <input type="hidden" name="flexHold" value="" />
+                  </ActionForm>
+                ) : null}
+                {c.flexHold ? (
+                  <ActionForm
+                    action={flexHoldNoticeAction}
+                    className=""
+                    submit={{ label: "Email the family about this hold", variant: "secondary" }}
+                    confirm={{ title: `Email ${display}’s family about the hold?`, body: `Families with a Family Portal account get the email explaining that ${display} is staying in ${flexHoldName(c.flexHold)}. Families who haven’t set up their account yet get a new portal invitation that explains it.`, confirmLabel: "Send email" }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
                   </ActionForm>
                 ) : null}
               </div>

@@ -10,7 +10,7 @@
  */
 import { and, asc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { audit, diff, OpsError, type Actor } from "@/lib/audit";
-import type { Executor } from "@/lib/db";
+import type { DB, Executor } from "@/lib/db";
 import { attendanceRecords, authorizedPickups, bookingItems, bookings, children, documents, emergencyContacts, families, familyNotes, formRequirements, formSubmissions, guardians, lateFees, memberships, sessions, waitlistEntries } from "@/lib/db/schema";
 import { flexHoldName, heldParagraph, isFlexHoldKey } from "@/lib/booking/flex-hold";
 
@@ -283,23 +283,51 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
   });
   // Families who already have a Family Portal account hear about a new or changed hold straight
   // away. Families who don't learn about it in their invitation to the portal.
-  let notified = 0;
-  if (hold && opts.baseUrl) {
-    const withAccount = (await db.select().from(guardians).where(eq(guardians.familyId, c.familyId))).filter((g) => g.portalAccess && (g.passwordHash || g.emailVerifiedAt));
-    if (withAccount.length) {
-      const { notifyFamily } = await import("@/lib/notify");
-      const cohort = flexHoldName(hold) ?? hold;
-      await notifyFamily(db, {
-        key: "flex_hold_notice",
-        familyId: c.familyId,
-        guardianIds: withAccount.map((g) => g.id),
-        vars: { child_name: name, cohort, held_note: heldParagraph(name, cohort), link: `${opts.baseUrl}/programs/yalla-flex` },
-        related: { type: "child", id: childId },
-      });
-      notified = withAccount.length;
-    }
-  }
+  const notified = hold && opts.baseUrl ? await emailFlexHoldToAccounts(db, u, opts.baseUrl) : 0;
   return { ...u, notified, unchanged: false };
+}
+
+/** Emails the hold notice to the family's guardians who have a Family Portal account. Returns how many. */
+async function emailFlexHoldToAccounts(db: Executor, c: typeof children.$inferSelect, baseUrl: string) {
+  if (!c.flexHold) return 0;
+  const withAccount = (await db.select().from(guardians).where(eq(guardians.familyId, c.familyId))).filter((g) => g.portalAccess && (g.passwordHash || g.emailVerifiedAt));
+  if (!withAccount.length) return 0;
+  const { notifyFamily } = await import("@/lib/notify");
+  const name = c.preferredName || c.firstName;
+  const cohort = flexHoldName(c.flexHold) ?? c.flexHold;
+  await notifyFamily(db, {
+    key: "flex_hold_notice",
+    familyId: c.familyId,
+    guardianIds: withAccount.map((g) => g.id),
+    vars: { child_name: name, cohort, held_note: heldParagraph(name, cohort), link: `${baseUrl}/programs/yalla-flex` },
+    related: { type: "child", id: c.id },
+  });
+  return withAccount.length;
+}
+
+/**
+ * Tells the family about a hold that's already in place (say, set before they were invited, or
+ * re-sent on request). A family with a Family Portal account gets the hold email; a family without
+ * one gets a fresh portal invitation (replacing any unused one), which explains the hold.
+ */
+export async function resendFlexHoldNotice(db: DB, actor: Actor, childId: string, baseUrl: string) {
+  const [c] = await db.select().from(children).where(eq(children.id, childId));
+  if (!c) throw new OpsError("not_found", "Child not found.");
+  if (!c.flexHold) throw new OpsError("invalid", "This child isn’t held in a Flex cohort.");
+  const emailed = await emailFlexHoldToAccounts(db, c, baseUrl);
+  if (emailed) {
+    await audit(db, actor, { action: "family.flex_hold_notice", entityType: "child", entityId: childId, summary: `Emailed the family about ${c.preferredName || c.firstName}’s hold in ${flexHoldName(c.flexHold)}` });
+    return { via: "hold_email" as const, count: emailed };
+  }
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, c.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) throw new OpsError("invalid", "This family has no primary guardian to email.");
+  const { inviteToPortal } = await import("@/lib/family-auth");
+  await inviteToPortal(db, actor, { email: g.email, name: `${g.firstName} ${g.lastName}` }, baseUrl);
+  return { via: "invitation" as const, count: 1, email: g.email };
 }
 
 /**
