@@ -27,8 +27,11 @@ const included = [
   { program: "Yalla Happenings", how: "Optional. Some Happenings offer coworking as an add-on for the grown-up who stays.", href: "/programs/yalla-happenings" },
 ];
 
+/** Linked to Our Approach wherever it appears in the amenities list. */
+const APPROACH = "Reggio Emilia and RIE approaches";
+
 const amenities = [
-  "Onsite childcare rooted in the Reggio Emilia and RIE approaches, provided by a highly qualified team of caregivers",
+  `Onsite childcare rooted in the ${APPROACH}, provided by a highly qualified team of caregivers`,
   "Communal coworking access",
   "High-speed internet",
   "Complimentary coffee and tea",
@@ -152,7 +155,22 @@ export default async function CoworkingPage() {
                 <svg viewBox="0 0 16 16" aria-hidden className="mt-1 h-4 w-4 shrink-0 text-blue" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 8.5l3 3 7-7" />
                 </svg>
-                <span>{a}</span>
+                <span>
+                  {a.includes(APPROACH)
+                    ? (() => {
+                        const [before, after] = a.split(APPROACH);
+                        return (
+                          <>
+                            {before}
+                            <Link href="/approach" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue">
+                              {APPROACH}
+                            </Link>
+                            {after}
+                          </>
+                        );
+                      })()
+                    : a}
+                </span>
               </Reveal>
             ))}
           </ul>
