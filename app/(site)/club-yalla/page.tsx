@@ -54,7 +54,7 @@ export default function ClubYallaPage() {
           </div>
           <Reveal delay={150} className="lg:col-span-4 lg:col-start-9">
             <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src={p.image} alt={p.imageAlt} fill priority sizes="(min-width:1024px) 30vw, 90vw" className="object-cover" />
+              <Image src="/photos/painted-feet.jpg" alt="A toddler in striped pajama pants standing barefoot in bright paint on a drop cloth" fill priority sizes="(min-width:1024px) 30vw, 90vw" className="object-cover" />
             </div>
           </Reveal>
         </div>
