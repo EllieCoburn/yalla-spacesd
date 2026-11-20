@@ -12,6 +12,7 @@ import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { audit, diff, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
 import { authorizedPickups, children, emergencyContacts, families, familyNotes, guardians } from "@/lib/db/schema";
+import { flexHoldName, isFlexHoldKey } from "@/lib/booking/flex-hold";
 
 const clean = (s?: string | null) => (s ?? "").trim();
 
@@ -90,7 +91,7 @@ export async function updateGuardian(db: Executor, actor: Actor, guardianId: str
   await audit(db, actor, { action: "family.guardian_update", entityType: "family", entityId: g.familyId, summary: `Updated ${g.firstName} ${g.lastName}`, changes: diff(g as Record<string, unknown>, patch as Record<string, unknown>) });
 }
 
-export async function addChild(db: Executor, actor: Actor, familyId: string, input: { firstName: string; lastName: string; preferredName?: string; birthDate: string; allergies?: string; medicalNotes?: string; careNotes?: string; cohortId?: string | null }) {
+export async function addChild(db: Executor, actor: Actor, familyId: string, input: { firstName: string; lastName: string; preferredName?: string; birthDate: string; allergies?: string; medicalNotes?: string; careNotes?: string; cohortId?: string | null; flexHold?: string | null }) {
   if (!clean(input.firstName) || !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) throw new OpsError("invalid", "Enter the child’s name and date of birth.");
   const dup = await db
     .select()
@@ -109,11 +110,12 @@ export async function addChild(db: Executor, actor: Actor, familyId: string, inp
       medicalNotes: clean(input.medicalNotes) || null,
       careNotes: clean(input.careNotes) || null,
       cohortId: input.cohortId ?? null,
+      ...(isFlexHoldKey(input.flexHold) ? { flexHold: input.flexHold, flexHoldSetAt: new Date(), flexHoldSetBy: actor.name } : {}),
       infoUpdatedAt: new Date(),
       infoUpdatedBy: actor.name,
     })
     .returning();
-  await audit(db, actor, { action: "family.child_add", entityType: "child", entityId: c.id, summary: `Added child ${c.firstName}` });
+  await audit(db, actor, { action: "family.child_add", entityType: "child", entityId: c.id, summary: `Added child ${c.firstName}${c.flexHold ? `, held in ${flexHoldName(c.flexHold)} for Yalla Flex` : ""}` });
   return { child: c, existed: false };
 }
 
@@ -255,4 +257,29 @@ export async function searchFamilies(db: Executor, q: string, limit = 25) {
     .where(or(ilike(families.name, term), ids.length ? inArray(families.id, ids) : sql`false`))
     .orderBy(asc(families.name))
     .limit(limit);
+}
+
+/**
+ * Holds a child in one Yalla Flex cohort (or releases the hold with null). Staff only: while held, the
+ * child books that cohort's Flex days whatever their age, and no other Flex cohort.
+ */
+export async function setFlexHold(db: Executor, actor: Actor, childId: string, hold: string | null) {
+  if (hold !== null && !isFlexHoldKey(hold)) throw new OpsError("invalid", "Choose a Yalla Flex cohort.");
+  const [c] = await db.select().from(children).where(eq(children.id, childId));
+  if (!c) throw new OpsError("not_found", "Child not found.");
+  if ((c.flexHold ?? null) === hold) return c;
+  const [u] = await db
+    .update(children)
+    .set({ flexHold: hold, flexHoldSetAt: hold ? new Date() : null, flexHoldSetBy: hold ? actor.name : null })
+    .where(eq(children.id, childId))
+    .returning();
+  const name = c.preferredName || c.firstName;
+  await audit(db, actor, {
+    action: hold ? "family.flex_hold" : "family.flex_hold_release",
+    entityType: "child",
+    entityId: childId,
+    summary: hold ? `Held ${name} in ${flexHoldName(hold)} for Yalla Flex` : `Released ${name}’s Yalla Flex hold in ${flexHoldName(c.flexHold)}`,
+    changes: { flexHold: { from: c.flexHold, to: hold } },
+  });
+  return u;
 }

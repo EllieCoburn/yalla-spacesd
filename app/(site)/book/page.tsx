@@ -24,7 +24,7 @@ export default async function BookPage() {
   const guardian = configured ? await getGuardian() : null;
   const saved = guardian
     ? await getDb()
-        .select({ id: children.id, firstName: children.firstName, lastName: children.lastName, preferredName: children.preferredName, birthDate: children.birthDate, allergies: children.allergies, medicalNotes: children.medicalNotes })
+        .select({ id: children.id, firstName: children.firstName, lastName: children.lastName, preferredName: children.preferredName, birthDate: children.birthDate, flexHold: children.flexHold, allergies: children.allergies, medicalNotes: children.medicalNotes })
         .from(children)
         .where(and(eq(children.familyId, guardian.familyId), eq(children.status, "active")))
         .orderBy(asc(children.birthDate))

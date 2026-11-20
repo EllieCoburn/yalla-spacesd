@@ -533,6 +533,13 @@
       "when": 1795146446404,
       "tag": "0075_welcome_to_sd_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1795205853615,
+      "tag": "0076_flex_cohort_hold",
+      "breakpoints": true
     }
   ]
 }

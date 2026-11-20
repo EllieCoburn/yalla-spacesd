@@ -419,6 +419,14 @@ export const children = pgTable(
     preferredName: text("preferred_name"),
     birthDate: date("birth_date").notNull(),
     cohortId: text("cohort_id").references(() => cohorts.id),
+    /**
+     * Yalla Flex cohort hold (a FLEX_GROUPS key, e.g. "seedlings"): set by staff for longtime drop-in
+     * families. While set, the child books Flex days in this cohort only, whatever their age, and
+     * can't book any other Flex cohort until staff release the hold (lib/booking/flex-hold.ts).
+     */
+    flexHold: text("flex_hold"),
+    flexHoldSetAt: ts("flex_hold_set_at"),
+    flexHoldSetBy: text("flex_hold_set_by"),
     /** Family-provided care information. */
     allergies: text("allergies"),
     medicalNotes: text("medical_notes"),

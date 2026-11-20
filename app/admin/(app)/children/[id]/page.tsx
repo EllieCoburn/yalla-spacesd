@@ -5,7 +5,9 @@ import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
 import { ActionForm, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
-import { updateChildAction } from "@/app/admin/(app)/families/actions";
+import { flexHoldAction, updateChildAction } from "@/app/admin/(app)/families/actions";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { childProfile } from "@/lib/admin/queries/families";
 import { requireStaff } from "@/lib/auth/session";
 import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-club";
@@ -14,7 +16,7 @@ import { eq } from "drizzle-orm";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
-import { ageLabel, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, fmtDateTime, fmtTime, localDateOf, todayLA } from "@/lib/time";
 
 function Stamp({ at, by }: { at: Date | null; by: string | null }) {
   return <p className="mt-3 text-[0.74rem] text-ink-soft">{at ? `Last updated ${fmtDateTime(at)}${by ? ` by ${by}` : ""}` : "Not yet provided"}</p>;
@@ -90,6 +92,40 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                     </div>
                   </ActionForm>
                 </Disclosure>
+              </div>
+            ) : null}
+          </Card>
+
+          {/* Yalla Flex cohort hold (lib/booking/flex-hold.ts) */}
+          <Card title="Yalla Flex cohort" actions={c.flexHold ? <Pill tone="info">Held in {flexHoldName(c.flexHold)}</Pill> : <Pill tone="muted">Books by age</Pill>}>
+            {c.flexHold ? (
+              <p className="text-[0.88rem] text-ink">
+                {display} is held in <b>{flexHoldName(c.flexHold)}</b> for Yalla Flex. The family can book {flexHoldName(c.flexHold)} days only, whatever {display}’s age, and can’t book
+                another Flex group until the hold is released.
+                {c.flexHoldSetBy ? <span className="block text-[0.78rem] text-ink-soft">Held by {c.flexHoldSetBy}{c.flexHoldSetAt ? ` on ${fmtDate(localDateOf(c.flexHoldSetAt), "d MMM yyyy")}` : ""}.</span> : null}
+              </p>
+            ) : (
+              <p className="text-[0.88rem] text-ink-soft">
+                {display} books the Flex group that fits their age on each day. For a longtime drop-in family who wants to stay with the teachers and friends they know, hold {display} in a cohort.
+              </p>
+            )}
+            {manage ? (
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <ActionForm action={flexHoldAction} className="flex flex-wrap items-end gap-3" submit={{ label: c.flexHold ? "Change hold" : "Hold in cohort", variant: "secondary" }}>
+                  <input type="hidden" name="childId" value={c.id} />
+                  <SelectField name="flexHold" label="Cohort" defaultValue={c.flexHold ?? FLEX_GROUPS[0].key} options={FLEX_GROUPS.map((g) => ({ value: g.key, label: `${g.cohort} (${g.label})` }))} />
+                </ActionForm>
+                {c.flexHold ? (
+                  <ActionForm
+                    action={flexHoldAction}
+                    className=""
+                    submit={{ label: "Release hold", variant: "primary" }}
+                    confirm={{ title: `Release ${display}’s hold in ${flexHoldName(c.flexHold)}?`, body: `${display} will book the Flex group that fits their age from now on. Days already booked stay as they are.`, confirmLabel: "Release hold" }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
+                    <input type="hidden" name="flexHold" value="" />
+                  </ActionForm>
+                ) : null}
               </div>
             ) : null}
           </Card>

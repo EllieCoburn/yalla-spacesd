@@ -21,11 +21,13 @@ import {
   removePickup,
   restoreFamily,
   setEmergencyContact,
+  setFlexHold,
   setPickup,
   updateChild,
   updateFamily,
   updateGuardian,
 } from "@/lib/ops/families";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 
 const nullable = (s: string) => (s === "" ? null : s);
 
@@ -110,6 +112,7 @@ export const addChildAction = adminAction("families.manage", async ({ db, actor,
     preferredName: str("preferredName"),
     birthDate: str("birthDate"),
     cohortId: nullable(str("cohortId")),
+    flexHold: nullable(str("flexHold")),
     allergies: care ? str("allergies") : undefined,
     careNotes: care ? str("careNotes") : undefined,
   });
@@ -190,4 +193,12 @@ export const purgeTestDataAction = adminAction("staff.manage", async ({ db, acto
   const { purgeFamilyBookingsAndInvoices } = await import("@/lib/ops/test-data");
   const r = await purgeFamilyBookingsAndInvoices(db, actor, { familyId: str("familyId"), confirmName: str("confirmName") });
   return `Deleted ${r.bookings} booking${r.bookings === 1 ? "" : "s"}, ${r.spaceReservations} workspace reservation${r.spaceReservations === 1 ? "" : "s"} and ${r.invoices} invoice${r.invoices === 1 ? "" : "s"} for good.`;
+});
+
+/** Hold a child in a Yalla Flex cohort, or release the hold (empty value). */
+export const flexHoldAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const hold = str("flexHold") || null;
+  const c = await setFlexHold(db, actor, str("childId"), hold);
+  const name = c.preferredName || c.firstName;
+  return hold ? `${name} is held in ${flexHoldName(hold)} for Yalla Flex.` : `Released. ${name} can now book the Flex group that fits their age.`;
 });

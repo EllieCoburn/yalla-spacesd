@@ -49,7 +49,8 @@ import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
 import { topicForProgram } from "./team-notices";
-import { flexGroupFor } from "@/lib/booking/flex";
+import { FLEX_SLUG, flexGroupFor } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { bookingStatusPath } from "@/lib/links";
@@ -742,6 +743,12 @@ export async function joinPublicWaitlist(
     if (childId) {
       const [c] = await db.select().from(children).where(and(eq(children.id, childId), eq(children.familyId, familyId)));
       if (!c) throw new OpsError("invalid", "That child isn’t part of your family.");
+      // A child held in a Flex cohort can't wait for another cohort's Flex day.
+      if (c.flexHold) {
+        const [ws] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
+        if (ws && ws.p.slug === FLEX_SLUG && flexGroupFor(ws.s.minAgeMonths)?.key !== c.flexHold)
+          throw new OpsError("flex_hold", `${c.preferredName || c.firstName} is staying in ${flexHoldName(c.flexHold)} for Yalla Flex for now. Ask us when they’re ready to move up.`);
+      }
     } else {
       const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.child.lastName!.trim(), birthDate: input.child.birthDate });
       childId = child.id;

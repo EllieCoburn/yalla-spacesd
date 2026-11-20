@@ -16,6 +16,8 @@ import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import type { CouponPreview } from "@/lib/ops/coupons";
 import { clearSavedCoupon, savedCoupon } from "@/lib/booking/saved-coupon";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
+import { FLEX_SLUG } from "@/lib/booking/flex";
+import { flexEligibility } from "@/lib/booking/flex-hold";
 import { usd } from "./format";
 import {
   FAMILY_RATE,
@@ -30,6 +32,8 @@ export type SavedChild = {
   lastName: string;
   preferredName: string | null;
   birthDate: string;
+  /** Staff-set Yalla Flex cohort hold (lib/booking/flex-hold.ts). */
+  flexHold?: string | null;
   /** "" = none known, text = details, null = not asked yet. */
   allergies?: string | null;
   medicalNotes?: string | null;
@@ -54,6 +58,7 @@ type ChildDraft = {
   firstName: string;
   lastName: string;
   birthDate: string;
+  flexHold?: string | null;
   /** Known allergies and medications, answered before payment ("no", or "yes" with details). */
   allergyAnswer: "" | "no" | "yes";
   allergies: string;
@@ -182,6 +187,7 @@ export function Checkout({
           firstName: c.preferredName || c.firstName,
           lastName: c.lastName,
           birthDate: c.birthDate,
+          flexHold: c.flexHold ?? null,
           ...careFromSaved(c),
           include: includeChildren.includes(c.id),
         })).concat(
@@ -280,13 +286,9 @@ export function Checkout({
     };
   }, [onClose]);
 
-  const eligible = (s: PublicSession, k: ChildDraft) => {
-    const m = ageInMonths(k.birthDate, s.localDate);
-    return (
-      (s.ages.min == null || m >= s.ages.min) &&
-      (s.ages.max == null || m <= s.ages.max)
-    );
-  };
+  // Age, or for Yalla Flex a staff-set cohort hold (lib/booking/flex-hold.ts).
+  const eligible = (s: PublicSession, k: ChildDraft) =>
+    flexEligibility({ isFlex: s.programSlug === FLEX_SLUG, minAge: s.ages.min, ages: s.ages, age: ageInMonths(k.birthDate, s.localDate), hold: k.flexHold }).ok;
   const isOn = (sid: string, key: string) =>
     spotsOf(sid) > 0
       ? (slots[sid] ?? []).includes(key)

@@ -39,9 +39,10 @@ import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
 import { couponLine, couponPrograms } from "./coupons";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
+import { flexEligibility } from "@/lib/booking/flex-hold";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
 import { addonsFor, validAddons } from "@/lib/booking/addons";
-import { flexGroupFor } from "@/lib/booking/flex";
+import { FLEX_SLUG, flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 import { bookingStatusPath } from "@/lib/links";
@@ -151,7 +152,12 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
       }
       const age = ageInMonths(c.birthDate, s.localDate);
       const name = c.preferredName || c.firstName;
-      if (!ageFits(age, sessionAges(s, p)))
+      // Yalla Flex cohort holds (lib/booking/flex-hold.ts): a held child books their held cohort only.
+      // Staff booking for a family may still place a held child elsewhere; families can't.
+      const elig = flexEligibility({ isFlex: p.slug === FLEX_SLUG, minAge: s.minAgeMonths, ages: sessionAges(s, p), age, hold: c.flexHold });
+      if (!elig.ok && elig.reason === "held_elsewhere" && opts.source === "public")
+        problems.push({ sessionId: s.id, childId: c.id, code: "flex_hold", message: `${name} is staying in ${elig.heldIn} for Yalla Flex for now, so ${s.title ?? p.name} isn’t available. Book ${elig.heldIn} days, or ask us when ${name} is ready to move up.` });
+      else if (!elig.ok && (elig.reason === "age" || !ageFits(age, sessionAges(s, p))))
         problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${s.title ?? p.name}.` });
       if (s.cohortId && c.cohortId && c.cohortId !== s.cohortId && p.kind !== "drop_in")
         problems.push({ sessionId: s.id, childId: c.id, code: "cohort", message: `${name} is assigned to a different cohort than this session.` });

@@ -18,6 +18,8 @@ import { familyTestDataCounts } from "@/lib/ops/test-data";
 import { portalStatusByEmail } from "@/lib/family-auth";
 import { familySignedCopies } from "@/lib/ops/forms";
 import { ensureCheckinCode } from "@/lib/ops/checkin";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
@@ -165,6 +167,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       </span>
                     </span>
                     <span className="flex flex-wrap gap-1">
+                      {c.flexHold ? <Pill tone="info">Flex hold: {flexHoldName(c.flexHold)}</Pill> : null}
                       {c.allergies ? <Pill tone="critical" icon="alert">Allergy: {c.allergies}</Pill> : null}
                       {d.paperwork ? <PaperworkSummary items={d.paperwork.get(c.id) ?? []} /> : null}
                     </span>
@@ -183,6 +186,12 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       <TextField name="preferredName" label="Preferred name" />
                       <TextField name="birthDate" label="Date of birth" type="date" required />
                       <SelectField name="cohortId" label="Cohort" options={[{ value: "", label: "Not assigned" }, ...d.cohorts.map((c) => ({ value: c.id, label: c.name }))]} />
+                      <SelectField
+                        name="flexHold"
+                        label="Yalla Flex cohort hold"
+                        options={[{ value: "", label: "No hold (books by age)" }, ...FLEX_GROUPS.map((g) => ({ value: g.key, label: `Hold in ${g.cohort} (${g.label})` }))]}
+                        hint="For longtime drop-in families: the child books this Flex cohort only, whatever their age, until you release the hold."
+                      />
                     </div>
                     {can(staff, "children.care") ? (
                       <div className="grid gap-3 sm:grid-cols-2">
