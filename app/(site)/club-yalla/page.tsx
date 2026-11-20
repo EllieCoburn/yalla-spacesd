@@ -131,11 +131,29 @@ export default function ClubYallaPage() {
               return (
                 <Reveal key={c.name} delay={i * 90} className="group">
                   <div className="relative flex aspect-[4/5] items-end justify-center overflow-hidden rounded-t-[999px] bg-mist">
-                    <span className="absolute top-[18%] font-serif text-[0.85rem] text-blue/60 italic">0{i + 1}</span>
-                    <Illustration
-                      title={c.name}
-                      className="mb-[4%] w-[86%] text-blue transition-transform duration-[1.2s] ease-[var(--ease-soft)] group-hover:-translate-y-1.5 group-hover:scale-[1.03]"
-                    />
+                    {c.name === "Seedlings" ? (
+                      // A silent clip of the Seedlings room. The file has no audio track at all, and there are no controls.
+                      <video
+                        src="/video/seedlings.mp4"
+                        poster="/video/seedlings-poster.jpg"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        disablePictureInPicture
+                        aria-label="Seedlings at play"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <span className="absolute top-[18%] font-serif text-[0.85rem] text-blue/60 italic">0{i + 1}</span>
+                        <Illustration
+                          title={c.name}
+                          className="mb-[4%] w-[86%] text-blue transition-transform duration-[1.2s] ease-[var(--ease-soft)] group-hover:-translate-y-1.5 group-hover:scale-[1.03]"
+                        />
+                      </>
+                    )}
                   </div>
                   <p className="display mt-6 text-[1.7rem] sm:text-[1.9rem]">{c.name}</p>
                   <p className="mt-1 text-[0.92rem] text-ink-soft">{c.ages}</p>
