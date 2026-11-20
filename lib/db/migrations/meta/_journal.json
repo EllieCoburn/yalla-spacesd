@@ -540,6 +540,13 @@
       "when": 1795205853615,
       "tag": "0076_flex_cohort_hold",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795209134204,
+      "tag": "0077_waitlist_day_length",
+      "breakpoints": true
     }
   ]
 }

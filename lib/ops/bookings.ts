@@ -146,7 +146,7 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
 
     if (it.childId) {
       const c = childrenById.get(it.childId);
-      if (!c || c.familyId !== familyId) {
+      if (!c || c.familyId !== familyId || c.status !== "active") {
         problems.push({ sessionId: s.id, childId: it.childId, code: "child_invalid", message: "That child isn’t part of this family." });
         continue;
       }

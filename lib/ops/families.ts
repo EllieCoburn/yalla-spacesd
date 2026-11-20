@@ -8,10 +8,10 @@
  * - Existing customers are matched by guardian email (and children by name + birth date) so a
  *   returning family isn't duplicated.
  */
-import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { audit, diff, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { authorizedPickups, children, emergencyContacts, families, familyNotes, guardians } from "@/lib/db/schema";
+import { attendanceRecords, authorizedPickups, bookingItems, bookings, children, documents, emergencyContacts, families, familyNotes, formRequirements, formSubmissions, guardians, lateFees, memberships, sessions, waitlistEntries } from "@/lib/db/schema";
 import { flexHoldName, heldParagraph, isFlexHoldKey } from "@/lib/booking/flex-hold";
 
 const clean = (s?: string | null) => (s ?? "").trim();
@@ -300,4 +300,71 @@ export async function setFlexHold(db: Executor, actor: Actor, childId: string, h
     }
   }
   return { ...u, notified };
+}
+
+/**
+ * What a child has on record. A child with any history (bookings, attendance, forms, documents, late
+ * fees, a membership) can be removed from the family but not deleted, so those records stay whole.
+ */
+export async function childHistory(db: Executor, childId: string) {
+  const n = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
+  const count = sql<number>`count(*)::int`;
+  const [bookingsN, attendanceN, formsN, docsN, feesN, membershipsN, upcomingN] = await Promise.all([
+    n(db.select({ n: count }).from(bookingItems).where(eq(bookingItems.childId, childId))),
+    n(db.select({ n: count }).from(attendanceRecords).where(eq(attendanceRecords.childId, childId))),
+    n(db.select({ n: count }).from(formSubmissions).where(eq(formSubmissions.childId, childId))),
+    n(db.select({ n: count }).from(documents).where(eq(documents.childId, childId))),
+    n(db.select({ n: count }).from(lateFees).where(eq(lateFees.childId, childId))),
+    n(db.select({ n: count }).from(memberships).where(and(eq(memberships.childId, childId), inArray(memberships.status, ["active", "upcoming", "paused", "ended"])))),
+    n(
+      db
+        .select({ n: count })
+        .from(bookingItems)
+        .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+        .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+        .where(and(eq(bookingItems.childId, childId), inArray(bookingItems.status, ["confirmed", "held"]), gt(sessions.startsAt, new Date()))),
+    ),
+  ]);
+  const liveMembership = await n(db.select({ n: count }).from(memberships).where(and(eq(memberships.childId, childId), inArray(memberships.status, ["active", "upcoming", "paused"]))));
+  const hasHistory = bookingsN + attendanceN + formsN + docsN + feesN + membershipsN > 0;
+  return { bookings: bookingsN, attendance: attendanceN, forms: formsN, documents: docsN, lateFees: feesN, memberships: membershipsN, upcoming: upcomingN, liveMembership, hasHistory };
+}
+
+/** Removes a child from the family's portal and booking (status archived). History stays; staff can restore them. */
+export async function setChildRemoved(db: Executor, actor: Actor, childId: string, removed: boolean) {
+  const [c] = await db.select().from(children).where(eq(children.id, childId));
+  if (!c) throw new OpsError("not_found", "Child not found.");
+  const name = c.preferredName || c.firstName;
+  if (removed) {
+    const h = await childHistory(db, childId);
+    if (h.upcoming) throw new OpsError("invalid", `${name} has ${h.upcoming} upcoming booking${h.upcoming === 1 ? "" : "s"}. Cancel ${h.upcoming === 1 ? "it" : "them"} first.`);
+    if (h.liveMembership) throw new OpsError("invalid", `${name} has a Club Yalla membership that isn’t over. End it first.`);
+  }
+  await db.update(children).set({ status: removed ? "archived" : "active" }).where(eq(children.id, childId));
+  await audit(db, actor, { action: removed ? "family.child_remove" : "family.child_restore", entityType: "child", entityId: childId, summary: removed ? `Removed ${name} from the family` : `Restored ${name} to the family` });
+}
+
+/** Deletes a child for good. Only for a child with no history (e.g. added by mistake). */
+export async function deleteChild(db: Executor, actor: Actor, childId: string) {
+  const [c] = await db.select().from(children).where(eq(children.id, childId));
+  if (!c) throw new OpsError("not_found", "Child not found.");
+  const name = c.preferredName || c.firstName;
+  const h = await childHistory(db, childId);
+  if (h.hasHistory) throw new OpsError("invalid", `${name} has bookings, attendance or forms on record, so they can be removed from the family but not deleted.`);
+  // Unlink contacts and notes, drop child-specific form requirements, and take them off any waitlist.
+  await db.update(authorizedPickups).set({ childId: null }).where(eq(authorizedPickups.childId, childId));
+  await db.update(emergencyContacts).set({ childId: null }).where(eq(emergencyContacts.childId, childId));
+  await db.update(familyNotes).set({ childId: null }).where(eq(familyNotes.childId, childId));
+  await db.delete(formRequirements).where(eq(formRequirements.childId, childId));
+  const onWaitlist = await db.select({ id: waitlistEntries.id, kids: waitlistEntries.childIds, status: waitlistEntries.status }).from(waitlistEntries).where(sql`${childId} = ANY(${waitlistEntries.childIds})`);
+  for (const w of onWaitlist) {
+    const kids = w.kids.filter((k) => k !== childId);
+    await db
+      .update(waitlistEntries)
+      .set({ childIds: kids, partySize: Math.max(1, kids.length), status: !kids.length && w.status === "waiting" ? "removed" : w.status, updatedAt: new Date() })
+      .where(eq(waitlistEntries.id, w.id));
+  }
+  await db.delete(children).where(eq(children.id, childId));
+  await audit(db, actor, { action: "family.child_delete", entityType: "family", entityId: c.familyId, summary: `Deleted ${name} ${c.lastName} from the family (no history on record)` });
+  return { familyId: c.familyId, name };
 }

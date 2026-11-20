@@ -118,6 +118,11 @@ export default async function WaitlistPage({ searchParams }: { searchParams: Pro
                   </td>
                   <td className="tabular-nums">
                     {r.e.partySize} {r.e.partySize === 1 ? "spot" : "spots"}
+                    {r.e.dayLength ? (
+                      <span className="mt-1 block">
+                        <Pill tone={r.e.dayLength === "half" ? "info" : "neutral"}>{r.e.dayLength === "half" ? "Half day" : "Full day"}</Pill>
+                      </span>
+                    ) : null}
                   </td>
                   <td>
                     {r.ineligible.length ? (

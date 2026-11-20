@@ -22,6 +22,8 @@ import {
   restoreFamily,
   setEmergencyContact,
   setFlexHold,
+  setChildRemoved,
+  deleteChild,
   setPickup,
   updateChild,
   updateFamily,
@@ -214,4 +216,17 @@ export const flexHoldAction = adminAction("families.manage", async ({ db, actor,
   const name = c.preferredName || c.firstName;
   if (!hold) return `Released. ${name} can now book the Flex group that fits their age.`;
   return `${name} is held in ${flexHoldName(hold)} for Yalla Flex.${c.notified ? " We’ve emailed the family to let them know." : " The family will hear about it when you invite them to the Family Portal."}`;
+});
+
+/** Remove a child from the family (kept on record) or restore them. */
+export const childRemovedAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const removed = str("removed") === "1";
+  await setChildRemoved(db, actor, str("childId"), removed);
+  return removed ? "Removed from the family. They no longer appear in the family’s portal or booking." : "Restored to the family.";
+});
+
+/** Delete a child with no history for good, then back to the family page. */
+export const deleteChildAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const r = await deleteChild(db, actor, str("childId"));
+  redirect(`/admin/families/${r.familyId}`);
 });

@@ -167,6 +167,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       </span>
                     </span>
                     <span className="flex flex-wrap gap-1">
+                      {c.status === "archived" ? <Pill tone="muted" icon="x">Removed</Pill> : null}
                       {c.flexHold ? <Pill tone="info">Flex hold: {flexHoldName(c.flexHold)}</Pill> : null}
                       {c.allergies ? <Pill tone="critical" icon="alert">Allergy: {c.allergies}</Pill> : null}
                       {d.paperwork ? <PaperworkSummary items={d.paperwork.get(c.id) ?? []} /> : null}

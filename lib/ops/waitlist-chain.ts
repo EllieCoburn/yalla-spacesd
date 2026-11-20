@@ -13,6 +13,7 @@
  *   Families offered after the one who booked go back on the waitlist quietly.
  * - It never goes back on the public calendar: at 8:00am the reservation simply ends.
  */
+import { HALF_DAY } from "@/lib/booking/flex";
 import { and, asc, eq, gt, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { SYSTEM, type Actor } from "@/lib/audit";
 import { trustedBaseUrl } from "@/lib/base-url";
@@ -63,7 +64,7 @@ async function offerInChain(db: DB, chain: typeof waitlistChains.$inferSelect, e
   try {
     hold = await createHold(db, ACTOR, {
       familyId: entry.familyId,
-      items: (entry.childIds.length ? entry.childIds : [null]).map((childId) => ({ sessionId: chain.sessionId, childId })),
+      items: (entry.childIds.length ? entry.childIds : [null]).map((childId) => ({ sessionId: chain.sessionId, childId, addons: entry.dayLength === "half" ? [HALF_DAY] : undefined })),
       source: "waitlist",
       acknowledgePaperwork: true,
       waitlistChainId: chain.id,

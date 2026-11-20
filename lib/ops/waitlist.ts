@@ -3,6 +3,7 @@
  * spot is reserved while the family decides and released automatically if they don't. Nothing is
  * charged or confirmed until the family completes checkout.
  */
+import { HALF_DAY } from "@/lib/booking/flex";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { FLEX_SLUG } from "@/lib/booking/flex";
 import { audit, OpsError, type Actor } from "@/lib/audit";
@@ -23,7 +24,7 @@ export const WAITLIST_STATUS_LABEL: Record<string, string> = {
   removed: "Removed",
 };
 
-export async function joinWaitlist(db: DB, actor: Actor, input: { familyId: string; sessionId: string; childIds: string[]; notes?: string }) {
+export async function joinWaitlist(db: DB, actor: Actor, input: { familyId: string; sessionId: string; childIds: string[]; notes?: string; dayLength?: string | null }) {
   const [s] = await db.select().from(sessions).where(eq(sessions.id, input.sessionId));
   if (!s) throw new OpsError("not_found", "Session not found.");
   const [p] = await db.select().from(programs).where(eq(programs.id, s.programId));
@@ -35,7 +36,7 @@ export async function joinWaitlist(db: DB, actor: Actor, input: { familyId: stri
   if (existing.length) throw new OpsError("duplicate", "This family is already on the waitlist for that session.");
   const [e] = await db
     .insert(waitlistEntries)
-    .values({ programId: p.id, sessionId: s.id, familyId: input.familyId, childIds: input.childIds, partySize: Math.max(1, input.childIds.length), notes: input.notes ?? null })
+    .values({ programId: p.id, sessionId: s.id, familyId: input.familyId, childIds: input.childIds, partySize: Math.max(1, input.childIds.length), notes: input.notes ?? null, dayLength: input.dayLength === "half" ? "half" : input.dayLength === "full" ? "full" : null })
     .returning();
   await audit(db, actor, { action: "waitlist.join", entityType: "waitlist", entityId: e.id, summary: `Joined waitlist for ${p.name} on ${fmtDate(s.localDate)}` });
   return e;
@@ -49,7 +50,8 @@ export async function makeOffer(db: DB, actor: Actor, input: { entryId: string; 
   const windowHours = input.windowHours ?? p.offerWindowHours;
   const hold = await createHold(db, actor, {
     familyId: e.familyId,
-    items: (e.childIds.length ? e.childIds : [null]).map((childId) => ({ sessionId: e.sessionId!, childId })),
+    // A half-day request is held as a half day (the Flex half-day extra), so it's priced as one.
+    items: (e.childIds.length ? e.childIds : [null]).map((childId) => ({ sessionId: e.sessionId!, childId, addons: e.dayLength === "half" ? [HALF_DAY] : undefined })),
     source: "waitlist",
     holdMinutes: windowHours * 60,
     acknowledgePaperwork: true,

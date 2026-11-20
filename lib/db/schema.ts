@@ -725,6 +725,8 @@ export const waitlistEntries = pgTable(
     offerBookingId: text("offer_booking_id"),
     /** The Yalla Flex waitlist spot this family was offered (see waitlist_chains). */
     chainId: text("chain_id"),
+    /** Yalla Flex: the day length they're waiting for (full | half). An offer is held at this length. */
+    dayLength: text("day_length"),
     notes: text("notes"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

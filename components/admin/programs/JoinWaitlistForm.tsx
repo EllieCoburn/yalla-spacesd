@@ -55,6 +55,14 @@ export function JoinWaitlistForm({ families, sessions }: { families: Fam[]; sess
           ))}
         </select>
       </div>
+      <label className="block space-y-1.5">
+        <span className="text-[0.8rem] font-medium text-ink">Day length (Yalla Flex)</span>
+        <select name="dayLength" defaultValue="" className={inputCls}>
+          <option value="">Not a Flex day / not asked</option>
+          <option value="full">Full day (8:30am – 4:30pm)</option>
+          <option value="half">Half day (8:30am – 12:00pm)</option>
+        </select>
+      </label>
       <TextArea name="notes" label="Notes (staff only)" rows={2} />
     </ActionForm>
   );

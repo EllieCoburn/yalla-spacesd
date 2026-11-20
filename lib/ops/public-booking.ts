@@ -699,7 +699,7 @@ export async function bookingStatusView(db: Executor, reference: string) {
 
 export async function joinPublicWaitlist(
   db: DB,
-  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; sessionId: string; baseUrl: string },
+  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; sessionId: string; baseUrl: string; dayLength?: string | null },
 ): Promise<{ ok: true } | { ok: false; code: string; error: string; devLink?: string }> {
   try {
     // Every family on file has a parent's full name, email and phone, and each child's full name and birthday.
@@ -753,7 +753,7 @@ export async function joinPublicWaitlist(
       const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.child.lastName!.trim(), birthDate: input.child.birthDate });
       childId = child.id;
     }
-    await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId] });
+    await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId], dayLength: input.dayLength });
     // Let the team know (Admin → Inbox and email). The waitlist itself is in Admin → Waitlist.
     const [sx] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
     const [kid] = await db.select().from(children).where(eq(children.id, childId));

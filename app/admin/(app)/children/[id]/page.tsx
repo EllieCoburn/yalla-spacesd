@@ -5,7 +5,8 @@ import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
 import { ActionForm, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
-import { flexHoldAction, updateChildAction } from "@/app/admin/(app)/families/actions";
+import { childRemovedAction, deleteChildAction, flexHoldAction, updateChildAction } from "@/app/admin/(app)/families/actions";
+import { childHistory } from "@/lib/ops/families";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { flexHoldName } from "@/lib/booking/flex-hold";
 import { childProfile } from "@/lib/admin/queries/families";
@@ -41,6 +42,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
   const cohortName = d.cohorts.find((x) => x.id === c.cohortId)?.name ?? null;
   const paperwork = d.paperwork ? [...(d.paperwork.get(c.id) ?? []), ...(d.paperwork.get("family") ?? [])] : null;
   const kids = [{ id: c.id, name: display }];
+  const history = manage ? await childHistory(getDb(), c.id) : null;
 
   return (
     <>
@@ -57,6 +59,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
             <span>
               {ageLabel(c.birthDate, today)} today · born {fmtDate(c.birthDate, "d MMMM yyyy")}
             </span>
+            {c.status === "archived" ? <Pill tone="muted" icon="x">Removed from family</Pill> : null}
             {cohortName ? <Pill tone="neutral">{cohortName}</Pill> : <Pill tone="muted">No cohort</Pill>}
             {activeMembership ? <Pill tone="info" icon="check">Club Yalla</Pill> : null}
             {c.allergies ? <Pill tone="critical" icon="alert">Allergy</Pill> : null}
@@ -233,6 +236,51 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                     </tr>
                   ))}
                 </Table>
+              )}
+            </Card>
+          ) : null}
+
+          {history ? (
+            <Card title={c.status === "archived" ? "Removed from the family" : "Remove or delete"} className="border-dashed">
+              {c.status === "archived" ? (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">{display} was removed from the family. They don’t appear in the family’s portal or booking, and their history is kept.</p>
+                  <ActionForm action={childRemovedAction} className="mt-3" submit={{ label: `Restore ${display}`, variant: "secondary" }}>
+                    <input type="hidden" name="childId" value={c.id} />
+                    <input type="hidden" name="removed" value="0" />
+                  </ActionForm>
+                </>
+              ) : history.hasHistory ? (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">
+                    {display} has history on record ({[history.bookings && `${history.bookings} booking${history.bookings === 1 ? "" : "s"}`, history.attendance && "attendance", history.forms && "forms", history.memberships && "a membership", history.documents && "documents", history.lateFees && "late fees"].filter(Boolean).join(", ")}), so they can be removed from the family but not deleted. Removing hides {display} from the family’s portal and booking; you can restore them anytime.
+                  </p>
+                  {history.upcoming || history.liveMembership ? (
+                    <p className="mt-2 text-[0.82rem] text-[#8a5212]">{history.upcoming ? `Cancel ${display}’s ${history.upcoming} upcoming booking${history.upcoming === 1 ? "" : "s"} first.` : `End ${display}’s Club Yalla membership first.`}</p>
+                  ) : (
+                    <ActionForm
+                      action={childRemovedAction}
+                      className="mt-3"
+                      submit={{ label: `Remove ${display} from the family`, variant: "secondary" }}
+                      confirm={{ title: `Remove ${display} from the family?`, body: "They’ll no longer appear in the family’s portal or booking. Their bookings, attendance and forms stay on record, and you can restore them.", confirmLabel: "Remove" }}
+                    >
+                      <input type="hidden" name="childId" value={c.id} />
+                      <input type="hidden" name="removed" value="1" />
+                    </ActionForm>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">{display} has no bookings, attendance or forms on record, so you can delete them for good (for example, if they were added by mistake).</p>
+                  <ActionForm
+                    action={deleteChildAction}
+                    className="mt-3"
+                    submit={{ label: `Delete ${display}`, variant: "danger" }}
+                    confirm={{ title: `Delete ${display} for good?`, body: "This can’t be undone. They’re taken off any waitlist too.", confirmLabel: "Delete", danger: true }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
+                  </ActionForm>
+                </>
               )}
             </Card>
           ) : null}

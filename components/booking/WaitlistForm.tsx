@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { joinWaitlistAction } from "@/app/(site)/book/actions";
+import { FLEX_SLUG } from "@/lib/booking/flex";
 import { Mark } from "@/components/brand/Mark";
 import type { PublicSession } from "@/lib/ops/public-booking";
 import { fmtDate, fmtTime } from "@/lib/time";
@@ -11,6 +12,8 @@ const input = "w-full border-0 border-b border-ink/20 bg-transparent px-0 py-2.5
 
 /** Join the waitlist for a full session. Nothing is charged; we offer the spot if one opens. */
 export function WaitlistForm({ session, guardian, savedChildren, onClose }: { session: PublicSession; guardian: SignedInGuardian | null; savedChildren: SavedChild[]; onClose: () => void }) {
+  const isFlex = session.programSlug === FLEX_SLUG;
+  const [dayLength, setDayLength] = useState<string>("");
   const [adult, setAdult] = useState({ firstName: guardian?.firstName ?? "", lastName: guardian?.lastName ?? "", email: guardian?.email ?? "", phone: "" });
   const [childId, setChildId] = useState<string>(savedChildren[0]?.id ?? "");
   const [child, setChild] = useState({ firstName: "", lastName: "", birthDate: "" });
@@ -72,6 +75,25 @@ export function WaitlistForm({ session, guardian, savedChildren, onClose }: { se
                 </label>
               </div>
             )}
+            {isFlex ? (
+              <fieldset>
+                <legend className="text-[0.7rem] tracking-[0.16em] text-ink-soft uppercase">Full or half day?</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {[
+                    { v: "full", label: "Full day", sub: "8:30am – 4:30pm" },
+                    { v: "half", label: "Half day", sub: "8:30am – 12:00pm" },
+                  ].map((o) => (
+                    <label key={o.v} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 ${dayLength === o.v ? "border-ink bg-paper" : "border-ink/15 hover:border-ink"}`}>
+                      <input type="radio" name="dayLength" value={o.v} checked={dayLength === o.v} onChange={() => setDayLength(o.v)} className="h-4 w-4" />
+                      <span>
+                        <span className="block text-[0.95rem] text-ink">{o.label}</span>
+                        <span className="text-[0.78rem] text-ink-soft">{o.sub}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
             {msg && !msg.ok ? (
               <p role="alert" className="text-[0.85rem] text-oxblood">
                 {msg.text}
@@ -86,7 +108,8 @@ export function WaitlistForm({ session, guardian, savedChildren, onClose }: { se
               disabled={pending}
               onClick={() =>
                 start(async () => {
-                  const res = await joinWaitlistAction({ sessionId: session.id, guardian: adult, child: savedChildren.length ? { existingId: childId, firstName: "", lastName: "", birthDate: "" } : child });
+                  if (isFlex && !dayLength) return setMsg({ ok: false, text: "Choose a full day or a half day." });
+                  const res = await joinWaitlistAction({ sessionId: session.id, guardian: adult, child: savedChildren.length ? { existingId: childId, firstName: "", lastName: "", birthDate: "" } : child, dayLength: isFlex ? (dayLength as "full" | "half") : undefined });
                   setMsg(res.ok ? { ok: true, text: "You’re on the waitlist. We’ll email you if a spot opens." } : { ok: false, text: res.error, devLink: "devLink" in res ? res.devLink : undefined });
                 })
               }
