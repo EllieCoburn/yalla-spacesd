@@ -66,14 +66,14 @@ export default function ClubYallaPage() {
       <section className="bg-paper py-20 lg:py-28">
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Mark name="roofline" className="h-4 w-auto text-blue" />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-t-[999px] bg-sand">
+              <Image src="/photos/cowork-desk.webp" alt="A quiet desk for two in the coworking space, steps from where children play" fill sizes="(min-width:1024px) 40vw, 90vw" className="object-cover" />
+            </div>
+            <Mark name="roofline" className="mt-10 h-4 w-auto text-blue" />
             <div className="mt-10 space-y-6 text-[1.08rem] text-ink-soft">
               {p.body.map((para) => (
                 <p key={para}>{para}</p>
               ))}
-            </div>
-            <div className="relative mt-12 aspect-[4/3] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/cowork-desk.webp" alt="A quiet desk for two in the coworking space, steps from where children play" fill sizes="(min-width:1024px) 40vw, 90vw" className="object-cover" />
             </div>
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
