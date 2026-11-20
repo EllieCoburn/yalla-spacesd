@@ -33,6 +33,18 @@ async function invoiceFor(email: string) {
 }
 
 describe("Coupon codes", () => {
+  it("WELCOMETOSD takes 15% off a Yalla Flex day only", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    await db().insert(s.discounts).values({ code: "WELCOMETOSD", name: "My SD Rental guests", kind: "percent", value: 15, programId: flex.id });
+    const day = await session(flex.id, { capacity: 4 });
+    const campDay = await session(camp.id, { capacity: 4 });
+    await expect(findCoupon(db(), "welcometosd", [campDay.id])).rejects.toThrow("That code is for Yalla Flex only.");
+    expect((await book("sd.guest@example.com", day.id, "welcometosd")).ok).toBe(true);
+    expect((await invoiceFor("sd.guest@example.com")).totals.total).toBe(12750);
+  });
+
   it("PHOENIXHOUSEFAM-style codes cover several programs: 30% off Flex and camp, refused elsewhere", async () => {
     const { saveDiscount } = await import("@/lib/ops/billing");
     const { couponPreview, findCoupon } = await import("@/lib/ops/coupons");

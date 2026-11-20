@@ -526,6 +526,13 @@
       "when": 1795107904046,
       "tag": "0074_phoenix_house_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795146446404,
+      "tag": "0075_welcome_to_sd_coupon",
+      "breakpoints": true
     }
   ]
 }
