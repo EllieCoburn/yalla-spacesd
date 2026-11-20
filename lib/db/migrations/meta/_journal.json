@@ -547,6 +547,13 @@
       "when": 1795209134204,
       "tag": "0077_waitlist_day_length",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795212268710,
+      "tag": "0078_friend_of_yalla_coupon",
+      "breakpoints": true
     }
   ]
 }
