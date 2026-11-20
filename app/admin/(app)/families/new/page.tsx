@@ -9,7 +9,7 @@ export default async function NewFamilyPage() {
   await requirePermission("families.manage");
   return (
     <>
-      <PageHeader title="Add a family" subtitle="Start with the primary guardian. You can add children, other guardians and contacts next." back={{ href: "/admin/families", label: "Families" }} />
+      <PageHeader title="Add a family" subtitle="The primary guardian and their children, all in one step. You can add other guardians and contacts on the family page." back={{ href: "/admin/families", label: "Families" }} />
       <div className="max-w-3xl">
         <Card>
           <NewFamilyForm action={createFamilyAction} />

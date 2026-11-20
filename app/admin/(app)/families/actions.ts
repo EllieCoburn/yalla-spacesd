@@ -37,6 +37,14 @@ export async function createFamilyAction(_prev: ActionState, form: FormData): Pr
   for (const [k, v] of form.entries()) if (typeof v === "string") values[k] = v;
   const staff = await getStaff();
   if (!staff || !can(staff, "families.manage")) return { ok: false, error: "You don’t have permission to add families.", values };
+  // Children typed on the same form (rows left empty are skipped).
+  const col = (k: string) => form.getAll(k).map((x) => String(x ?? "").trim());
+  const [firsts, lasts, births, holds] = [col("childFirst"), col("childLast"), col("childBirth"), col("childHold")];
+  const kids = firsts
+    .map((firstName, i) => ({ firstName, lastName: lasts[i] ?? "", birthDate: births[i] ?? "", flexHold: holds[i] ?? "" }))
+    .filter((k) => k.firstName || k.lastName || k.birthDate);
+  const bad = kids.find((k) => !k.firstName || !/^\d{4}-\d{2}-\d{2}$/.test(k.birthDate));
+  if (bad) return { ok: false, error: "Add each child’s first name and date of birth, or clear the row.", values, data: { children: kids }, at: Date.now() };
   let familyId: string;
   try {
     const res = await createFamily(getDb(), staffActor(staff), {
@@ -46,10 +54,13 @@ export async function createFamilyAction(_prev: ActionState, form: FormData): Pr
       marketingOptIn: values.marketingOptIn === "on",
     });
     familyId = res.family.id;
+    for (const k of kids)
+      await addChild(getDb(), staffActor(staff), familyId, { firstName: k.firstName, lastName: k.lastName || res.guardian.lastName, birthDate: k.birthDate, flexHold: k.flexHold || null });
+    // Invited after the children are saved, so the email explains any Flex cohort hold.
     if (values.invite === "on") await inviteToPortal(getDb(), staffActor(staff), { email: res.guardian.email, name: `${res.guardian.firstName} ${res.guardian.lastName}` }, trustedBaseUrl((await headers()).get("host")));
   } catch (e) {
-    if (e instanceof OpsError) return { ok: false, error: e.message, values, data: e.details, at: Date.now() };
-    return { ok: false, error: "Something went wrong and nothing was saved.", values, at: Date.now() };
+    if (e instanceof OpsError) return { ok: false, error: e.message, values, data: { ...((e.details as object) ?? {}), children: kids }, at: Date.now() };
+    return { ok: false, error: "Something went wrong and nothing was saved.", values, data: { children: kids }, at: Date.now() };
   }
   redirect(`/admin/families/${familyId}?created=1`);
 }
