@@ -44,9 +44,10 @@ export function assetBase() {
 const HERO: Record<string, string> = {
   enquiry_received: "hero-space.jpg",
   tour_received: "hero-space.jpg",
-  family_welcome: "hero-rainbow.jpg",
-  family_added: "hero-rainbow.jpg",
-  flex_hold_notice: "hero-rainbow.jpg",
+  family_welcome: "hero-paint.jpg",
+  family_invite: "hero-paint.jpg",
+  family_added: "hero-paint.jpg",
+  flex_hold_notice: "hero-paint.jpg",
   application_received: "hero-rainbow.jpg",
   event_received: "hero-sunflowers.jpg",
   playpass_welcome: "hero-rainbow.jpg",
