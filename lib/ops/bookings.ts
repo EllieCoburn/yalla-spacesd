@@ -34,7 +34,7 @@ import { notifyFamily } from "@/lib/notify";
 import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
-import { availabilityFor, lockSessions, publicState } from "./capacity";
+import { availabilityFor, lockSessions, occupancyFor, publicState } from "./capacity";
 import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
 import { couponLine, couponPrograms } from "./coupons";
@@ -118,6 +118,10 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
   const childrenById = new Map(kidRows.map((c) => [c.id, c]));
   const spotsBySession = new Map<string, number>();
 
+  // Children booked or being paid for, per session (for the ahead-of-time Full rule on Camp and Happenings).
+  const occupiedNow = new Map<string, number>();
+  if (opts.source === "public" && sessionsById.size)
+    for (const [id, o] of await occupancyFor(db, [...sessionsById.keys()], opts.now)) occupiedNow.set(id, o.booked + o.held);
   for (const it of items) {
     const s = sessionsById.get(it.sessionId);
     if (!s) {
@@ -129,7 +133,8 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
     if (s.status !== "scheduled") problems.push({ sessionId: s.id, code: "not_offered", message: `${label} is ${s.status === "cancelled" ? "cancelled" : "closed"}.` });
     if (s.endsAt <= opts.now) problems.push({ sessionId: s.id, code: "past", message: `${label} has already happened.` });
     if (opts.source === "public") {
-      const st = publicState(s, p, 1, opts.now);
+      const st = publicState(s, p, 1, opts.now, occupiedNow.get(s.id) ?? 0);
+      if (st.state === "full") problems.push({ sessionId: s.id, code: "capacity", message: `${label} is now full. You can join the waitlist.` });
       if (st.state === "closed" || st.state === "not_offered")
         problems.push({ sessionId: s.id, code: "closed", message: `${label}: ${st.state === "closed" ? st.reason : "not offered"}.` });
       if (p.bookingMode === "enroll" || p.bookingMode === "inquire")

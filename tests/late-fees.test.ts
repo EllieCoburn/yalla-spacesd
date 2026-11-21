@@ -24,7 +24,8 @@ describe("Late fee arithmetic", () => {
 
 async function booked(kind: "drop_in" | "camp", addons: string[] = []) {
   const p = await program({ kind, slug: `${kind === "camp" ? "camp" : "flex"}-test-${Math.random().toString(36).slice(2, 7)}`, priceCents: 15000 });
-  const sess = await session(p.id, {}, 1, "09:00", "15:00");
+  // A few days out: Camp shows Full to families within 24 hours when no one has booked (AUTO_FULL).
+  const sess = await session(p.id, {}, 3, "09:00", "15:00");
   const f = await family("Late");
   const hold = await createHold(db(), owner, { familyId: f.family.id, items: [{ sessionId: sess.id, childId: f.children[0].id, addons }], source: "public", acknowledgePaperwork: true });
   await startCheckout(db(), owner, hold.booking.id, { base: "http://test" });

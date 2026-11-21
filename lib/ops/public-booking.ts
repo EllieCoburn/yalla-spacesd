@@ -178,7 +178,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       localDate: s.localDate,
       startsAt: s.startsAt.toISOString(),
       endsAt: s.endsAt.toISOString(),
-      state: withoutCounts(publicState(s, p, remaining, now)),
+      state: withoutCounts(publicState(s, p, remaining, now, (avail.get(s.id)?.occupancy.booked ?? 0) + (avail.get(s.id)?.occupancy.held ?? 0))),
       priceCents: pickPrice(s, p, table),
       halfPriceCents: p.kind === "drop_in" ? (flexGroupFor(s.minAgeMonths)?.halfCents ?? null) : null,
       closure,
@@ -591,9 +591,10 @@ async function precheck(db: Executor, input: PublicBookingInput): Promise<Public
     rows.map((r) => r.s.id),
   );
   for (const { s, p } of rows) {
-    const st = publicState(s, p, avail.get(s.id)?.remaining ?? 0);
+    const st = publicState(s, p, avail.get(s.id)?.remaining ?? 0, new Date(), (avail.get(s.id)?.occupancy.booked ?? 0) + (avail.get(s.id)?.occupancy.held ?? 0));
     const label = `${p.name} on ${fmtDate(s.localDate)}`;
     if (st.state === "closed" || st.state === "not_offered") return { ok: false, code: "closed", error: `${label}: ${st.state === "closed" ? st.reason : "not offered"}.` };
+    if (st.state === "full") return { ok: false, code: "capacity", error: `${label} is now full. You can join the waitlist.` };
     const n = p.bookingUnit === "per_child" ? (need.get(s.id) ?? 0) : 1;
     const remaining = avail.get(s.id)?.remaining ?? 0;
     if (n > remaining)
