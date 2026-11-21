@@ -9,6 +9,7 @@
  *   kiosk session that ends at midnight (or when staff end it). Every kiosk request checks it.
  * - The kiosk only ever shows a family's children who are booked today, by first name.
  */
+import { childDay } from "@/lib/booking/addons";
 import { randomInt } from "node:crypto";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import type { DB, Executor } from "@/lib/db";
@@ -127,7 +128,7 @@ export async function kioskLookup(db: Executor, code: string, now = new Date()):
       childId: r.child.id,
       name: (r.child.preferredName || r.child.firstName).trim(),
       what: r.program.name,
-      time: `${fmtTime(r.session.startsAt)}–${fmtTime(r.session.endsAt)}`,
+      time: `${fmtTime(r.session.startsAt)}–${fmtTime(childDay(r.program, r.session, r.item.addons).endsAt)}`,
       status: (rec?.status as KioskChild["status"]) ?? "expected",
     };
   });

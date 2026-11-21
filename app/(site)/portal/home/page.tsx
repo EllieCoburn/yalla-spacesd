@@ -70,7 +70,8 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               <span className="block">{b.title}</span>
               <span className="text-[0.8rem] text-ink-soft">
                 {b.child ? `${b.child} · ` : ""}
-                {fmtDate(b.localDate, "EEE")} {fmtTime(b.startsAt)} – {fmtTime(b.endsAt)} · {b.reference}
+                {fmtDate(b.localDate, "EEE")} {fmtTime(b.startsAt)} – {fmtTime(b.endsAt)}
+                {b.dayLabel ? ` (${b.dayLabel.toLowerCase()})` : ""} · {b.reference}
               </span>
               {cancellable && b.itemStatus === "confirmed" ? <span className="block text-[0.75rem] text-ink-soft">{b.cancelNote}</span> : null}
               {b.itemStatus === "confirmed" && b.bookingStatus === "confirmed" && new Date(b.endsAt) > new Date() ? (

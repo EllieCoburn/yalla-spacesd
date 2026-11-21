@@ -2,6 +2,7 @@
  * Dashboard queries. Every number here is computed from live records and links to the records
  * behind it. Money figures are kept separate: collected, refunded, unpaid and scheduled.
  */
+import { childDay } from "@/lib/booking/addons";
 import { and, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { auditLog, bookingItems, bookings, children, families, invoices, payments, programs, refunds, scheduledCharges, sessions, waitlistEntries, attendanceRecords } from "@/lib/db/schema";
@@ -86,11 +87,13 @@ export async function expectedChildIds(db: Executor, date: string, endDate = dat
 export async function dayPresence(db: Executor, date: string, now = new Date()) {
   const visits: { childId: string; sessionId: string; startsAt: Date; endsAt: Date }[] = [];
   const booked = await db
-    .select({ childId: bookingItems.childId, sessionId: sessions.id, startsAt: sessions.startsAt, endsAt: sessions.endsAt })
+    .select({ childId: bookingItems.childId, addons: bookingItems.addons, sessionId: sessions.id, startsAt: sessions.startsAt, endsAt: sessions.endsAt, kind: programs.kind, slug: programs.slug })
     .from(bookingItems)
     .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
     .where(and(eq(bookingItems.status, "confirmed"), eq(sessions.localDate, date)));
-  for (const r of booked) if (r.childId) visits.push({ childId: r.childId, sessionId: r.sessionId, startsAt: r.startsAt, endsAt: r.endsAt });
+  // A half-day child's day ends at 12:00pm, so they stop being "still expected" then.
+  for (const r of booked) if (r.childId) visits.push({ childId: r.childId, sessionId: r.sessionId, startsAt: r.startsAt, endsAt: childDay(r, r, r.addons).endsAt });
   const clubSessions = await db
     .select({ s: sessions })
     .from(sessions)

@@ -9,6 +9,7 @@ import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, guardians, programs, sessions, spaceReservationGroups, spaceReservations, workspaces } from "@/lib/db/schema";
 import { notifyStaff } from "@/lib/notify";
 import { trustedBaseUrl } from "@/lib/base-url";
+import { childDay } from "@/lib/booking/addons";
 import { fmtDate, fmtTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
 import { notifyCohortsOfCancelledDropIns, teamRecipients, topicForProgram, type NoticeTopic } from "./team-notices";
@@ -53,7 +54,9 @@ export async function notifyTeamOfCancellation(db: Executor, input: { bookingId:
       const s = group[0].session;
       const what = s.title ?? group[0].program.name;
       const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
-      blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+      const days = group.map((r) => childDay(r.program, r.session, r.item.addons));
+      const same = days.every((d) => d.endsAt.getTime() === days[0].endsAt.getTime());
+      blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(same ? days[0].endsAt : s.endsAt)}${same && days[0].label ? ` · ${days[0].label}` : ""}`);
       blocks.push([`Parent: ${parent}`, ...group.map((r) => `Child: ${r.child ? `${r.child.firstName} ${r.child.lastName}` : "not named"}`)].join("\n"));
       blocks.push(`!! ${left} | ${left === 1 ? "spot" : "spots"} now open in that age group for ${fmtDate(s.localDate, "MMMM d")}`);
     }

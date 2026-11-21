@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { childDay } from "@/lib/booking/addons";
 import { notFound, redirect } from "next/navigation";
 import { EmergencyList, PickupList } from "@/components/admin/families/ContactForms";
 import { NotesPanel } from "@/components/admin/families/Notes";
@@ -204,7 +205,8 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                       <td className="whitespace-nowrap">
                         {fmtDate(r.s.localDate, "EEE d MMM yyyy")}
                         <span className="block text-[0.74rem] text-ink-soft">
-                          {fmtTime(r.s.startsAt)}–{fmtTime(r.s.endsAt)}
+                          {fmtTime(r.s.startsAt)}–{fmtTime(childDay(r.p, r.s, r.i.addons).endsAt)}
+                          {childDay(r.p, r.s, r.i.addons).label ? ` · ${childDay(r.p, r.s, r.i.addons).label}` : ""}
                         </span>
                       </td>
                       <td>{r.p.name}</td>

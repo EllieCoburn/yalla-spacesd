@@ -37,7 +37,7 @@ import { ageInMonths, fmtDate, todayLA } from "@/lib/time";
 import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
 import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
-import { addonsFor } from "@/lib/booking/addons";
+import { addonsFor, childDay } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { findCoupon } from "./coupons";
@@ -830,7 +830,9 @@ export async function familyPortalData(db: Executor, g: GuardianContext) {
       title: x.s.title ?? x.p.name,
       localDate: x.s.localDate,
       startsAt: x.s.startsAt.toISOString(),
-      endsAt: x.s.endsAt.toISOString(),
+      // The child's own day: a half day ends at 12:00pm.
+      endsAt: childDay(x.p, x.s, x.i.addons).endsAt.toISOString(),
+      dayLabel: childDay(x.p, x.s, x.i.addons).label,
       child: x.i.childId ? (childName.get(x.i.childId) ?? "") : "",
       canCancel: x.i.status === "confirmed" && hoursAhead > 0,
       /** Cancelling now returns what was paid to the Yalla Wallet. */

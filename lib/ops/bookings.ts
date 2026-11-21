@@ -41,7 +41,7 @@ import { couponLine, couponPrograms } from "./coupons";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { flexEligibility } from "@/lib/booking/flex-hold";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
-import { addonsFor, validAddons } from "@/lib/booking/addons";
+import { addonsFor, childDay, validAddons } from "@/lib/booking/addons";
 import { FLEX_SLUG, flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
@@ -435,9 +435,23 @@ function familyRateLines(rows: Awaited<ReturnType<typeof bookingLines>>): LineIn
 }
 
 export function describeLine(r: { program: ProgramRow; session: SessionRow; child: { firstName: string; preferredName: string | null } | null; item?: { addons: string[] } | null }) {
-  const short = addonsFor(r.program.kind, r.program.slug).find((a) => a.endsAfterStartMinutes && r.item?.addons.includes(a.key));
-  const end = short ? new Date(r.session.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : r.session.endsAt;
-  return `${r.program.name}${short ? ` (${short.label.toLowerCase()})` : ""} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(r.session.startsAt)}–${fmtTime(end)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
+  const day = childDay(r.program, r.session, r.item?.addons);
+  return `${r.program.name}${day.label ? ` (${day.label.toLowerCase()})` : ""} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
+}
+
+/**
+ * The hours for a group of children on one session: "8:30am–12:00pm · Half day" when they all have
+ * the same day, otherwise the session's hours (each child's own day is shown next to their name).
+ */
+function groupHours(group: { program: ProgramRow; session: SessionRow; item: { addons: string[] } }[]) {
+  const days = group.map((r) => childDay(r.program, r.session, r.item.addons));
+  const same = days.every((d) => d.endsAt.getTime() === days[0].endsAt.getTime());
+  const s = group[0].session;
+  return {
+    text: same ? `${fmtTime(days[0].startsAt)}–${fmtTime(days[0].endsAt)}${days[0].label ? ` · ${days[0].label}` : ""}` : `${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`,
+    /** Per child, only when the children's days differ. */
+    childNote: (i: number) => (same ? "" : days[i].label ? ` · ${days[i].label.toLowerCase()} until ${fmtTime(days[i].endsAt)}` : ` · full day`),
+  };
 }
 
 /**
@@ -458,8 +472,10 @@ export async function checkoutLabel(db: Executor, bookingId: string, opts: { wal
         ? `${programs[0]} · ${sessionsBooked.length} sessions`
         : `Yalla booking · ${sessionsBooked.length} sessions`;
   const lines = sessionsBooked.map((s) => {
-    const kids = rows.filter((r) => r.session.id === s.session.id && r.child).map((r) => r.child!.preferredName || r.child!.firstName);
-    return `${title(s)}, ${fmtDate(s.session.localDate, "EEE MMM d")} ${fmtTime(s.session.startsAt)}–${fmtTime(s.session.endsAt)}${kids.length ? ` (${kids.join(", ")})` : ""}`;
+    const group = rows.filter((r) => r.session.id === s.session.id);
+    const hours = groupHours(group);
+    const kids = group.filter((r) => r.child).map((r) => r.child!.preferredName || r.child!.firstName);
+    return `${title(s)}, ${fmtDate(s.session.localDate, "EEE MMM d")} ${hours.text}${kids.length ? ` (${kids.join(", ")})` : ""}`;
   });
   const details = [
     lines.join(" · "),
@@ -602,10 +618,12 @@ function sessionBlocks(rows: LineRow[], opts: { cancelled?: boolean } = {}) {
   const blocks: string[] = [];
   for (const group of bySession.values()) {
     const s = group[0].session;
-    const short = addonsFor(group[0].program.kind, group[0].program.slug).find((a) => a.endsAfterStartMinutes && group.some((r) => r.item.addons.includes(a.key)));
-    const end = short ? new Date(s.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : s.endsAt;
-    blocks.push(`>> ${s.title ?? group[0].program.name}${short ? ` (${short.label.toLowerCase()})` : ""}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(end)}`);
-    const card: string[] = group.map((r) => `${group.length > 1 || opts.cancelled ? "Child" : "Who’s coming"}: ${r.child ? `${r.child.preferredName || r.child.firstName} ${r.child.lastName}` : "Your family"}`);
+    // Each child's own day (a half day ends at 12:00pm); shown once when they're all the same.
+    const hours = groupHours(group);
+    blocks.push(`>> ${s.title ?? group[0].program.name}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${hours.text}`);
+    const card: string[] = group.map(
+      (r, i) => `${group.length > 1 || opts.cancelled ? "Child" : "Who’s coming"}: ${r.child ? `${r.child.preferredName || r.child.firstName} ${r.child.lastName}` : "Your family"}${hours.childNote(i)}`,
+    );
     const extras = [
       ...new Set(
         group.flatMap((r) =>
@@ -731,12 +749,15 @@ export async function staffBookingNotice(db: Executor, bookingId: string) {
     const what = s.title ?? group[0].program.name;
     const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
     const short = fmtDate(s.localDate, "MMMM d");
-    blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+    const hours = groupHours(group);
+    blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${hours.text}`);
     blocks.push(
       [
         `Parent: ${who}`,
-        ...group.map((r) =>
-          r.child ? `Child: ${r.child.firstName} ${r.child.lastName} · born ${fmtDate(r.child.birthDate, "MMM d, yyyy")} · ${ageOnDay(r.child.birthDate, s.localDate)}` : "Child: not named",
+        ...group.map((r, i) =>
+          r.child
+            ? `Child: ${r.child.firstName} ${r.child.lastName} · born ${fmtDate(r.child.birthDate, "MMM d, yyyy")} · ${ageOnDay(r.child.birthDate, s.localDate)}${hours.childNote(i)}`
+            : "Child: not named",
         ),
       ].join("\n"),
     );

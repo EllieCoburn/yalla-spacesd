@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { childDay } from "@/lib/booking/addons";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 import { notFound } from "next/navigation";
 import { MovePanel } from "@/components/admin/bookings/MovePanel";
@@ -233,7 +234,8 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                         <p className="mt-0.5 text-[0.85rem] text-ink">
                           {i.program.name} ·{" "}
                           <Link href={`/admin/sessions/${i.session.id}`} className="hover:text-blue">
-                            {fmtDate(i.session.localDate, "EEEE d MMMM")}, {fmtTime(i.session.startsAt)}–{fmtTime(i.session.endsAt)}
+                            {fmtDate(i.session.localDate, "EEEE d MMMM")}, {fmtTime(i.session.startsAt)}–{fmtTime(childDay(i.program, i.session, i.item.addons).endsAt)}
+                            {childDay(i.program, i.session, i.item.addons).label ? <span className="ml-1.5 rounded-full bg-[#e9e9fb] px-2 py-0.5 text-[0.72rem] font-medium text-[#3d40b8]">{childDay(i.program, i.session, i.item.addons).label}</span> : null}
                           </Link>
                         </p>
                         <p className="text-[0.78rem] text-ink-soft">
