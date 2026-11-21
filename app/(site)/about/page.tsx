@@ -87,7 +87,7 @@ export default function AboutPage() {
               {
                 title: "Room to explore, indoors and out",
                 body: "From art and sensory experiences to movement, imaginative play, and outdoor exploration, Yalla offers children opportunities to engage with the world in meaningful ways. Our indoor and outdoor spaces support a wide range of experiences, with activities and environments thoughtfully adapted to the ages, interests, and needs of each group.",
-                img: { src: "/photos/park-lawn.jpg", alt: "The wide lawns of Balboa Park, a short stroll from Yalla" },
+                img: { src: "/photos/play-garden-trees.jpg", alt: "Yalla’s play garden from above, under sunlit sycamore trees in Bankers Hill", position: "object-[50%_38%]" },
                 shape: "rounded-full",
               },
               {
