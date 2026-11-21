@@ -203,4 +203,33 @@ describe("routes", () => {
     const [b] = await db().select().from(s.bookings);
     expect(b.status).toBe("confirmed");
   });
+
+  it("a family who comes back from the payment page and starts again isn't blocked by their own first try", async () => {
+    const p = await program();
+    const sess = await session(p.id, { capacity: 1 });
+    expect((await submitPublicBooking(db(), input(sess.id))).ok).toBe(true);
+    // The only spot is held by their first try; trying again still works.
+    const again = await submitPublicBooking(db(), input(sess.id));
+    expect(again.ok).toBe(true);
+    // Someone using their email but booking a different child doesn't cancel their try.
+    const stranger = await submitPublicBooking(db(), input(sess.id, { children: [{ key: "a", firstName: "Other", lastName: "Kid", birthDate: "2023-03-01", allergies: "", medications: "" }] }));
+    expect(stranger.ok).toBe(false);
+    // Someone else can't take it while the new try is open.
+    const other = await submitPublicBooking(db(), input(sess.id, { guardian: { firstName: "Sam", lastName: "Other", email: "sam@example.com", phone: "619-555-0101" } }));
+    expect(other.ok).toBe(false);
+    const statuses = (await db().select().from(s.bookings)).map((b) => b.status).sort();
+    expect(statuses).toEqual(["expired", "pending_payment"].sort());
+  });
+
+  it("a once-per-family code isn't used up by an unpaid try whose hold ran out", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const p = await program();
+    const sess = await session(p.id, { capacity: 4 });
+    await db().insert(s.discounts).values({ code: "ONCE", name: "Once", kind: "percent", value: 10, oncePerFamily: true });
+    expect((await submitPublicBooking(db(), input(sess.id, { couponCode: "ONCE" }))).ok).toBe(true);
+    const [b] = await db().select().from(s.bookings);
+    await expect(findCoupon(db(), "ONCE", [sess.id], { familyId: b.familyId })).rejects.toThrow(/already used/);
+    // The hold runs out (the daily job hasn't marked it expired yet).
+    await expect(findCoupon(db(), "ONCE", [sess.id], { familyId: b.familyId, now: new Date(Date.now() + 3600_000) })).resolves.toBeTruthy();
+  });
 });

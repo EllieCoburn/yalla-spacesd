@@ -3,7 +3,7 @@
  * a percent or fixed amount, optionally limited to one program, a date range and a number of uses.
  * The discount is a line on the booking's invoice, so the card is charged the reduced amount.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { OpsError } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
 import { bookings, discounts, programs, sessions } from "@/lib/db/schema";
@@ -24,6 +24,10 @@ export function couponPrograms(d: Pick<Coupon, "programId" | "programIds">): str
   return d.programId ? [d.programId] : null;
 }
 
+/** A booking that uses up a code: confirmed, or still being paid for within its hold. */
+const stillCounts = (now: Date) =>
+  or(eq(bookings.status, "confirmed"), and(inArray(bookings.status, ["pending_payment", "held"]), gt(bookings.holdExpiresAt, now)));
+
 export async function findCoupon(db: Executor, rawCode: string, sessionIds: string[], opts: { familyId?: string | null; now?: Date } = {}): Promise<Coupon> {
   const now = opts.now ?? new Date();
   const code = normalizeCode(rawCode);
@@ -35,7 +39,7 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
     const [{ n }] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(bookings)
-      .where(and(eq(bookings.discountId, d.id), inArray(bookings.status, ["confirmed", "pending_payment", "held"])));
+      .where(and(eq(bookings.discountId, d.id), stillCounts(now)));
     if (n >= d.maxUses) throw new OpsError("coupon", "That coupon code has been fully used.");
   }
   // Some codes are one per family (a thank-you for coming back). A booking still being paid counts.
@@ -43,7 +47,7 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
     const [used] = await db
       .select({ id: bookings.id })
       .from(bookings)
-      .where(and(eq(bookings.discountId, d.id), eq(bookings.familyId, opts.familyId), inArray(bookings.status, ["confirmed", "pending_payment", "held"])))
+      .where(and(eq(bookings.discountId, d.id), eq(bookings.familyId, opts.familyId), stillCounts(now)))
       .limit(1);
     if (used) throw new OpsError("coupon", "Your family has already used this code.");
   }

@@ -56,6 +56,8 @@ export interface PaymentProvider {
   }): Promise<{ checkoutRef: string; url: string }>;
   refund(input: { providerRef: string; amountCents: number; idempotencyKey: string; reason: string }): Promise<{ status: "succeeded" | "pending" | "failed"; providerRef?: string; failureReason?: string }>;
   parseWebhook(rawBody: string, headers: Headers): NormalizedEvent;
+  /** Closes an unpaid checkout page so it can't be paid (best effort; it also expires on its own). */
+  expireCheckout?(checkoutRef: string): Promise<void>;
 }
 
 /* ── Test provider ── */
@@ -126,6 +128,13 @@ export const stripeProvider: PaymentProvider = {
       { idempotencyKey: input.idempotencyKey },
     );
     return { checkoutRef: session.id, url: session.url! };
+  },
+  async expireCheckout(checkoutRef) {
+    try {
+      await stripe().checkout.sessions.expire(checkoutRef);
+    } catch {
+      // Already paid, expired or closed: nothing to do.
+    }
   },
   async refund(input) {
     try {

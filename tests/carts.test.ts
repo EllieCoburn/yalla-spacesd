@@ -99,4 +99,19 @@ describe("abandoned checkouts", () => {
     expect(r.abandoned.find((x) => x.contact?.email === "robin.new@example.com")?.bookedLater).toBe(true);
     expect((await cartSummary(db())).abandoned).toBe(1);
   });
+
+  it("a family who tried several times counts once, and a run-out hold counts before the daily tidy-up", async () => {
+    const p = await program();
+    const a = await session(p.id, { capacity: 4 });
+    expect((await submitPublicBooking(db(), booking(a.id))).ok).toBe(true);
+    // They come back and try again: the first try is let go, not left holding a spot.
+    expect((await submitPublicBooking(db(), booking(a.id))).ok).toBe(true);
+    const all = await db().select().from(s.bookings);
+    expect(all.map((b) => b.status).sort()).toEqual(["expired", "pending_payment"].sort());
+    // The second hold runs out, but the daily job hasn't run yet.
+    const later = new Date(Date.now() + 3600_000);
+    const r = await abandonedCheckouts(db(), { days: 30, now: later });
+    expect(r.abandoned).toHaveLength(1);
+    expect(r.abandoned[0].attempts).toBe(2);
+  });
 });

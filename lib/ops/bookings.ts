@@ -31,7 +31,7 @@ import {
   waitlistEntries,
 } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
-import { activeProvider } from "@/lib/payments/provider";
+import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
 import { availabilityFor, lockSessions, publicState } from "./capacity";
@@ -1096,6 +1096,50 @@ export async function resendConfirmation(db: DB, actor: Actor, bookingId: string
 }
 
 /** Marks lapsed holds as expired (housekeeping; availability already ignores them). */
+/**
+ * A family checking out again: their earlier unpaid website attempts on any of the same sessions are
+ * let go first, so their own first try doesn't hold a spot (or a once-per-family code) against them.
+ * The earlier payment page is closed too, so the same days can't be paid for twice.
+ */
+export async function releaseEarlierAttempts(
+  db: DB,
+  familyId: string,
+  sessionIds: string[],
+  opts: { now?: Date; /** Guests (not signed in): only tries for these same children (first name and birth date). */ children?: { firstName: string; birthDate: string }[] } = {},
+) {
+  const now = opts.now ?? new Date();
+  if (!sessionIds.length) return 0;
+  let open = await db
+    .selectDistinct({ id: bookings.id, childId: bookingItems.childId })
+    .from(bookings)
+    .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
+    .where(and(eq(bookings.familyId, familyId), eq(bookings.source, "public"), inArray(bookings.status, ["held", "pending_payment"]), inArray(bookingItems.sessionId, sessionIds)));
+  if (opts.children) {
+    const want = opts.children.map((c) => `${c.firstName.trim().toLowerCase()}|${c.birthDate}`);
+    const kids = await db.select({ id: children.id, firstName: children.firstName, birthDate: children.birthDate }).from(children).where(eq(children.familyId, familyId));
+    const ok = new Set(kids.filter((k) => want.includes(`${k.firstName.trim().toLowerCase()}|${k.birthDate}`)).map((k) => k.id));
+    const bad = new Set(open.filter((o) => !o.childId || !ok.has(o.childId)).map((o) => o.id));
+    open = open.filter((o) => !bad.has(o.id));
+  }
+  open = [...new Map(open.map((o) => [o.id, o])).values()];
+  for (const { id } of open) {
+    const [b] = await db
+      .update(bookings)
+      .set({ status: "expired", holdExpiresAt: now, updatedAt: now })
+      .where(and(eq(bookings.id, id), inArray(bookings.status, ["held", "pending_payment"])))
+      .returning({ id: bookings.id });
+    if (!b) continue;
+    await releaseForBooking(db, id);
+    const pays = await db
+      .select({ provider: payments.provider, checkoutRef: payments.checkoutRef })
+      .from(payments)
+      .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+      .where(and(eq(invoices.bookingId, id), eq(payments.status, "pending")));
+    for (const p of pays) if (p.checkoutRef) await providerFor(p.provider).expireCheckout?.(p.checkoutRef);
+  }
+  return open.length;
+}
+
 export async function expireHolds(db: DB, now = new Date()) {
   const expired = await db
     .update(bookings)

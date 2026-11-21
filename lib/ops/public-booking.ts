@@ -41,7 +41,7 @@ import { addonsFor } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { findCoupon } from "./coupons";
-import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
+import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, releaseEarlierAttempts, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, CARE_REQUIRED, careAnswered, careValid, createFamily, findGuardianByEmail, phoneProblem, recordCareAnswers, updateChild } from "./families";
 import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
@@ -385,6 +385,17 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   // Every child's known allergies and medications are asked before payment.
   if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
     return { ok: false, code: "care", error: CARE_REQUIRED };
+  // A family trying again (back from the payment page): their own earlier unpaid attempt at these days
+  // is let go first, so it doesn't count against them in the checks below. Guests are matched by email,
+  // only on a family record with no portal account (anyone with an account signs in instead).
+  const returning = input.signedIn?.familyId ?? (await (async () => {
+    const g = await findGuardianByEmail(db, input.guardian.email.trim().toLowerCase());
+    return g && !g.portalAccess && !g.passwordHash ? g.familyId : null;
+  })());
+  if (returning)
+    await releaseEarlierAttempts(db, returning, (await Promise.all(lines.map((l) => expandSeries(db, [l.sessionId])))).flat(), {
+      children: input.signedIn ? undefined : input.children.map((c) => ({ firstName: c.firstName, birthDate: c.birthDate })),
+    });
   // A coupon is checked before anything is created, so a bad code books nothing.
   let couponId: string | null = null;
   if (input.couponCode?.trim()) {
@@ -517,6 +528,11 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
       );
     }
 
+    // The family's own earlier unpaid attempt at these days (they came back from the payment page and
+    // started again) is let go, so it doesn't hold the spot or the code against them.
+    await releaseEarlierAttempts(db, familyId, items.map((i) => i.sessionId), {
+      children: input.signedIn ? undefined : input.children.map((c) => ({ firstName: c.firstName, birthDate: c.birthDate })),
+    });
     // A once-per-family code is checked again now that the family is known (guests too).
     if (couponId && input.couponCode) await findCoupon(db, input.couponCode, items.map((i) => i.sessionId), { familyId });
 
@@ -534,7 +550,15 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         );
     if (couponId) await db.update(bookings).set({ discountId: couponId }).where(eq(bookings.id, hold.booking.id));
     if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}${bookingStatusPath(hold.booking.reference)}`, reference: hold.booking.reference };
-    const checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
+    let checkout: Awaited<ReturnType<typeof startCheckout>>;
+    try {
+      checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
+    } catch (e) {
+      // The payment page couldn't be opened: let the spots go, so "nothing was booked" is true.
+      console.error("[public booking: checkout failed]", (e as Error).message?.slice(0, 200));
+      await releaseEarlierAttempts(db, familyId, items.map((i) => i.sessionId));
+      throw new OpsError("payment_unavailable", "We couldn’t open the payment page just now, so nothing was booked or charged. Please try again in a moment.");
+    }
     return { ok: true, url: checkout.url, reference: hold.booking.reference };
   } catch (e) {
     if (createdFamily) await removeFreshFamily(db, familyId);

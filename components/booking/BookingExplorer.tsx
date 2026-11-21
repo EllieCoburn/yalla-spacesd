@@ -48,7 +48,12 @@ export function BookingExplorer({
   const router = useRouter();
   const [offering, setOffering] = useState<string>(
     // Yalla Weekends is now part of Happenings; old links still land in the right place.
-    ["weekend", "parents_night"].includes(params.get("offering") ?? "") ? "happening" : params.get("offering") || "all",
+    // Old or mistyped links (an offering that doesn't exist) show everything rather than an empty calendar.
+    ["weekend", "parents_night"].includes(params.get("offering") ?? "")
+      ? "happening"
+      : offerings.some((o) => o.kind === params.get("offering"))
+        ? params.get("offering")!
+        : "all",
   );
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));

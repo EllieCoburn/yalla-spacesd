@@ -8,7 +8,7 @@
  * Abandoned checkouts: public bookings whose hold ran out before payment. The family entered their
  * details at checkout, so staff can see who they are and what they chose, and follow up.
  */
-import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, carts, children, families, guardians, programs, sessions, type SavedCartItem } from "@/lib/db/schema";
 import { availabilityFor } from "@/lib/ops/capacity";
@@ -141,6 +141,8 @@ export type CheckoutRow = {
   lines: { session: SessionInfo; childName: string | null; spots: number }[];
   /** The family went on to book at least one of the same sessions afterwards. */
   bookedLater: boolean;
+  /** How many unpaid tries at these days this row stands for (a family who came back and tried again counts once). */
+  attempts: number;
 };
 
 async function checkoutRows(db: Executor, list: (typeof bookings.$inferSelect)[]): Promise<CheckoutRow[]> {
@@ -185,6 +187,7 @@ async function checkoutRows(db: Executor, list: (typeof bookings.$inferSelect)[]
         spots: r.item.spots,
       })),
       bookedLater: later.some((l) => l.familyId === b.familyId && l.createdAt > b.createdAt && sessionIds.has(l.sessionId)),
+      attempts: 1,
     };
   });
 }
@@ -200,7 +203,14 @@ export async function abandonedCheckouts(db: Executor, opts: { days: number; now
     db
       .select()
       .from(bookings)
-      .where(and(eq(bookings.source, "public"), eq(bookings.status, "expired"), gte(bookings.createdAt, since)))
+      // Expired, or a hold that has run out but hasn't been tidied up by the daily job yet.
+      .where(
+        and(
+          eq(bookings.source, "public"),
+          gte(bookings.createdAt, since),
+          or(eq(bookings.status, "expired"), and(inArray(bookings.status, ["held", "pending_payment"]), lte(bookings.holdExpiresAt, now))),
+        ),
+      )
       .orderBy(desc(bookings.createdAt))
       .limit(300),
     db
@@ -209,7 +219,17 @@ export async function abandonedCheckouts(db: Executor, opts: { days: number; now
       .where(and(eq(bookings.source, "public"), inArray(bookings.status, ["held", "pending_payment"]), gt(bookings.holdExpiresAt, now)))
       .orderBy(desc(bookings.createdAt)),
   ]);
-  const [abandoned, inProgress] = await Promise.all([checkoutRows(db, expired), checkoutRows(db, live)]);
+  const [rows, inProgress] = await Promise.all([checkoutRows(db, expired), checkoutRows(db, live)]);
+  // A family who tried more than once for the same days is one abandoned checkout (the latest try).
+  const abandoned: CheckoutRow[] = [];
+  const overlaps = (a: CheckoutRow, b: CheckoutRow) => a.family.id === b.family.id && a.lines.some((x) => b.lines.some((y) => y.session.id === x.session.id));
+  for (const r of rows) {
+    const kept = abandoned.find((k) => overlaps(k, r));
+    if (kept) {
+      kept.attempts += 1;
+      kept.bookedLater ||= r.bookedLater;
+    } else abandoned.push(r);
+  }
   return { abandoned, inProgress };
 }
 
