@@ -554,6 +554,13 @@
       "when": 1795212268710,
       "tag": "0078_friend_of_yalla_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795290628450,
+      "tag": "0079_immersive_third_fourth_saturdays",
+      "breakpoints": true
     }
   ]
 }
