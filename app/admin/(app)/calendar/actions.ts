@@ -1,6 +1,7 @@
 "use server";
 
 import { requirePermission } from "@/lib/auth/session";
+import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { CALENDAR_PROGRAMS, calendarDay, calendarSessions, type CalendarProgram } from "@/lib/admin/queries/calendar";
 import { monthGrid } from "@/lib/admin/calendar-grid";
@@ -9,10 +10,11 @@ const program = (p: string): CalendarProgram => (CALENDAR_PROGRAMS.some((x) => x
 
 /** Every session shown on a month's grid (including the edge days of the weeks around it). */
 export async function loadMonth(month: string, prog: string) {
-  await requirePermission("roster.view");
+  const staff = await requirePermission("roster.view");
   if (!/^\d{4}-\d{2}$/.test(month)) return [];
   const g = monthGrid(month);
-  return calendarSessions(getDb(), g.start, g.end, program(prog));
+  // Revenue figures only for staff who can see reports.
+  return calendarSessions(getDb(), g.start, g.end, program(prog), { money: can(staff, "reports.view") });
 }
 
 /** One day's sessions with who's coming. */

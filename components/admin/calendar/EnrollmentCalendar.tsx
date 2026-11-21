@@ -17,6 +17,8 @@ type Props = {
   programs: readonly Program[];
   today: string;
   initial: { month: string; program: CalendarProgram; date: string | null; sessions: CalendarSession[]; day: CalendarDaySession[] };
+  /** Show the revenue panel (staff who can see reports). */
+  showMoney?: boolean;
 };
 
 const STALE_MS = 60_000;
@@ -104,7 +106,7 @@ const ATTEND: Record<string, { label: string; cls: string } | undefined> = {
   absent: { label: "Absent", cls: "bg-[#f6e3e5] text-[#8a2333]" },
 };
 
-export function EnrollmentCalendar({ programs, today, initial }: Props) {
+export function EnrollmentCalendar({ programs, today, initial, showMoney = false }: Props) {
   const [month, setMonth] = useState(initial.month);
   const [program, setProgram] = useState<CalendarProgram>(initial.program);
   const [date, setDate] = useState<string | null>(initial.date);
@@ -348,6 +350,8 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           </div>
         ))}
       </dl>
+
+      {showMoney ? <RevenuePanel sessions={inMonth} month={month} program={programs.find((p) => p.key === program)?.label ?? ""} loading={loadingMonth} /> : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem]">
         {/* The month */}
@@ -733,5 +737,97 @@ function ChildRow({ c, ended }: { c: CalendarChild; ended: boolean }) {
         {a ? <span className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[0.66rem] font-medium ${a.cls}`}>{a.label}</span> : null}
       </Link>
     </li>
+  );
+}
+
+const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+const moneyRange = (a: number, b: number) => (Math.round(a / 100) === Math.round(b / 100) ? money(a) : `${money(a)}–${money(b)}`);
+const STRIPE_GREEN = "repeating-linear-gradient(135deg, rgb(44 100 71 / 0.45) 0 3px, rgb(44 100 71 / 0.15) 3px 6px)";
+const STRIPE_GREY = "repeating-linear-gradient(135deg, rgb(41 44 69 / 0.18) 0 3px, transparent 3px 6px)";
+
+/**
+ * The month's revenue: what's captured (after discounts), what's still bookable on days to come (at
+ * the lowest and the full rate), and what went unfilled on days already past. "If fully booked" is
+ * captured plus everything still bookable, so a spot booked at a discount counts at what was paid.
+ */
+function RevenuePanel({ sessions, month, program, loading }: { sessions: CalendarSession[]; month: string; program: string; loading: boolean }) {
+  const withMoney = sessions.filter((s) => s.money);
+  if (!withMoney.length && !loading) return null;
+  const t = { captured: 0, unpaid: 0, booked: 0, aheadSpots: 0, aheadMin: 0, aheadMax: 0, pastSpots: 0, pastMin: 0, pastMax: 0, unpriced: 0 };
+  for (const s of withMoney) {
+    const m = s.money!;
+    t.captured += m.capturedCents;
+    t.unpaid += m.unpaidCents;
+    t.booked += s.booked;
+    if (m.unpriced && m.openSpots) t.unpriced += m.openSpots;
+    if (sessionPhase(s) === "ended") {
+      t.pastSpots += m.openSpots;
+      t.pastMin += m.openSpots * m.spotMinCents;
+      t.pastMax += m.openSpots * m.spotMaxCents;
+    } else {
+      t.aheadSpots += m.openSpots;
+      t.aheadMin += m.openSpots * m.spotMinCents;
+      t.aheadMax += m.openSpots * m.spotMaxCents;
+    }
+  }
+  const scale = Math.max(1, t.captured + t.aheadMax + t.pastMax);
+  const pct = (n: number) => `${(n / scale) * 100}%`;
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const figures = [
+    { label: "Captured", value: money(t.captured), sub: `${plural(t.booked, "booked spot")}, after discounts${t.unpaid ? ` · ${money(t.unpaid)} not yet paid` : ""}`, tone: "text-blue" },
+    { label: "Still bookable", value: moneyRange(t.aheadMin, t.aheadMax), sub: t.aheadSpots ? `${plural(t.aheadSpots, "open spot")} on days to come` : "nothing left to book", tone: "text-[#2c6447]" },
+    { label: "If fully booked", value: moneyRange(t.captured + t.aheadMin, t.captured + t.aheadMax), sub: "captured + everything still bookable", tone: "text-ink" },
+    ...(t.pastSpots ? [{ label: "Went unfilled", value: moneyRange(t.pastMin, t.pastMax), sub: `${plural(t.pastSpots, "spot")} on days already past`, tone: "text-ink-soft" }] : []),
+  ];
+  return (
+    <section aria-label="Revenue" className="mb-5 rounded-2xl bg-white p-5 shadow-[0_0_0_1px_rgba(41,44,69,0.08)]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-[0.7rem] tracking-[0.08em] text-ink-soft uppercase">
+          Revenue · {fmtDate(`${month}-01`, "MMMM yyyy")} · {program}
+        </h2>
+        <p className="text-[0.72rem] text-ink-soft">Open spots are valued from their lowest rate (e.g. a Flex half day) to their full rate. Extras aren’t counted.</p>
+      </div>
+      <dl className={`mt-3 grid grid-cols-2 gap-4 ${figures.length > 3 ? "lg:grid-cols-4" : "lg:grid-cols-3"} ${loading ? "opacity-30" : ""}`}>
+        {figures.map((f) => (
+          <div key={f.label}>
+            <dt className="text-[0.75rem] text-ink-soft">{f.label}</dt>
+            <dd className={`text-[1.45rem] leading-tight font-semibold tabular-nums ${f.tone}`}>{loading ? "–" : f.value}</dd>
+            <dd className="text-[0.72rem] text-ink-soft">{loading ? " " : f.sub}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* Captured | still bookable at the lowest rate | up to the full rate | unfilled past days */}
+      <div className={`mt-4 flex h-3 overflow-hidden rounded-full bg-ink/[0.05] ${loading ? "opacity-30" : ""}`} role="img" aria-label={`Captured ${money(t.captured)} of up to ${money(t.captured + t.aheadMax)}`}>
+        <span className="h-full bg-blue" style={{ width: pct(t.captured) }} />
+        <span className="h-full bg-[#2c6447]/55" style={{ width: pct(t.aheadMin) }} />
+        <span className="h-full" style={{ width: pct(t.aheadMax - t.aheadMin), backgroundImage: STRIPE_GREEN }} />
+        <span className="h-full" style={{ width: pct(t.pastMax), backgroundImage: STRIPE_GREY }} />
+      </div>
+      <ul className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[0.72rem] text-ink-soft">
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full bg-blue" />
+          Captured
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full bg-[#2c6447]/55" />
+          Still bookable (lowest rate)
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full" style={{ backgroundImage: STRIPE_GREEN }} />
+          Up to full rate
+        </li>
+        {t.pastSpots ? (
+          <li className="flex items-center gap-1.5">
+            <span className="h-2 w-4 rounded-full" style={{ backgroundImage: STRIPE_GREY }} />
+            Went unfilled
+          </li>
+        ) : null}
+        {t.unpriced ? (
+          <li className="text-[#8a5212]">
+            {t.unpriced} open {t.unpriced === 1 ? "spot has" : "spots have"} no price set, so {t.unpriced === 1 ? "it isn’t" : "they aren’t"} counted
+          </li>
+        ) : null}
+      </ul>
+    </section>
   );
 }
