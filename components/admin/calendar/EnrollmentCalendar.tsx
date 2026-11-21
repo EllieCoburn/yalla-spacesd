@@ -20,7 +20,7 @@ type Props = {
 };
 
 const STALE_MS = 60_000;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const KIND_DOT: Record<string, string> = { camp: "bg-blue", drop_in: "bg-[#2c6447]", happening: "bg-[#c08a3e]", parents_night: "bg-[#673e46]", nature: "bg-[#2c6447]" };
 
@@ -357,7 +357,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           </div>
           <div className="grid grid-cols-7 border-b border-ink/[0.07]">
             {WEEKDAYS.map((d, i) => (
-              <div key={d} className={`px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[0.12em] uppercase sm:px-3 sm:text-left ${i > 4 ? "text-ink/35" : "text-ink-soft"}`}>
+              <div key={d} className={`px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[0.12em] uppercase sm:px-3 sm:text-left ${i === 0 || i === 6 ? "text-ink/35" : "text-ink-soft"}`}>
                 {d}
               </div>
             ))}

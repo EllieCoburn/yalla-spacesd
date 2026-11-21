@@ -1,6 +1,6 @@
 import { addDaysISO, weekdayOf } from "@/lib/time";
 
-/** A month's grid, Monday to Sunday, from the Monday on or before the 1st to the Sunday on or after the last day. */
+/** A month's grid, Sunday to Saturday, from the Sunday on or before the 1st to the Saturday on or after the last day. */
 export function monthGrid(month: string) {
   const first = `${month}-01`;
   const next = addDaysISO(first, 32).slice(0, 7);
@@ -8,8 +8,8 @@ export function monthGrid(month: string) {
   return {
     first,
     last,
-    start: addDaysISO(first, -((weekdayOf(first) + 6) % 7)),
-    end: addDaysISO(last, (7 - weekdayOf(last)) % 7),
+    start: addDaysISO(first, -weekdayOf(first)),
+    end: addDaysISO(last, 6 - weekdayOf(last)),
     prev: addDaysISO(first, -1).slice(0, 7),
     next,
   };
