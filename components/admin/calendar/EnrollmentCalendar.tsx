@@ -197,9 +197,15 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
     window.history.replaceState(null, "", `/admin/calendar?${p}`);
   }, [month, program, date]);
 
+  // Sessions on days Yalla is closed aren't bookable: they're left out of the counts and the day shows "Closed".
   const byDate = useMemo(() => {
     const m = new Map<string, CalendarSession[]>();
-    for (const s of sessions ?? []) m.set(s.date, [...(m.get(s.date) ?? []), s]);
+    for (const s of sessions ?? []) if (!s.closure) m.set(s.date, [...(m.get(s.date) ?? []), s]);
+    return m;
+  }, [sessions]);
+  const closedOn = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of sessions ?? []) if (s.closure && !m.has(s.date)) m.set(s.date, s.closure);
     return m;
   }, [sessions]);
 
@@ -255,7 +261,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [goMonth, grid.prev, grid.next, today]);
 
-  const inMonth = (sessions ?? []).filter((s) => s.date >= grid.first && s.date <= grid.last);
+  const inMonth = (sessions ?? []).filter((s) => !s.closure && s.date >= grid.first && s.date <= grid.last);
   // Spots still open only counts sessions that haven't ended: a past day's empty places can't be booked.
   const ahead = inMonth.filter((s) => sessionPhase(s) !== "ended");
   const totals = {
@@ -359,6 +365,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           <div key={`${program}|${month}`} className={`grid grid-cols-7 ${dir > 0 ? "animate-[cal-next_0.4s_var(--ease-soft)]" : dir < 0 ? "animate-[cal-prev_0.4s_var(--ease-soft)]" : "animate-[fade_0.3s_var(--ease-soft)]"}`}>
             {dates.map((d, i) => {
               const raw = byDate.get(d) ?? [];
+              const closed = raw.length ? null : (closedOn.get(d) ?? null);
               // Camp and Flex: one row per age group. Happenings and Everything: one row per time slot.
               const daySlots = slotsOf(raw, { withProgram: true, compact: true });
               const perGroup = program === "camp" || program === "flex";
@@ -386,7 +393,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                   }}
                   onMouseEnter={() => raw.length && void fetchDay(program, d).catch(() => {})}
                   aria-pressed={sel}
-                  aria-label={`${fmtDate(d, "EEEE d MMMM")}: ${raw.length ? `${coming} booked, ${open} spots open` : "nothing scheduled"}`}
+                  aria-label={`${fmtDate(d, "EEEE d MMMM")}: ${raw.length ? `${coming} booked, ${open} spots open` : closed ? `Yalla closed, ${closed}` : "nothing scheduled"}`}
                   className={`group relative flex flex-col border-ink/[0.07] p-1.5 text-left transition-colors duration-200 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-blue sm:p-2.5 ${busyWeek.has(Math.floor(i / 7)) ? "min-h-[4.25rem] sm:min-h-[8.5rem]" : "min-h-[3.25rem] sm:min-h-[4.5rem]"} ${i % 7 !== 6 ? "border-r" : ""} ${i < dates.length - 7 ? "border-b" : ""} ${
                     sel ? "z-[1] bg-blue/[0.05]" : out ? "bg-[#faf9f5]" : raw.length ? "hover:bg-[#f7f6fb]" : "hover:bg-ink/[0.015]"
                   }`}
@@ -402,10 +409,18 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                     </span>
                     {raw.length && !out && dayOver ? (
                       <span className="hidden rounded-full bg-ink/5 px-2 py-0.5 text-[0.66rem] font-medium whitespace-nowrap text-ink-soft tabular-nums sm:inline">{coming} booked</span>
+                    ) : closed && !out ? (
+                      <span className="hidden rounded-full bg-ink/5 px-2 py-0.5 text-[0.66rem] font-medium whitespace-nowrap text-ink-soft sm:inline">Closed</span>
                     ) : raw.length && !out && (oneSlot || allFull) ? (
                       <span className={`hidden rounded-full px-2 py-0.5 text-[0.66rem] whitespace-nowrap font-medium tabular-nums sm:inline ${TONE_BG[tone]} ${past ? "opacity-60" : ""}`}>{tone === "full" ? "Full" : `${open} open`}</span>
                     ) : null}
                   </span>
+                  {closed ? (
+                    <span className={`mt-auto block text-[0.62rem] leading-tight text-ink-soft sm:mt-2 sm:text-[0.7rem] ${out ? "opacity-40" : ""}`}>
+                      <span className="sm:hidden">Closed</span>
+                      {closed !== "Closed" ? <span className="hidden sm:inline">{closed}</span> : null}
+                    </span>
+                  ) : null}
                   {/* Phones: one dot and the spots open. */}
                   {raw.length ? (
                     <span className={`mt-auto flex items-center gap-1 sm:hidden ${out ? "opacity-40" : ""}`}>
@@ -484,7 +499,9 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
 }
 
 function DayPanel({ date, program, today, data }: { date: string | null; program: CalendarProgram; today: string; data: CalendarDaySession[] | undefined }) {
-  const list = data ?? [];
+  // Sessions on a day Yalla is closed can't be booked; the panel says so instead of listing open spots.
+  const closedFor = (data ?? []).find((s) => s.closure)?.closure ?? null;
+  const list = (data ?? []).filter((s) => !s.closure);
   const slots = slotsOf(list, { withProgram: program === "all" || program === "happenings" || new Set(list.map((s) => s.programName)).size > 1 });
   const [slotKeyChosen, setSlot] = useState<string | null>(null);
   const [tab, setTab] = useState<string | null>(null);
@@ -529,6 +546,11 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
               <span className="h-3 flex-1 rounded bg-ink/[0.06]" style={{ maxWidth: `${70 - i * 10}%` }} />
             </div>
           ))}
+        </div>
+      ) : !slot && closedFor ? (
+        <div className="px-5 py-10 text-center">
+          <p className="text-[0.92rem] text-ink">{closedFor === "Closed" ? "Yalla is closed" : `Yalla is closed · ${closedFor}`}</p>
+          <p className="mt-1 text-[0.8rem] text-ink-soft">{program === "flex" ? "Yalla Flex isn’t offered this day." : "Nothing can be booked this day."} To open it, change the session’s status in the schedule.</p>
         </div>
       ) : !slot ? (
         <div className="px-5 py-10 text-center">

@@ -49,6 +49,8 @@ export type CalendarSession = {
   remaining: number;
   waiting: number;
   status: string;
+  /** Yalla is closed this day (e.g. "Fall Family Break"): nothing can be booked, so it's never shown as open. */
+  closure: string | null;
 };
 
 /** Sessions between two dates (inclusive) for the chosen programs, with booked and waitlist counts. */
@@ -76,6 +78,7 @@ export async function calendarSessions(db: Executor, from: string, to: string, p
   const bookedBy = new Map(booked.map((b) => [b.sessionId, b.n]));
   const waitingBy = new Map(waiting.map((w) => [w.sessionId, w.n]));
   return rows.map(({ s, p }) => {
+    const closure = s.status === "closed" ? (s.notes?.startsWith("Closed: ") ? s.notes.slice("Closed: ".length) : "Closed") : null;
     // "Camp Yalla · 4 – 7 years" → "4 – 7 years"
     const title = s.title ?? p.name;
     const group = title.includes(" · ") ? title.split(" · ").slice(1).join(" · ") : title;
@@ -96,6 +99,9 @@ export async function calendarSessions(db: Executor, from: string, to: string, p
       remaining: avail.get(s.id)?.remaining ?? Math.max(0, s.capacity - (bookedBy.get(s.id) ?? 0)),
       waiting: waitingBy.get(s.id ?? "") ?? 0,
       status: s.status,
+      closure,
+      // A closed day has no places to book.
+      ...(closure ? { remaining: 0, effectiveCapacity: 0, capacity: 0 } : {}),
     };
   });
 }
@@ -119,6 +125,7 @@ export async function calendarDay(db: Executor, date: string, program: CalendarP
   const list = await calendarSessions(db, date, date, program);
   return Promise.all(
     list.map(async (s) => {
+      if (s.closure) return { ...s, children: [], notComing: [] };
       const r = await roster(db, s.id, perms);
       const coming = r.children.filter((c) => c.expected || c.attendance?.status === "checked_in" || c.attendance?.status === "checked_out");
       const display = (c: (typeof r.children)[number]) => (c.preferredName ? `${c.preferredName} ${c.name.split(" ").slice(1).join(" ")}` : c.name);
