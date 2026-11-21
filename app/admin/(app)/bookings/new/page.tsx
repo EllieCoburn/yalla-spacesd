@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { NewBookingForm, type SessionOption } from "@/components/admin/bookings/NewBookingForm";
@@ -27,13 +28,13 @@ export default async function NewBookingPage({ searchParams }: { searchParams: P
       <>
         <PageHeader title="New booking" subtitle="Step 1 of 2 · Choose the family" back={{ href: "/admin/bookings", label: "Bookings" }} />
         <Card>
-          <form action="/admin/bookings/new" className="flex flex-wrap gap-2" role="search">
+          <Form action="/admin/bookings/new" className="flex flex-wrap gap-2" role="search">
             <label htmlFor="family-q" className="sr-only">
               Search families
             </label>
             <input id="family-q" name="q" defaultValue={sp.q ?? ""} placeholder="Family name, guardian, email, phone or child" className={`${inputCls} max-w-md flex-1`} autoFocus />
             <button className={btn.primary}>Search</button>
-          </form>
+          </Form>
           <ul className="mt-4 divide-y divide-ink/6">
             {results.length === 0 ? (
               <li className="py-6">
@@ -125,7 +126,7 @@ export default async function NewBookingPage({ searchParams }: { searchParams: P
         </Notice>
       ) : null}
       <Card className="mb-5">
-        <form action="/admin/bookings/new" className="flex flex-wrap items-end gap-3">
+        <Form action="/admin/bookings/new" className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="family" value={family.id} />
           <label className="flex flex-col gap-1 text-[0.8rem] font-medium text-ink">
             Program
@@ -144,7 +145,7 @@ export default async function NewBookingPage({ searchParams }: { searchParams: P
             <input type="date" name="from" defaultValue={from} className={inputCls} />
           </label>
           <button className={btn.secondary}>Show sessions</button>
-        </form>
+        </Form>
       </Card>
       {program ? (
         <NewBookingForm

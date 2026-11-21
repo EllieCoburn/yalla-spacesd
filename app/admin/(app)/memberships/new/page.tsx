@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import { ActionForm, MoneyField, SelectField, TextArea, TextField } from "@/components/admin/forms";
@@ -54,7 +55,7 @@ export default async function NewMembershipPage({ searchParams }: { searchParams
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <Card title="1 · Family & schedule">
-          <form action="/admin/memberships/new" className="space-y-4">
+          <Form action="/admin/memberships/new" className="space-y-4">
             <label className="block space-y-1.5">
               <span className="text-[0.8rem] font-medium text-ink">Family</span>
               <select name="family" defaultValue={family?.id ?? ""} className={inputCls} required>
@@ -137,7 +138,7 @@ export default async function NewMembershipPage({ searchParams }: { searchParams
               )
             ) : null}
             <button className={btn.secondary}>{family ? "Check availability & price" : "Continue"}</button>
-          </form>
+          </Form>
         </Card>
 
         <div className="space-y-6">

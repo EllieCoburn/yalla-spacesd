@@ -3,6 +3,9 @@
  * everything operational, hairline structure, and status pills that pair an icon shape with text.
  */
 import Link from "next/link";
+import Form from "next/form";
+import { Suspense } from "react";
+import { FilterSubmit } from "./FilterSubmit";
 import type { ReactNode } from "react";
 import { statusOf, type Icon, type StatusKind, type Tone } from "@/lib/admin/status";
 
@@ -205,13 +208,16 @@ export const inputCls =
 /** GET filter bar — filters live in the URL so views are shareable and bookmarkable. */
 export function FilterBar({ children, action }: { children: ReactNode; action: string }) {
   return (
-    <form action={action} className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-ink/10 bg-[#fffefb] p-3">
+    // next/form: applying filters updates the page in place instead of reloading everything.
+    <Form action={action} className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-ink/10 bg-[#fffefb] p-3">
       {children}
-      <button className={btn.secondary}>Apply</button>
+      <Suspense fallback={<button className={btn.secondary}>Apply</button>}>
+        <FilterSubmit className={btn.secondary} />
+      </Suspense>
       <Link href={action} className={btn.ghost}>
         Clear
       </Link>
-    </form>
+    </Form>
   );
 }
 

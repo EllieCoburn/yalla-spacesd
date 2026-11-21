@@ -36,8 +36,8 @@ import {
   staffUsers,
   documents,
 } from "@/lib/db/schema";
-import { familyLedger } from "@/lib/ops/billing";
-import { paperworkStatus, type PaperworkItem } from "@/lib/ops/forms";
+import { familyBalances, familyLedger } from "@/lib/ops/billing";
+import { paperworkStatus, paperworkStatusMany, type PaperworkItem } from "@/lib/ops/forms";
 import { searchFamilies } from "@/lib/ops/families";
 import { todayLA } from "@/lib/time";
 
@@ -88,25 +88,21 @@ export async function familyDirectory(db: Executor, staff: StaffContext, q: stri
   ]);
   const showMoney = can(staff, "billing.view");
   const showForms = can(staff, "forms.view");
+  // Everyone's balances and paperwork in one go (not one check per family).
+  const balances = showMoney ? await familyBalances(db, rows.map((f) => f.id)) : null;
+  const paperworkAll = showForms ? await paperworkStatusMany(db, rows.map((f) => ({ familyId: f.id, childIds: kids.filter((k) => k.familyId === f.id).map((k) => k.id) }))) : null;
   return Promise.all(
-    rows.map(async (f) => {
+    rows.map(async (f, fi) => {
       const fk = kids.filter((k) => k.familyId === f.id);
       let balance: number | null = null;
       let credit: number | null = null;
-      if (showMoney) {
-        const l = await familyLedger(db, f.id);
+      if (balances) {
+        const l = balances.get(f.id)!;
         balance = l.outstanding;
         credit = l.credit;
       }
       let paperworkIssues: number | null = null;
-      if (showForms)
-        paperworkIssues = openPaperworkCount(
-          await familyPaperwork(
-            db,
-            f.id,
-            fk.map((k) => k.id),
-          ),
-        );
+      if (paperworkAll) paperworkIssues = openPaperworkCount(paperworkAll[fi]);
       return {
         family: f,
         guardians: gs.filter((g) => g.familyId === f.id).map((g) => ({ id: g.id, name: `${g.firstName} ${g.lastName}`, email: g.email, phone: g.phone, isPrimary: g.isPrimary })),
@@ -484,8 +480,10 @@ export async function outstandingPaperwork(db: Executor, f: { from: string; to: 
       ),
     );
   const out: { family: typeof families.$inferSelect; rows: { childId: string | null; childName: string | null; items: PaperworkItem[] }[] }[] = [];
-  for (const [familyId, e] of byFamily) {
-    const status = await paperworkStatus(db, { familyId, childIds: [...e.childIds], programIds: [...e.programIds], sessionIds: [...e.sessionIds], onDate: f.from });
+  const famList = [...byFamily];
+  const statuses = await paperworkStatusMany(db, famList.map(([familyId, e]) => ({ familyId, childIds: [...e.childIds], programIds: [...e.programIds], sessionIds: [...e.sessionIds], onDate: f.from })));
+  for (const [fi, [familyId]] of famList.entries()) {
+    const status = statuses[fi];
     const rows: (typeof out)[number]["rows"] = [];
     for (const [key, list] of status) {
       const open = list.filter((i) => i.state !== "complete" && i.enforcement !== "informational");

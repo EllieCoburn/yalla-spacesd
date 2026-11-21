@@ -18,7 +18,7 @@ import {
   waitlistEntries,
 } from "@/lib/db/schema";
 import { availabilityFor } from "@/lib/ops/capacity";
-import { blockingPaperwork } from "@/lib/ops/forms";
+import { paperworkStatusMany } from "@/lib/ops/forms";
 import { ageInMonths, todayLA } from "@/lib/time";
 
 export async function referenceData(db: Executor) {
@@ -154,12 +154,13 @@ export async function waitlistRows(db: Executor, f: { programId?: string; sessio
   });
   // Paperwork that blocks booking also blocks an offer (the hold uses the same booking rules).
   const out = [];
+  const checkable = withEligibility.filter((r) => r.e.status === "waiting" && r.s);
+  const statuses = await paperworkStatusMany(db, checkable.map((r) => ({ familyId: r.f.id, childIds: r.e.childIds, programIds: [r.p.id], sessionIds: [r.s!.id], onDate: r.s!.localDate })));
+  const blockingFor = new Map(
+    checkable.map((r, i) => [r, [...new Set([...statuses[i].values()].flat().filter((x) => x.enforcement === "blocks_booking" && x.state !== "complete").map((x) => x.title))]]),
+  );
   for (const r of withEligibility) {
-    let blocking: string[] = [];
-    if (r.e.status === "waiting" && r.s) {
-      const items = await blockingPaperwork(db, { familyId: r.f.id, childIds: r.e.childIds, programIds: [r.p.id], sessionIds: [r.s.id], onDate: r.s.localDate });
-      blocking = [...new Set(items.map((i) => i.title))];
-    }
+    const blocking: string[] = blockingFor.get(r) ?? [];
     out.push({ ...r, blocking, canOffer: r.e.status === "waiting" && !!r.s && r.remaining != null && r.remaining >= r.e.partySize && r.ineligible.length === 0 });
   }
   return out;

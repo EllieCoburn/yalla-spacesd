@@ -131,67 +131,155 @@ export async function applicableTemplates(db: Executor, ctx: Ctx) {
 }
 
 export async function paperworkStatus(db: Executor, ctx: Ctx): Promise<Map<string, PaperworkItem[]>> {
-  const onDate = ctx.onDate ?? todayLA();
-  const reqs = await applicableTemplates(db, ctx);
-  const templateIds = [...new Set(reqs.map((r) => r.t.id))];
-  const out = new Map<string, PaperworkItem[]>();
-  for (const c of ctx.childIds) out.set(c, []);
-  out.set("family", []);
-  if (!templateIds.length) return out;
+  return (await paperworkStatusMany(db, [ctx]))[0];
+}
 
-  const subs = await db
-    .select()
-    .from(formSubmissions)
-    .where(and(eq(formSubmissions.familyId, ctx.familyId), inArray(formSubmissions.templateId, templateIds), inArray(formSubmissions.status, ["submitted", "signed"])))
-    .orderBy(desc(formSubmissions.createdAt));
-  const versions = await db.select().from(formVersions).where(inArray(formVersions.templateId, templateIds));
+/**
+ * Paperwork status for many families at once (a page of families, bookings or a roster), in a fixed
+ * handful of queries however many there are. Same rules as applicableTemplates + paperworkStatus;
+ * results are in the same order as `ctxs`.
+ */
+export async function paperworkStatusMany(db: Executor, ctxs: Ctx[]): Promise<Map<string, PaperworkItem[]>[]> {
+  if (!ctxs.length) return [];
+  const today = todayLA();
+  const famIds = [...new Set(ctxs.map((c) => c.familyId))];
+  const childIds = [...new Set(ctxs.flatMap((c) => c.childIds))];
+  const programIds = [...new Set(ctxs.flatMap((c) => c.programIds ?? []))];
+  const sessionIds = [...new Set(ctxs.flatMap((c) => c.sessionIds ?? []))];
+
+  const members = new Set(
+    childIds.length
+      ? (await db.select({ childId: memberships.childId }).from(memberships).where(and(inArray(memberships.childId, childIds), inArray(memberships.status, ["active", "upcoming", "paused"])))).map((m) => m.childId)
+      : [],
+  );
+  const conds = [eq(formRequirements.scope, "all"), inArray(formRequirements.familyId, famIds)];
+  if (programIds.length) conds.push(and(eq(formRequirements.scope, "program"), inArray(formRequirements.programId, programIds))!);
+  if (childIds.length) conds.push(inArray(formRequirements.childId, childIds));
+  if (sessionIds.length) conds.push(inArray(formRequirements.sessionId, sessionIds));
+  if (members.size) conds.push(eq(formRequirements.scope, "membership"));
+  const allRows = await db
+    .select({ r: formRequirements, t: formTemplates })
+    .from(formRequirements)
+    .innerJoin(formTemplates, eq(formTemplates.id, formRequirements.templateId))
+    .where(and(eq(formRequirements.active, true), eq(formTemplates.status, "active"), or(...conds)));
+
+  const hasFilters = (r: (typeof allRows)[number]["r"]) => r.minAgeMonths != null || r.maxAgeMonths != null || r.programKinds.length > 0;
+  const anyFiltered = allRows.some((x) => hasFilters(x.r));
+  const minDate = ctxs.reduce((m, c) => ((c.onDate ?? today) < m ? (c.onDate ?? today) : m), ctxs[0].onDate ?? today);
+  const [births, booked, kinds] = await Promise.all([
+    anyFiltered && childIds.length ? db.select({ id: children.id, birthDate: children.birthDate }).from(children).where(inArray(children.id, childIds)) : Promise.resolve([]),
+    anyFiltered && childIds.length
+      ? db
+          .select({ childId: bookingItems.childId, kind: programs.kind, localDate: sessions.localDate })
+          .from(bookingItems)
+          .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+          .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+          .innerJoin(programs, eq(programs.id, sessions.programId))
+          .where(and(inArray(bookingItems.childId, childIds), inArray(bookingItems.status, ["confirmed", "held"]), sql`${sessions.localDate} >= ${minDate}`))
+      : Promise.resolve([]),
+    anyFiltered && programIds.length ? db.select({ id: programs.id, kind: programs.kind }).from(programs).where(inArray(programs.id, programIds)) : Promise.resolve([]),
+  ]);
+  const birthOf = new Map(births.map((c) => [c.id, c.birthDate]));
+  const kindOf = new Map(kinds.map((k) => [k.id, k.kind]));
+
+  const templateIds = [...new Set(allRows.map((x) => x.t.id))];
+  const [subs, versions] = templateIds.length
+    ? await Promise.all([
+        db
+          .select()
+          .from(formSubmissions)
+          .where(and(inArray(formSubmissions.familyId, famIds), inArray(formSubmissions.templateId, templateIds), inArray(formSubmissions.status, ["submitted", "signed"])))
+          .orderBy(desc(formSubmissions.createdAt)),
+        db.select().from(formVersions).where(inArray(formVersions.templateId, templateIds)),
+      ])
+    : [[], []];
   const versionById = new Map(versions.map((v) => [v.id, v]));
 
-  const evaluate = (t: (typeof reqs)[number]["t"], childId: string | null): PaperworkItem => {
-    const candidates = subs.filter(
-      (s) => s.templateId === t.id && (t.perChild ? s.childId === childId : true) && (t.frequency !== "per_booking" || (ctx.bookingId && s.bookingId === ctx.bookingId)),
+  return ctxs.map((ctx) => {
+    const onDate = ctx.onDate ?? today;
+    const memberChildIds = ctx.childIds.filter((c) => members.has(c));
+    // The requirements that reach this family (the same conditions as applicableTemplates).
+    const rows = allRows.filter(
+      ({ r }) =>
+        r.scope === "all" ||
+        r.familyId === ctx.familyId ||
+        (r.scope === "program" && !!r.programId && !!ctx.programIds?.includes(r.programId)) ||
+        (!!r.childId && ctx.childIds.includes(r.childId)) ||
+        (!!r.sessionId && !!ctx.sessionIds?.includes(r.sessionId)) ||
+        (memberChildIds.length > 0 && r.scope === "membership"),
     );
-    const latest = candidates[0];
-    let state: PaperworkState = "complete";
-    if (!latest) state = "missing";
-    else if (t.requiresSignature && latest.status !== "signed") state = "unsigned";
-    else if (latest.expiresOn && latest.expiresOn < onDate) state = "expired";
-    else if (t.currentVersionId && latest.versionId !== t.currentVersionId) {
-      const current = versionById.get(t.currentVersionId);
-      if (current?.requiresResign) state = "needs_resign";
+    // What each child is enrolled in or booked for (childOfferings).
+    const offerings = new Map<string, Set<string>>(ctx.childIds.map((c) => [c, new Set<string>()]));
+    for (const c of memberChildIds) offerings.get(c)?.add("membership");
+    for (const b of booked) if (b.childId && b.localDate >= onDate) offerings.get(b.childId)?.add(b.kind);
+    for (const pid of ctx.programIds ?? []) {
+      const k = kindOf.get(pid);
+      if (k) for (const c of ctx.childIds) offerings.get(c)!.add(k);
     }
-    return {
-      templateId: t.id,
-      title: t.title,
-      kind: t.kind,
-      enforcement: t.enforcement,
-      perChild: t.perChild,
-      childId,
-      state,
-      submissionId: latest?.id ?? null,
-      signedAt: latest?.signedAt ?? latest?.createdAt ?? null,
-      expiresOn: latest?.expiresOn ?? null,
-      frequency: t.frequency,
-    };
-  };
-
-  const seen = new Set<string>();
-  for (const r of reqs) {
-    // Agreements signed for each purchase are checked against that booking only (at checkout and before
-    // paying); outside a booking there's nothing to sign yet, so they aren't listed as outstanding.
-    if (r.t.frequency === "per_booking" && !ctx.bookingId) continue;
-    if (r.t.perChild) {
-      for (const c of ctx.childIds) {
-        if (!r.appliesToChild(c) || seen.has(`${r.t.id}:${c}`)) continue;
-        seen.add(`${r.t.id}:${c}`);
-        out.get(c)!.push(evaluate(r.t, c));
+    const fits = (r: (typeof rows)[number]["r"], childId: string) => {
+      if (r.minAgeMonths != null || r.maxAgeMonths != null) {
+        const birth = birthOf.get(childId);
+        if (!birth) return false;
+        const age = ageInMonths(birth, onDate);
+        if (r.minAgeMonths != null && age < r.minAgeMonths) return false;
+        if (r.maxAgeMonths != null && age > r.maxAgeMonths) return false;
       }
-    } else if (!seen.has(`${r.t.id}:family`)) {
-      seen.add(`${r.t.id}:family`);
-      out.get("family")!.push(evaluate(r.t, null));
+      if (r.programKinds.length && !r.programKinds.some((k) => offerings.get(childId)?.has(k))) return false;
+      return true;
+    };
+    const appliesToChild = (r: (typeof rows)[number]["r"], childId: string) =>
+      (r.scope === "child" ? r.childId === childId : r.scope === "membership" ? memberChildIds.includes(childId) : true) && fits(r, childId);
+    const reqs = rows.filter((x) => x.t.perChild || !hasFilters(x.r) || ctx.childIds.some((c) => appliesToChild(x.r, c)));
+
+    const out = new Map<string, PaperworkItem[]>();
+    for (const c of ctx.childIds) out.set(c, []);
+    out.set("family", []);
+    const mySubs = subs.filter((x) => x.familyId === ctx.familyId);
+    const evaluate = (t: (typeof reqs)[number]["t"], childId: string | null): PaperworkItem => {
+      const candidates = mySubs.filter(
+        (x) => x.templateId === t.id && (t.perChild ? x.childId === childId : true) && (t.frequency !== "per_booking" || (ctx.bookingId && x.bookingId === ctx.bookingId)),
+      );
+      const latest = candidates[0];
+      let state: PaperworkState = "complete";
+      if (!latest) state = "missing";
+      else if (t.requiresSignature && latest.status !== "signed") state = "unsigned";
+      else if (latest.expiresOn && latest.expiresOn < onDate) state = "expired";
+      else if (t.currentVersionId && latest.versionId !== t.currentVersionId) {
+        const current = versionById.get(t.currentVersionId);
+        if (current?.requiresResign) state = "needs_resign";
+      }
+      return {
+        templateId: t.id,
+        title: t.title,
+        kind: t.kind,
+        enforcement: t.enforcement,
+        perChild: t.perChild,
+        childId,
+        state,
+        submissionId: latest?.id ?? null,
+        signedAt: latest?.signedAt ?? latest?.createdAt ?? null,
+        expiresOn: latest?.expiresOn ?? null,
+        frequency: t.frequency,
+      };
+    };
+    const seen = new Set<string>();
+    for (const r of reqs) {
+      // Agreements signed for each purchase are checked against that booking only (at checkout and before
+      // paying); outside a booking there's nothing to sign yet, so they aren't listed as outstanding.
+      if (r.t.frequency === "per_booking" && !ctx.bookingId) continue;
+      if (r.t.perChild) {
+        for (const c of ctx.childIds) {
+          if (!appliesToChild(r.r, c) || seen.has(`${r.t.id}:${c}`)) continue;
+          seen.add(`${r.t.id}:${c}`);
+          out.get(c)!.push(evaluate(r.t, c));
+        }
+      } else if (!seen.has(`${r.t.id}:family`)) {
+        seen.add(`${r.t.id}:family`);
+        out.get("family")!.push(evaluate(r.t, null));
+      }
     }
-  }
-  return out;
+    return out;
+  });
 }
 
 /** Outstanding items that block booking (enforcement = blocks_booking). */
@@ -451,8 +539,10 @@ export async function outstandingForChildren(db: Executor, childIds: string[], o
   const byFamily = new Map<string, string[]>();
   for (const r of rows) byFamily.set(r.familyId, [...(byFamily.get(r.familyId) ?? []), r.id]);
   const out: { familyId: string; childId: string | null; items: PaperworkItem[] }[] = [];
-  for (const [familyId, ids] of byFamily) {
-    const status = await paperworkStatus(db, { familyId, childIds: ids, onDate });
+  const fams = [...byFamily];
+  const statuses = await paperworkStatusMany(db, fams.map(([familyId, ids]) => ({ familyId, childIds: ids, onDate })));
+  for (const [i, [familyId]] of fams.entries()) {
+    const status = statuses[i];
     for (const [key, items] of status) {
       const open = items.filter((i) => i.state !== "complete" && i.enforcement !== "informational");
       if (open.length) out.push({ familyId, childId: key === "family" ? null : key, items: open });

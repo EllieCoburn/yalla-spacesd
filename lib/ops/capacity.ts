@@ -123,23 +123,25 @@ export async function availabilityFor(db: Executor, sessionIds: string[], now = 
   if (pooled.length) {
     const poolIds = [...new Set(pooled.map((r) => r.capacityPoolId!))];
     poolCaps = new Map((await db.select().from(capacityPools).where(inArray(capacityPools.id, poolIds))).map((p) => [p.id, p.capacity]));
-    for (const s of pooled) {
-      const overlapping = await db
-        .select({ id: sessions.id })
-        .from(sessions)
-        .where(
-          and(
-            eq(sessions.capacityPoolId, s.capacityPoolId!),
-            sql`${sessions.status} <> 'cancelled'`,
-            sql`${sessions.startsAt} < ${s.endsAt.toISOString()}::timestamptz`,
-            sql`${sessions.endsAt} > ${s.startsAt.toISOString()}::timestamptz`,
-          ),
-        );
+    // Every live session in these pools across the time span, in one query; overlaps worked out here.
+    const from = new Date(Math.min(...pooled.map((s) => s.startsAt.getTime())));
+    const to = new Date(Math.max(...pooled.map((s) => s.endsAt.getTime())));
+    const inPools = await db
+      .select({ id: sessions.id, poolId: sessions.capacityPoolId, startsAt: sessions.startsAt, endsAt: sessions.endsAt })
+      .from(sessions)
+      .where(
+        and(
+          inArray(sessions.capacityPoolId, poolIds),
+          sql`${sessions.status} <> 'cancelled'`,
+          sql`${sessions.startsAt} < ${to.toISOString()}::timestamptz`,
+          sql`${sessions.endsAt} > ${from.toISOString()}::timestamptz`,
+        ),
+      );
+    for (const s of pooled)
       neighbours.set(
         s.id,
-        overlapping.map((o) => o.id),
+        inPools.filter((o) => o.poolId === s.capacityPoolId && o.startsAt < s.endsAt && o.endsAt > s.startsAt).map((o) => o.id),
       );
-    }
   }
   const allIds = [...new Set([...sessionIds, ...[...neighbours.values()].flat()])];
   const occ = await occupancyFor(db, allIds, now);

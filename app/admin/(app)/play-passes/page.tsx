@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { ActionForm, Checkbox, MoneyField, TextField } from "@/components/admin/forms";
@@ -78,7 +79,7 @@ export default async function PlayPassesAdmin({ searchParams }: { searchParams: 
         <Card
           title={`Financial summary · ${fmtDate(`${month}-01`, "MMMM yyyy")}`}
           actions={
-            <form className="flex items-center gap-2">
+            <Form action="/admin/play-passes" className="flex items-center gap-2">
               <input type="hidden" name="tab" value="overview" />
               <select name="month" defaultValue={month} className={`${inputCls} h-8 py-0`}>
                 {months.map((m) => (
@@ -88,7 +89,7 @@ export default async function PlayPassesAdmin({ searchParams }: { searchParams: 
                 ))}
               </select>
               <button className="text-blue">Show</button>
-            </form>
+            </Form>
           }
         >
           <p className="mb-4 text-[0.82rem] text-ink-soft">
