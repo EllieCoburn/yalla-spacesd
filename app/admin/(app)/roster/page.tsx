@@ -172,7 +172,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                       {fees.map((f) => (
                         <li key={f.fee.id} className="flex flex-wrap items-center justify-between gap-3">
                           <span>
-                            {f.child} · {f.fee.minutesLate} minutes late · ${(f.fee.amountCents / 100).toFixed(2)}
+                            {f.child} · {f.fee.minutesLate} minutes late{can(staff, "billing.view") ? ` · $${(f.fee.amountCents / 100).toFixed(2)}` : ""}
                             {f.fee.status === "waived" ? <span className="text-ink-soft"> · waived by {f.fee.waivedBy}: {f.fee.waivedReason}</span> : null}
                           </span>
                           {f.fee.status === "charged" && can(staff, "billing.manage") ? (

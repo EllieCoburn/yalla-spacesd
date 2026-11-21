@@ -407,7 +407,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                 <ul className="divide-y divide-ink/6">
                   {d.comms.map((m) => (
                     <li key={m.id} className="px-5 py-2.5">
-                      <p className="truncate text-[0.84rem] text-ink">{m.subject}</p>
+                      <p className="truncate text-[0.84rem] text-ink">{can(staff, "billing.view") ? m.subject : m.subject.replace(/[−-]?\$\s?\d[\d,]*(?:\.\d{1,2})?/g, "$•••")}</p>
                       <p className="flex flex-wrap items-center gap-2 text-[0.72rem] text-ink-soft">
                         {m.toAddress} · {fmtDateTime(m.createdAt)} <Status kind="message" value={m.status} />
                       </p>

@@ -23,7 +23,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? sp.date! : null;
   const month = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : (validDate ?? today).slice(0, 7);
   const g = monthGrid(month);
-  const showMoney = can(staff, "reports.view");
+  const showMoney = can(staff, "reports.financial");
   const sessions = await calendarSessions(db, g.start, g.end, program, { money: showMoney });
   const inMonth = sessions.filter((s) => s.date >= g.first && s.date <= g.last);
   const date =

@@ -16,7 +16,7 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { bookingItems, children, programs, sessions, staffUsers } from "@/lib/db/schema";
+import { bookingItems, children, programs, sessions, staffUsers, roles } from "@/lib/db/schema";
 import { EARLY_BIRD, FLEX_GROUPS, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
 import { addDaysISO, fmtDate, todayLA, weekdayOf } from "@/lib/time";
@@ -86,6 +86,23 @@ export async function teamRecipients(db: Executor, topics: NoticeTopic | NoticeT
   if (membership) for (const e of parseList(await getPolicy(db, "notifications.membershipEmails"))) if (!accounts.has(e)) out.add(e);
   for (const s of staff) if (s.status === "active" && worksOn(s.workdays, today) && s.notices.some((t) => want.has(t as NoticeTopic))) out.add(s.email.toLowerCase());
   return [...out];
+}
+
+/**
+ * Of these recipients, the ones who may see money: staff whose role has billing permission, plus
+ * addresses an owner typed into Settings → Notifications (those aren't staff accounts; an owner
+ * chose them). Everyone else gets team emails without amounts.
+ */
+export async function seesMoney(db: Executor, emails: string[]): Promise<Set<string>> {
+  const rows = await db
+    .select({ email: staffUsers.email, permissions: roles.permissions })
+    .from(staffUsers)
+    .innerJoin(roles, eq(roles.id, staffUsers.roleId));
+  const accounts = new Map(rows.map((r) => [r.email.toLowerCase(), r.permissions]));
+  return new Set(emails.filter((e) => {
+    const perms = accounts.get(e.toLowerCase());
+    return perms ? perms.includes("billing.view") : true;
+  }));
 }
 
 /** An owner chooses which team emails a person gets, and which Flex cohorts they're part of. */

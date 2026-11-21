@@ -13,8 +13,8 @@ export async function loadMonth(month: string, prog: string) {
   const staff = await requirePermission("roster.view");
   if (!/^\d{4}-\d{2}$/.test(month)) return [];
   const g = monthGrid(month);
-  // Revenue figures only for staff who can see reports.
-  return calendarSessions(getDb(), g.start, g.end, program(prog), { money: can(staff, "reports.view") });
+  // Revenue figures only for staff with financial reports permission.
+  return calendarSessions(getDb(), g.start, g.end, program(prog), { money: can(staff, "reports.financial") });
 }
 
 /** One day's sessions with who's coming. */
