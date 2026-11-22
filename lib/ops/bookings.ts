@@ -22,6 +22,7 @@ import {
   children,
   families,
   guardians,
+  invoiceLines,
   invoices,
   locations,
   payments,
@@ -470,12 +471,29 @@ export async function checkoutLabel(db: Executor, bookingId: string, opts: { wal
   const title = (r: (typeof rows)[number]) => r.session.title ?? r.program.name;
   const children = [...new Set(rows.map((r) => (r.child ? r.child.preferredName || r.child.firstName : null)).filter(Boolean))] as string[];
   const programs = [...new Set(sessionsBooked.map((r) => r.program.name))];
-  const name =
+  // Stripe shows one item for the whole booking ("× 1"), so the name says who it's for and any
+  // sibling or family-rate saving, and the total reads right: "… · 2 children (Ava & Mia) · sibling discount applied".
+  const [inv] = await db
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")))
+    .limit(1);
+  const discountNotes = inv
+    ? await db.select({ description: invoiceLines.description }).from(invoiceLines).where(and(eq(invoiceLines.invoiceId, inv.id), eq(invoiceLines.kind, "discount")))
+    : [];
+  const familyDeal = discountNotes.some((d) => d.description.startsWith("Sibling discount"))
+    ? " · sibling discount applied"
+    : discountNotes.some((d) => d.description.startsWith("Family rate"))
+      ? " · family rate applied"
+      : "";
+  const who = children.length > 1 ? ` · ${children.length} children (${children.join(" & ")})` : "";
+  const base =
     sessionsBooked.length === 1
       ? `${title(sessionsBooked[0])} · ${fmtDate(sessionsBooked[0].session.localDate, "EEE, MMM d")}`
       : programs.length === 1
         ? `${programs[0]} · ${sessionsBooked.length} sessions`
         : `Yalla booking · ${sessionsBooked.length} sessions`;
+  const name = `${base}${who}${familyDeal}`.slice(0, 250);
   const lines = sessionsBooked.map((s) => {
     const group = rows.filter((r) => r.session.id === s.session.id);
     const hours = groupHours(group);
