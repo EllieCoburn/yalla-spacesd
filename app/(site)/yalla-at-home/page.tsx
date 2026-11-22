@@ -83,7 +83,7 @@ export default function YallaAtHome() {
           </>
         }
         lede="Newborn care and practical support for San Diego families finding their rhythm with a new baby."
-        image={{ src: "/photos/lounge.jpg", alt: "A calm, sunlit living room with a soft blue sofa, green velvet chairs and white tulips" }}
+        image={{ src: "/photos/ellie-coburn.jpg", alt: "Ellie Coburn, owner of Yalla and a postpartum doula, smiling outdoors in a mint green shirt" }}
       />
 
       {/* In Ellie's words */}
