@@ -568,6 +568,13 @@
       "when": 1795311606684,
       "tag": "0080_flex_age_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795312296559,
+      "tag": "0081_newfriends_coupon",
+      "breakpoints": true
     }
   ]
 }

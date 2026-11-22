@@ -102,6 +102,7 @@ export const discountAction = adminAction("billing.manage", async ({ db, actor, 
     endsOn: str("endsOn") || null,
     maxUses: num("maxUses"),
     oncePerFamily: bool("oncePerFamily"),
+    firstBookingOnly: bool("firstBookingOnly"),
   });
   return "Discount saved.";
 });

@@ -446,6 +446,7 @@ export async function saveDiscount(
     endsOn?: string | null;
     maxUses?: number | null;
     oncePerFamily?: boolean;
+    firstBookingOnly?: boolean;
   },
 ) {
   if (!input.name.trim()) throw new OpsError("invalid", "Name the discount.");
@@ -469,6 +470,7 @@ export async function saveDiscount(
     endsOn: input.endsOn || null,
     maxUses: input.maxUses ?? null,
     oncePerFamily: input.oncePerFamily ?? false,
+    firstBookingOnly: input.firstBookingOnly ?? false,
   };
   if (input.id) await db.update(discounts).set(values).where(eq(discounts.id, input.id));
   else await db.insert(discounts).values(values);

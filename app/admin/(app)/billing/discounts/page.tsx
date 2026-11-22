@@ -13,7 +13,7 @@ import { discountAction } from "../actions";
 
 export const metadata = { title: "Discounts" };
 
-function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; programIds: string[] | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null; oncePerFamily: boolean }; programOptions: { value: string; label: string }[] }) {
+function DiscountFields({ d, programOptions }: { d?: { id: string; code: string | null; name: string; kind: string; value: number; programId: string | null; programIds: string[] | null; active: boolean; startsOn: string | null; endsOn: string | null; maxUses: number | null; oncePerFamily: boolean; firstBookingOnly: boolean }; programOptions: { value: string; label: string }[] }) {
   return (
     <>
       {d ? <input type="hidden" name="id" value={d.id} /> : null}
@@ -36,6 +36,7 @@ function DiscountFields({ d, programOptions }: { d?: { id: string; code: string 
         </div>
       </fieldset>
       <Checkbox name="oncePerFamily" label="Once per family (each family can use the code one time)" defaultChecked={d?.oncePerFamily ?? false} />
+      <Checkbox name="firstBookingOnly" label="First booking only (families who haven’t booked these programs before)" defaultChecked={d?.firstBookingOnly ?? false} />
       <Checkbox name="active" label="Active" defaultChecked={d?.active ?? true} />
     </>
   );

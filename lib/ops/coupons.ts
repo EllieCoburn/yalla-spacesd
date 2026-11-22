@@ -6,7 +6,7 @@
 import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { OpsError } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { bookings, discounts, programs, sessions } from "@/lib/db/schema";
+import { bookingItems, bookings, discounts, programs, sessions } from "@/lib/db/schema";
 import { todayLA } from "@/lib/time";
 import type { LineInput } from "./billing";
 
@@ -52,6 +52,27 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
     if (used) throw new OpsError("coupon", "Your family has already used this code.");
   }
   const covered = couponPrograms(d);
+  // A welcome code: only for a family who hasn't had a confirmed booking of these programs before.
+  if (d.firstBookingOnly && opts.familyId) {
+    const [before] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
+      .innerJoin(sessions, eq(sessions.id, bookingItems.sessionId))
+      .where(
+        and(
+          eq(bookings.familyId, opts.familyId),
+          eq(bookings.status, "confirmed"),
+          eq(bookingItems.status, "confirmed"),
+          covered ? inArray(sessions.programId, covered) : undefined,
+        ),
+      )
+      .limit(1);
+    if (before) {
+      const names = covered ? (await db.select({ name: programs.name }).from(programs).where(inArray(programs.id, covered))).map((p) => p.name).sort() : [];
+      throw new OpsError("coupon", `That code is for a family’s first ${names.length ? names.join(" or ") : "Yalla"} booking.`);
+    }
+  }
   if (covered && sessionIds.length) {
     const rows = await db.select({ programId: sessions.programId }).from(sessions).where(inArray(sessions.id, sessionIds));
     if (!rows.some((r) => covered.includes(r.programId))) {

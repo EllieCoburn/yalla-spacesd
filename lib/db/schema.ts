@@ -857,6 +857,8 @@ export const discounts = pgTable("discounts", {
   maxUses: integer("max_uses"),
   /** Each family can use the code once (e.g. a thank-you code for a return visit). */
   oncePerFamily: boolean("once_per_family").notNull().default(false),
+  /** Only for a family's first booking of the programs it covers (no confirmed booking of them before). */
+  firstBookingOnly: boolean("first_booking_only").notNull().default(false),
   createdAt: createdAt(),
 });
 

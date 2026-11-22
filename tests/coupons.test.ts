@@ -164,4 +164,31 @@ describe("Coupon codes", () => {
     expect(parsed.getTitle()).toMatch(/^Invoice INV-.+ · Yalla Childcare$/);
     if (process.env.INVOICE_PDF_OUT) writeFileSync(process.env.INVOICE_PDF_OUT, doc.bytes);
   });
+
+  it("NEWFRIENDS-style codes: 15% off a family's first Flex or camp booking only, once", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    await db().insert(s.discounts).values({ code: "NEWFRIENDS", name: "New friends", kind: "percent", value: 15, programIds: [flex.id, camp.id], oncePerFamily: true, firstBookingOnly: true });
+    const day1 = await session(flex.id, { capacity: 4 });
+    const day2 = await session(flex.id, { capacity: 4 }, 9);
+    const campDay = await session(camp.id, { capacity: 4 }, 11);
+
+    // A brand-new family: 15% off.
+    expect((await book("new.friend@example.com", day1.id, "newfriends")).ok).toBe(true);
+    const first = await invoiceFor("new.friend@example.com");
+    expect(first.totals.total).toBe(12750);
+    await processEvent(db(), "test", { id: "evt_nf1", type: "payment.succeeded", checkoutRef: first.payment.checkoutRef!, providerRef: "pi_nf1", amountCents: first.payment.amountCents });
+
+    // That family again: they've used it.
+    await expect(findCoupon(db(), "NEWFRIENDS", [campDay.id], { familyId: first.booking.familyId })).rejects.toThrow(/already used this code/);
+    expect((await book("new.friend@example.com", day2.id, "newfriends")).ok).toBe(false);
+
+    // A family who booked before without the code isn't a first booking either.
+    expect((await book("old.friend@example.com", day1.id)).ok).toBe(true);
+    const earlier = await invoiceFor("old.friend@example.com");
+    await processEvent(db(), "test", { id: "evt_nf2", type: "payment.succeeded", checkoutRef: earlier.payment.checkoutRef!, providerRef: "pi_nf2", amountCents: earlier.payment.amountCents });
+    await expect(findCoupon(db(), "NEWFRIENDS", [campDay.id], { familyId: earlier.booking.familyId })).rejects.toThrow(/first Camp Yalla or Yalla Flex booking/);
+  });
 });
+
