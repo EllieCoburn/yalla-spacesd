@@ -28,6 +28,8 @@ export type TemplateKey =
   | "payment_receipt"
   | "payment_failed"
   | "waitlist_offer"
+  | "waitlist_joined"
+  | "waitlist_welcome"
   | "membership_update"
   | "payment_request"
   | "staff_password_reset"
@@ -267,6 +269,20 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     body: "Hi {{guardian_first_name}},\n\nYour payment of {{amount}} for invoice {{invoice_number}} didn’t go through ({{reason}}). Your spot is held until {{hold_until}}.\n\nPlease try again from the link in the Family Portal.\n\nTeam Yalla",
     essential: true,
     audience: "billing",
+  },
+  waitlist_welcome: {
+    name: "Waitlist: welcome (family new to Yalla)",
+    subject: "Welcome to Yalla! You’re on the waitlist for {{program}}",
+    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nThank you for joining the waitlist. We’re so glad you found us. Yalla is a coworking and childcare space in Bankers Hill where children play, explore and grow in small groups with caregivers who know them well, while their grown-ups work just steps away.\n\n{{waitlist_details}}\n\n{{waitlist_how}}\n\nWhile you wait, set up your Family Portal account. You’ll be able to see your waitlist, save your family’s details and book quickly when a spot opens.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
+  },
+  waitlist_joined: {
+    name: "Waitlist: you’re on the list (returning family)",
+    subject: "You’re on the waitlist for {{program}} on {{date}}",
+    body: "Hi {{guardian_first_name}},\n\nThanks for joining the waitlist! Here’s what you’re waiting for:\n\n{{waitlist_details}}\n\n{{waitlist_how}}\n\nWarmly,\nTeam Yalla",
+    essential: true,
+    audience: "family",
   },
   waitlist_offer: {
     name: "Waitlist offer",
@@ -518,6 +534,8 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   payment_receipt: ["guardian_first_name", "service", "invoice_number", "amount", "paid_at", "receipt", "line_items", "balance", "book_link"],
   payment_failed: ["guardian_first_name", "invoice_number", "amount", "reason", "hold_until"],
   payment_request: ["guardian_first_name", "invoice_number", "amount", "line_items", "payment_link"],
+  waitlist_welcome: ["guardian_first_name", "program", "date", "child_names", "waitlist_details", "waitlist_how", "link"],
+  waitlist_joined: ["guardian_first_name", "program", "date", "child_names", "waitlist_details", "waitlist_how"],
   waitlist_offer: ["guardian_first_name", "program", "date", "child_names", "booking_details", "waitlist_note", "offer_expires", "offer_link"],
   waitlist_update: ["guardian_first_name", "date", "update", "book_link"],
   membership_update: ["guardian_first_name", "child_name", "membership_summary"],

@@ -58,6 +58,7 @@ const HERO: Record<string, string> = {
   flex_thank_you: "hero-sunflowers.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",
+  waitlist_welcome: "hero-paint.jpg",
 };
 
 const BUTTON: Record<string, string> = {
@@ -72,6 +73,7 @@ const BUTTON: Record<string, string> = {
   booking_confirmed_team: "View my bookings",
   payment_request: "Pay securely",
   waitlist_offer: "Book spot now",
+  waitlist_welcome: "Set up my account",
   waitlist_update: "Book another Flex day",
   staff_new_enquiry: "Open in the Inbox",
   staff_password_reset: "Choose a new password",

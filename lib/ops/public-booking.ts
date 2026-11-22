@@ -30,10 +30,12 @@ import {
   refunds,
   scheduleSeries,
   sessions,
+  messages,
+  waitlistEntries,
 } from "@/lib/db/schema";
 import { requestMagicLink, guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { activeProvider } from "@/lib/payments/provider";
-import { ageInMonths, fmtDate, todayLA } from "@/lib/time";
+import { ageInMonths, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
 import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
@@ -49,7 +51,7 @@ import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
 import { topicForProgram } from "./team-notices";
-import { FLEX_SLUG, flexGroupFor } from "@/lib/booking/flex";
+import { FLEX_SLUG, HALF_DAY, flexGroupFor } from "@/lib/booking/flex";
 import { flexHoldName } from "@/lib/booking/flex-hold";
 import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
@@ -744,6 +746,8 @@ export async function joinPublicWaitlist(
     }
     let familyId: string;
     let actor: Actor;
+    /** No Family Portal account yet (new to Yalla, or only ever waitlisted): they get the welcome email. */
+    let newFamily = false;
     if (input.signedIn) {
       familyId = input.signedIn.familyId;
       actor = guardianActor(input.signedIn);
@@ -752,6 +756,7 @@ export async function joinPublicWaitlist(
       const existing = await findGuardianByEmail(db, email);
       if (existing && !existing.portalAccess && !existing.passwordHash) {
         familyId = existing.familyId;
+        newFamily = true;
         if (input.guardian.phone?.trim()) await db.update(guardians).set({ phone: input.guardian.phone.trim() }).where(eq(guardians.id, existing.id));
         actor = guardianActor({ guardianId: existing.id, firstName: existing.firstName, lastName: existing.lastName });
       } else if (existing) {
@@ -761,6 +766,7 @@ export async function joinPublicWaitlist(
         // Joining a waitlist doesn't open the Family Portal (only a paid booking or an invitation does).
         const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone, portalAccess: false } });
         familyId = created.family.id;
+        newFamily = true;
         actor = guardianActor({ guardianId: created.guardian.id, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
       }
     }
@@ -778,7 +784,8 @@ export async function joinPublicWaitlist(
       const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.child.lastName!.trim(), birthDate: input.child.birthDate });
       childId = child.id;
     }
-    await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId], dayLength: input.dayLength });
+    const entry = await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId], dayLength: input.dayLength });
+    await emailWaitlistJoined(db, { familyId, entryId: entry.id, newFamily, baseUrl: input.baseUrl }).catch((e) => console.error("[waitlist email failed]", (e as Error).message?.slice(0, 120)));
     // Let the team know (Admin → Inbox and email). The waitlist itself is in Admin → Waitlist.
     const [sx] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
     const [kid] = await db.select().from(children).where(eq(children.id, childId));
@@ -800,6 +807,50 @@ export async function joinPublicWaitlist(
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, code: e.code, error: e.message };
     throw e;
+  }
+}
+
+/**
+ * Tells a family they're on the waitlist. A family new to Yalla (no Family Portal account) gets a warm
+ * welcome with a link to set up their account, once; after that, and for returning families, a short
+ * "you're on the waitlist" note.
+ */
+async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: string; newFamily: boolean; baseUrl: string }) {
+  const [row] = await db
+    .select({ e: waitlistEntries, s: sessions, p: programs })
+    .from(waitlistEntries)
+    .innerJoin(sessions, eq(sessions.id, waitlistEntries.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .where(eq(waitlistEntries.id, input.entryId));
+  if (!row) return;
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, input.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) return;
+  const kids = row.e.childIds.length ? await db.select().from(children).where(inArray(children.id, row.e.childIds)) : [];
+  const names = kids.map((k) => (k.preferredName || k.firstName).trim());
+  const isFlex = row.p.slug === FLEX_SLUG;
+  const day = childDay(row.p, row.s, row.e.dayLength === "half" ? [HALF_DAY] : []);
+  const what = row.s.title ?? row.p.name;
+  const details = `>> ${what}\n${fmtDate(row.s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${day.label ? ` · ${day.label}` : ""}${names.length ? `\n\nWaiting: ${names.join(", ")}` : ""}`;
+  const how = isFlex
+    ? "If a spot opens, we’ll email you right away with a link to book. Families are offered the spot in the order they joined, and each has 15 minutes to book before the next family is offered it too. Nothing is charged unless you book."
+    : "If a spot opens, we’ll email you right away with a link to book. Spots are offered in the order families joined, and nothing is charged unless you book.";
+  const vars = { guardian_first_name: g.firstName, program: row.p.name, date: fmtDate(row.s.localDate, "EEE, MMM d"), child_names: names.join(" and ") || "your family", waitlist_details: details, waitlist_how: how };
+  // The welcome goes once per family: a family who has had it before gets the short note.
+  let welcome = input.newFamily && !g.passwordHash;
+  if (welcome) {
+    const [sent] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.familyId, input.familyId), eq(messages.templateKey, "waitlist_welcome"))).limit(1);
+    if (sent) welcome = false;
+  }
+  if (welcome) {
+    const { waitlistSetupLink } = await import("@/lib/family-auth");
+    const link = await waitlistSetupLink(db, PUBLIC, { email: g.email, name: `${g.firstName} ${g.lastName}` }, input.baseUrl);
+    await notifyFamily(db, { key: "waitlist_welcome", familyId: input.familyId, guardianIds: [g.id], vars: { ...vars, link }, related: { type: "waitlist", id: input.entryId } });
+  } else {
+    await notifyFamily(db, { key: "waitlist_joined", familyId: input.familyId, guardianIds: [g.id], vars, related: { type: "waitlist", id: input.entryId } });
   }
 }
 

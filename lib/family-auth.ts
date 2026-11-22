@@ -213,6 +213,11 @@ export async function inviteToPortal(db: DB, actor: Actor, input: { email: strin
   return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
 }
 
+/** A Family Portal setup link for a family who joined a waitlist (works once, for 30 days). Sends nothing. */
+export async function waitlistSetupLink(db: Executor, actor: Actor, input: { email: string; name: string }, baseUrl: string) {
+  return (await createInvite(db, actor, { ...input, ttlMs: 30 * 24 * 3600 * 1000 }, baseUrl)).link;
+}
+
 /** Makes a single-use invitation link (replacing any unused one for that email); doesn't send it. */
 async function createInvite(db: Executor, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null; ttlMs?: number }, baseUrl: string) {
   const email = input.email.trim().toLowerCase();
