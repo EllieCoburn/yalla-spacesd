@@ -834,7 +834,7 @@ async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: s
   const isFlex = row.p.slug === FLEX_SLUG;
   const day = childDay(row.p, row.s, row.e.dayLength === "half" ? [HALF_DAY] : []);
   const what = row.s.title ?? row.p.name;
-  const details = `>> ${what}\n${fmtDate(row.s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${day.label ? ` · ${day.label}` : ""}${names.length ? `\n\nWaiting: ${names.join(", ")}` : ""}`;
+  const details = `>> ${what}\n${fmtDate(row.s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${day.label ? ` · ${day.label}` : ""}${names.length ? ` · for ${names.join(" and ")}` : ""}`;
   const how = isFlex
     ? "If a spot opens, we’ll email you right away with a link to book. Families are offered the spot in the order they joined, and each has 15 minutes to book before the next family is offered it too. Nothing is charged unless you book."
     : "If a spot opens, we’ll email you right away with a link to book. Spots are offered in the order families joined, and nothing is charged unless you book.";

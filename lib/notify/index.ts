@@ -273,7 +273,7 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
   waitlist_welcome: {
     name: "Waitlist: welcome (family new to Yalla)",
     subject: "Welcome to Yalla! You’re on the waitlist for {{program}}",
-    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nThank you for joining the waitlist. We’re so glad you found us. Yalla is a coworking and childcare space in Bankers Hill where children play, explore and grow in small groups with caregivers who know them well, while their grown-ups work just steps away.\n\n{{waitlist_details}}\n\n{{waitlist_how}}\n\nWhile you wait, set up your Family Portal account. You’ll be able to see your waitlist, save your family’s details and book quickly when a spot opens.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWarmly,\nTeam Yalla",
+    body: "# Welcome to the Yalla family!\n\nHi {{guardian_first_name}},\n\nThanks for joining the waitlist! Here’s what you’re waiting for:\n\n{{waitlist_details}}\n\n{{waitlist_how}}\n\nWhile you wait, set up your Family Portal account. You’ll be able to see your waitlist, save your family’s details and book quickly when a spot opens.\n\n{{link}}\n\nThis link is just for you and works once, for 30 days. If it expires, reply to this email and we’ll gladly send a new one.\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },

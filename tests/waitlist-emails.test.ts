@@ -22,7 +22,9 @@ describe("Waitlist emails", () => {
     const [welcome] = await sent("waitlist_welcome");
     expect(welcome.subject).toBe("Welcome to Yalla! You’re on the waitlist for Camp Yalla");
     expect(welcome.body).toContain("Camp Yalla · 4 – 7 years");
-    expect(welcome.body).toContain("Waiting: Ava");
+    expect(welcome.body).toContain("Thanks for joining the waitlist! Here’s what you’re waiting for:");
+    expect(welcome.body).toContain("· for Ava");
+    expect(welcome.body).not.toContain("Bankers Hill");
     // The private setup link is sent, but never stored in the saved copy.
     expect(welcome.body).toContain("[private link removed]");
     expect(await sent("waitlist_joined")).toHaveLength(0);
