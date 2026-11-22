@@ -693,7 +693,7 @@ async function confirmationVars(db: Executor, bookingId: string) {
   // "Where" opens the address in the family's maps app.
   const address = loc?.address?.trim() || site.address.value || "";
   const placeName = loc?.name ?? "Yalla";
-  const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Childcare & Coworking, ${address}`)})` : placeName;
+  const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Coworking & Childcare, ${address}`)})` : placeName;
   // Flex and camp have packing lists, in the Family Portal from the moment the booking is confirmed.
   const packing = rows.some((r) => r.program.slug === "yalla-flex" || r.program.kind === "camp")
     ? [`[See what to bring in your Family Portal](${await siteBase()}/portal/what-to-bring)`]

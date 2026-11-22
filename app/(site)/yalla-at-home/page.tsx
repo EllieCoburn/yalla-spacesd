@@ -185,7 +185,7 @@ export default function YallaAtHome() {
             </Reveal>
             <Reveal delay={80}>
               <p className="mt-6 text-[1.08rem] leading-relaxed text-ink-soft">
-                I’m the owner of Yalla Childcare &amp; Coworking in Bankers Hill and a longtime postpartum doula. My work, at Yalla and in families’ homes, rests on the same belief: babies are
+                I’m the owner of Yalla Coworking &amp; Childcare in Bankers Hill and a longtime postpartum doula. My work, at Yalla and in families’ homes, rests on the same belief: babies are
                 capable, and they deserve care that is calm, unhurried and responsive. I’ll follow your lead on how you care for your baby, and bring steady, experienced hands to those
                 early weeks so you can rest, recover and enjoy your new little one.
               </p>

@@ -13,7 +13,7 @@ import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "About Yalla",
-  description: "The story, values and people behind Yalla Childcare & Coworking in Bankers Hill, San Diego.",
+  description: "The story, values and people behind Yalla Coworking & Childcare in Bankers Hill, San Diego.",
 };
 
 const values = [

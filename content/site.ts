@@ -4,7 +4,7 @@
  */
 export const site = {
   name: "Yalla",
-  fullName: "Yalla Childcare & Coworking",
+  fullName: "Yalla Coworking & Childcare",
   neighborhood: "Bankers Hill",
   city: "San Diego",
   locationLine: "Historic Bankers Hill, near Balboa Park’s west entrance",

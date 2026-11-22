@@ -390,7 +390,7 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
       ${
         status
           ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr><td style="padding:5px 12px;border-radius:999px;background:${status.tint};font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${status.color};">●&nbsp; ${status.label}</td><td style="padding-left:12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.soft};">${staff ? "Yalla · Team" : "Yalla"}</td></tr></table>`
-          : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>`
+          : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Coworking &amp; Childcare"}</p>`
       }
       <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(headline)}</h1>
       ${bodyHtml(rest, input.key)}

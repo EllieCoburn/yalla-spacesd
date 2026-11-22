@@ -9,7 +9,7 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.yallaspacesd.com"),
   title: {
-    default: "Yalla Childcare & Coworking · San Diego",
+    default: "Yalla Coworking & Childcare · San Diego",
     template: "%s · Yalla",
   },
   description:
