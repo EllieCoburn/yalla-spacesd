@@ -36,8 +36,11 @@ async function child(familyId: string, first: string, cohort: Cohort, preferred:
 }
 
 async function book(familyId: string, items: { sessionId: string; childId: string; addons?: string[] }[]) {
-  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true });
-  await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
+  // Booked at midday the day before, so the tests behave the same whatever the time (after the
+  // evening run, a booking for tomorrow is welcomed straight away; a test covers that on purpose).
+  const at = zonedDateTime(todayLA(), "12:00");
+  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true, now: at });
+  await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false, now: at });
   return hold.booking;
 }
 

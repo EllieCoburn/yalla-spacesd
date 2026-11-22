@@ -15,7 +15,8 @@ describe("who is still expected today", () => {
     const a = await family("Ana");
     const b = await family("Ben");
     for (const f of [a, b]) {
-      const h = await createHold(db(), owner, { familyId: f.family.id, items: [{ sessionId: day.id, childId: f.children[0].id }], source: "admin" });
+      // Booked first thing in the morning, so the test passes at any time of day.
+      const h = await createHold(db(), owner, { familyId: f.family.id, items: [{ sessionId: day.id, childId: f.children[0].id }], source: "admin", now: zonedDateTime(today, "07:00") });
       await confirmAdminBooking(db(), owner, h.booking.id, { createInvoice: false, notify: false });
     }
     const at = (hhmm: string) => zonedDateTime(today, hhmm);

@@ -883,7 +883,7 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const { sendFlexWelcomes } = await import("./flex-welcome");
       const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
-      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId], bookingId });
+      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId], bookingId, now });
     } catch (e) {
       console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
     }
@@ -891,7 +891,7 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const { sendCampWelcomes } = await import("./camp-welcome");
       const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
-      if (bk) await sendCampWelcomes(db, { familyIds: [bk.familyId], bookingId });
+      if (bk) await sendCampWelcomes(db, { familyIds: [bk.familyId], bookingId, now });
     } catch (e) {
       console.error("[camp welcome failed]", (e as Error).message?.slice(0, 160));
     }
@@ -919,8 +919,8 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
 }
 
 /** Admin: confirm a booking now and bill later (invoice left open), or with no invoice when free. */
-export async function confirmAdminBooking(db: DB, actor: Actor, bookingId: string, opts: { createInvoice: boolean; notify: boolean }) {
-  const res = await confirmBooking(db, actor, bookingId, { reason: "Confirmed by staff", notify: opts.notify });
+export async function confirmAdminBooking(db: DB, actor: Actor, bookingId: string, opts: { createInvoice: boolean; notify: boolean; now?: Date }) {
+  const res = await confirmBooking(db, actor, bookingId, { reason: "Confirmed by staff", notify: opts.notify, now: opts.now });
   if (res.status === "confirmed" && opts.createInvoice) {
     const existing = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
     if (!existing.length) await invoiceForBooking(db, actor, bookingId);
