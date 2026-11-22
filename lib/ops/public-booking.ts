@@ -838,7 +838,14 @@ async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: s
   const how = isFlex
     ? "If a spot opens, we’ll email you right away with a link to book. Families are offered the spot in the order they joined, and each has 15 minutes to book before the next family is offered it too. Nothing is charged unless you book."
     : "If a spot opens, we’ll email you right away with a link to book. Spots are offered in the order families joined, and nothing is charged unless you book.";
-  const vars = { guardian_first_name: g.firstName, program: row.p.name, date: fmtDate(row.s.localDate, "EEE, MMM d"), child_names: names.join(" and ") || "your family", waitlist_details: details, waitlist_how: how };
+  // A short hello written for what they're waiting for (a Flex family wants one good day, not a membership pitch).
+  const welcome_intro =
+    isFlex
+      ? "We’re so glad you found us! Yalla Flex is childcare by the day for the days you need it most: daycare is closed, the nanny is sick, or a deadline won’t wait. Your little one plays in a small group with warm, experienced caregivers while you get work done in our coworking space just down the hall."
+      : row.p.kind === "camp"
+        ? "We’re so glad you found us! Camp Yalla fills the days school and childcare are closed with play, art and time outdoors, in small groups led by warm, experienced caregivers. Early Bird and late stay help it fit around your workday."
+        : "We’re so glad you found us! Yalla Happenings are playful sessions for little ones, from weekend mornings to evenings out for the grown-ups, in small groups led by warm, experienced caregivers.";
+  const vars = { welcome_intro, guardian_first_name: g.firstName, program: row.p.name, date: fmtDate(row.s.localDate, "EEE, MMM d"), child_names: names.join(" and ") || "your family", waitlist_details: details, waitlist_how: how };
   // The welcome goes once per family: a family who has had it before gets the short note.
   let welcome = input.newFamily && !g.passwordHash;
   if (welcome) {
