@@ -23,7 +23,7 @@ const phone = site.phone.value;
 const care = [
   {
     title: "Overnight care",
-    lede: "My focus, especially in the early weeks. You sleep; I take the night shift.",
+    lede: "Especially helpful in the early weeks. You sleep; I take the night shift.",
     items: [
       "Bottle feeds, with bottles and pump parts washed and ready by morning",
       "Bringing your baby to you to nurse, then burping, changing and settling afterward so you can go right back to bed",
@@ -96,7 +96,7 @@ export default function YallaAtHome() {
             <Reveal>
               <p>
                 Yalla at Home brings Yalla’s approach to caring for children and families into your home. I’m Ellie Coburn, the owner of Yalla and a longtime postpartum doula. I offer in-home
-                postpartum support in San Diego, with a focus on <em className="text-blue">overnight care</em> in the early weeks with a new baby.
+                postpartum support in San Diego, with a focus on <em className="text-blue">supporting the whole family</em> in the early weeks with a new baby.
               </p>
             </Reveal>
             <Reveal delay={80}>
