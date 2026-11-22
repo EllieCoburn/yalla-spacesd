@@ -16,17 +16,6 @@ export const enquiryStatusAction = adminAction("families.view", async ({ db, act
   return status === "handled" ? "Marked as handled." : status === "archived" ? "Archived." : "Moved back to New.";
 });
 
-/** Waitlist sign-ups: send the waitlist email (welcome + Family Portal setup for a family new to Yalla). */
-export const waitlistWelcomeAction = adminAction("families.manage", async ({ db, str }) => {
-  const [e] = await db.select().from(enquiries).where(eq(enquiries.id, str("id")));
-  if (!e?.familyId) throw new OpsError("not_found", "This sign-up isn’t linked to a family.");
-  const { sendWaitlistWelcome } = await import("@/lib/ops/public-booking");
-  const r = await sendWaitlistWelcome(db, { familyId: e.familyId, baseUrl: trustedBaseUrl((await headers()).get("host")) });
-  return r.welcome
-    ? `Waitlist welcome sent to ${r.email}, with their spot and a link to set up their Family Portal account (works once, for 30 days).`
-    : `Waitlist email sent to ${r.email}. They already have a Family Portal account, so it’s the short “you’re on the waitlist” note.`;
-});
-
 /** Send this person an invitation to create a Family Portal account (staff decide when). */
 export const inviteFromEnquiryAction = adminAction("families.manage", async ({ db, actor, str }) => {
   const [e] = await db.select().from(enquiries).where(eq(enquiries.id, str("id")));

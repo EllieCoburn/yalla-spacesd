@@ -6,7 +6,7 @@ import { getDb } from "@/lib/db";
 import { ENQUIRY_KINDS, inboxList, newEnquiryCount, staffRecipients, type EnquiryKind } from "@/lib/ops/enquiries";
 import { membershipRecipients, notificationsMode } from "@/lib/notify";
 import { fmtDateTime } from "@/lib/time";
-import { enquiryStatusAction, inviteFromEnquiryAction, waitlistWelcomeAction } from "./actions";
+import { enquiryStatusAction, inviteFromEnquiryAction } from "./actions";
 import { portalStatusByEmail } from "@/lib/family-auth";
 import { can } from "@/lib/auth/staff";
 
@@ -115,27 +115,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   <span className="text-ink-soft">Family Portal:</span>
                   {(() => {
                     const st = portal.get(e.email.toLowerCase());
-                    // A waitlist sign-up gets the waitlist email (their spot + portal setup), not the general invitation.
-                    const waitlistButton =
-                      canInvite && e.kind === "waitlist" && e.familyId ? (
-                        <ActionForm action={waitlistWelcomeAction} submit={{ label: st?.account ? "Send waitlist email" : "Send waitlist welcome", variant: "ghost" }} className="">
-                          <input type="hidden" name="id" value={e.id} />
-                        </ActionForm>
-                      ) : null;
-                    if (st?.account)
-                      return (
-                        <>
-                          <span className="text-ink">Has an account</span>
-                          {waitlistButton}
-                        </>
-                      );
-                    if (waitlistButton)
-                      return (
-                        <>
-                          <span className="text-ink">{st?.invitedAt ? `Invited ${fmtDateTime(st.invitedAt)}${st.inviteExpired ? " (expired)" : ""}` : "Not invited"}</span>
-                          {waitlistButton}
-                        </>
-                      );
+                    if (st?.account) return <span className="text-ink">Has an account</span>;
                     return (
                       <>
                         <span className="text-ink">{st?.invitedAt ? `Invited ${fmtDateTime(st.invitedAt)}${st.inviteExpired ? " (expired)" : ""}` : "Not invited"}</span>
