@@ -16,7 +16,7 @@ beforeEach(reset);
 // The first visit is tomorrow; "now" is 6:00am that morning in San Diego.
 const day = () => addDaysISO(todayLA(), 1);
 const morning = () => zonedDateTime(day(), "06:00");
-const GROUP = { seedlings: [4, 11], saplings: [12, 19], sprouts: [20, 35], wildflowers: [36, 59] } as const;
+const GROUP = { seedlings: [4, 13], saplings: [14, 23], sprouts: [24, 35], wildflowers: [36, 59] } as const;
 type Cohort = keyof typeof GROUP;
 
 async function setup() {

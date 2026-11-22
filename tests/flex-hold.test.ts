@@ -10,7 +10,7 @@ import { db, family, owner, program, reset, session } from "./helpers";
 
 beforeEach(reset);
 
-/** A child who is 14 months old a week from today: Saplings (12–19 months) by age. */
+/** A child who is 14 months old a week from today: Saplings (14–23 months) by age. */
 const birth14mo = () => {
   const d = new Date(`${addDaysISO(todayLA(), 7)}T12:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() - 14);
@@ -19,8 +19,8 @@ const birth14mo = () => {
 
 async function setup() {
   const flex = await program({ slug: "yalla-flex", name: "Yalla Flex", kind: "drop_in", priceCents: 15000 });
-  const seedlings = await session(flex.id, { capacity: 4, minAgeMonths: 4, maxAgeMonths: 11, title: "Yalla Flex · Seedlings" });
-  const saplings = await session(flex.id, { capacity: 4, minAgeMonths: 12, maxAgeMonths: 19, title: "Yalla Flex · Saplings" });
+  const seedlings = await session(flex.id, { capacity: 4, minAgeMonths: 4, maxAgeMonths: 13, title: "Yalla Flex · Seedlings" });
+  const saplings = await session(flex.id, { capacity: 4, minAgeMonths: 14, maxAgeMonths: 23, title: "Yalla Flex · Saplings" });
   const fam = await family("Lee", [{ first: "Mila", birth: birth14mo() }]);
   return { flex, seedlings, saplings, fam, child: fam.children[0] };
 }
@@ -29,14 +29,14 @@ const book = (familyId: string, sessionId: string, childId: string, source: "pub
 
 describe("Yalla Flex cohort holds", () => {
   it("the rule: a held child fits their held cohort whatever their age, and no other Flex cohort", () => {
-    const seedlingsAges = { min: 4, max: 11 };
-    const saplingsAges = { min: 12, max: 19 };
+    const seedlingsAges = { min: 4, max: 13 };
+    const saplingsAges = { min: 14, max: 23 };
     expect(flexEligibility({ isFlex: true, minAge: 4, ages: seedlingsAges, age: 14, hold: "seedlings" })).toEqual({ ok: true, held: true });
-    expect(flexEligibility({ isFlex: true, minAge: 12, ages: saplingsAges, age: 14, hold: "seedlings" })).toMatchObject({ ok: false, reason: "held_elsewhere", heldIn: "Seedlings" });
-    expect(flexEligibility({ isFlex: true, minAge: 12, ages: saplingsAges, age: 14, hold: null })).toEqual({ ok: true, held: false });
+    expect(flexEligibility({ isFlex: true, minAge: 14, ages: saplingsAges, age: 14, hold: "seedlings" })).toMatchObject({ ok: false, reason: "held_elsewhere", heldIn: "Seedlings" });
+    expect(flexEligibility({ isFlex: true, minAge: 14, ages: saplingsAges, age: 14, hold: null })).toEqual({ ok: true, held: false });
     expect(flexEligibility({ isFlex: true, minAge: 4, ages: seedlingsAges, age: 14, hold: null })).toMatchObject({ ok: false, reason: "age" });
     // Holds only touch Yalla Flex.
-    expect(flexEligibility({ isFlex: false, minAge: 12, ages: saplingsAges, age: 14, hold: "seedlings" })).toEqual({ ok: true, held: false });
+    expect(flexEligibility({ isFlex: false, minAge: 14, ages: saplingsAges, age: 14, hold: "seedlings" })).toEqual({ ok: true, held: false });
   });
 
   it("a held 14-month-old books Seedlings, can't book Saplings until staff release the hold", async () => {
@@ -50,14 +50,14 @@ describe("Yalla Flex cohort holds", () => {
     await expect(book(fam.family.id, saplings.id, child.id)).rejects.toThrow(/staying in Seedlings/);
 
     // Staff can still place a held child elsewhere if they need to.
-    const saplingsLater = await session(saplings.programId, { capacity: 4, minAgeMonths: 12, maxAgeMonths: 19 }, 9);
+    const saplingsLater = await session(saplings.programId, { capacity: 4, minAgeMonths: 14, maxAgeMonths: 23 }, 9);
     expect((await book(fam.family.id, saplingsLater.id, child.id, "admin")).booking).toBeTruthy();
 
     // Released: back to booking by age.
     await setFlexHold(db(), owner, child.id, null);
     const [c] = await db().select().from(s.children).where(eq(s.children.id, child.id));
     expect(c.flexHold).toBeNull();
-    const saplings2 = await session(saplings.programId, { capacity: 4, minAgeMonths: 12, maxAgeMonths: 19 }, 8);
+    const saplings2 = await session(saplings.programId, { capacity: 4, minAgeMonths: 14, maxAgeMonths: 23 }, 8);
     expect((await book(fam.family.id, saplings2.id, child.id)).booking).toBeTruthy();
     const audits = await db().select().from(s.auditLog).where(eq(s.auditLog.entityId, child.id));
     expect(audits.map((a) => a.action)).toEqual(expect.arrayContaining(["family.flex_hold", "family.flex_hold_release"]));

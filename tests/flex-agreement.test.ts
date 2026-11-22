@@ -36,7 +36,7 @@ async function setup() {
 
 const input = (sessionId: string, over: Partial<PublicBookingInput> = {}): PublicBookingInput => ({
   guardian: { firstName: "Robin", lastName: "Flex", email: "robin.flex@example.com", phone: "619-555-0100" },
-  children: [{ key: "a", firstName: "Pip", lastName: "Flex", birthDate: addDaysISO(todayLA(), -365 * 2), allergies: "", medications: "" }],
+  children: [{ key: "a", firstName: "Pip", lastName: "Flex", birthDate: addDaysISO(todayLA(), -365 * 2 - 60), allergies: "", medications: "" }],
   lines: [{ sessionId, childKeys: ["a"] }],
   signatures: [],
   meta: {},
@@ -55,8 +55,8 @@ const signed = (templateId: string) => ({
 describe("Yalla Flex admission agreement", () => {
   it("asks for the age group's agreement, with corrected rates, initials and a signature", async () => {
     const { monday, at } = await setup();
-    const toddler = at(monday, 20);
-    const list = await previewAgreements(db(), { sessionIds: [toddler.id], children: [{ key: "a", firstName: "Pip", birthDate: addDaysISO(todayLA(), -365 * 2) }] });
+    const toddler = at(monday, 24);
+    const list = await previewAgreements(db(), { sessionIds: [toddler.id], children: [{ key: "a", firstName: "Pip", birthDate: addDaysISO(todayLA(), -365 * 2 - 60) }] });
     expect(list.map((a) => a.templateId)).toEqual(["flex-agreement-sprouts"]);
     const a = list[0];
     expect(a.validForMonths).toBe(12);
@@ -86,7 +86,7 @@ describe("Yalla Flex admission agreement", () => {
 
   it("won't book (or take payment) until it's signed, then doesn't ask again for a year", async () => {
     const { monday, at } = await setup();
-    const toddler = at(monday, 20);
+    const toddler = at(monday, 24);
     await adjustFlexSpots(db(), owner, toddler.id, 1);
 
     const unsigned = await submitPublicBooking(db(), input(toddler.id));
@@ -110,12 +110,12 @@ describe("Yalla Flex admission agreement", () => {
     // Signed in, the same child isn't asked again.
     const [g] = await db().select().from(s.guardians);
     const [child] = await db().select().from(s.children);
-    const again = await previewAgreements(db(), { familyId: g.familyId, sessionIds: [at(addDaysISO(monday, 1), 20).id], children: [{ key: child.id, existingId: child.id, firstName: child.firstName }] });
+    const again = await previewAgreements(db(), { familyId: g.familyId, sessionIds: [at(addDaysISO(monday, 1), 24).id], children: [{ key: child.id, existingId: child.id, firstName: child.firstName }] });
     expect(again).toHaveLength(0);
 
     // A year later it has expired and must be signed again.
     await db().update(s.formSubmissions).set({ expiresOn: addDaysISO(todayLA(), -1) }).where(and(eq(s.formSubmissions.id, sub.id)));
-    const expired = await previewAgreements(db(), { familyId: g.familyId, sessionIds: [at(addDaysISO(monday, 1), 20).id], children: [{ key: child.id, existingId: child.id, firstName: child.firstName }] });
+    const expired = await previewAgreements(db(), { familyId: g.familyId, sessionIds: [at(addDaysISO(monday, 1), 24).id], children: [{ key: child.id, existingId: child.id, firstName: child.firstName }] });
     expect(expired.map((x) => x.templateId)).toEqual(["flex-agreement-sprouts"]);
   });
 });

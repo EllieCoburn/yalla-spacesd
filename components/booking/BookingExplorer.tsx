@@ -21,8 +21,8 @@ export const offerings: { kind: string; label: string }[] = [
 
 export const ageBands = [
   { label: "Any age", months: undefined },
-  { label: "4–11 months", months: 8 },
-  { label: "1 year", months: 18 },
+  { label: "4–13 months", months: 8 },
+  { label: "14–23 months", months: 18 },
   { label: "2 years", months: 30 },
   { label: "3 years", months: 42 },
   { label: "4–5 years", months: 54 },
