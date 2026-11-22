@@ -47,4 +47,23 @@ describe("Waitlist emails", () => {
     expect(m.body).toContain("Yalla Flex is childcare by the day");
     expect(m.body).toContain("8:30am–12:00pm · Half day");
   });
+
+  it("staff can send the waitlist welcome by hand (e.g. a family who joined before these emails existed)", async () => {
+    const { sendWaitlistWelcome } = await import("@/lib/ops/public-booking");
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    const a = await session(camp.id, { capacity: 0 }, 10, "09:00", "15:00");
+    expect(await join(a.id)).toEqual({ ok: true });
+    await db().delete(s.messages); // as if they'd joined before the automatic email
+    const [g] = await db().select().from(s.guardians).where(eq(s.guardians.email, "jordan@example.com"));
+    expect(await sendWaitlistWelcome(db(), { familyId: g.familyId, baseUrl: "https://yalla.test" })).toMatchObject({ welcome: true });
+    expect(await sent("waitlist_welcome")).toHaveLength(1);
+    // Sending again by hand sends a fresh welcome (a new setup link), not the short note.
+    await sendWaitlistWelcome(db(), { familyId: g.familyId, baseUrl: "https://yalla.test" });
+    expect(await sent("waitlist_welcome")).toHaveLength(2);
+    // Once they have an account, it's the short note.
+    await db().update(s.guardians).set({ portalAccess: true, passwordHash: "x" }).where(eq(s.guardians.id, g.id));
+    expect(await sendWaitlistWelcome(db(), { familyId: g.familyId, baseUrl: "https://yalla.test" })).toMatchObject({ welcome: false });
+    expect(await sent("waitlist_joined")).toHaveLength(1);
+  });
 });
+

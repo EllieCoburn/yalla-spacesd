@@ -815,7 +815,7 @@ export async function joinPublicWaitlist(
  * welcome with a link to set up their account, once; after that, and for returning families, a short
  * "you're on the waitlist" note.
  */
-async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: string; newFamily: boolean; baseUrl: string }) {
+async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: string; newFamily: boolean; baseUrl: string; resend?: boolean }) {
   const [row] = await db
     .select({ e: waitlistEntries, s: sessions, p: programs })
     .from(waitlistEntries)
@@ -848,7 +848,7 @@ async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: s
   const vars = { welcome_intro, guardian_first_name: g.firstName, program: row.p.name, date: fmtDate(row.s.localDate, "EEE, MMM d"), child_names: names.join(" and ") || "your family", waitlist_details: details, waitlist_how: how };
   // The welcome goes once per family: a family who has had it before gets the short note.
   let welcome = input.newFamily && !g.passwordHash;
-  if (welcome) {
+  if (welcome && !input.resend) {
     const [sent] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.familyId, input.familyId), eq(messages.templateKey, "waitlist_welcome"))).limit(1);
     if (sent) welcome = false;
   }
@@ -859,6 +859,30 @@ async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: s
   } else {
     await notifyFamily(db, { key: "waitlist_joined", familyId: input.familyId, guardianIds: [g.id], vars, related: { type: "waitlist", id: input.entryId } });
   }
+}
+
+/**
+ * Staff send the waitlist email by hand (Admin → Inbox), e.g. for a family who joined before these
+ * emails existed. A family without a Family Portal account gets the welcome with a fresh setup link;
+ * one with an account gets the short note. Uses the family's most recent waitlist spot.
+ */
+export async function sendWaitlistWelcome(db: DB, input: { familyId: string; baseUrl: string }) {
+  const [entry] = await db
+    .select({ id: waitlistEntries.id })
+    .from(waitlistEntries)
+    .where(and(eq(waitlistEntries.familyId, input.familyId), inArray(waitlistEntries.status, ["waiting", "offered"])))
+    .orderBy(desc(waitlistEntries.createdAt))
+    .limit(1);
+  if (!entry) throw new OpsError("not_found", "This family isn’t waiting for a spot right now.");
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, input.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) throw new OpsError("not_found", "This family has no primary guardian to email.");
+  const hasAccount = !!g.passwordHash || (g.portalAccess && !!g.emailVerifiedAt);
+  await emailWaitlistJoined(db, { familyId: input.familyId, entryId: entry.id, newFamily: !hasAccount, baseUrl: input.baseUrl, resend: true });
+  return { email: g.email, welcome: !hasAccount };
 }
 
 /* ───────────────────────── Family Portal ───────────────────────── */
