@@ -34,6 +34,14 @@ export default function BookATourPage() {
         <div className="shell grid gap-16 lg:grid-cols-12">
           <Reveal className="bg-paper p-7 sm:p-12 lg:col-span-7">
             <p className="eyebrow text-ink-soft">Request a tour</p>
+            <div className="mt-6 border-l-2 border-blue/40 pl-5">
+              <p className="display text-[1.35rem]">
+                Tours are at <em>4:30pm.</em>
+              </p>
+              <p className="mt-2 text-[0.95rem] text-ink-soft">
+                To protect the privacy of the children currently enrolled in our program, we typically only schedule tours at 4:30pm, the end of our program day. This timing lets prospective families experience the overall rhythm and culture of the environment, meet our educators, and connect with current families as they wrap up their day, while also preserving the privacy of enrolled children and minimizing disruptions during active program hours.
+              </p>
+            </div>
             <div className="mt-8">
               <TourForm />
             </div>
@@ -84,6 +92,7 @@ export default function BookATourPage() {
                     </Link>
                   ),
                 },
+                { label: "Tour time", value: "Tours are typically at 4:30pm, at the end of our program day, to protect the privacy of enrolled children." },
                 { label: "Arriving", value: "Your tour guide will meet you in the front lobby at the time of your tour." },
               ]}
             />

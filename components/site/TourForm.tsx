@@ -109,7 +109,7 @@ export function TourForm() {
       </fieldset>
 
       <Field name="when" required>
-        Days or times that suit you
+        Days that suit you for a 4:30pm tour
       </Field>
 
       <label className="relative block">
