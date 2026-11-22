@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { CtaBand, PageHero, Section, SectionTitle } from "@/components/site/PageParts";
 import { Index } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/Reveal";
-import { site } from "@/content/site";
 
 /**
  * Yalla at Home: Ellie's in-home postpartum doula care. A private page shared by link only: it's not
@@ -16,9 +15,10 @@ export const metadata: Metadata = {
   alternates: { canonical: null },
 };
 
-const EMAIL = site.email.value;
+// Yalla at Home has its own inbox and number (not the Yalla front desk).
+const EMAIL = "athome@yallaspacesd.com";
 const mailto = `mailto:${EMAIL}?subject=${encodeURIComponent("Yalla at Home")}`;
-const phone = site.phone.value;
+const phone: string | null = "619.876.1089";
 
 const care = [
   {
