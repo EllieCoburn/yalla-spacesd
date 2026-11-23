@@ -12,12 +12,14 @@ import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-clu
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
-import { ageLabel, fmtDate, fmtDateTime, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, fmtDateTime, todayLA, localDateOf } from "@/lib/time";
 import { addChildAction, addGuardianAction, archiveFamilyAction, purgeTestDataAction, restoreFamilyAction, updateFamilyAction, updateGuardianAction, inviteGuardianAction } from "../actions";
 import { familyTestDataCounts } from "@/lib/ops/test-data";
 import { portalStatusByEmail } from "@/lib/family-auth";
 import { familySignedCopies } from "@/lib/ops/forms";
 import { ensureCheckinCode } from "@/lib/ops/checkin";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
@@ -55,7 +57,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
             {d.family.isSample ? <Pill tone="muted">Sample data</Pill> : null}
             {d.memberships.some((m) => ["active", "upcoming", "paused"].includes(m.m.status)) ? <Pill tone="info" icon="check">Club Yalla</Pill> : null}
             <span>
-              Family since {fmtDate(d.family.createdAt.toISOString().slice(0, 10), "MMMM yyyy")}
+              Family since {fmtDate(localDateOf(d.family.createdAt), "MMMM yyyy")}
               {primary ? ` · ${primary.email}` : ""}
             </span>
             <span title="Entered at the lobby kiosk for camp, weekend sessions and Happenings">
@@ -165,6 +167,8 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       </span>
                     </span>
                     <span className="flex flex-wrap gap-1">
+                      {c.status === "archived" ? <Pill tone="muted" icon="x">Removed</Pill> : null}
+                      {c.flexHold ? <Pill tone="info">Flex hold: {flexHoldName(c.flexHold)}</Pill> : null}
                       {c.allergies ? <Pill tone="critical" icon="alert">Allergy: {c.allergies}</Pill> : null}
                       {d.paperwork ? <PaperworkSummary items={d.paperwork.get(c.id) ?? []} /> : null}
                     </span>
@@ -183,6 +187,12 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                       <TextField name="preferredName" label="Preferred name" />
                       <TextField name="birthDate" label="Date of birth" type="date" required />
                       <SelectField name="cohortId" label="Cohort" options={[{ value: "", label: "Not assigned" }, ...d.cohorts.map((c) => ({ value: c.id, label: c.name }))]} />
+                      <SelectField
+                        name="flexHold"
+                        label="Yalla Flex cohort hold"
+                        options={[{ value: "", label: "No hold (books by age)" }, ...FLEX_GROUPS.map((g) => ({ value: g.key, label: `Hold in ${g.cohort} (${g.label})` }))]}
+                        hint="For longtime drop-in families: the child books this Flex cohort only, whatever their age, until you release the hold."
+                      />
                     </div>
                     {can(staff, "children.care") ? (
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -292,7 +302,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                           {c.childName ? <span className="text-ink-soft"> · {c.childName}</span> : null}
                         </p>
                         <p className="text-[0.74rem] text-ink-soft">
-                          Signed {fmtDate(c.signedAt.toISOString().slice(0, 10), "d MMM yyyy")}
+                          Signed {fmtDate(localDateOf(c.signedAt), "d MMM yyyy")}
                           {c.signerName ? ` by ${c.signerName}` : ""}
                           {c.bookingReference ? ` · booking ${c.bookingReference}` : ""}
                         </p>
@@ -330,7 +340,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                         <span className="min-w-0">
                           <span className="block truncate text-[0.84rem] text-ink">{inv.description ?? inv.number}</span>
                           <span className="text-[0.74rem] text-ink-soft">
-                            {inv.number} · {fmtDate(inv.issuedAt.toISOString().slice(0, 10), "d MMM yyyy")} · total <Money cents={inv.totals.total} />
+                            {inv.number} · {fmtDate(localDateOf(inv.issuedAt), "d MMM yyyy")} · total <Money cents={inv.totals.total} />
                             {inv.totals.refunded ? (
                               <>
                                 {" "}
@@ -397,7 +407,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                 <ul className="divide-y divide-ink/6">
                   {d.comms.map((m) => (
                     <li key={m.id} className="px-5 py-2.5">
-                      <p className="truncate text-[0.84rem] text-ink">{m.subject}</p>
+                      <p className="truncate text-[0.84rem] text-ink">{can(staff, "billing.view") ? m.subject : m.subject.replace(/[−-]?\$\s?\d[\d,]*(?:\.\d{1,2})?/g, "$•••")}</p>
                       <p className="flex flex-wrap items-center gap-2 text-[0.72rem] text-ink-soft">
                         {m.toAddress} · {fmtDateTime(m.createdAt)} <Status kind="message" value={m.status} />
                       </p>

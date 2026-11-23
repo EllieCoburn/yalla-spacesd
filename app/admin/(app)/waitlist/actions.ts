@@ -30,7 +30,7 @@ export const joinAction = adminAction("waitlist.manage", async ({ db, actor, str
   const childIds = all("childIds").filter(Boolean);
   if (!str("familyId")) throw new OpsError("invalid", "Choose a family.");
   if (!str("sessionId")) throw new OpsError("invalid", "Choose a session.");
-  await joinWaitlist(db, actor, { familyId: str("familyId"), sessionId: str("sessionId"), childIds, notes: str("notes") || undefined });
+  await joinWaitlist(db, actor, { familyId: str("familyId"), sessionId: str("sessionId"), childIds, notes: str("notes") || undefined, dayLength: str("dayLength") || null });
   return "Added to the waitlist.";
 });
 

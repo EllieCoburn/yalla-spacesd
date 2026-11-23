@@ -51,7 +51,7 @@ export async function SignedRecord({ db, submissionId }: { db: Executor; submiss
   ];
   return (
     <div className="print-record-sheet rounded-xl border border-ink/10 bg-white p-8 sm:p-10">
-      <p className="text-[0.7rem] tracking-[0.18em] text-ink-soft uppercase">Yalla Childcare &amp; Coworking · Signed record</p>
+      <p className="text-[0.7rem] tracking-[0.18em] text-ink-soft uppercase">Yalla Coworking &amp; Childcare · Signed record</p>
       <h1 className="mt-2 font-serif text-[1.8rem] leading-tight text-ink">{t.title}</h1>
       <dl className="print-record mt-5 grid grid-cols-[11rem_1fr] gap-x-4 gap-y-1.5 border-y border-ink/10 py-4 text-[0.82rem]">
         {record.map(([k, val]) => (

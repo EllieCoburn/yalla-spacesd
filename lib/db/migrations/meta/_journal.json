@@ -516,8 +516,71 @@
     {
       "idx": 73,
       "version": "7",
-      "when": 1795104215294,
-      "tag": "0073_checkout_hold_35",
+      "when": 1795107742202,
+      "tag": "0073_camp_may_31_2027",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795107904046,
+      "tag": "0074_phoenix_house_coupon",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795146446404,
+      "tag": "0075_welcome_to_sd_coupon",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1795205853615,
+      "tag": "0076_flex_cohort_hold",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795209134204,
+      "tag": "0077_waitlist_day_length",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795212268710,
+      "tag": "0078_friend_of_yalla_coupon",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795290628450,
+      "tag": "0079_immersive_third_fourth_saturdays",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795311606684,
+      "tag": "0080_flex_age_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795312296559,
+      "tag": "0081_newfriends_coupon",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795312297559,
+      "tag": "0082_checkout_hold_35",
       "breakpoints": true
     }
   ]

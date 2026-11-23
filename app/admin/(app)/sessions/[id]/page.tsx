@@ -7,7 +7,7 @@ import { sessionDetail } from "@/lib/admin/queries/bookings";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
-import { publicState } from "@/lib/ops/capacity";
+import { autoFullReason, publicState } from "@/lib/ops/capacity";
 import { WEEKDAY } from "@/lib/ops/memberships";
 import { ageLabel, addDaysISO, fmtDate, fmtDateTime, fmtTime } from "@/lib/time";
 import { applyChangeAction, duplicateAction, previewChangeAction } from "./actions";
@@ -27,9 +27,21 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
   const o = a.occupancy;
   const schedule = can(staff, "schedule.manage");
   const showBookings = can(staff, "bookings.view");
-  const ps = publicState(s, p, a.remaining);
+  const ps = publicState(s, p, a.remaining, new Date(), o.booked + o.held);
+  // Camp and Happenings show Full to families ahead of time (see AUTO_FULL); staff can still book here.
+  const autoFull = ps.state === "full" && a.remaining > 0 ? autoFullReason(s, p, o.booked + o.held) : null;
   const publicLabel =
-    ps.state === "available" ? `Bookable · ${ps.remaining ?? "spots"} left` : ps.state === "limited" ? `Bookable · ${ps.showCount ? `only ${ps.remaining} left` : "few spots left"}` : ps.state === "full" ? `Fully booked${ps.waitlist ? " · waitlist open" : ""}` : ps.state === "closed" ? ps.reason : "Not offered";
+    ps.state === "available"
+      ? `Bookable · ${ps.remaining ?? "spots"} left`
+      : ps.state === "limited"
+        ? `Bookable · ${ps.showCount ? `only ${ps.remaining} left` : "few spots left"}`
+        : ps.state === "full"
+          ? autoFull
+            ? `Shown as full to families (${autoFull.toLowerCase()})${ps.waitlist ? " · waitlist open" : ""} · staff can still book`
+            : `Fully booked${ps.waitlist ? " · waitlist open" : ""}`
+          : ps.state === "closed"
+            ? ps.reason
+            : "Not offered";
   const confirmed = d.attendees.filter((x) => x.item.status === "confirmed");
   const held = d.attendees.filter((x) => x.item.status === "held");
   const cancelled = d.attendees.filter((x) => x.item.status === "cancelled");

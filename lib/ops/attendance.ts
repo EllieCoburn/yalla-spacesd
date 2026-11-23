@@ -10,7 +10,7 @@ import type { DB, Executor } from "@/lib/db";
 import { attendanceRecords, authorizedPickups, bookingItems, bookings, children, cohorts, emergencyContacts, guardians, lateFees, membershipExceptions, programs, sessions } from "@/lib/db/schema";
 import { chargeLateFee, waiveLateFee } from "./late-fees";
 import { ageLabel } from "@/lib/time";
-import { paperworkStatus, type PaperworkItem } from "./forms";
+import { paperworkStatusMany, type PaperworkItem } from "./forms";
 import { membershipsForCohortDay } from "./memberships";
 import { getPolicy } from "./settings";
 import { addonsFor } from "@/lib/booking/addons";
@@ -145,9 +145,9 @@ export async function roster(db: Executor, sessionId: string, perms: readonly Pe
     }
   }
   if (perms.includes("forms.view")) {
-    for (const fid of familyIds) {
-      const kids = list.filter((r) => r.familyId === fid).map((r) => r.childId);
-      const status = await paperworkStatus(db, { familyId: fid, childIds: kids, programIds: [s.programId], sessionIds: [s.id], onDate: s.localDate });
+    const statuses = await paperworkStatusMany(db, familyIds.map((fid) => ({ familyId: fid, childIds: list.filter((r) => r.familyId === fid).map((r) => r.childId), programIds: [s.programId], sessionIds: [s.id], onDate: s.localDate })));
+    for (const [fi, fid] of familyIds.entries()) {
+      const status = statuses[fi];
       for (const r of list.filter((x) => x.familyId === fid))
         r.paperwork = [...(status.get(r.childId) ?? []), ...(status.get("family") ?? [])].filter((i) => i.state !== "complete");
     }

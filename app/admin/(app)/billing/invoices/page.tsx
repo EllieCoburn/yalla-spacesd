@@ -3,7 +3,7 @@ import { Card, Empty, FilterBar, FilterField, inputCls, Money, PageHeader, Statu
 import { listInvoices } from "@/lib/admin/queries/billing";
 import { requirePermission } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { fmtDate } from "@/lib/time";
+import { fmtDate, localDateOf } from "@/lib/time";
 
 export const metadata = { title: "Invoices" };
 
@@ -51,7 +51,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                 </td>
                 <td>{f.name}</td>
                 <td className="max-w-[16rem] truncate text-ink-soft">{i.description}</td>
-                <td className="whitespace-nowrap text-ink-soft">{fmtDate(i.issuedAt.toISOString().slice(0, 10), "d MMM yyyy")}</td>
+                <td className="whitespace-nowrap text-ink-soft">{fmtDate(localDateOf(i.issuedAt), "d MMM yyyy")}</td>
                 <td>
                   <Money cents={t.total} />
                 </td>

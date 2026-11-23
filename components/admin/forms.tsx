@@ -195,13 +195,14 @@ export function SelectField({ options, ...p }: Common & { options: { value: stri
   );
 }
 
-export function Checkbox({ name, label, hint, defaultChecked, disabled }: { name: string; label: ReactNode; hint?: ReactNode; defaultChecked?: boolean; disabled?: boolean }) {
+export function Checkbox({ name, label, hint, defaultChecked, disabled, value }: { name: string; label: ReactNode; hint?: ReactNode; defaultChecked?: boolean; disabled?: boolean; value?: string }) {
   const { values } = useContext(FormCtx);
-  const checked = name in values ? values[name] === "on" : (defaultChecked ?? false);
+  // With a value, several boxes share one name; only the plain on/off kind is restored from a failed submit.
+  const checked = !value && name in values ? values[name] === "on" : (defaultChecked ?? false);
   const id = useId();
   return (
     <div className="flex items-start gap-2.5">
-      <input id={id} type="checkbox" name={name} defaultChecked={checked} key={String(checked)} disabled={disabled} className="mt-0.5 h-4 w-4 rounded border-ink/30 text-blue focus:ring-blue/30" />
+      <input id={id} type="checkbox" name={name} value={value} defaultChecked={checked} key={String(checked)} disabled={disabled} className="mt-0.5 h-4 w-4 rounded border-ink/30 text-blue focus:ring-blue/30" />
       <label htmlFor={id} className="text-[0.85rem] text-ink">
         {label}
         {hint ? <span className="mt-0.5 block text-[0.75rem] text-ink-soft">{hint}</span> : null}

@@ -33,6 +33,41 @@ async function invoiceFor(email: string) {
 }
 
 describe("Coupon codes", () => {
+  it("WELCOMETOSD takes 15% off a Yalla Flex day only", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    await db().insert(s.discounts).values({ code: "WELCOMETOSD", name: "My SD Rental guests", kind: "percent", value: 15, programId: flex.id });
+    const day = await session(flex.id, { capacity: 4 });
+    const campDay = await session(camp.id, { capacity: 4 });
+    await expect(findCoupon(db(), "welcometosd", [campDay.id])).rejects.toThrow("That code is for Yalla Flex only.");
+    expect((await book("sd.guest@example.com", day.id, "welcometosd")).ok).toBe(true);
+    expect((await invoiceFor("sd.guest@example.com")).totals.total).toBe(12750);
+  });
+
+  it("PHOENIXHOUSEFAM-style codes cover several programs: 30% off Flex and camp, refused elsewhere", async () => {
+    const { saveDiscount } = await import("@/lib/ops/billing");
+    const { couponPreview, findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    const other = await program({ kind: "happening", name: "Weekend Play", priceCents: 6000 });
+    await saveDiscount(db(), { type: "system", name: "Test" }, { code: "phoenixhousefam", name: "Phoenix House", kind: "percent", value: 30, programIds: [flex.id, camp.id], active: true });
+    const [d] = await db().select().from(s.discounts).where(eq(s.discounts.code, "PHOENIXHOUSEFAM"));
+    expect(d.programId).toBeNull();
+    expect([...(d.programIds ?? [])].sort()).toEqual([flex.id, camp.id].sort());
+    expect((await couponPreview(db(), d)).label).toBe("30% off Camp Yalla and Yalla Flex");
+
+    const flexDay = await session(flex.id, { capacity: 4 });
+    const campDay = await session(camp.id, { capacity: 4 });
+    const weekend = await session(other.id, { capacity: 4 });
+    await expect(findCoupon(db(), "PhoenixHouseFam", [weekend.id])).rejects.toThrow("That code is for Camp Yalla and Yalla Flex only.");
+
+    expect((await book("phoenix.flex@example.com", flexDay.id, "phoenixhousefam")).ok).toBe(true);
+    expect((await invoiceFor("phoenix.flex@example.com")).totals.total).toBe(10500);
+    expect((await book("phoenix.camp@example.com", campDay.id, "PHOENIXHOUSEFAM")).ok).toBe(true);
+    expect((await invoiceFor("phoenix.camp@example.com")).totals.total).toBe(11200);
+  });
+
   it("takes 50% off camp with CLUBYALLAFAM, in any letter case, and charges the card the reduced amount", async () => {
     const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
     const sess = await session(camp.id, { capacity: 4 });
@@ -129,4 +164,31 @@ describe("Coupon codes", () => {
     expect(parsed.getTitle()).toMatch(/^Invoice INV-.+ · Yalla Childcare$/);
     if (process.env.INVOICE_PDF_OUT) writeFileSync(process.env.INVOICE_PDF_OUT, doc.bytes);
   });
+
+  it("NEWFRIENDS-style codes: 15% off a family's first Flex or camp booking only, once", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    await db().insert(s.discounts).values({ code: "NEWFRIENDS", name: "New friends", kind: "percent", value: 15, programIds: [flex.id, camp.id], oncePerFamily: true, firstBookingOnly: true });
+    const day1 = await session(flex.id, { capacity: 4 });
+    const day2 = await session(flex.id, { capacity: 4 }, 9);
+    const campDay = await session(camp.id, { capacity: 4 }, 11);
+
+    // A brand-new family: 15% off.
+    expect((await book("new.friend@example.com", day1.id, "newfriends")).ok).toBe(true);
+    const first = await invoiceFor("new.friend@example.com");
+    expect(first.totals.total).toBe(12750);
+    await processEvent(db(), "test", { id: "evt_nf1", type: "payment.succeeded", checkoutRef: first.payment.checkoutRef!, providerRef: "pi_nf1", amountCents: first.payment.amountCents });
+
+    // That family again: they've used it.
+    await expect(findCoupon(db(), "NEWFRIENDS", [campDay.id], { familyId: first.booking.familyId })).rejects.toThrow(/already used this code/);
+    expect((await book("new.friend@example.com", day2.id, "newfriends")).ok).toBe(false);
+
+    // A family who booked before without the code isn't a first booking either.
+    expect((await book("old.friend@example.com", day1.id)).ok).toBe(true);
+    const earlier = await invoiceFor("old.friend@example.com");
+    await processEvent(db(), "test", { id: "evt_nf2", type: "payment.succeeded", checkoutRef: earlier.payment.checkoutRef!, providerRef: "pi_nf2", amountCents: earlier.payment.amountCents });
+    await expect(findCoupon(db(), "NEWFRIENDS", [campDay.id], { familyId: earlier.booking.familyId })).rejects.toThrow(/first Camp Yalla or Yalla Flex booking/);
+  });
 });
+

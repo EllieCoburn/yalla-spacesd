@@ -112,7 +112,7 @@ for (const [i, c] of cohortDefs.entries()) {
   await createSeries(db, admin, { ...common, programId: club.id, title: `Club Yalla · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
   await createSeries(db, admin, { ...common, programId: flex.id, title: `Flex · ${c.name}`, startTime: "08:30", endTime: "16:30", capacity: c.maxSize, hardCapacity: c.maxSize });
 }
-// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007, 0013 and 0069 migrations do the same in production).
+// Weekend Play Sessions (a Happening, formerly Yalla Weekends): first and second Saturday, AM and PM play sessions in three age groups (the 0007, 0013 and 0069 migrations do the same in production). Immersive Play takes the 3rd and 4th Saturdays (0079).
 const weekendGroups = [
   { label: "18 months – 3 years", minAgeMonths: 18, maxAgeMonths: 47, capacity: 16 },
   { label: "4 – 7 years", minAgeMonths: 48, maxAgeMonths: 95, capacity: 10 },
@@ -135,11 +135,11 @@ if (!afterHoursMonthly)
   for (const g of afterHoursGroups)
     await createSeries(db, admin, { programId: after.id, ...g, weekdays: [5], monthWeek: 2, startTime: "17:00", endTime: "21:00", startsOn: start, endsOn: addDaysISO(today, 365), hardCapacity: g.capacity, locationId: loc.id });
 await createSeries(db, admin, { programId: happenings.id, title: "Pop-up workshop", weekdays: [0], startTime: "10:00", endTime: "11:30", startsOn: addDaysISO(today, 3), endsOn: addDaysISO(today, 45), capacity: 14, locationId: loc.id });
-// Immersive Play Sessions: first and third Saturdays, 9:00am – 12:00pm (the 0012 migration does the same in production).
+// Immersive Play Sessions: third and fourth Saturdays, 9:00am – 12:00pm, so they never share a Saturday with Weekend Play (the 0012 and 0079 migrations do the same in production).
 const [immersiveSeries] = await db.select({ id: s.scheduleSeries.id }).from(s.scheduleSeries).where(eq(s.scheduleSeries.programId, immersive.id));
 if (!immersiveSeries)
-  for (const monthWeek of [1, 3])
-    await createSeries(db, admin, { programId: immersive.id, title: `Immersive Play Session · ${monthWeek === 1 ? "First" : "Third"} Saturday`, weekdays: [6], monthWeek, startTime: "09:00", endTime: "12:00", startsOn: start, endsOn: "2027-12-31", capacity: 12, hardCapacity: 12, minAgeMonths: 36, maxAgeMonths: 107, priceCents: 4500, locationId: loc.id });
+  for (const monthWeek of [3, 4])
+    await createSeries(db, admin, { programId: immersive.id, title: `Immersive Play Session · ${monthWeek === 3 ? "Third" : "Fourth"} Saturday`, weekdays: [6], monthWeek, startTime: "09:00", endTime: "12:00", startsOn: start, endsOn: "2027-12-31", capacity: 12, hardCapacity: 12, minAgeMonths: 36, maxAgeMonths: 107, priceCents: 4500, locationId: loc.id });
 // Camp Yalla: the confirmed camp days in three age groups (the 0005 migration does the same in production).
 const campDays = ["2026-11-11", "2026-11-25", "2026-12-21", "2026-12-22", "2026-12-23", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-18", "2027-02-15", "2027-07-05"];
 const [campExisting] = await db.select({ id: s.sessions.id }).from(s.sessions).where(eq(s.sessions.programId, camp.id));

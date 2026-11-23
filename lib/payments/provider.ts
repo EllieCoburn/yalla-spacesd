@@ -61,6 +61,8 @@ export interface PaymentProvider {
    * webhook). Returns the same event the webhook would have sent, or null if not paid yet.
    */
   checkPayment?(checkoutRef: string): Promise<NormalizedEvent | null>;
+  /** Closes an unpaid checkout page so it can't be paid (best effort; it also expires on its own). */
+  expireCheckout?(checkoutRef: string): Promise<void>;
 }
 
 /* ── Test provider ── */
@@ -137,6 +139,13 @@ export const stripeProvider: PaymentProvider = {
     if (s.mode !== "payment" || s.payment_status !== "paid") return null;
     // Its own event id; if Stripe's webhook also arrives, the payment is already marked paid and nothing repeats.
     return { id: `check:${s.id}`, type: "payment.succeeded", checkoutRef: s.id, providerRef: String(s.payment_intent), amountCents: s.amount_total ?? 0 };
+  },
+  async expireCheckout(checkoutRef) {
+    try {
+      await stripe().checkout.sessions.expire(checkoutRef);
+    } catch {
+      // Already paid, expired or closed: nothing to do.
+    }
   },
   async refund(input) {
     try {

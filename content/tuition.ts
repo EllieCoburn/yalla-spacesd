@@ -90,9 +90,9 @@ export const cohorts: Cohort[] = [
  * Club Yalla cohort ages differ and must not reuse these.
  */
 export const flexAges: Record<Cohort["id"], string> = {
-  seedlings: "4 – 12 months",
-  saplings: "12 – 20 months",
-  sprouts: "20 – 35 months",
+  seedlings: "4 – 14 months",
+  saplings: "14 – 23 months",
+  sprouts: "24 – 35 months",
   wildflowers: "3 – 4 years",
 };
 

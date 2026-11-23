@@ -5,7 +5,9 @@
 import { and, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import type { Permission } from "@/lib/auth/permissions";
-import { bookingItems, bookings, programs, sessions, waitlistEntries } from "@/lib/db/schema";
+import { bookingItems, bookings, invoiceLines, invoices, programPrices, programs, sessions, waitlistEntries } from "@/lib/db/schema";
+import { addonsFor } from "@/lib/booking/addons";
+import { flexGroupFor } from "@/lib/booking/flex";
 import { roster } from "@/lib/ops/attendance";
 import { availabilityFor } from "@/lib/ops/capacity";
 
@@ -49,10 +51,28 @@ export type CalendarSession = {
   remaining: number;
   waiting: number;
   status: string;
+  /** Yalla is closed this day (e.g. "Fall Family Break"): nothing can be booked, so it's never shown as open. */
+  closure: string | null;
+  /** Revenue (only for staff who can see reports; see sessionRevenue). */
+  money?: SessionMoney;
+};
+
+export type SessionMoney = {
+  /** What the booked spots actually bring in, after each one's share of any coupon or sibling discount. */
+  capturedCents: number;
+  /** The part of captured still owed on an open invoice. */
+  unpaidCents: number;
+  /** Spots not yet captured: open, plus any held at checkout. */
+  openSpots: number;
+  /** One open spot at its lowest rate (e.g. a Flex half day) and at its full rate. */
+  spotMinCents: number;
+  spotMaxCents: number;
+  /** No price is set for this session, so its open spots can't be valued. */
+  unpriced: boolean;
 };
 
 /** Sessions between two dates (inclusive) for the chosen programs, with booked and waitlist counts. */
-export async function calendarSessions(db: Executor, from: string, to: string, program: CalendarProgram): Promise<CalendarSession[]> {
+export async function calendarSessions(db: Executor, from: string, to: string, program: CalendarProgram, opts: { money?: boolean } = {}): Promise<CalendarSession[]> {
   const rows = await db
     .select({ s: sessions, p: programs })
     .from(sessions)
@@ -75,7 +95,9 @@ export async function calendarSessions(db: Executor, from: string, to: string, p
   const avail = await availabilityFor(db, ids);
   const bookedBy = new Map(booked.map((b) => [b.sessionId, b.n]));
   const waitingBy = new Map(waiting.map((w) => [w.sessionId, w.n]));
+  const money = opts.money ? await sessionRevenue(db, rows) : null;
   return rows.map(({ s, p }) => {
+    const closure = s.status === "closed" ? (s.notes?.startsWith("Closed: ") ? s.notes.slice("Closed: ".length) : "Closed") : null;
     // "Camp Yalla · 4 – 7 years" → "4 – 7 years"
     const title = s.title ?? p.name;
     const group = title.includes(" · ") ? title.split(" · ").slice(1).join(" · ") : title;
@@ -96,8 +118,100 @@ export async function calendarSessions(db: Executor, from: string, to: string, p
       remaining: avail.get(s.id)?.remaining ?? Math.max(0, s.capacity - (bookedBy.get(s.id) ?? 0)),
       waiting: waitingBy.get(s.id ?? "") ?? 0,
       status: s.status,
+      closure,
+      // A closed day has no places to book.
+      ...(closure ? { remaining: 0, effectiveCapacity: 0, capacity: 0 } : {}),
+      ...(money
+        ? {
+            money: {
+              ...money.get(s.id)!,
+              openSpots: closure ? 0 : (avail.get(s.id)?.remaining ?? 0) + (avail.get(s.id)?.occupancy.held ?? 0),
+            },
+          }
+        : {}),
     };
   });
+}
+
+/**
+ * Revenue per session, for the calendar's revenue panel.
+ *
+ * Captured: each confirmed booked spot's charges on its invoice, scaled by that invoice's discounts
+ * (coupons, sibling and family rates), so a $160 camp day with 50% off counts as $80. A spot booked
+ * without an invoice counts at the price on the booking. Open spots are valued at the session's
+ * lowest rate (a Flex half day) and its full rate; extras like Early Bird aren't counted.
+ */
+async function sessionRevenue(db: Executor, rows: { s: typeof sessions.$inferSelect; p: typeof programs.$inferSelect }[]) {
+  const ids = rows.map((r) => r.s.id);
+  const out = new Map<string, Omit<SessionMoney, "openSpots">>();
+  const items = await db
+    .select({ id: bookingItems.id, sessionId: bookingItems.sessionId, priceCents: bookingItems.priceCents })
+    .from(bookingItems)
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .where(and(inArray(bookingItems.sessionId, ids), eq(bookingItems.status, "confirmed"), eq(bookings.status, "confirmed")));
+  const itemLines = items.length
+    ? await db
+        .select({ itemId: invoiceLines.bookingItemId, invoiceId: invoiceLines.invoiceId, amount: invoiceLines.amountCents })
+        .from(invoiceLines)
+        .innerJoin(invoices, eq(invoices.id, invoiceLines.invoiceId))
+        .where(and(inArray(invoiceLines.bookingItemId, items.map((i) => i.id)), eq(invoiceLines.kind, "charge"), ne(invoices.status, "void")))
+    : [];
+  const invIds = [...new Set(itemLines.map((l) => l.invoiceId))];
+  const [allLines, invRows] = invIds.length
+    ? await Promise.all([
+        db.select({ invoiceId: invoiceLines.invoiceId, kind: invoiceLines.kind, amount: invoiceLines.amountCents }).from(invoiceLines).where(inArray(invoiceLines.invoiceId, invIds)),
+        db.select({ id: invoices.id, status: invoices.status }).from(invoices).where(inArray(invoices.id, invIds)),
+      ])
+    : [[], []];
+  // Each invoice's discounts are shared across its charges in proportion: net ÷ gross.
+  const ratio = new Map<string, number>();
+  for (const id of invIds) {
+    const charges = allLines.filter((l) => l.invoiceId === id && l.kind === "charge").reduce((n, l) => n + l.amount, 0);
+    const discounts = allLines.filter((l) => l.invoiceId === id && l.kind === "discount").reduce((n, l) => n + l.amount, 0);
+    ratio.set(id, charges > 0 ? Math.max(0, (charges + discounts) / charges) : 0);
+  }
+  const open = new Set(invRows.filter((i) => i.status === "open").map((i) => i.id));
+  const captured = new Map<string, { cents: number; unpaid: number }>();
+  for (const it of items) {
+    const lines = itemLines.filter((l) => l.itemId === it.id);
+    let cents = 0;
+    let unpaid = 0;
+    if (lines.length)
+      for (const l of lines) {
+        const v = Math.round(l.amount * (ratio.get(l.invoiceId) ?? 1));
+        cents += v;
+        if (open.has(l.invoiceId)) unpaid += v;
+      }
+    else cents = it.priceCents ?? 0;
+    const c = captured.get(it.sessionId) ?? { cents: 0, unpaid: 0 };
+    captured.set(it.sessionId, { cents: c.cents + cents, unpaid: c.unpaid + unpaid });
+  }
+  // What one more spot would cost: the lowest and the full rate.
+  const programIds = [...new Set(rows.map((r) => r.p.id))];
+  const table = await db.select().from(programPrices).where(and(inArray(programPrices.programId, programIds), eq(programPrices.unit, "session"), eq(programPrices.active, true)));
+  for (const { s, p } of rows) {
+    let min: number | null;
+    let max: number | null;
+    const group = p.kind === "drop_in" ? flexGroupFor(s.minAgeMonths) : null;
+    if (group) {
+      max = s.priceCents ?? group.fullCents;
+      min = addonsFor(p.kind, p.slug).some((a) => a.dayLength === "half") ? Math.min(group.halfCents, max) : max;
+    } else {
+      const mine = table.filter((t) => t.programId === p.id);
+      const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3600_000;
+      const day = hours > 5 ? "full" : "half";
+      const pick = (len: string) =>
+        mine.find((t) => t.cohortId === s.cohortId && t.dayLength === len) ??
+        mine.find((t) => t.cohortId === s.cohortId && !t.dayLength) ??
+        mine.find((t) => !t.cohortId && t.dayLength === len) ??
+        mine.find((t) => !t.cohortId && !t.dayLength);
+      max = s.priceCents ?? pick(day)?.amountCents ?? p.priceCents ?? null;
+      min = max;
+    }
+    const c = captured.get(s.id) ?? { cents: 0, unpaid: 0 };
+    out.set(s.id, { capturedCents: c.cents, unpaidCents: c.unpaid, spotMinCents: min ?? 0, spotMaxCents: max ?? 0, unpriced: max == null });
+  }
+  return out;
 }
 
 export type CalendarChild = {
@@ -119,6 +233,7 @@ export async function calendarDay(db: Executor, date: string, program: CalendarP
   const list = await calendarSessions(db, date, date, program);
   return Promise.all(
     list.map(async (s) => {
+      if (s.closure) return { ...s, children: [], notComing: [] };
       const r = await roster(db, s.id, perms);
       const coming = r.children.filter((c) => c.expected || c.attendance?.status === "checked_in" || c.attendance?.status === "checked_out");
       const display = (c: (typeof r.children)[number]) => (c.preferredName ? `${c.preferredName} ${c.name.split(" ").slice(1).join(" ")}` : c.name);

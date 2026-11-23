@@ -16,7 +16,7 @@ beforeEach(reset);
 // The first visit is tomorrow; "now" is 6:00am that morning in San Diego.
 const day = () => addDaysISO(todayLA(), 1);
 const morning = () => zonedDateTime(day(), "06:00");
-const GROUP = { seedlings: [4, 11], saplings: [12, 19], sprouts: [20, 35], wildflowers: [36, 59] } as const;
+const GROUP = { seedlings: [4, 13], saplings: [14, 23], sprouts: [24, 35], wildflowers: [36, 59] } as const;
 type Cohort = keyof typeof GROUP;
 
 async function setup() {
@@ -36,8 +36,11 @@ async function child(familyId: string, first: string, cohort: Cohort, preferred:
 }
 
 async function book(familyId: string, items: { sessionId: string; childId: string; addons?: string[] }[]) {
-  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true });
-  await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
+  // Booked at midday the day before, so the tests behave the same whatever the time (after the
+  // evening run, a booking for tomorrow is welcomed straight away; a test covers that on purpose).
+  const at = zonedDateTime(todayLA(), "12:00");
+  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true, now: at });
+  await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false, now: at });
   return hold.booking;
 }
 

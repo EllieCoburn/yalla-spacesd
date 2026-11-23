@@ -44,7 +44,10 @@ export function assetBase() {
 const HERO: Record<string, string> = {
   enquiry_received: "hero-space.jpg",
   tour_received: "hero-space.jpg",
-  family_welcome: "hero-rainbow.jpg",
+  family_welcome: "hero-paint.jpg",
+  family_invite: "hero-paint.jpg",
+  family_added: "hero-paint.jpg",
+  flex_hold_notice: "hero-paint.jpg",
   application_received: "hero-rainbow.jpg",
   event_received: "hero-sunflowers.jpg",
   playpass_welcome: "hero-rainbow.jpg",
@@ -55,18 +58,22 @@ const HERO: Record<string, string> = {
   flex_thank_you: "hero-sunflowers.jpg",
   space_confirmation: "hero-space.jpg",
   waitlist_offer: "hero-rainbow.jpg",
+  waitlist_welcome: "hero-paint.jpg",
 };
 
 const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
   family_confirm_email: "Confirm my email and open my portal",
   family_invite: "Create your Family Portal account",
+  family_added: "Set up my account",
+  flex_hold_notice: "See available Flex days",
   booking_confirmation: "View my booking",
   booking_cancellation: "Book another experience",
   booking_welcome_team: "Set up my Family Portal",
   booking_confirmed_team: "View my bookings",
   payment_request: "Pay securely",
   waitlist_offer: "Book spot now",
+  waitlist_welcome: "Set up my account",
   waitlist_update: "Book another Flex day",
   staff_new_enquiry: "Open in the Inbox",
   staff_password_reset: "Choose a new password",
@@ -385,7 +392,7 @@ export function emailHtml(input: { key: string; subject: string; body: string; a
       ${
         status
           ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;"><tr><td style="padding:5px 12px;border-radius:999px;background:${status.tint};font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${status.color};">●&nbsp; ${status.label}</td><td style="padding-left:12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.soft};">${staff ? "Yalla · Team" : "Yalla"}</td></tr></table>`
-          : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Childcare &amp; Coworking"}</p>`
+          : `<p style="margin:0 0 12px;font-family:${SANS};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${C.blue};">${staff ? "Yalla · Team" : "Yalla Coworking &amp; Childcare"}</p>`
       }
       <h1 class="h1" style="margin:0 0 26px;font-family:${SERIF};font-weight:400;font-size:32px;line-height:1.2;color:${C.ink};">${esc(headline)}</h1>
       ${bodyHtml(rest, input.key)}

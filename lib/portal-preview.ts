@@ -36,6 +36,7 @@ export function samplePortalData(): PortalData {
     localDate: addDaysISO(today, days),
     startsAt: at(days, start),
     endsAt: at(days, end),
+    dayLabel: null,
     child,
     canCancel: true,
     creditOnCancel: true,

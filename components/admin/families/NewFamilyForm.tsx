@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/admin/action";
 import { btn, inputCls } from "@/components/admin/ui";
@@ -27,10 +28,17 @@ function F({ label, name, v, ...rest }: { label: string; name: string; v: Record
   );
 }
 
+type ChildRow = { firstName: string; lastName: string; birthDate: string; flexHold: string };
+
 export function NewFamilyForm({ action }: { action: (prev: ActionState, form: FormData) => Promise<ActionState> }) {
   const [state, formAction] = useActionState(action, undefined);
   const v = state && !state.ok ? (state.values ?? {}) : {};
-  const dupFamily = (state?.data as { familyId?: string } | undefined)?.familyId;
+  const data = state?.data as { familyId?: string; children?: ChildRow[] } | undefined;
+  const dupFamily = data?.familyId;
+  // Children are kept across a failed submit (the server hands back what was typed).
+  const kept = state && !state.ok ? data?.children : undefined;
+  const [rows, setRows] = useState(1);
+  const count = Math.max(rows, kept?.length ?? 0);
   return (
     <form action={formAction} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -41,6 +49,48 @@ export function NewFamilyForm({ action }: { action: (prev: ActionState, form: Fo
         <F label="Relationship to the children" name="relationship" v={v} placeholder="Parent" />
         <F label="Family name (shown in the directory)" name="name" v={v} placeholder="Defaults to “[Last name] family”" />
       </div>
+      {/* Children, with an optional Yalla Flex cohort hold, added in the same step. */}
+      <fieldset className="space-y-3 rounded-xl border border-ink/10 p-4">
+        <legend className="px-1 text-[0.85rem] font-medium text-ink">Children</legend>
+        <p className="text-[0.78rem] text-ink-soft">
+          Optional. Leave a row empty to skip it. Choose a Yalla Flex cohort hold for a longtime drop-in child who should stay with a younger cohort, whatever their age, until you release them.
+        </p>
+        {Array.from({ length: count }, (_, i) => {
+          const k = kept?.[i];
+          const kk = `${state?.at ?? 0}-${i}`;
+          return (
+            <div key={i} className="grid gap-3 rounded-lg bg-mist/30 p-3 sm:grid-cols-[1fr_1fr_10rem_1.2fr]">
+              <label className="block space-y-1">
+                <span className="text-[0.75rem] font-medium text-ink">First name</span>
+                <input name="childFirst" defaultValue={k?.firstName ?? ""} key={`f${kk}`} className={inputCls} autoComplete="off" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[0.75rem] font-medium text-ink">Last name</span>
+                <input name="childLast" defaultValue={k?.lastName ?? ""} key={`l${kk}`} placeholder="Same as guardian" className={inputCls} autoComplete="off" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[0.75rem] font-medium text-ink">Date of birth</span>
+                <input name="childBirth" type="date" defaultValue={k?.birthDate ?? ""} key={`b${kk}`} className={inputCls} />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[0.75rem] font-medium text-ink">Yalla Flex cohort</span>
+                <select name="childHold" defaultValue={k?.flexHold ?? ""} key={`h${kk}`} className={inputCls}>
+                  <option value="">Books by age</option>
+                  {FLEX_GROUPS.map((g) => (
+                    <option key={g.key} value={g.key}>
+                      Hold in {g.cohort}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          );
+        })}
+        <button type="button" onClick={() => setRows(count + 1)} className="text-[0.82rem] text-blue hover:underline">
+          + Add another child
+        </button>
+      </fieldset>
+
       <label className="flex items-start gap-2.5 text-[0.85rem]">
         <input type="checkbox" name="marketingOptIn" defaultChecked={v.marketingOptIn === "on"} className="mt-0.5 h-4 w-4 rounded border-ink/30" />
         <span>
@@ -52,7 +102,9 @@ export function NewFamilyForm({ action }: { action: (prev: ActionState, form: Fo
         <input type="checkbox" name="invite" defaultChecked={v.invite === "on"} className="mt-0.5 h-4 w-4 rounded border-ink/30" />
         <span>
           Email them an invitation to the Family Portal now
-          <span className="block text-[0.75rem] text-ink-soft">Otherwise they’re invited when you confirm a booking for them, or anytime from their family page.</span>
+          <span className="block text-[0.75rem] text-ink-soft">
+            Sent after the children above are saved, so it tells them about any Flex cohort hold. Otherwise they’re invited when you confirm a booking for them, or anytime from their family page.
+          </span>
         </span>
       </label>
       <p className="rounded-lg bg-mist/50 px-3 py-2 text-[0.8rem] text-ink-soft">

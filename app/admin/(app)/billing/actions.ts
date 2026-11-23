@@ -88,7 +88,7 @@ export const skipChargeAction = adminAction("billing.manage", async ({ db, actor
   return "Charge skipped.";
 });
 
-export const discountAction = adminAction("billing.manage", async ({ db, actor, str, num, cents, bool }) => {
+export const discountAction = adminAction("billing.manage", async ({ db, actor, str, num, cents, bool, all }) => {
   const kind = str("kind") === "fixed" ? "fixed" : "percent";
   await saveDiscount(db, actor, {
     id: str("id") || undefined,
@@ -96,12 +96,13 @@ export const discountAction = adminAction("billing.manage", async ({ db, actor, 
     name: str("name"),
     kind,
     value: kind === "fixed" ? (cents("value") ?? 0) : (num("value") ?? 0),
-    programId: str("programId") || null,
+    programIds: all("programIds").filter(Boolean),
     active: bool("active"),
     startsOn: str("startsOn") || null,
     endsOn: str("endsOn") || null,
     maxUses: num("maxUses"),
     oncePerFamily: bool("oncePerFamily"),
+    firstBookingOnly: bool("firstBookingOnly"),
   });
   return "Discount saved.";
 });

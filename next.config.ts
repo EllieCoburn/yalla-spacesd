@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
       { source: "/pay/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/play-passes/welcome", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/portal/join", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      // Yalla at Home is shared by link only: search engines must not list it (or its images).
+      { source: "/yalla-at-home", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, noimageindex" }] },
     ];
   },
   // Pricing is now public on the Membership page; old portal links land there.

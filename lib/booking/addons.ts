@@ -51,6 +51,20 @@ export const ADDONS: Record<string, Addon[]> = {
 
 export const addonsFor = (kind: string, slug?: string | null): Addon[] => (slug ? ADDONS[slug] : undefined) ?? ADDONS[kind] ?? [];
 
+/**
+ * A child's actual hours for a booked session: a half day ends early (Yalla Flex, 12:00pm) though
+ * the session runs all day. Use this, not the session's own times, wherever one child's day is shown.
+ */
+export function childDay(program: { kind: string; slug?: string | null }, session: { startsAt: Date; endsAt: Date }, addons: string[] | null | undefined) {
+  const short = addonsFor(program.kind, program.slug).find((a) => a.endsAfterStartMinutes && addons?.includes(a.key));
+  return {
+    startsAt: session.startsAt,
+    endsAt: short ? new Date(session.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : session.endsAt,
+    /** "Half day" for a shortened day, otherwise null. */
+    label: short ? short.label : null,
+  };
+}
+
 /** Keep only add-ons the program offers, once each. */
 export const validAddons = (kind: string, keys: string[] | undefined, slug?: string | null) =>
   [...new Set(keys ?? [])].filter((k) => addonsFor(kind, slug).some((a) => a.key === k));

@@ -419,6 +419,14 @@ export const children = pgTable(
     preferredName: text("preferred_name"),
     birthDate: date("birth_date").notNull(),
     cohortId: text("cohort_id").references(() => cohorts.id),
+    /**
+     * Yalla Flex cohort hold (a FLEX_GROUPS key, e.g. "seedlings"): set by staff for longtime drop-in
+     * families. While set, the child books Flex days in this cohort only, whatever their age, and
+     * can't book any other Flex cohort until staff release the hold (lib/booking/flex-hold.ts).
+     */
+    flexHold: text("flex_hold"),
+    flexHoldSetAt: ts("flex_hold_set_at"),
+    flexHoldSetBy: text("flex_hold_set_by"),
     /** Family-provided care information. */
     allergies: text("allergies"),
     medicalNotes: text("medical_notes"),
@@ -717,6 +725,8 @@ export const waitlistEntries = pgTable(
     offerBookingId: text("offer_booking_id"),
     /** The Yalla Flex waitlist spot this family was offered (see waitlist_chains). */
     chainId: text("chain_id"),
+    /** Yalla Flex: the day length they're waiting for (full | half). An offer is held at this length. */
+    dayLength: text("day_length"),
     notes: text("notes"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -838,6 +848,8 @@ export const discounts = pgTable("discounts", {
   kind: text("kind").notNull(), // percent | fixed
   value: integer("value").notNull(), // percent (0-100) or cents
   programId: text("program_id").references(() => programs.id),
+  /** The programs a code covers when it's more than one (e.g. Yalla Flex and Camp Yalla). Empty or null with no programId: every program. */
+  programIds: text("program_ids").array(),
   siblingDiscount: boolean("sibling_discount").notNull().default(false),
   active: boolean("active").notNull().default(true),
   startsOn: date("starts_on"),
@@ -845,6 +857,8 @@ export const discounts = pgTable("discounts", {
   maxUses: integer("max_uses"),
   /** Each family can use the code once (e.g. a thank-you code for a return visit). */
   oncePerFamily: boolean("once_per_family").notNull().default(false),
+  /** Only for a family's first booking of the programs it covers (no confirmed booking of them before). */
+  firstBookingOnly: boolean("first_booking_only").notNull().default(false),
   createdAt: createdAt(),
 });
 

@@ -436,9 +436,9 @@ Starting ages vary a little from year to year, but are generally:
 
 Children move to their new cohort each August. Over the summer, care teams prepare new environments and families hear about their child’s cohort, care team and what to bring. Cohorts still come together often for shared experiences, outdoor exploration, celebrations and community gatherings.`,
           flex: `Flex days are booked by age group, using your child’s age on the day:
-- **Seedlings**: 4 – 12 months
-- **Saplings**: 12 – 20 months
-- **Sprouts**: 20 – 35 months
+- **Seedlings**: 4 – 14 months
+- **Saplings**: 14 – 23 months
+- **Sprouts**: 24 – 35 months
 - **Wildflowers**: 3 – 4 years
 
 Flex fills vacancies, so availability depends on openings in your child’s group.`,

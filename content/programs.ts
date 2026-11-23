@@ -58,7 +58,7 @@ export const programs: ProgramContent[] = [
     image: "/photos/flex-roller-painting.jpg",
     imageAlt: "A toddler painting a large sheet of paper on a fence with a blue paint roller, while another child dips a roller in a tray",
     motif: "waves",
-    ages: "4 months – 4 years, in four age groups: 4 – 12 months, 12 – 20 months, 20 – 35 months and 3 – 4 years. See the day rates below.",
+    ages: "4 months – 4 years, in four age groups: 4 – 14 months, 14 – 23 months, 24 – 35 months and 3 – 4 years. See the day rates below.",
     days: "Monday – Friday, when a spot opens for your child’s age group. Full days 8:30am – 4:30pm or half days 8:30am – 12:00pm",
     pricing: "$150–$180 a full day or $75–$90 a half day for childcare and coworking, depending on your child’s age. No registration fee. Siblings: 10% off each additional child on the same day, applied automatically. See day rates below.",
     included: ["Childcare in a play environment with similarly aged peers and attentive educarers and guides", "Communal coworking for you"],

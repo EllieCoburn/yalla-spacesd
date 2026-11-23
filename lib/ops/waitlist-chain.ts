@@ -13,6 +13,8 @@
  *   Families offered after the one who booked go back on the waitlist quietly.
  * - It never goes back on the public calendar: at 8:00am the reservation simply ends.
  */
+import { childDay } from "@/lib/booking/addons";
+import { HALF_DAY } from "@/lib/booking/flex";
 import { and, asc, eq, gt, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { SYSTEM, type Actor } from "@/lib/audit";
 import { trustedBaseUrl } from "@/lib/base-url";
@@ -63,7 +65,7 @@ async function offerInChain(db: DB, chain: typeof waitlistChains.$inferSelect, e
   try {
     hold = await createHold(db, ACTOR, {
       familyId: entry.familyId,
-      items: (entry.childIds.length ? entry.childIds : [null]).map((childId) => ({ sessionId: chain.sessionId, childId })),
+      items: (entry.childIds.length ? entry.childIds : [null]).map((childId) => ({ sessionId: chain.sessionId, childId, addons: entry.dayLength === "half" ? [HALF_DAY] : undefined })),
       source: "waitlist",
       acknowledgePaperwork: true,
       waitlistChainId: chain.id,
@@ -96,7 +98,7 @@ async function offerInChain(db: DB, chain: typeof waitlistChains.$inferSelect, e
       program: s.title ?? p.name,
       date: fmtDate(s.localDate, "EEEE, MMMM d"),
       child_names: names.length ? names.join(" and ") : "your family",
-      booking_details: `>> ${s.title ?? p.name}\n${fmtDate(s.localDate, "EEEE, MMMM d")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}${names.length ? `\n\nWho’s coming: ${names.join(", ")}` : ""}`,
+      booking_details: `>> ${s.title ?? p.name}\n${fmtDate(s.localDate, "EEEE, MMMM d")} · ${fmtTime(s.startsAt)}–${fmtTime(childDay(p, s, entry.dayLength === "half" ? [HALF_DAY] : []).endsAt)}${entry.dayLength === "half" ? " · Half day" : ""}${names.length ? `\n\nWho’s coming: ${names.join(", ")}` : ""}`,
       waitlist_note: behind > 0 ? `~~ ${WAITLIST_NOTE}` : "",
       offer_expires: "",
       offer_link: `${baseUrl}${offerPath(hold.booking.reference)}`,

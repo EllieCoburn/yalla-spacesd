@@ -88,13 +88,13 @@ export async function agreementsAction(input: { sessionIds: string[]; children: 
   return previewAgreements(getDb(), { familyId: signedIn?.familyId ?? null, sessionIds: input.sessionIds.slice(0, 60), children: input.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), birthDate: c.birthDate ? clip(c.birthDate, 10) : undefined })) });
 }
 
-export async function joinWaitlistAction(input: { sessionId: string; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string } }) {
+export async function joinWaitlistAction(input: { sessionId: string; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; dayLength?: "full" | "half" }) {
   if (!isDbConfigured()) return { ok: false as const, code: "unavailable", error: "The waitlist isn’t open yet." };
   const ctx = await requestContext();
   if (!(await allow(getDb(), "waitlistIp", ctx.ip))) return { ok: false as const, code: "throttled", error: "That’s a lot of waitlist requests in a short time. Please try again later." };
   const guardian = { firstName: clip(input.guardian.firstName, 80), lastName: clip(input.guardian.lastName, 80), email: clip(input.guardian.email, 200), phone: clip(input.guardian.phone, 40) };
   const child = { existingId: input.child.existingId ? clip(input.child.existingId, 60) : null, firstName: clip(input.child.firstName, 80), lastName: clip(input.child.lastName, 80), birthDate: clip(input.child.birthDate, 10) };
-  return joinPublicWaitlist(getDb(), { signedIn: await getGuardian(), guardian, child, sessionId: clip(input.sessionId, 60), baseUrl: ctx.baseUrl });
+  return joinPublicWaitlist(getDb(), { signedIn: await getGuardian(), guardian, child, sessionId: clip(input.sessionId, 60), baseUrl: ctx.baseUrl, dayLength: input.dayLength === "half" ? "half" : input.dayLength === "full" ? "full" : null });
 }
 
 /** Retry a declined payment while the hold is still valid. */

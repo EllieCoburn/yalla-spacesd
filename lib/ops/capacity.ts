@@ -123,23 +123,25 @@ export async function availabilityFor(db: Executor, sessionIds: string[], now = 
   if (pooled.length) {
     const poolIds = [...new Set(pooled.map((r) => r.capacityPoolId!))];
     poolCaps = new Map((await db.select().from(capacityPools).where(inArray(capacityPools.id, poolIds))).map((p) => [p.id, p.capacity]));
-    for (const s of pooled) {
-      const overlapping = await db
-        .select({ id: sessions.id })
-        .from(sessions)
-        .where(
-          and(
-            eq(sessions.capacityPoolId, s.capacityPoolId!),
-            sql`${sessions.status} <> 'cancelled'`,
-            sql`${sessions.startsAt} < ${s.endsAt.toISOString()}::timestamptz`,
-            sql`${sessions.endsAt} > ${s.startsAt.toISOString()}::timestamptz`,
-          ),
-        );
+    // Every live session in these pools across the time span, in one query; overlaps worked out here.
+    const from = new Date(Math.min(...pooled.map((s) => s.startsAt.getTime())));
+    const to = new Date(Math.max(...pooled.map((s) => s.endsAt.getTime())));
+    const inPools = await db
+      .select({ id: sessions.id, poolId: sessions.capacityPoolId, startsAt: sessions.startsAt, endsAt: sessions.endsAt })
+      .from(sessions)
+      .where(
+        and(
+          inArray(sessions.capacityPoolId, poolIds),
+          sql`${sessions.status} <> 'cancelled'`,
+          sql`${sessions.startsAt} < ${to.toISOString()}::timestamptz`,
+          sql`${sessions.endsAt} > ${from.toISOString()}::timestamptz`,
+        ),
+      );
+    for (const s of pooled)
       neighbours.set(
         s.id,
-        overlapping.map((o) => o.id),
+        inPools.filter((o) => o.poolId === s.capacityPoolId && o.startsAt < s.endsAt && o.endsAt > s.startsAt).map((o) => o.id),
       );
-    }
   }
   const allIds = [...new Set([...sessionIds, ...[...neighbours.values()].flat()])];
   const occ = await occupancyFor(db, allIds, now);
@@ -187,17 +189,38 @@ export type PublicState =
   | { state: "closed"; reason: string }
   | { state: "not_offered" };
 
+/**
+ * Camp Yalla and Happenings (not Yalla Flex, Club Yalla or private events) stop taking bookings ahead
+ * of time, so the team is never surprised by a class it has to staff: a session nobody has booked shows
+ * Full 24 hours before it starts, and one with at least one booking stays open until 30 minutes before.
+ * Families can still join the waitlist. Staff can always book from Admin.
+ */
+export const AUTO_FULL = { emptyMinutes: 24 * 60, bookedMinutes: 30 } as const;
+export const autoFullApplies = (p: { kind: string; slug: string }) => !["drop_in", "membership", "private_event"].includes(p.kind) && p.slug !== "yalla-flex";
+
+/** Why a session reads as full ahead of time, or null. `occupied` = children booked or being paid for. */
+export function autoFullReason(session: { startsAt: Date }, program: { kind: string; slug: string }, occupied: number, now = new Date()): string | null {
+  if (!autoFullApplies(program)) return null;
+  const lead = session.startsAt.getTime() - now.getTime();
+  if (occupied <= 0 && lead < AUTO_FULL.emptyMinutes * 60_000) return "No one booked within 24 hours of the start";
+  if (lead < AUTO_FULL.bookedMinutes * 60_000) return "Within 30 minutes of the start";
+  return null;
+}
+
 export function publicState(
   session: { status: string; startsAt: Date; bookingOpensAt: Date | null; bookingClosesAt: Date | null },
-  program: Pick<typeof programs.$inferSelect, "status" | "showRemaining" | "lowAvailabilityThreshold" | "waitlistEnabled" | "minNoticeMinutes" | "advanceBookingDays">,
+  program: Pick<typeof programs.$inferSelect, "status" | "showRemaining" | "lowAvailabilityThreshold" | "waitlistEnabled" | "minNoticeMinutes" | "advanceBookingDays" | "kind" | "slug">,
   remaining: number,
   now = new Date(),
+  /** Children booked or being paid for. Given, the ahead-of-time Full rule applies (see AUTO_FULL). */
+  occupied?: number | null,
 ): PublicState {
   if (session.status === "cancelled" || program.status === "archived" || program.status === "draft") return { state: "not_offered" };
   if (session.status === "closed") return { state: "closed", reason: "Closed" };
   if (program.status === "paused") return { state: "closed", reason: "Booking paused" };
   if (session.bookingOpensAt && now < session.bookingOpensAt) return { state: "closed", reason: "Booking not yet open" };
   if (session.bookingClosesAt && now >= session.bookingClosesAt) return { state: "closed", reason: "Booking closed" };
+  if (occupied != null && autoFullReason(session, program, occupied, now)) return { state: "full", waitlist: program.waitlistEnabled };
   if (session.startsAt.getTime() - now.getTime() < program.minNoticeMinutes * 60_000) return { state: "closed", reason: "Booking closed" };
   if (program.advanceBookingDays != null && session.startsAt.getTime() - now.getTime() > program.advanceBookingDays * 86400_000)
     return { state: "closed", reason: "Not yet open for booking" };

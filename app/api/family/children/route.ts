@@ -22,6 +22,7 @@ export async function GET() {
           lastName: children.lastName,
           preferredName: children.preferredName,
           birthDate: children.birthDate,
+          flexHold: children.flexHold,
           allergies: children.allergies,
           medicalNotes: children.medicalNotes,
         })
@@ -45,10 +46,11 @@ export async function GET() {
         id: c.id,
         name: c.preferredName || c.firstName,
         birthDate: c.birthDate,
+        flexHold: c.flexHold,
       })),
       checkout: {
         guardian: guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email, phone: guardian.phone ?? null } : null,
-        savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate, ...(guardian?.canViewSensitive ? { allergies: c.allergies, medicalNotes: c.medicalNotes } : {}) })),
+        savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate, flexHold: c.flexHold, ...(guardian?.canViewSensitive ? { allergies: c.allergies, medicalNotes: c.medicalNotes } : {}) })),
         wallet: wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null,
         sibling,
       },

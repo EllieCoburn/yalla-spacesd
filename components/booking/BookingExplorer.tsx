@@ -21,8 +21,8 @@ export const offerings: { kind: string; label: string }[] = [
 
 export const ageBands = [
   { label: "Any age", months: undefined },
-  { label: "4–11 months", months: 8 },
-  { label: "1 year", months: 18 },
+  { label: "4–13 months", months: 8 },
+  { label: "14–23 months", months: 18 },
   { label: "2 years", months: 30 },
   { label: "3 years", months: 42 },
   { label: "4–5 years", months: 54 },
@@ -48,7 +48,12 @@ export function BookingExplorer({
   const router = useRouter();
   const [offering, setOffering] = useState<string>(
     // Yalla Weekends is now part of Happenings; old links still land in the right place.
-    ["weekend", "parents_night"].includes(params.get("offering") ?? "") ? "happening" : params.get("offering") || "all",
+    // Old or mistyped links (an offering that doesn't exist) show everything rather than an empty calendar.
+    ["weekend", "parents_night"].includes(params.get("offering") ?? "")
+      ? "happening"
+      : offerings.some((o) => o.kind === params.get("offering"))
+        ? params.get("offering")!
+        : "all",
   );
   const [ageIdx, setAgeIdx] = useState(0);
   const [day, setDay] = useState<string | null>(params.get("date"));

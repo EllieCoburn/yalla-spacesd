@@ -7,7 +7,7 @@ import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { cohorts, families, invoices, memberships, payments, programs, refunds, sessions, waitlistEntries } from "@/lib/db/schema";
 import { WEEKDAY } from "./memberships";
-import { addDaysISO, fmtDate, fmtTime, todayLA, zonedDateTime } from "@/lib/time";
+import { addDaysISO, fmtDate, fmtTime, todayLA, zonedDateTime, localDateOf } from "@/lib/time";
 import { availabilityFor } from "./capacity";
 import { invoiceTotals } from "./billing";
 
@@ -276,7 +276,7 @@ async function paymentsCollected(db: Executor, f: ReportFilter): Promise<ReportR
     .where(and(eq(payments.status, "succeeded"), sql`${payments.method} <> 'credit'`, gte(payments.succeededAt, new Date(startOf(f.from))), lte(payments.succeededAt, new Date(endOf(f.to)))))
     .orderBy(asc(payments.succeededAt));
   const out = rows.map(({ p, i, fam }) => ({
-    date: fmtDate(p.succeededAt!.toISOString().slice(0, 10)),
+    date: fmtDate(localDateOf(p.succeededAt!)),
     family: fam.name,
     invoice: i.number,
     method: p.method === "card" ? `Card (${p.provider})` : p.method.replace("offline_", "Offline · "),
@@ -306,7 +306,7 @@ async function refundsReport(db: Executor, f: ReportFilter): Promise<ReportResul
     .innerJoin(families, eq(families.id, invoices.familyId))
     .where(and(gte(refunds.createdAt, new Date(startOf(f.from))), lte(refunds.createdAt, new Date(endOf(f.to)))))
     .orderBy(asc(refunds.createdAt));
-  const out = rows.map(({ r, i, fam }) => ({ date: fmtDate(r.createdAt.toISOString().slice(0, 10)), family: fam.name, invoice: i.number, reason: r.reason, status: r.status, by: r.requestedBy ?? "", amount: r.amountCents }));
+  const out = rows.map(({ r, i, fam }) => ({ date: fmtDate(localDateOf(r.createdAt)), family: fam.name, invoice: i.number, reason: r.reason, status: r.status, by: r.requestedBy ?? "", amount: r.amountCents }));
   return {
     columns: [
       { key: "date", label: "Requested" },
@@ -333,7 +333,7 @@ async function outstandingInvoices(db: Executor, f: ReportFilter): Promise<Repor
   const out = open
     .map(({ i, fam }) => {
       const t = totals.get(i.id)!;
-      const ref = i.dueOn ?? i.issuedAt.toISOString().slice(0, 10);
+      const ref = i.dueOn ?? localDateOf(i.issuedAt);
       const age = Math.max(0, Math.round((new Date(today).getTime() - new Date(ref).getTime()) / 86400000));
       return { invoice: i.number, family: fam.name, description: i.description ?? "", due: i.dueOn ? fmtDate(i.dueOn) : "On receipt", age, total: t.total, paid: t.paid + t.creditApplied - t.refunded, balance: t.balance };
     })

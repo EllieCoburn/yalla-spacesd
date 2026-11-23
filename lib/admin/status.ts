@@ -25,6 +25,8 @@ export const STATUS = {
   },
   attendance: {
     expected: { label: "Expected", tone: "neutral", icon: "dot" },
+    /** Shown instead of "Expected" once the session is over and the child never checked in. */
+    not_checked_in: { label: "Not checked in", tone: "muted", icon: "minus" },
     present: { label: "Present", tone: "positive", icon: "check" },
     checked_in: { label: "Checked in", tone: "positive", icon: "check" },
     checked_out: { label: "Checked out", tone: "muted", icon: "arrow" },

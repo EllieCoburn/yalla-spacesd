@@ -32,18 +32,18 @@ describe("Yalla Flex", () => {
     const { rows, monday, at } = await setup();
     expect(rows).toHaveLength(5 * 4);
     expect(await weeklyVacancies(db())).toEqual(DEFAULT_WEEKLY);
-    // 20 – 35 months has one spot Monday to Thursday; everything else is full.
-    expect(at(monday, 20).capacity).toBe(1);
-    expect(at(addDaysISO(monday, 3), 20).capacity).toBe(1);
-    expect(at(addDaysISO(monday, 4), 20).capacity).toBe(0);
+    // 24 – 35 months has one spot Monday to Thursday; everything else is full.
+    expect(at(monday, 24).capacity).toBe(1);
+    expect(at(addDaysISO(monday, 3), 24).capacity).toBe(1);
+    expect(at(addDaysISO(monday, 4), 24).capacity).toBe(0);
     expect(at(monday, 4).capacity).toBe(0);
     expect(at(monday, 36).title).toBe("Yalla Flex · 3 – 4 years");
 
     const list = await listPublicSessions(db(), { from: monday, to: monday });
     const st = (min: number) => list.find((x) => x.id === at(monday, min).id)!;
-    expect(st(20).state).toEqual({ state: "available", remaining: null });
+    expect(st(24).state).toEqual({ state: "available", remaining: null });
     expect(st(4).state).toMatchObject({ state: "full", waitlist: false });
-    expect(st(20).halfPriceCents).toBe(7500);
+    expect(st(24).halfPriceCents).toBe(7500);
     expect(st(4).priceCents).toBe(18000);
   });
 
@@ -59,18 +59,18 @@ describe("Yalla Flex", () => {
 
   it("weekly changes shift upcoming days and keep single-day releases", async () => {
     const { monday, at } = await setup();
-    await adjustFlexSpots(db(), owner, at(addDaysISO(monday, 1), 12).id, 1); // Tuesday, one-off
+    await adjustFlexSpots(db(), owner, at(addDaysISO(monday, 1), 14).id, 1); // Tuesday, one-off
     await setWeeklyVacancies(db(), owner, { ...DEFAULT_WEEKLY, saplings: [0, 2, 0, 0, 0], sprouts: [0, 1, 1, 1, 0] });
     const cap = async (date: string, min: number) => (await db().select().from(s.sessions).where(and(eq(s.sessions.localDate, date), eq(s.sessions.minAgeMonths, min))))[0].capacity;
-    expect(await cap(addDaysISO(monday, 1), 12)).toBe(3);
-    expect(await cap(monday, 20)).toBe(0);
-    expect(await cap(addDaysISO(monday, 1), 20)).toBe(1);
+    expect(await cap(addDaysISO(monday, 1), 14)).toBe(3);
+    expect(await cap(monday, 24)).toBe(0);
+    expect(await cap(addDaysISO(monday, 1), 24)).toBe(1);
   });
 
   it("charges the half-day rate for a half day, with no extra line on the invoice", async () => {
     const { monday, at } = await setup();
-    const toddlers = at(monday, 20);
-    const { family: f, children } = await family("Half", [{ first: "Mo", birth: addDaysISO(monday, -365 * 2) }]);
+    const toddlers = at(monday, 24);
+    const { family: f, children } = await family("Half", [{ first: "Mo", birth: addDaysISO(monday, -365 * 2 - 60) }]);
     const hold = await createHold(db(), owner, { familyId: f.id, items: [{ sessionId: toddlers.id, childId: children[0].id, addons: ["half"] }], source: "admin", acknowledgePaperwork: true });
     await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: true, notify: false });
     const [item] = await db().select().from(s.bookingItems).where(eq(s.bookingItems.bookingId, hold.booking.id));
@@ -84,7 +84,7 @@ describe("Yalla Flex", () => {
 
   it("closes booking at 8:00am, 30 minutes before the 8:30 start, even with a spot open", async () => {
     const { monday, at } = await setup();
-    const toddlers = at(monday, 20);
+    const toddlers = at(monday, 24);
     const st = async (now: Date) => (await listPublicSessions(db(), { from: monday, to: monday, now })).find((x) => x.id === toddlers.id)!.state;
     expect((await st(zonedDateTime(monday, "07:59"))).state).toBe("available");
     expect(await st(zonedDateTime(monday, "08:00"))).toEqual({ state: "closed", reason: "Booking closed" });
@@ -111,13 +111,13 @@ describe("Yalla Flex", () => {
 
   it("offers Early Bird only on days staff open seats, for children 12 months and older", async () => {
     const { monday, at } = await setup();
-    const toddlers = at(monday, 20);
+    const toddlers = at(monday, 24);
     await adjustFlexSpots(db(), owner, toddlers.id, 1); // two spots that day
     const pub = async () => (await listPublicSessions(db(), { from: monday, to: monday })).find((x) => x.id === toddlers.id)!;
     expect((await earlyBirdByDate(db(), [monday])).get(monday)).toEqual({ seats: null, booked: 0 });
     expect((await pub()).earlyBirdOpen).toBe(false);
 
-    const { family: f, children } = await family("Early", [{ first: "Ro", birth: addDaysISO(monday, -365 * 2) }, { first: "Su", birth: addDaysISO(monday, -365 * 2 - 40) }]);
+    const { family: f, children } = await family("Early", [{ first: "Ro", birth: addDaysISO(monday, -365 * 2 - 60) }, { first: "Su", birth: addDaysISO(monday, -365 * 2 - 100) }]);
     const hold = (childId: string) => createHold(db(), owner, { familyId: f.id, items: [{ sessionId: toddlers.id, childId, addons: ["early"] }], source: "admin", acknowledgePaperwork: true });
     await expect(hold(children[0].id)).rejects.toThrow(/Early Bird isn’t available/);
 

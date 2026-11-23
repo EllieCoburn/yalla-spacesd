@@ -28,7 +28,7 @@ export default async function CouponPage({ params }: { params: Promise<{ code: s
               {what} <em>{prog ? `your next ${prog.name} booking` : "your next booking"}.</em>
             </h1>
             <p className="mx-auto mt-4 max-w-lg text-ink-soft">
-              Copy your code, then enter it under “Coupon code” when you book.{d.oncePerFamily ? " It can be used once per family." : ""}
+              Copy your code, then enter it under “Coupon code” when you book.{d.firstBookingOnly ? " It’s for your family’s first booking." : d.oncePerFamily ? " It can be used once per family." : ""}
             </p>
             <div className="mt-10">
               <CopyCode code={code} />

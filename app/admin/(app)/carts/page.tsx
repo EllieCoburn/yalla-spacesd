@@ -223,7 +223,10 @@ function CheckoutTable({ rows, seeFamilies, live }: { rows: CheckoutRow[]; seeFa
               ))}
             </ul>
           </td>
-          <td className="whitespace-nowrap text-[0.8rem] text-ink-soft">{live && r.booking.holdExpiresAt ? fmtTime(r.booking.holdExpiresAt) : fmtDateTime(r.booking.createdAt)}</td>
+          <td className="whitespace-nowrap text-[0.8rem] text-ink-soft">
+            {live && r.booking.holdExpiresAt ? fmtTime(r.booking.holdExpiresAt) : fmtDateTime(r.booking.createdAt)}
+            {!live && r.attempts > 1 ? <span className="block">Tried {r.attempts} times</span> : null}
+          </td>
           <td className="text-right">{live ? <Status kind="booking" value={r.booking.status} /> : r.bookedLater ? <Pill tone="positive" icon="check">Booked later</Pill> : <Pill tone="warning" icon="alert">Not booked</Pill>}</td>
         </tr>
       ))}

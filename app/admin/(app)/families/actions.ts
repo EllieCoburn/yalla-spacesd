@@ -2,9 +2,9 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { guardians } from "@/lib/db/schema";
+import { familyInvites, guardians } from "@/lib/db/schema";
 import { inviteToPortal } from "@/lib/family-auth";
 import { adminAction, type ActionState } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
@@ -21,11 +21,15 @@ import {
   removePickup,
   restoreFamily,
   setEmergencyContact,
+  setFlexHold,
+  setChildRemoved,
+  deleteChild,
   setPickup,
   updateChild,
   updateFamily,
   updateGuardian,
 } from "@/lib/ops/families";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 
 const nullable = (s: string) => (s === "" ? null : s);
 
@@ -35,6 +39,14 @@ export async function createFamilyAction(_prev: ActionState, form: FormData): Pr
   for (const [k, v] of form.entries()) if (typeof v === "string") values[k] = v;
   const staff = await getStaff();
   if (!staff || !can(staff, "families.manage")) return { ok: false, error: "You don’t have permission to add families.", values };
+  // Children typed on the same form (rows left empty are skipped).
+  const col = (k: string) => form.getAll(k).map((x) => String(x ?? "").trim());
+  const [firsts, lasts, births, holds] = [col("childFirst"), col("childLast"), col("childBirth"), col("childHold")];
+  const kids = firsts
+    .map((firstName, i) => ({ firstName, lastName: lasts[i] ?? "", birthDate: births[i] ?? "", flexHold: holds[i] ?? "" }))
+    .filter((k) => k.firstName || k.lastName || k.birthDate);
+  const bad = kids.find((k) => !k.firstName || !/^\d{4}-\d{2}-\d{2}$/.test(k.birthDate));
+  if (bad) return { ok: false, error: "Add each child’s first name and date of birth, or clear the row.", values, data: { children: kids }, at: Date.now() };
   let familyId: string;
   try {
     const res = await createFamily(getDb(), staffActor(staff), {
@@ -44,10 +56,13 @@ export async function createFamilyAction(_prev: ActionState, form: FormData): Pr
       marketingOptIn: values.marketingOptIn === "on",
     });
     familyId = res.family.id;
+    for (const k of kids)
+      await addChild(getDb(), staffActor(staff), familyId, { firstName: k.firstName, lastName: k.lastName || res.guardian.lastName, birthDate: k.birthDate, flexHold: k.flexHold || null });
+    // Invited after the children are saved, so the email explains any Flex cohort hold.
     if (values.invite === "on") await inviteToPortal(getDb(), staffActor(staff), { email: res.guardian.email, name: `${res.guardian.firstName} ${res.guardian.lastName}` }, trustedBaseUrl((await headers()).get("host")));
   } catch (e) {
-    if (e instanceof OpsError) return { ok: false, error: e.message, values, data: e.details, at: Date.now() };
-    return { ok: false, error: "Something went wrong and nothing was saved.", values, at: Date.now() };
+    if (e instanceof OpsError) return { ok: false, error: e.message, values, data: { ...((e.details as object) ?? {}), children: kids }, at: Date.now() };
+    return { ok: false, error: "Something went wrong and nothing was saved.", values, data: { children: kids }, at: Date.now() };
   }
   redirect(`/admin/families/${familyId}?created=1`);
 }
@@ -113,6 +128,8 @@ export const addChildAction = adminAction("families.manage", async ({ db, actor,
     allergies: care ? str("allergies") : undefined,
     careNotes: care ? str("careNotes") : undefined,
   });
+  // A Yalla Flex cohort hold goes through setFlexHold, so a family who already has an account is emailed.
+  if (!res.existed && str("flexHold")) await setFlexHold(db, actor, res.child.id, str("flexHold"), { baseUrl: trustedBaseUrl((await headers()).get("host")) });
   return res.existed ? `${res.child.firstName} is already on this family’s record — no duplicate was created.` : `${res.child.firstName} added.`;
 });
 
@@ -190,4 +207,45 @@ export const purgeTestDataAction = adminAction("staff.manage", async ({ db, acto
   const { purgeFamilyBookingsAndInvoices } = await import("@/lib/ops/test-data");
   const r = await purgeFamilyBookingsAndInvoices(db, actor, { familyId: str("familyId"), confirmName: str("confirmName") });
   return `Deleted ${r.bookings} booking${r.bookings === 1 ? "" : "s"}, ${r.spaceReservations} workspace reservation${r.spaceReservations === 1 ? "" : "s"} and ${r.invoices} invoice${r.invoices === 1 ? "" : "s"} for good.`;
+});
+
+/** Hold a child in a Yalla Flex cohort, or release the hold (empty value). */
+export const flexHoldAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const hold = str("flexHold") || null;
+  const c = await setFlexHold(db, actor, str("childId"), hold, { baseUrl: trustedBaseUrl((await headers()).get("host")) });
+  const name = c.preferredName || c.firstName;
+  if (!hold) return `Released. ${name} can now book the Flex group that fits their age.`;
+  const held = `${name} is held in ${flexHoldName(hold)} for Yalla Flex.`;
+  if (c.unchanged) return `${held} Nothing changed, so no email was sent.`;
+  if (c.notified) return `${held} We’ve emailed the family to let them know.`;
+  // Not in the Family Portal yet: say whether an invitation is already waiting for them.
+  const emails = (await db.select({ email: guardians.email }).from(guardians).where(eq(guardians.familyId, c.familyId))).map((g) => g.email.toLowerCase());
+  const [pending] = emails.length
+    ? await db.select({ id: familyInvites.id }).from(familyInvites).where(and(inArray(familyInvites.email, emails), isNull(familyInvites.usedAt), gt(familyInvites.expiresAt, new Date()))).limit(1)
+    : [];
+  return pending
+    ? `${held} This family hasn’t set up their Family Portal account yet, and the invitation they already have doesn’t mention the hold. Use “Send a new invitation” on the family page and the new one will explain it.`
+    : `${held} This family isn’t in the Family Portal yet. When you invite them, the invitation will explain the hold.`;
+});
+
+/** Email the family about a child's Flex hold that's already in place. */
+export const flexHoldNoticeAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const { resendFlexHoldNotice } = await import("@/lib/ops/families");
+  const r = await resendFlexHoldNotice(db, actor, str("childId"), trustedBaseUrl((await headers()).get("host")));
+  return r.via === "hold_email"
+    ? `Sent. The family has the email explaining the hold.`
+    : `Sent. This family hasn’t set up their Family Portal account yet, so we emailed ${r.email} a new invitation that explains the hold. Any earlier invitation link no longer works.`;
+});
+
+/** Remove a child from the family (kept on record) or restore them. */
+export const childRemovedAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const removed = str("removed") === "1";
+  await setChildRemoved(db, actor, str("childId"), removed);
+  return removed ? "Removed from the family. They no longer appear in the family’s portal or booking." : "Restored to the family.";
+});
+
+/** Delete a child with no history for good, then back to the family page. */
+export const deleteChildAction = adminAction("families.manage", async ({ db, actor, str }) => {
+  const r = await deleteChild(db, actor, str("childId"));
+  redirect(`/admin/families/${r.familyId}`);
 });

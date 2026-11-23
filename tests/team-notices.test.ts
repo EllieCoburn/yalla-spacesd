@@ -177,3 +177,28 @@ describe("Flex: a second grown-up coworking", () => {
     expect(adult[0].unitCents).toBe(2500);
   });
 });
+
+describe("Money in team emails", () => {
+  it("cancellation amounts go only to team members with billing permission", async () => {
+    const { notifyTeamOfCancellation } = await import("@/lib/ops/staff-notices");
+    const { topicForProgram, seesMoney } = await import("@/lib/ops/team-notices");
+    const camp = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    const sess = await session(camp.id, { capacity: 4 });
+    const f = await family("Money");
+    const b = await book(sess.id, f.children[0].id, f.family.id);
+    const items = await db().select().from(s.bookingItems).where(eq(s.bookingItems.bookingId, b.id));
+    const topic = topicForProgram(camp);
+    const biller = await person("biller@yalla.test", "billing");
+    const educator = await person("educator@yalla.test", "educator");
+    for (const u of [biller, educator]) await setStaffNotices(db(), owner, u.id, { notices: [topic], flexCohorts: [] });
+    expect([...(await seesMoney(db(), ["biller@yalla.test", "educator@yalla.test"]))]).toEqual(["biller@yalla.test"]);
+
+    await notifyTeamOfCancellation(db(), { bookingId: b.id, itemIds: items.map((i) => i.id), actor: owner, money: "Returned to their wallet.", walletCents: 16000 });
+    const mail = await sent("staff_booking_cancelled");
+    const to = (e: string) => mail.find((m) => m.toAddress === e)!;
+    expect(to("biller@yalla.test").body).toContain("$160");
+    expect(to("educator@yalla.test").body).not.toContain("$");
+    expect(to("educator@yalla.test").body).toContain("Camp Yalla");
+  });
+});
+

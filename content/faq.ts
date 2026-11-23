@@ -105,7 +105,7 @@ export const DEFAULT_FAQS: Faq[] = [
     status: "published",
     question: "How do I schedule a tour?",
     answer:
-      "Request a time on our [Book a tour](/book-a-tour) page. Visits are by appointment, and your tour guide will meet you in the front lobby at the time of your tour.\n\nFor Club Yalla, families begin with an [application](/apply). Applications are accepted year-round, first come, first served, depending on cohort availability, and we’ll reach out to invite you to tour and ask us anything.",
+      "Request a time on our [Book a tour](/book-a-tour) page. Visits are by appointment. To protect the privacy of enrolled children, we typically schedule tours at 4:30pm, at the end of our program day, so you can see the rhythm of the space, meet our educators and connect with families as they wrap up their day. Your tour guide will meet you in the front lobby at the time of your tour.\n\nFor Club Yalla, families begin with an [application](/apply). Applications are accepted year-round, first come, first served, depending on cohort availability, and we’ll reach out to invite you to tour and ask us anything.",
   },
   {
     id: "what-is-portal",

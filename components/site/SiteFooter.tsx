@@ -69,7 +69,7 @@ export function SiteFooter() {
                 <br />
                 San Diego, CA 92103
               </p>
-              <p className="mt-4 text-chalk/90">Visits by appointment or reservation only</p>
+              <p className="mt-4 font-semibold text-chalk">Visits by appointment or reservation only</p>
               <p className="mt-4">
                 <a href="tel:+16197754008" className="link-underline">
                   619.775.4008

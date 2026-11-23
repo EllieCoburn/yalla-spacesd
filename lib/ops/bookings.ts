@@ -22,6 +22,7 @@ import {
   children,
   families,
   guardians,
+  invoiceLines,
   invoices,
   locations,
   payments,
@@ -31,17 +32,18 @@ import {
   waitlistEntries,
 } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
-import { activeProvider } from "@/lib/payments/provider";
+import { activeProvider, providerFor } from "@/lib/payments/provider";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd, type LineInput } from "./billing";
-import { availabilityFor, lockSessions, publicState } from "./capacity";
+import { availabilityFor, lockSessions, occupancyFor, publicState } from "./capacity";
 import { blockingPaperwork } from "./forms";
 import { getPolicy } from "./settings";
-import { couponLine } from "./coupons";
+import { couponLine, couponPrograms } from "./coupons";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
+import { flexEligibility } from "@/lib/booking/flex-hold";
 import { FAMILY_RATE, familyRateKey, familyRateTotal } from "@/lib/booking/family-rate";
-import { addonsFor, validAddons } from "@/lib/booking/addons";
-import { flexGroupFor } from "@/lib/booking/flex";
+import { addonsFor, childDay, validAddons } from "@/lib/booking/addons";
+import { FLEX_SLUG, flexGroupFor } from "@/lib/booking/flex";
 import { earlyBirdByDate } from "./flex";
 import { captureForBooking, eligibleSessionIds, releaseExpiredReservations, releaseForBooking, reserveForBooking, walletSummary } from "@/lib/playpass/wallet";
 import { bookingStatusPath } from "@/lib/links";
@@ -117,6 +119,10 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
   const childrenById = new Map(kidRows.map((c) => [c.id, c]));
   const spotsBySession = new Map<string, number>();
 
+  // Children booked or being paid for, per session (for the ahead-of-time Full rule on Camp and Happenings).
+  const occupiedNow = new Map<string, number>();
+  if (opts.source === "public" && sessionsById.size)
+    for (const [id, o] of await occupancyFor(db, [...sessionsById.keys()], opts.now)) occupiedNow.set(id, o.booked + o.held);
   for (const it of items) {
     const s = sessionsById.get(it.sessionId);
     if (!s) {
@@ -128,7 +134,8 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
     if (s.status !== "scheduled") problems.push({ sessionId: s.id, code: "not_offered", message: `${label} is ${s.status === "cancelled" ? "cancelled" : "closed"}.` });
     if (s.endsAt <= opts.now) problems.push({ sessionId: s.id, code: "past", message: `${label} has already happened.` });
     if (opts.source === "public") {
-      const st = publicState(s, p, 1, opts.now);
+      const st = publicState(s, p, 1, opts.now, occupiedNow.get(s.id) ?? 0);
+      if (st.state === "full") problems.push({ sessionId: s.id, code: "capacity", message: `${label} is now full. You can join the waitlist.` });
       if (st.state === "closed" || st.state === "not_offered")
         problems.push({ sessionId: s.id, code: "closed", message: `${label}: ${st.state === "closed" ? st.reason : "not offered"}.` });
       if (p.bookingMode === "enroll" || p.bookingMode === "inquire")
@@ -145,13 +152,18 @@ async function prepare(db: Executor, familyId: string, items: ItemRequest[], opt
 
     if (it.childId) {
       const c = childrenById.get(it.childId);
-      if (!c || c.familyId !== familyId) {
+      if (!c || c.familyId !== familyId || c.status !== "active") {
         problems.push({ sessionId: s.id, childId: it.childId, code: "child_invalid", message: "That child isn’t part of this family." });
         continue;
       }
       const age = ageInMonths(c.birthDate, s.localDate);
       const name = c.preferredName || c.firstName;
-      if (!ageFits(age, sessionAges(s, p)))
+      // Yalla Flex cohort holds (lib/booking/flex-hold.ts): a held child books their held cohort only.
+      // Staff booking for a family may still place a held child elsewhere; families can't.
+      const elig = flexEligibility({ isFlex: p.slug === FLEX_SLUG, minAge: s.minAgeMonths, ages: sessionAges(s, p), age, hold: c.flexHold });
+      if (!elig.ok && elig.reason === "held_elsewhere" && opts.source === "public")
+        problems.push({ sessionId: s.id, childId: c.id, code: "flex_hold", message: `${name} is staying in ${elig.heldIn} for Yalla Flex for now, so ${s.title ?? p.name} isn’t available. Book ${elig.heldIn} days, or ask us when ${name} is ready to move up.` });
+      else if (!elig.ok && (elig.reason === "age" || !ageFits(age, sessionAges(s, p))))
         problems.push({ sessionId: s.id, childId: c.id, code: "age", message: `${name} will be ${age} months old on ${fmtDate(s.localDate)}, outside the age range for ${s.title ?? p.name}.` });
       if (s.cohortId && c.cohortId && c.cohortId !== s.cohortId && p.kind !== "drop_in")
         problems.push({ sessionId: s.id, childId: c.id, code: "cohort", message: `${name} is assigned to a different cohort than this session.` });
@@ -429,9 +441,23 @@ function familyRateLines(rows: Awaited<ReturnType<typeof bookingLines>>): LineIn
 }
 
 export function describeLine(r: { program: ProgramRow; session: SessionRow; child: { firstName: string; preferredName: string | null } | null; item?: { addons: string[] } | null }) {
-  const short = addonsFor(r.program.kind, r.program.slug).find((a) => a.endsAfterStartMinutes && r.item?.addons.includes(a.key));
-  const end = short ? new Date(r.session.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : r.session.endsAt;
-  return `${r.program.name}${short ? ` (${short.label.toLowerCase()})` : ""} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(r.session.startsAt)}–${fmtTime(end)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
+  const day = childDay(r.program, r.session, r.item?.addons);
+  return `${r.program.name}${day.label ? ` (${day.label.toLowerCase()})` : ""} · ${fmtDate(r.session.localDate, "EEE d MMM")} ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${r.child ? ` · ${r.child.preferredName || r.child.firstName}` : ""}`;
+}
+
+/**
+ * The hours for a group of children on one session: "8:30am–12:00pm · Half day" when they all have
+ * the same day, otherwise the session's hours (each child's own day is shown next to their name).
+ */
+function groupHours(group: { program: ProgramRow; session: SessionRow; item: { addons: string[] } }[]) {
+  const days = group.map((r) => childDay(r.program, r.session, r.item.addons));
+  const same = days.every((d) => d.endsAt.getTime() === days[0].endsAt.getTime());
+  const s = group[0].session;
+  return {
+    text: same ? `${fmtTime(days[0].startsAt)}–${fmtTime(days[0].endsAt)}${days[0].label ? ` · ${days[0].label}` : ""}` : `${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`,
+    /** Per child, only when the children's days differ. */
+    childNote: (i: number) => (same ? "" : days[i].label ? ` · ${days[i].label.toLowerCase()} until ${fmtTime(days[i].endsAt)}` : ` · full day`),
+  };
 }
 
 /**
@@ -445,15 +471,34 @@ export async function checkoutLabel(db: Executor, bookingId: string, opts: { wal
   const title = (r: (typeof rows)[number]) => r.session.title ?? r.program.name;
   const children = [...new Set(rows.map((r) => (r.child ? r.child.preferredName || r.child.firstName : null)).filter(Boolean))] as string[];
   const programs = [...new Set(sessionsBooked.map((r) => r.program.name))];
-  const name =
+  // Stripe shows one item for the whole booking ("× 1"), so the name says who it's for and any
+  // sibling or family-rate saving, and the total reads right: "… · 2 children (Ava & Mia) · sibling discount applied".
+  const [inv] = await db
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")))
+    .limit(1);
+  const discountNotes = inv
+    ? await db.select({ description: invoiceLines.description }).from(invoiceLines).where(and(eq(invoiceLines.invoiceId, inv.id), eq(invoiceLines.kind, "discount")))
+    : [];
+  const familyDeal = discountNotes.some((d) => d.description.startsWith("Sibling discount"))
+    ? " · sibling discount applied"
+    : discountNotes.some((d) => d.description.startsWith("Family rate"))
+      ? " · family rate applied"
+      : "";
+  const who = children.length > 1 ? ` · ${children.length} children (${children.join(" & ")})` : "";
+  const base =
     sessionsBooked.length === 1
       ? `${title(sessionsBooked[0])} · ${fmtDate(sessionsBooked[0].session.localDate, "EEE, MMM d")}`
       : programs.length === 1
         ? `${programs[0]} · ${sessionsBooked.length} sessions`
         : `Yalla booking · ${sessionsBooked.length} sessions`;
+  const name = `${base}${who}${familyDeal}`.slice(0, 250);
   const lines = sessionsBooked.map((s) => {
-    const kids = rows.filter((r) => r.session.id === s.session.id && r.child).map((r) => r.child!.preferredName || r.child!.firstName);
-    return `${title(s)}, ${fmtDate(s.session.localDate, "EEE MMM d")} ${fmtTime(s.session.startsAt)}–${fmtTime(s.session.endsAt)}${kids.length ? ` (${kids.join(", ")})` : ""}`;
+    const group = rows.filter((r) => r.session.id === s.session.id);
+    const hours = groupHours(group);
+    const kids = group.filter((r) => r.child).map((r) => r.child!.preferredName || r.child!.firstName);
+    return `${title(s)}, ${fmtDate(s.session.localDate, "EEE MMM d")} ${hours.text}${kids.length ? ` (${kids.join(", ")})` : ""}`;
   });
   const details = [
     lines.join(" · "),
@@ -486,7 +531,8 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
   // A coupon code entered at checkout comes off the sessions it covers.
   if (b.discountId) {
     const [d] = await db.select().from(discounts).where(eq(discounts.id, b.discountId));
-    const eligible = new Set(rows.filter((r) => d && (!d.programId || d.programId === r.program.id)).map((r) => r.item.id));
+    const covered = d ? couponPrograms(d) : null;
+    const eligible = new Set(rows.filter((r) => d && (!covered || covered.includes(r.program.id))).map((r) => r.item.id));
     const line = d ? couponLine(d, lines, eligible) : null;
     if (line) lines.push(line);
   }
@@ -595,10 +641,12 @@ function sessionBlocks(rows: LineRow[], opts: { cancelled?: boolean } = {}) {
   const blocks: string[] = [];
   for (const group of bySession.values()) {
     const s = group[0].session;
-    const short = addonsFor(group[0].program.kind, group[0].program.slug).find((a) => a.endsAfterStartMinutes && group.some((r) => r.item.addons.includes(a.key)));
-    const end = short ? new Date(s.startsAt.getTime() + short.endsAfterStartMinutes! * 60_000) : s.endsAt;
-    blocks.push(`>> ${s.title ?? group[0].program.name}${short ? ` (${short.label.toLowerCase()})` : ""}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(end)}`);
-    const card: string[] = group.map((r) => `${group.length > 1 || opts.cancelled ? "Child" : "Who’s coming"}: ${r.child ? `${r.child.preferredName || r.child.firstName} ${r.child.lastName}` : "Your family"}`);
+    // Each child's own day (a half day ends at 12:00pm); shown once when they're all the same.
+    const hours = groupHours(group);
+    blocks.push(`>> ${s.title ?? group[0].program.name}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${hours.text}`);
+    const card: string[] = group.map(
+      (r, i) => `${group.length > 1 || opts.cancelled ? "Child" : "Who’s coming"}: ${r.child ? `${r.child.preferredName || r.child.firstName} ${r.child.lastName}` : "Your family"}${hours.childNote(i)}`,
+    );
     const extras = [
       ...new Set(
         group.flatMap((r) =>
@@ -645,7 +693,7 @@ async function confirmationVars(db: Executor, bookingId: string) {
   // "Where" opens the address in the family's maps app.
   const address = loc?.address?.trim() || site.address.value || "";
   const placeName = loc?.name ?? "Yalla";
-  const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Childcare & Coworking, ${address}`)})` : placeName;
+  const where = address ? `[${placeName} · ${address}](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Yalla Coworking & Childcare, ${address}`)})` : placeName;
   // Flex and camp have packing lists, in the Family Portal from the moment the booking is confirmed.
   const packing = rows.some((r) => r.program.slug === "yalla-flex" || r.program.kind === "camp")
     ? [`[See what to bring in your Family Portal](${await siteBase()}/portal/what-to-bring)`]
@@ -724,12 +772,15 @@ export async function staffBookingNotice(db: Executor, bookingId: string) {
     const what = s.title ?? group[0].program.name;
     const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
     const short = fmtDate(s.localDate, "MMMM d");
-    blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+    const hours = groupHours(group);
+    blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${hours.text}`);
     blocks.push(
       [
         `Parent: ${who}`,
-        ...group.map((r) =>
-          r.child ? `Child: ${r.child.firstName} ${r.child.lastName} · born ${fmtDate(r.child.birthDate, "MMM d, yyyy")} · ${ageOnDay(r.child.birthDate, s.localDate)}` : "Child: not named",
+        ...group.map((r, i) =>
+          r.child
+            ? `Child: ${r.child.firstName} ${r.child.lastName} · born ${fmtDate(r.child.birthDate, "MMM d, yyyy")} · ${ageOnDay(r.child.birthDate, s.localDate)}${hours.childNote(i)}`
+            : "Child: not named",
         ),
       ].join("\n"),
     );
@@ -832,7 +883,7 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const { sendFlexWelcomes } = await import("./flex-welcome");
       const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
-      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId], bookingId });
+      if (bk) await sendFlexWelcomes(db, { familyIds: [bk.familyId], bookingId, now });
     } catch (e) {
       console.error("[flex welcome failed]", (e as Error).message?.slice(0, 160));
     }
@@ -840,7 +891,7 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
     try {
       const { sendCampWelcomes } = await import("./camp-welcome");
       const [bk] = await db.select({ familyId: bookings.familyId }).from(bookings).where(eq(bookings.id, bookingId));
-      if (bk) await sendCampWelcomes(db, { familyIds: [bk.familyId], bookingId });
+      if (bk) await sendCampWelcomes(db, { familyIds: [bk.familyId], bookingId, now });
     } catch (e) {
       console.error("[camp welcome failed]", (e as Error).message?.slice(0, 160));
     }
@@ -868,8 +919,8 @@ export async function confirmBooking(db: DB, actor: Actor, bookingId: string, op
 }
 
 /** Admin: confirm a booking now and bill later (invoice left open), or with no invoice when free. */
-export async function confirmAdminBooking(db: DB, actor: Actor, bookingId: string, opts: { createInvoice: boolean; notify: boolean }) {
-  const res = await confirmBooking(db, actor, bookingId, { reason: "Confirmed by staff", notify: opts.notify });
+export async function confirmAdminBooking(db: DB, actor: Actor, bookingId: string, opts: { createInvoice: boolean; notify: boolean; now?: Date }) {
+  const res = await confirmBooking(db, actor, bookingId, { reason: "Confirmed by staff", notify: opts.notify, now: opts.now });
   if (res.status === "confirmed" && opts.createInvoice) {
     const existing = await db.select().from(invoices).where(and(eq(invoices.bookingId, bookingId), ne(invoices.status, "void")));
     if (!existing.length) await invoiceForBooking(db, actor, bookingId);
@@ -1089,6 +1140,50 @@ export async function resendConfirmation(db: DB, actor: Actor, bookingId: string
 }
 
 /** Marks lapsed holds as expired (housekeeping; availability already ignores them). */
+/**
+ * A family checking out again: their earlier unpaid website attempts on any of the same sessions are
+ * let go first, so their own first try doesn't hold a spot (or a once-per-family code) against them.
+ * The earlier payment page is closed too, so the same days can't be paid for twice.
+ */
+export async function releaseEarlierAttempts(
+  db: DB,
+  familyId: string,
+  sessionIds: string[],
+  opts: { now?: Date; /** Guests (not signed in): only tries for these same children (first name and birth date). */ children?: { firstName: string; birthDate: string }[] } = {},
+) {
+  const now = opts.now ?? new Date();
+  if (!sessionIds.length) return 0;
+  let open = await db
+    .selectDistinct({ id: bookings.id, childId: bookingItems.childId })
+    .from(bookings)
+    .innerJoin(bookingItems, eq(bookingItems.bookingId, bookings.id))
+    .where(and(eq(bookings.familyId, familyId), eq(bookings.source, "public"), inArray(bookings.status, ["held", "pending_payment"]), inArray(bookingItems.sessionId, sessionIds)));
+  if (opts.children) {
+    const want = opts.children.map((c) => `${c.firstName.trim().toLowerCase()}|${c.birthDate}`);
+    const kids = await db.select({ id: children.id, firstName: children.firstName, birthDate: children.birthDate }).from(children).where(eq(children.familyId, familyId));
+    const ok = new Set(kids.filter((k) => want.includes(`${k.firstName.trim().toLowerCase()}|${k.birthDate}`)).map((k) => k.id));
+    const bad = new Set(open.filter((o) => !o.childId || !ok.has(o.childId)).map((o) => o.id));
+    open = open.filter((o) => !bad.has(o.id));
+  }
+  open = [...new Map(open.map((o) => [o.id, o])).values()];
+  for (const { id } of open) {
+    const [b] = await db
+      .update(bookings)
+      .set({ status: "expired", holdExpiresAt: now, updatedAt: now })
+      .where(and(eq(bookings.id, id), inArray(bookings.status, ["held", "pending_payment"])))
+      .returning({ id: bookings.id });
+    if (!b) continue;
+    await releaseForBooking(db, id);
+    const pays = await db
+      .select({ provider: payments.provider, checkoutRef: payments.checkoutRef })
+      .from(payments)
+      .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+      .where(and(eq(invoices.bookingId, id), eq(payments.status, "pending")));
+    for (const p of pays) if (p.checkoutRef) await providerFor(p.provider).expireCheckout?.(p.checkoutRef);
+  }
+  return open.length;
+}
+
 export async function expireHolds(db: DB, now = new Date()) {
   const expired = await db
     .update(bookings)

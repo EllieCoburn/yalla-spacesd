@@ -16,6 +16,8 @@ import type { Agreement, PublicSession } from "@/lib/ops/public-booking";
 import type { CouponPreview } from "@/lib/ops/coupons";
 import { clearSavedCoupon, savedCoupon } from "@/lib/booking/saved-coupon";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
+import { FLEX_SLUG } from "@/lib/booking/flex";
+import { flexEligibility } from "@/lib/booking/flex-hold";
 import { usd } from "./format";
 import {
   FAMILY_RATE,
@@ -30,6 +32,8 @@ export type SavedChild = {
   lastName: string;
   preferredName: string | null;
   birthDate: string;
+  /** Staff-set Yalla Flex cohort hold (lib/booking/flex-hold.ts). */
+  flexHold?: string | null;
   /** "" = none known, text = details, null = not asked yet. */
   allergies?: string | null;
   medicalNotes?: string | null;
@@ -54,6 +58,7 @@ type ChildDraft = {
   firstName: string;
   lastName: string;
   birthDate: string;
+  flexHold?: string | null;
   /** Known allergies and medications, answered before payment ("no", or "yes" with details). */
   allergyAnswer: "" | "no" | "yes";
   allergies: string;
@@ -124,6 +129,37 @@ function childrenNeeded(sessions: PublicSession[], spots: Record<string, number>
   return fixed.reduce((most, s) => Math.max(most, fixed.filter((o) => overlaps(o, s)).reduce((t, o) => t + (spots[o.id] ?? 1), 0)), 0);
 }
 
+/**
+ * What a guest has typed at checkout (children, care answers and their own details), kept for this
+ * browser tab so closing the panel, adding another day or reloading doesn't lose it. Cleared once
+ * they go to payment. sessionStorage only: it never leaves the device and ends with the tab.
+ */
+const DRAFT_KEY = "yalla.checkout.draft.v1";
+const DRAFT_TTL_MS = 6 * 3600_000;
+type CheckoutDraft = { at: number; kids: ChildDraft[]; adult: { firstName: string; lastName: string; email: string; phone: string } };
+function readDraft(): CheckoutDraft | null {
+  try {
+    const d = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? "null") as CheckoutDraft | null;
+    return d && Date.now() - d.at < DRAFT_TTL_MS && Array.isArray(d.kids) ? d : null;
+  } catch {
+    return null;
+  }
+}
+/** A guest's saved children, or null when there are none to bring back. */
+function draftKids(signedIn: unknown): ChildDraft[] | null {
+  if (signedIn || typeof window === "undefined") return null;
+  const kids = readDraft()?.kids.filter((k) => !k.existingId).map((k) => ({ ...k, include: true })) ?? [];
+  return kids.length ? kids : null;
+}
+function writeDraft(d: Omit<CheckoutDraft, "at"> | null) {
+  try {
+    if (d) window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, at: Date.now() }));
+    else window.sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // Private browsing or storage blocked: checkout still works, it just won't remember.
+  }
+}
+
 export function Checkout({
   sessions,
   guardian: guardianProp,
@@ -182,12 +218,14 @@ export function Checkout({
           firstName: c.preferredName || c.firstName,
           lastName: c.lastName,
           birthDate: c.birthDate,
+          flexHold: c.flexHold ?? null,
           ...careFromSaved(c),
           include: includeChildren.includes(c.id),
         })).concat(
           newChildren.map((c, i): ChildDraft => ({ key: `added-${i + 1}`, existingId: null, firstName: c.firstName, lastName: c.lastName, birthDate: c.birthDate, ...NO_CARE, include: true })),
         )
-      : Array.from({ length: Math.max(1, childrenNeeded(sessions, spots)) }, (_, i) => ({
+      : draftKids(guardianProp) ??
+        Array.from({ length: Math.max(1, childrenNeeded(sessions, spots)) }, (_, i) => ({
           key: `new-${i + 1}`,
           existingId: null,
           firstName: "",
@@ -200,13 +238,25 @@ export function Checkout({
   /** Which child fills each spot, per session (fixed-spot sessions only). */
   const [slots, setSlots] = useState<Record<string, string[]>>({});
   const [assign, setAssign] = useState<Record<string, string[]>>({});
-  const [adult, setAdult] = useState({
-    firstName: guardian?.firstName ?? "",
-    lastName: guardian?.lastName ?? "",
-    email: guardian?.email ?? "",
-    phone: "",
+  const [adult, setAdult] = useState(() => {
+    const draft = !guardian && typeof window !== "undefined" ? readDraft()?.adult : null;
+    return draft ?? {
+      firstName: guardian?.firstName ?? "",
+      lastName: guardian?.lastName ?? "",
+      email: guardian?.email ?? "",
+      phone: "",
+    };
   });
+  // Remember what a guest has typed (see writeDraft).
+  useEffect(() => {
+    if (guardian) return;
+    const typed = kids.filter((k) => !k.existingId && (k.firstName.trim() || k.lastName.trim() || k.birthDate));
+    if (typed.length || adult.firstName || adult.email || adult.phone) writeDraft({ kids: typed, adult });
+  }, [kids, adult, guardian]);
   const [agreements, setAgreements] = useState<Agreement[] | null>(null);
+  /** The agreements couldn't be loaded (a dropped connection, or the site was updated mid-checkout). */
+  const [agreementsFailed, setAgreementsFailed] = useState(false);
+  const [agreementsTry, setAgreementsTry] = useState(0);
   const [signatures, setSignatures] = useState<
     Record<string, { text: string; consent: boolean }>
   >({});
@@ -270,9 +320,15 @@ export function Checkout({
     (k) => !k.existingId && k.include && (k.firstName.trim() || k.lastName.trim() || k.birthDate) && !(k.firstName.trim() && k.lastName.trim() && /^\d{4}-\d{2}-\d{2}$/.test(k.birthDate)),
   );
 
+  /** Closing by the backdrop or Escape asks first once signing has started (drawings can't be kept). */
+  const [confirmClose, setConfirmClose] = useState(false);
+  const signingStarted = () => Object.values(formAnswers).some((a) => Object.values(a ?? {}).some(Boolean)) || Object.values(signatures).some((x) => x.consent || x.text.trim());
+  const requestClose = () => (step === 2 && signingStarted() ? setConfirmClose(true) : onClose());
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
   useEffect(() => {
     document.documentElement.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && requestCloseRef.current();
     window.addEventListener("keydown", onKey);
     return () => {
       document.documentElement.style.overflow = "";
@@ -280,13 +336,9 @@ export function Checkout({
     };
   }, [onClose]);
 
-  const eligible = (s: PublicSession, k: ChildDraft) => {
-    const m = ageInMonths(k.birthDate, s.localDate);
-    return (
-      (s.ages.min == null || m >= s.ages.min) &&
-      (s.ages.max == null || m <= s.ages.max)
-    );
-  };
+  // Age, or for Yalla Flex a staff-set cohort hold (lib/booking/flex-hold.ts).
+  const eligible = (s: PublicSession, k: ChildDraft) =>
+    flexEligibility({ isFlex: s.programSlug === FLEX_SLUG, minAge: s.ages.min, ages: s.ages, age: ageInMonths(k.birthDate, s.localDate), hold: k.flexHold }).ok;
   const isOn = (sid: string, key: string) =>
     spotsOf(sid) > 0
       ? (slots[sid] ?? []).includes(key)
@@ -463,6 +515,7 @@ export function Checkout({
     if (step !== 2) return;
     let current = true;
     setAgreements(null);
+    setAgreementsFailed(false);
     agreementsAction({
       sessionIds: lines.map((l) => l.sessionId),
       children: chosen.map((c) => ({
@@ -471,15 +524,20 @@ export function Checkout({
         firstName: c.firstName,
         birthDate: c.birthDate,
       })),
-    }).then((list) => {
-      if (current) setAgreements(list);
-    });
+    }).then(
+      (list) => {
+        if (current) setAgreements(list);
+      },
+      () => {
+        if (current) setAgreementsFailed(true);
+      },
+    );
     return () => {
       current = false;
     };
     // Refetch once each spot has its child (spots are filled just after this step opens).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, JSON.stringify(lines.map((l) => [l.sessionId, l.childKeys]))]);
+  }, [step, agreementsTry, JSON.stringify(lines.map((l) => [l.sessionId, l.childKeys]))]);
 
   // Online agreements (questions, initials, drawn signature): answers per agreement and child.
   const [formAnswers, setFormAnswers] = useState<Record<string, Answers>>({});
@@ -490,6 +548,20 @@ export function Checkout({
     if (a.fields && !validateAnswers(a.fields, formAnswers[sigKey(a)] ?? {}).ok) return false;
     return s?.consent && (!a.requiresSignature || s.text.trim().length > 1);
   });
+  /** On Review: the first thing still needed before payment, so a greyed-out button explains itself. */
+  const stillNeeded = (): string | null => {
+    if (agreementsFailed && agreements === null) return "The agreements didn’t load. Tap “Try again” above.";
+    if (agreements === null) return null;
+    for (const a of agreements) {
+      if (!a.completableOnline) return `“${a.title}” needs to be completed with Yalla. Please get in touch.`;
+      const problem = agreementProblem(a);
+      if (problem) return problem;
+      const sig = signatures[sigKey(a)];
+      if (a.requiresSignature && !(sig?.text.trim().length > 1)) return "Please type your full name to sign.";
+      if (!sig?.consent) return "Please tick the box to confirm your electronic signature.";
+    }
+    return null;
+  };
   /** The first thing still missing on an online agreement, worded for families. */
   const agreementProblem = (a: Agreement) => {
     if (!a.fields) return null;
@@ -646,7 +718,7 @@ export function Checkout({
     }
     if (!lines.length) return { text: "Your cart is empty. Go back and choose a day." };
     if (slotProblem) return { text: slotProblem };
-    if (agreements === null) return { text: "One moment, loading the agreements…" };
+    if (agreements === null) return { text: agreementsFailed ? "The agreements didn’t load. Tap “Try again” above." : "One moment, loading the agreements…" };
     for (const a of agreements) {
       const k = sigKey(a);
       const sig = signatures[k];
@@ -696,6 +768,7 @@ export function Checkout({
       });
       if (res.ok) {
         if (coupon && couponSaving > 0) clearSavedCoupon();
+        writeDraft(null);
         window.location.href = res.url;
         return;
       }
@@ -716,7 +789,7 @@ export function Checkout({
     >
       <button
         aria-label="Close"
-        onClick={onClose}
+        onClick={requestClose}
         className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
       />
       <div className="relative flex h-full w-full flex-col bg-chalk shadow-2xl sm:max-w-xl">
@@ -728,7 +801,7 @@ export function Checkout({
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-sand"
             aria-label="Close checkout"
           >
@@ -743,7 +816,7 @@ export function Checkout({
           </button>
         </div>
 
-        <div className="flex gap-2 px-6 pt-6 sm:px-10">
+        <div className="flex gap-2 border-b border-line/60 px-6 pt-6 pb-4 sm:border-b-0 sm:px-10 sm:pb-0">
           {steps.map((s, i) => (
             <div key={s} className="flex-1">
               <div
@@ -1409,7 +1482,15 @@ export function Checkout({
               </p>
 
               <div className="mt-10">
-                {agreements === null ? (
+                {agreements === null && agreementsFailed ? (
+                  <div className="border border-oxblood/30 bg-oxblood/5 p-4 text-[0.88rem] text-ink">
+                    <p>We couldn’t load the agreements just now.</p>
+                    <button type="button" onClick={() => setAgreementsTry((n) => n + 1)} className="mt-3 h-10 rounded-full bg-ink px-5 text-[0.85rem] text-chalk hover:bg-blue">
+                      Try again
+                    </button>
+                    <p className="mt-3 text-[0.8rem] text-ink-soft">Still not loading? Refresh the page. Your children and details are saved on this device.</p>
+                  </div>
+                ) : agreements === null ? (
                   <p className="text-[0.88rem] text-ink-soft">
                     Checking required agreements…
                   </p>
@@ -1539,19 +1620,41 @@ export function Checkout({
         </div>
 
         {(() => {
-          // A "what's missing" message follows what's still missing (and goes once it's all done).
+          // Leaving mid-checkout asks first; otherwise a "what's missing" message (after pressing the
+          // button, following what's still missing), a refusal from the server, or the gentle hint.
+          if (confirmClose)
+            return (
+              <div className="border-t border-line bg-paper px-6 py-4 sm:px-10" role="alertdialog" aria-label="Leave checkout?">
+                <p className="text-[0.9rem] text-ink">Leave checkout? Your signature and initials will need to be added again.</p>
+                <div className="mt-3 flex gap-3">
+                  <button type="button" onClick={() => setConfirmClose(false)} className="h-10 rounded-full bg-ink px-5 text-[0.85rem] text-chalk hover:bg-blue">
+                    Keep going
+                  </button>
+                  <button type="button" onClick={onClose} className="h-10 px-3 text-[0.85rem] text-ink-soft hover:text-ink">
+                    Leave
+                  </button>
+                </div>
+              </div>
+            );
           const live = missingShown ? blocker() : null;
           const text = missingShown ? live?.text : error?.text;
           const target = missingShown ? live?.target : null;
-          return text ? (
-          <div role="alert" className="border-t border-oxblood/20 bg-oxblood/[0.06] px-6 py-3 text-[0.88rem] leading-snug text-oxblood sm:px-10">
-            {text}
-            {target ? (
-              <button type="button" onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="ml-2 underline underline-offset-2">
-                Show me
-              </button>
-            ) : null}
-          </div>
+          if (text)
+            return (
+              <div role="alert" className="border-t border-oxblood/20 bg-oxblood/[0.06] px-6 py-3 text-[0.88rem] leading-snug text-oxblood sm:px-10">
+                {text}
+                {target ? (
+                  <button type="button" onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="ml-2 underline underline-offset-2">
+                    Show me
+                  </button>
+                ) : null}
+              </div>
+            );
+          const hint = step === 2 && !canNext && !pending ? stillNeeded() : null;
+          return hint ? (
+            <p className="border-t border-line px-6 py-3 text-[0.82rem] text-oxblood sm:px-10" aria-live="polite">
+              {hint}
+            </p>
           ) : null;
         })()}
         <div className="flex items-center justify-between gap-3 border-t border-line px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-10">

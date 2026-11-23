@@ -1,3 +1,4 @@
+import { zonedDateTime } from "@/lib/time";
 /**
  * Yalla Flex fills vacancies in Yalla's core cohorts. Each weekday has one session per age group,
  * and every group is full until staff release a spot (Admin → Yalla Flex), for an absence or an
@@ -7,9 +8,9 @@
 export type FlexGroup = { key: string; cohort: string; label: string; minAge: number; maxAge: number; fullCents: number; halfCents: number };
 
 export const FLEX_GROUPS: FlexGroup[] = [
-  { key: "seedlings", cohort: "Seedlings", label: "4 – 12 months", minAge: 4, maxAge: 11, fullCents: 18000, halfCents: 9000 },
-  { key: "saplings", cohort: "Saplings", label: "12 – 20 months", minAge: 12, maxAge: 19, fullCents: 16000, halfCents: 8000 },
-  { key: "sprouts", cohort: "Sprouts", label: "20 – 35 months", minAge: 20, maxAge: 35, fullCents: 15000, halfCents: 7500 },
+  { key: "seedlings", cohort: "Seedlings", label: "4 – 14 months", minAge: 4, maxAge: 13, fullCents: 18000, halfCents: 9000 },
+  { key: "saplings", cohort: "Saplings", label: "14 – 23 months", minAge: 14, maxAge: 23, fullCents: 16000, halfCents: 8000 },
+  { key: "sprouts", cohort: "Sprouts", label: "24 – 35 months", minAge: 24, maxAge: 35, fullCents: 15000, halfCents: 7500 },
   { key: "wildflowers", cohort: "Wildflowers", label: "3 – 4 years", minAge: 36, maxAge: 59, fullCents: 15000, halfCents: 7500 },
 ];
 
@@ -23,7 +24,14 @@ export const EARLY_BIRD = "early";
 export const EARLY_BIRD_MIN_AGE = 12;
 
 /** The age group a Flex session belongs to, by its youngest age. */
-export const flexGroupFor = (minAgeMonths: number | null | undefined) => FLEX_GROUPS.find((g) => g.minAge === minAgeMonths) ?? null;
+/**
+ * Before November 2026 the groups were 4–11, 12–19, 20–35 and 36–59 months. Past sessions keep the
+ * starting ages they ran with, so those still map to the right group (history, receipts, reports).
+ */
+const LEGACY_MIN_AGE: Record<number, string> = { 12: "saplings", 20: "sprouts" };
+
+export const flexGroupFor = (minAgeMonths: number | null | undefined) =>
+  FLEX_GROUPS.find((g) => g.minAge === minAgeMonths) ?? (minAgeMonths != null && LEGACY_MIN_AGE[minAgeMonths] ? FLEX_GROUPS.find((g) => g.key === LEGACY_MIN_AGE[minAgeMonths]) ?? null : null);
 
 export const flexTitle = (g: FlexGroup) => `Yalla Flex · ${g.label}`;
 
@@ -49,4 +57,9 @@ export function parseWeekly(raw: unknown): WeeklyVacancies {
     });
   }
   return out;
+}
+
+/** A Yalla Flex day's hours as instants (Pacific time), for "starts / in session / ended" labels. */
+export function flexDayWindow(localDate: string) {
+  return { startsAt: zonedDateTime(localDate, FLEX_HOURS.start), endsAt: zonedDateTime(localDate, FLEX_HOURS.end) };
 }

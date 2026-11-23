@@ -13,7 +13,7 @@ import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   title: "About Yalla",
-  description: "The story, values and people behind Yalla Childcare & Coworking in Bankers Hill, San Diego.",
+  description: "The story, values and people behind Yalla Coworking & Childcare in Bankers Hill, San Diego.",
 };
 
 const values = [
@@ -87,19 +87,19 @@ export default function AboutPage() {
               {
                 title: "Room to explore, indoors and out",
                 body: "From art and sensory experiences to movement, imaginative play, and outdoor exploration, Yalla offers children opportunities to engage with the world in meaningful ways. Our indoor and outdoor spaces support a wide range of experiences, with activities and environments thoughtfully adapted to the ages, interests, and needs of each group.",
-                img: { src: "/photos/park-lawn.jpg", alt: "The wide lawns of Balboa Park, a short stroll from Yalla" },
+                img: { src: "/photos/play-garden-trees.jpg", alt: "Yalla’s play garden from above, under sunlit sycamore trees in Bankers Hill", position: "object-[50%_38%]" },
                 shape: "rounded-full",
               },
               {
                 title: "Spaces that bring people together",
                 body: "Yalla was designed with children and families in mind. Alongside our play and learning environments, our space includes comfortable coworking areas, private offices, and shared gathering spaces. How families use these spaces varies by program, but each is part of our broader commitment to making Yalla a welcoming and versatile community resource.",
-                img: { src: "/photos/cowork-loft.jpg", alt: "The balcony looking down over the long shared table in the coworking space" },
+                img: { src: "/photos/lounge.jpg", alt: "The lounge at Yalla: a pale blue sofa, two green velvet chairs and a vase of white tulips", position: "object-[50%_62%]" },
                 shape: "rounded-full",
               },
             ].map((c, i) => (
               <Reveal key={c.title} delay={i * 90}>
                 <div className={`relative aspect-square overflow-hidden bg-sand ${c.shape}`}>
-                  <Image src={c.img.src} alt={c.img.alt} fill sizes="(min-width:768px) 30vw, 90vw" className="object-cover" />
+                  <Image src={c.img.src} alt={c.img.alt} fill sizes="(min-width:768px) 30vw, 90vw" className={`object-cover ${"position" in c.img ? c.img.position : ""}`} />
                 </div>
                 <h3 className="display mt-8 text-[1.7rem]">{c.title}</h3>
                 <p className="mt-3 text-ink-soft">{c.body}</p>

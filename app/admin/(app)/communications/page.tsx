@@ -17,6 +17,9 @@ const relatedHref = (type: string | null, id: string | null) =>
 
 export default async function CommunicationsPage({ searchParams }: { searchParams: Promise<{ tab?: string; template?: string; status?: string; q?: string; from?: string; to?: string; m?: string }> }) {
   const staff = await requirePermission("communications.view");
+  // Amounts in family emails (receipts, payment requests, refunds) are only shown with billing permission.
+  const seeMoney = can(staff, "billing.view");
+  const hideMoney = (t: string | null) => (seeMoney || !t ? t : t.replace(/[−-]?\$\s?\d[\d,]*(?:\.\d{1,2})?/g, "$•••"));
   const sp = await searchParams;
   const tab = sp.tab === "templates" || sp.tab === "send" ? sp.tab : "history";
   const db = getDb();
@@ -163,7 +166,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
                   <td>{f?.name ?? <span className="text-ink-soft">Staff</span>}</td>
                   <td className="max-w-[18rem]">
                     <Link href={qs({ m: m.id })} className="block truncate text-ink hover:text-blue">
-                      {m.subject}
+                      {hideMoney(m.subject)}
                     </Link>
                     <span className="text-[0.72rem] text-ink-soft">{m.templateKey ? DEFAULT_TEMPLATES[m.templateKey as TemplateKey]?.name : "Custom"}</span>
                   </td>
@@ -208,8 +211,8 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
               ) : null}
             </dl>
             <div className="mt-4 rounded-lg border border-ink/10 bg-white">
-              <p className="border-b border-ink/8 px-4 py-2.5 text-[0.9rem] font-medium">{selected.m.subject}</p>
-              <pre className="px-4 py-3 font-sans text-[0.85rem] leading-relaxed whitespace-pre-wrap">{selected.m.body}</pre>
+              <p className="border-b border-ink/8 px-4 py-2.5 text-[0.9rem] font-medium">{hideMoney(selected.m.subject)}</p>
+              <pre className="px-4 py-3 font-sans text-[0.85rem] leading-relaxed whitespace-pre-wrap">{hideMoney(selected.m.body)}</pre>
             </div>
           </Card>
         ) : null}

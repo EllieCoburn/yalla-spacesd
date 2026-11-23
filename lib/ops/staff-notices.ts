@@ -9,9 +9,10 @@ import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, guardians, programs, sessions, spaceReservationGroups, spaceReservations, workspaces } from "@/lib/db/schema";
 import { notifyStaff } from "@/lib/notify";
 import { trustedBaseUrl } from "@/lib/base-url";
+import { childDay } from "@/lib/booking/addons";
 import { fmtDate, fmtTime } from "@/lib/time";
 import { availabilityFor } from "./capacity";
-import { notifyCohortsOfCancelledDropIns, teamRecipients, topicForProgram, type NoticeTopic } from "./team-notices";
+import { notifyCohortsOfCancelledDropIns, seesMoney, teamRecipients, topicForProgram, type NoticeTopic } from "./team-notices";
 
 const dollars = (c: number) => "$" + (c / 100).toFixed(2);
 
@@ -24,8 +25,17 @@ async function parentName(db: Executor, familyId: string) {
   return g ? `${g.firstName} ${g.lastName}` : "A family";
 }
 
-async function send(db: Executor, topics: NoticeTopic[], vars: { summary: string; details: string; reference: string; link: string }, related: { type: string; id: string }) {
-  for (const to of await teamRecipients(db, topics)) await notifyStaff(db, { key: "staff_booking_cancelled", to, vars, relatedType: related.type, relatedId: related.id });
+async function send(
+  db: Executor,
+  topics: NoticeTopic[],
+  vars: { summary: string; details: string; reference: string; link: string },
+  related: { type: string; id: string },
+  /** The same details without amounts, for team members without billing permission. */
+  detailsNoMoney?: string,
+) {
+  const to = await teamRecipients(db, topics);
+  const money = detailsNoMoney ? await seesMoney(db, to) : new Set(to);
+  for (const e of to) await notifyStaff(db, { key: "staff_booking_cancelled", to: e, vars: money.has(e) ? vars : { ...vars, details: detailsNoMoney! }, relatedType: related.type, relatedId: related.id });
 }
 
 /** A care booking (or some of its days) was cancelled. `money` says what happened to what they paid. */
@@ -53,19 +63,24 @@ export async function notifyTeamOfCancellation(db: Executor, input: { bookingId:
       const s = group[0].session;
       const what = s.title ?? group[0].program.name;
       const left = Math.max(0, avail.get(s.id)?.remaining ?? 0);
-      blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(s.endsAt)}`);
+      const days = group.map((r) => childDay(r.program, r.session, r.item.addons));
+      const same = days.every((d) => d.endsAt.getTime() === days[0].endsAt.getTime());
+      blocks.push(`>> ${what}\n${fmtDate(s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(s.startsAt)}–${fmtTime(same ? days[0].endsAt : s.endsAt)}${same && days[0].label ? ` · ${days[0].label}` : ""}`);
       blocks.push([`Parent: ${parent}`, ...group.map((r) => `Child: ${r.child ? `${r.child.firstName} ${r.child.lastName}` : "not named"}`)].join("\n"));
       blocks.push(`!! ${left} | ${left === 1 ? "spot" : "spots"} now open in that age group for ${fmtDate(s.localDate, "MMMM d")}`);
     }
+    const moneyAt = blocks.length;
     blocks.push(input.walletCents ? `!! ${dollars(input.walletCents)} | returned to their Yalla Wallet` : `~~ ${input.money}`);
     blocks.push(`Cancelled by: ${input.actor.type === "staff" ? `${input.actor.name} (Team Yalla)` : `${parent} in the Family Portal`}\nReference: ${b.reference}`);
     const details = blocks.join("\n\n");
+    const detailsNoMoney = blocks.filter((_, i) => i !== moneyAt).join("\n\n");
     const first = [...bySession.values()][0][0];
     await send(
       db,
       [...new Set(rows.map((r) => topicForProgram(r.program)))],
       { summary: `${parent} · ${first.session.title ?? first.program.name} · ${fmtDate(first.session.localDate, "MMM d")}${bySession.size > 1 ? ` + ${bySession.size - 1} more` : ""}`, details, reference: b.reference, link: `${trustedBaseUrl()}/admin/bookings/${b.id}` },
       { type: "booking", id: b.id },
+      detailsNoMoney,
     );
   } catch (e) {
     console.error("[staff cancellation email failed]", (e as Error).message?.slice(0, 160));
@@ -86,7 +101,8 @@ export async function notifyTeamOfSpaceCancellation(db: Executor, input: { group
       `Parent: ${parent}\nCancelled by: ${input.actor.type === "staff" ? `${input.actor.name} (Team Yalla)` : `${parent} in the Family Portal`}\nReference: ${g.reference}`,
       `~~ ${input.money} ${ws?.name ?? "The space"} is free again for that time.`,
     ].join("\n\n");
-    await send(db, ["spaces"], { summary: `${parent} · ${ws?.name ?? "Workspace"}${first ? ` · ${fmtDate(first.localDate, "MMM d")}` : ""}`, details, reference: g.reference, link: `${trustedBaseUrl()}/admin/spaces/${g.id}` }, { type: "space_reservation", id: g.id });
+    const detailsNoMoney = details.replace(`~~ ${input.money} `, "~~ ");
+    await send(db, ["spaces"], { summary: `${parent} · ${ws?.name ?? "Workspace"}${first ? ` · ${fmtDate(first.localDate, "MMM d")}` : ""}`, details, reference: g.reference, link: `${trustedBaseUrl()}/admin/spaces/${g.id}` }, { type: "space_reservation", id: g.id }, detailsNoMoney);
   } catch (e) {
     console.error("[staff space cancellation email failed]", (e as Error).message?.slice(0, 160));
   }

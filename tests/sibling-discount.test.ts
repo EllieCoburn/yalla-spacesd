@@ -71,4 +71,18 @@ describe("Camp availability wording", () => {
     expect(st(roomy.id)).toEqual({ state: "available", remaining: null });
     expect(st(tight.id)).toEqual({ state: "limited", remaining: 0, showCount: false });
   });
+
+  it("the payment page names both children and the sibling discount, so one $304 item reads right", async () => {
+    const { checkoutLabel } = await import("@/lib/ops/bookings");
+    const p = await program({ kind: "camp", name: "Camp Yalla", priceCents: 16000, minAgeMonths: 18, maxAgeMonths: 47 });
+    const day = await session(p.id, { minAgeMonths: 18, maxAgeMonths: 47, capacity: 8, title: "Camp Yalla · 18 months – 3 years" }, 10, "09:00", "15:00");
+    const { family: f, children } = await family("Twins", [
+      { first: "Ava", birth: addDaysISO(todayLA(), -365 * 2) },
+      { first: "Mia", birth: addDaysISO(todayLA(), -365 * 2) },
+    ]);
+    const hold = await createHold(db(), owner, { familyId: f.id, items: children.map((c) => ({ sessionId: day.id, childId: c.id })), source: "admin", acknowledgePaperwork: true });
+    await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: true, notify: false });
+    const { name } = await checkoutLabel(db(), hold.booking.id);
+    expect(name).toMatch(/^Camp Yalla · 18 months – 3 years · .+ · 2 children \(Ava & Mia\) · sibling discount applied$/);
+  });
 });

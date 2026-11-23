@@ -12,7 +12,8 @@
  * What a guardian can see follows their own flags (billing, sensitive care information).
  * Cookie handling lives in app/(site)/portal/session.ts.
  */
-import { and, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { flexHoldName, heldParagraph } from "@/lib/booking/flex-hold";
+import { and, desc, eq, gt, inArray, isNull, ne, sql, isNotNull } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/lib/auth/crypto";
 import { addChild, createFamily, phoneProblem } from "@/lib/ops/families";
@@ -21,7 +22,7 @@ import { bookings, children, families, familyAuthTokens, familyInvites, familySe
 import { validLinkKey } from "@/lib/links";
 import { notificationsMode, notifyFamily, notifyStaff } from "@/lib/notify";
 import { teamRecipients } from "@/lib/ops/team-notices";
-import { fmtDate } from "@/lib/time";
+import { fmtDate, todayLA } from "@/lib/time";
 import { allow } from "@/lib/rate-limit";
 
 export const FAMILY_LINK_MS = 20 * 60 * 1000;
@@ -201,9 +202,20 @@ export async function inviteDetails(db: Executor, token: string) {
  */
 export async function inviteToPortal(db: DB, actor: Actor, input: { email: string; name?: string; enquiryId?: string | null }, baseUrl: string) {
   const { email, name, existing, link } = await createInvite(db, actor, input, baseUrl);
-  await notifyStaff(db, { key: "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link }, relatedType: "invite", relatedId: existing?.familyId });
+  // A family Team Yalla added in Admin gets the "added you" email; anyone else, the general invitation.
+  // Each child held in a Yalla Flex cohort gets a paragraph explaining the hold.
+  const held = existing?.familyId
+    ? (await db.select({ first: children.firstName, preferred: children.preferredName, hold: children.flexHold }).from(children).where(and(eq(children.familyId, existing.familyId), isNotNull(children.flexHold)))).map((c) => ({ name: c.preferred || c.first, cohort: flexHoldName(c.hold) }))
+    : [];
+  const held_note = held.map((h) => heldParagraph(h.name, h.cohort ?? "")).join("");
+  await notifyStaff(db, { key: existing ? "family_added" : "family_invite", to: email, vars: { name: name.split(" ")[0] || "there", link, held_note }, relatedType: "invite", relatedId: existing?.familyId });
   await audit(db, actor, { action: "family.invited", entityType: existing ? "family" : "enquiry", entityId: existing?.familyId ?? input.enquiryId ?? email, summary: `Invited ${email} to create a Family Portal account` });
   return { email, devLink: notificationsMode() === "test" && process.env.NODE_ENV !== "production" ? link : undefined };
+}
+
+/** A Family Portal setup link for a family who joined a waitlist (works once, for 30 days). Sends nothing. */
+export async function waitlistSetupLink(db: Executor, actor: Actor, input: { email: string; name: string }, baseUrl: string) {
+  return (await createInvite(db, actor, { ...input, ttlMs: 30 * 24 * 3600 * 1000 }, baseUrl)).link;
 }
 
 /** Makes a single-use invitation link (replacing any unused one for that email); doesn't send it. */
@@ -272,7 +284,7 @@ export async function registerFamilyAccount(db: DB, input: NewAccount & { invite
   const problem = familyPasswordProblem(input.password);
   if (problem) throw new OpsError("invalid", problem);
   const kids = input.children.filter((c) => c.firstName.trim() || c.lastName?.trim() || c.birthDate);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLA();
   for (const c of kids) {
     if (!c.firstName.trim() || !c.lastName?.trim() || !DATE.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
     if (c.birthDate > today) throw new OpsError("invalid", `${c.firstName.trim()}’s date of birth is in the future.`);

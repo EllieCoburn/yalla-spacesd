@@ -30,18 +30,20 @@ import {
   refunds,
   scheduleSeries,
   sessions,
+  messages,
+  waitlistEntries,
 } from "@/lib/db/schema";
 import { requestMagicLink, guardianActor, type GuardianContext } from "@/lib/family-auth";
 import { activeProvider } from "@/lib/payments/provider";
-import { ageInMonths, fmtDate } from "@/lib/time";
+import { ageInMonths, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { invoiceTotals, familyLedger, refundPayment, usd } from "./billing";
 import { getPolicy } from "./settings";
 import { notifyFamily } from "@/lib/notify";
-import { addonsFor } from "@/lib/booking/addons";
+import { addonsFor, childDay } from "@/lib/booking/addons";
 import { heldReservation } from "@/lib/playpass/wallet";
 import { itemValue, returnPaid } from "./credits";
 import { findCoupon } from "./coupons";
-import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, startCheckout } from "./bookings";
+import { bookingConfirmationVars, bookingLines, cancelBooking, checkoutLabel, createHold, describeLine, releaseEarlierAttempts, startCheckout } from "./bookings";
 import { availabilityFor, publicState, type PublicState } from "./capacity";
 import { addChild, CARE_REQUIRED, careAnswered, careValid, createFamily, findGuardianByEmail, phoneProblem, recordCareAnswers, updateChild } from "./families";
 import { applicableTemplates, effectiveFields, paperworkStatus, submitForm, type PaperworkItem } from "./forms";
@@ -49,7 +51,8 @@ import type { Answers, FormField } from "@/lib/forms/fields";
 import { joinWaitlist } from "./waitlist";
 import { submitEnquiry } from "./enquiries";
 import { topicForProgram } from "./team-notices";
-import { flexGroupFor } from "@/lib/booking/flex";
+import { FLEX_SLUG, HALF_DAY, flexGroupFor } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { earlyBirdByDate } from "./flex";
 import { ageFits, sessionAges } from "@/lib/booking/ages";
 import { bookingStatusPath } from "@/lib/links";
@@ -177,7 +180,7 @@ export async function listPublicSessions(db: Executor, q: { from: string; to: st
       localDate: s.localDate,
       startsAt: s.startsAt.toISOString(),
       endsAt: s.endsAt.toISOString(),
-      state: withoutCounts(publicState(s, p, remaining, now)),
+      state: withoutCounts(publicState(s, p, remaining, now, (avail.get(s.id)?.occupancy.booked ?? 0) + (avail.get(s.id)?.occupancy.held ?? 0))),
       priceCents: pickPrice(s, p, table),
       halfPriceCents: p.kind === "drop_in" ? (flexGroupFor(s.minAgeMonths)?.halfCents ?? null) : null,
       closure,
@@ -253,7 +256,7 @@ export async function previewAgreements(db: Executor, input: { familyId?: string
   if (!blockingTemplates.size) return [];
   // Per-child forms narrowed by age (e.g. one Flex agreement per age group) apply only to children who
   // fit. Saved children are checked against their record; new children by the birth date entered.
-  const today = firstDay ?? new Date().toISOString().slice(0, 10);
+  const today = firstDay ?? todayLA();
   const forChild = (templateId: string, c: ChildRef) =>
     reqs
       .filter((r) => r.t.id === templateId)
@@ -384,6 +387,17 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   // Every child's known allergies and medications are asked before payment.
   if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
     return { ok: false, code: "care", error: CARE_REQUIRED };
+  // A family trying again (back from the payment page): their own earlier unpaid attempt at these days
+  // is let go first, so it doesn't count against them in the checks below. Guests are matched by email,
+  // only on a family record with no portal account (anyone with an account signs in instead).
+  const returning = input.signedIn?.familyId ?? (await (async () => {
+    const g = await findGuardianByEmail(db, input.guardian.email.trim().toLowerCase());
+    return g && !g.portalAccess && !g.passwordHash ? g.familyId : null;
+  })());
+  if (returning)
+    await releaseEarlierAttempts(db, returning, (await Promise.all(lines.map((l) => expandSeries(db, [l.sessionId])))).flat(), {
+      children: input.signedIn ? undefined : input.children.map((c) => ({ firstName: c.firstName, birthDate: c.birthDate })),
+    });
   // A coupon is checked before anything is created, so a bad code books nothing.
   let couponId: string | null = null;
   if (input.couponCode?.trim()) {
@@ -516,6 +530,11 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
       );
     }
 
+    // The family's own earlier unpaid attempt at these days (they came back from the payment page and
+    // started again) is let go, so it doesn't hold the spot or the code against them.
+    await releaseEarlierAttempts(db, familyId, items.map((i) => i.sessionId), {
+      children: input.signedIn ? undefined : input.children.map((c) => ({ firstName: c.firstName, birthDate: c.birthDate })),
+    });
     // A once-per-family code is checked again now that the family is known (guests too).
     if (couponId && input.couponCode) await findCoupon(db, input.couponCode, items.map((i) => i.sessionId), { familyId });
 
@@ -533,7 +552,15 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         );
     if (couponId) await db.update(bookings).set({ discountId: couponId }).where(eq(bookings.id, hold.booking.id));
     if (hold.booking.status === "requested") return { ok: true, url: `${input.baseUrl}${bookingStatusPath(hold.booking.reference)}`, reference: hold.booking.reference };
-    const checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
+    let checkout: Awaited<ReturnType<typeof startCheckout>>;
+    try {
+      checkout = await startCheckout(db, actor, hold.booking.id, { base: input.baseUrl });
+    } catch (e) {
+      // The payment page couldn't be opened: let the spots go, so "nothing was booked" is true.
+      console.error("[public booking: checkout failed]", (e as Error).message?.slice(0, 200));
+      await releaseEarlierAttempts(db, familyId, items.map((i) => i.sessionId));
+      throw new OpsError("payment_unavailable", "We couldn’t open the payment page just now, so nothing was booked or charged. Please try again in a moment.");
+    }
     return { ok: true, url: checkout.url, reference: hold.booking.reference };
   } catch (e) {
     if (createdFamily) await removeFreshFamily(db, familyId);
@@ -566,9 +593,10 @@ async function precheck(db: Executor, input: PublicBookingInput): Promise<Public
     rows.map((r) => r.s.id),
   );
   for (const { s, p } of rows) {
-    const st = publicState(s, p, avail.get(s.id)?.remaining ?? 0);
+    const st = publicState(s, p, avail.get(s.id)?.remaining ?? 0, new Date(), (avail.get(s.id)?.occupancy.booked ?? 0) + (avail.get(s.id)?.occupancy.held ?? 0));
     const label = `${p.name} on ${fmtDate(s.localDate)}`;
     if (st.state === "closed" || st.state === "not_offered") return { ok: false, code: "closed", error: `${label}: ${st.state === "closed" ? st.reason : "not offered"}.` };
+    if (st.state === "full") return { ok: false, code: "capacity", error: `${label} is now full. You can join the waitlist.` };
     const n = p.bookingUnit === "per_child" ? (need.get(s.id) ?? 0) : 1;
     const remaining = avail.get(s.id)?.remaining ?? 0;
     if (n > remaining)
@@ -698,7 +726,7 @@ export async function bookingStatusView(db: Executor, reference: string) {
 
 export async function joinPublicWaitlist(
   db: DB,
-  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; sessionId: string; baseUrl: string },
+  input: { signedIn?: GuardianContext | null; guardian: { firstName: string; lastName: string; email: string; phone?: string }; child: { existingId?: string | null; firstName: string; lastName?: string; birthDate: string }; sessionId: string; baseUrl: string; dayLength?: string | null },
 ): Promise<{ ok: true } | { ok: false; code: string; error: string; devLink?: string }> {
   try {
     // Every family on file has a parent's full name, email and phone, and each child's full name and birthday.
@@ -718,6 +746,8 @@ export async function joinPublicWaitlist(
     }
     let familyId: string;
     let actor: Actor;
+    /** No Family Portal account yet (new to Yalla, or only ever waitlisted): they get the welcome email. */
+    let newFamily = false;
     if (input.signedIn) {
       familyId = input.signedIn.familyId;
       actor = guardianActor(input.signedIn);
@@ -726,6 +756,7 @@ export async function joinPublicWaitlist(
       const existing = await findGuardianByEmail(db, email);
       if (existing && !existing.portalAccess && !existing.passwordHash) {
         familyId = existing.familyId;
+        newFamily = true;
         if (input.guardian.phone?.trim()) await db.update(guardians).set({ phone: input.guardian.phone.trim() }).where(eq(guardians.id, existing.id));
         actor = guardianActor({ guardianId: existing.id, firstName: existing.firstName, lastName: existing.lastName });
       } else if (existing) {
@@ -735,6 +766,7 @@ export async function joinPublicWaitlist(
         // Joining a waitlist doesn't open the Family Portal (only a paid booking or an invitation does).
         const created = await createFamily(db, PUBLIC, { guardian: { firstName: input.guardian.firstName, lastName: input.guardian.lastName, email, phone: input.guardian.phone, portalAccess: false } });
         familyId = created.family.id;
+        newFamily = true;
         actor = guardianActor({ guardianId: created.guardian.id, firstName: created.guardian.firstName, lastName: created.guardian.lastName });
       }
     }
@@ -742,11 +774,18 @@ export async function joinPublicWaitlist(
     if (childId) {
       const [c] = await db.select().from(children).where(and(eq(children.id, childId), eq(children.familyId, familyId)));
       if (!c) throw new OpsError("invalid", "That child isn’t part of your family.");
+      // A child held in a Flex cohort can't wait for another cohort's Flex day.
+      if (c.flexHold) {
+        const [ws] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
+        if (ws && ws.p.slug === FLEX_SLUG && flexGroupFor(ws.s.minAgeMonths)?.key !== c.flexHold)
+          throw new OpsError("flex_hold", `${c.preferredName || c.firstName} is staying in ${flexHoldName(c.flexHold)} for Yalla Flex for now. Ask us when they’re ready to move up.`);
+      }
     } else {
       const { child } = await addChild(db, actor, familyId, { firstName: input.child.firstName, lastName: input.child.lastName!.trim(), birthDate: input.child.birthDate });
       childId = child.id;
     }
-    await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId] });
+    const entry = await joinWaitlist(db, actor, { familyId, sessionId: input.sessionId, childIds: [childId], dayLength: input.dayLength });
+    await emailWaitlistJoined(db, { familyId, entryId: entry.id, newFamily, baseUrl: input.baseUrl }).catch((e) => console.error("[waitlist email failed]", (e as Error).message?.slice(0, 120)));
     // Let the team know (Admin → Inbox and email). The waitlist itself is in Admin → Waitlist.
     const [sx] = await db.select({ s: sessions, p: programs }).from(sessions).innerJoin(programs, eq(programs.id, sessions.programId)).where(eq(sessions.id, input.sessionId));
     const [kid] = await db.select().from(children).where(eq(children.id, childId));
@@ -768,6 +807,57 @@ export async function joinPublicWaitlist(
   } catch (e) {
     if (e instanceof OpsError) return { ok: false, code: e.code, error: e.message };
     throw e;
+  }
+}
+
+/**
+ * Tells a family they're on the waitlist. A family new to Yalla (no Family Portal account) gets a warm
+ * welcome with a link to set up their account, once; after that, and for returning families, a short
+ * "you're on the waitlist" note.
+ */
+async function emailWaitlistJoined(db: DB, input: { familyId: string; entryId: string; newFamily: boolean; baseUrl: string }) {
+  const [row] = await db
+    .select({ e: waitlistEntries, s: sessions, p: programs })
+    .from(waitlistEntries)
+    .innerJoin(sessions, eq(sessions.id, waitlistEntries.sessionId))
+    .innerJoin(programs, eq(programs.id, sessions.programId))
+    .where(eq(waitlistEntries.id, input.entryId));
+  if (!row) return;
+  const [g] = await db
+    .select()
+    .from(guardians)
+    .where(and(eq(guardians.familyId, input.familyId), eq(guardians.isPrimary, true)))
+    .limit(1);
+  if (!g) return;
+  const kids = row.e.childIds.length ? await db.select().from(children).where(inArray(children.id, row.e.childIds)) : [];
+  const names = kids.map((k) => (k.preferredName || k.firstName).trim());
+  const isFlex = row.p.slug === FLEX_SLUG;
+  const day = childDay(row.p, row.s, row.e.dayLength === "half" ? [HALF_DAY] : []);
+  const what = row.s.title ?? row.p.name;
+  const details = `>> ${what}\n${fmtDate(row.s.localDate, "EEEE, MMMM d, yyyy")} · ${fmtTime(day.startsAt)}–${fmtTime(day.endsAt)}${day.label ? ` · ${day.label}` : ""}${names.length ? ` · for ${names.join(" and ")}` : ""}`;
+  const how = isFlex
+    ? "If a spot opens, we’ll email you right away with a link to book. Families are offered the spot in the order they joined, and each has 15 minutes to book before the next family is offered it too. Nothing is charged unless you book."
+    : "If a spot opens, we’ll email you right away with a link to book. Spots are offered in the order families joined, and nothing is charged unless you book.";
+  // A short hello written for what they're waiting for (a Flex family wants one good day, not a membership pitch).
+  const welcome_intro =
+    isFlex
+      ? "We’re so glad you found us! Yalla Flex is childcare by the day for the days you need it most: daycare is closed, the nanny is sick, or a deadline won’t wait. Your little one plays in a small group with warm, experienced caregivers while you get work done in our coworking space just down the hall."
+      : row.p.kind === "camp"
+        ? "We’re so glad you found us! Camp Yalla fills the days school and childcare are closed with play, art and time outdoors, in small groups led by warm, experienced caregivers. Early Bird and late stay help it fit around your workday."
+        : "We’re so glad you found us! Yalla Happenings are playful sessions for little ones, from weekend mornings to evenings out for the grown-ups, in small groups led by warm, experienced caregivers.";
+  const vars = { welcome_intro, guardian_first_name: g.firstName, program: row.p.name, date: fmtDate(row.s.localDate, "EEE, MMM d"), child_names: names.join(" and ") || "your family", waitlist_details: details, waitlist_how: how };
+  // The welcome goes once per family: a family who has had it before gets the short note.
+  let welcome = input.newFamily && !g.passwordHash;
+  if (welcome) {
+    const [sent] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.familyId, input.familyId), eq(messages.templateKey, "waitlist_welcome"))).limit(1);
+    if (sent) welcome = false;
+  }
+  if (welcome) {
+    const { waitlistSetupLink } = await import("@/lib/family-auth");
+    const link = await waitlistSetupLink(db, PUBLIC, { email: g.email, name: `${g.firstName} ${g.lastName}` }, input.baseUrl);
+    await notifyFamily(db, { key: "waitlist_welcome", familyId: input.familyId, guardianIds: [g.id], vars: { ...vars, link }, related: { type: "waitlist", id: input.entryId } });
+  } else {
+    await notifyFamily(db, { key: "waitlist_joined", familyId: input.familyId, guardianIds: [g.id], vars, related: { type: "waitlist", id: input.entryId } });
   }
 }
 
@@ -799,7 +889,9 @@ export async function familyPortalData(db: Executor, g: GuardianContext) {
       title: x.s.title ?? x.p.name,
       localDate: x.s.localDate,
       startsAt: x.s.startsAt.toISOString(),
-      endsAt: x.s.endsAt.toISOString(),
+      // The child's own day: a half day ends at 12:00pm.
+      endsAt: childDay(x.p, x.s, x.i.addons).endsAt.toISOString(),
+      dayLabel: childDay(x.p, x.s, x.i.addons).label,
       child: x.i.childId ? (childName.get(x.i.childId) ?? "") : "",
       canCancel: x.i.status === "confirmed" && hoursAhead > 0,
       /** Cancelling now returns what was paid to the Yalla Wallet. */

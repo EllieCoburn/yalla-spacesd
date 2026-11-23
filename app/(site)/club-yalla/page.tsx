@@ -54,7 +54,7 @@ export default function ClubYallaPage() {
           </div>
           <Reveal delay={150} className="lg:col-span-4 lg:col-start-9">
             <div className="relative aspect-[3/4] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src={p.image} alt={p.imageAlt} fill priority sizes="(min-width:1024px) 30vw, 90vw" className="object-cover" />
+              <Image src="/photos/painted-feet.jpg" alt="A toddler in striped pajama pants standing barefoot in bright paint on a drop cloth" fill priority sizes="(min-width:1024px) 30vw, 90vw" className="object-cover" />
             </div>
           </Reveal>
         </div>
@@ -66,14 +66,14 @@ export default function ClubYallaPage() {
       <section className="bg-paper py-20 lg:py-28">
         <div className="shell grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Mark name="roofline" className="h-4 w-auto text-blue" />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-t-[999px] bg-sand">
+              <Image src="/photos/cowork-desk.webp" alt="A quiet desk for two in the coworking space, steps from where children play" fill sizes="(min-width:1024px) 40vw, 90vw" className="object-cover" />
+            </div>
+            <Mark name="roofline" className="mt-10 h-4 w-auto text-blue" />
             <div className="mt-10 space-y-6 text-[1.08rem] text-ink-soft">
               {p.body.map((para) => (
                 <p key={para}>{para}</p>
               ))}
-            </div>
-            <div className="relative mt-12 aspect-[4/3] overflow-hidden rounded-t-[999px] bg-sand">
-              <Image src="/photos/cowork-desk.webp" alt="A quiet desk for two in the coworking space, steps from where children play" fill sizes="(min-width:1024px) 40vw, 90vw" className="object-cover" />
             </div>
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
@@ -131,11 +131,29 @@ export default function ClubYallaPage() {
               return (
                 <Reveal key={c.name} delay={i * 90} className="group">
                   <div className="relative flex aspect-[4/5] items-end justify-center overflow-hidden rounded-t-[999px] bg-mist">
-                    <span className="absolute top-[18%] font-serif text-[0.85rem] text-blue/60 italic">0{i + 1}</span>
-                    <Illustration
-                      title={c.name}
-                      className="mb-[4%] w-[86%] text-blue transition-transform duration-[1.2s] ease-[var(--ease-soft)] group-hover:-translate-y-1.5 group-hover:scale-[1.03]"
-                    />
+                    {c.name === "Seedlings" ? (
+                      // A silent clip of the Seedlings room. The file has no audio track at all, and there are no controls.
+                      <video
+                        src="/video/seedlings.mp4"
+                        poster="/video/seedlings-poster.jpg"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        disablePictureInPicture
+                        aria-label="Seedlings at play"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <span className="absolute top-[18%] font-serif text-[0.85rem] text-blue/60 italic">0{i + 1}</span>
+                        <Illustration
+                          title={c.name}
+                          className="mb-[4%] w-[86%] text-blue transition-transform duration-[1.2s] ease-[var(--ease-soft)] group-hover:-translate-y-1.5 group-hover:scale-[1.03]"
+                        />
+                      </>
+                    )}
                   </div>
                   <p className="display mt-6 text-[1.7rem] sm:text-[1.9rem]">{c.name}</p>
                   <p className="mt-1 text-[0.92rem] text-ink-soft">{c.ages}</p>

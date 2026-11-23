@@ -12,7 +12,7 @@ import { LoopDivider } from "@/components/brand/LoopDivider";
 
 export const metadata: Metadata = {
   // The name Google shows for the home page.
-  title: { absolute: "Yalla Childcare & Coworking · San Diego" },
+  title: { absolute: "Yalla Coworking & Childcare · San Diego" },
   alternates: { canonical: "/" },
 };
 

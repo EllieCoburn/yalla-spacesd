@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { childDay } from "@/lib/booking/addons";
 import { notFound, redirect } from "next/navigation";
 import { EmergencyList, PickupList } from "@/components/admin/families/ContactForms";
 import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
 import { ActionForm, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Notice, PageHeader, Pill, Status, Table } from "@/components/admin/ui";
-import { updateChildAction } from "@/app/admin/(app)/families/actions";
+import { childRemovedAction, deleteChildAction, flexHoldAction, flexHoldNoticeAction, updateChildAction } from "@/app/admin/(app)/families/actions";
+import { childHistory } from "@/lib/ops/families";
+import { FLEX_GROUPS } from "@/lib/booking/flex";
+import { flexHoldName } from "@/lib/booking/flex-hold";
 import { childProfile } from "@/lib/admin/queries/families";
 import { requireStaff } from "@/lib/auth/session";
 import { asFamilyViewer, canOpenFamily, flexClubOnly } from "@/lib/auth/flex-club";
@@ -14,7 +18,7 @@ import { eq } from "drizzle-orm";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { WEEKDAY } from "@/lib/ops/memberships";
-import { ageLabel, fmtDate, fmtDateTime, fmtTime, todayLA } from "@/lib/time";
+import { ageLabel, fmtDate, fmtDateTime, fmtTime, localDateOf, todayLA } from "@/lib/time";
 
 function Stamp({ at, by }: { at: Date | null; by: string | null }) {
   return <p className="mt-3 text-[0.74rem] text-ink-soft">{at ? `Last updated ${fmtDateTime(at)}${by ? ` by ${by}` : ""}` : "Not yet provided"}</p>;
@@ -39,6 +43,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
   const cohortName = d.cohorts.find((x) => x.id === c.cohortId)?.name ?? null;
   const paperwork = d.paperwork ? [...(d.paperwork.get(c.id) ?? []), ...(d.paperwork.get("family") ?? [])] : null;
   const kids = [{ id: c.id, name: display }];
+  const history = manage ? await childHistory(getDb(), c.id) : null;
 
   return (
     <>
@@ -55,6 +60,7 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
             <span>
               {ageLabel(c.birthDate, today)} today · born {fmtDate(c.birthDate, "d MMMM yyyy")}
             </span>
+            {c.status === "archived" ? <Pill tone="muted" icon="x">Removed from family</Pill> : null}
             {cohortName ? <Pill tone="neutral">{cohortName}</Pill> : <Pill tone="muted">No cohort</Pill>}
             {activeMembership ? <Pill tone="info" icon="check">Club Yalla</Pill> : null}
             {c.allergies ? <Pill tone="critical" icon="alert">Allergy</Pill> : null}
@@ -90,6 +96,50 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                     </div>
                   </ActionForm>
                 </Disclosure>
+              </div>
+            ) : null}
+          </Card>
+
+          {/* Yalla Flex cohort hold (lib/booking/flex-hold.ts) */}
+          <Card title="Yalla Flex cohort" actions={c.flexHold ? <Pill tone="info">Held in {flexHoldName(c.flexHold)}</Pill> : <Pill tone="muted">Books by age</Pill>}>
+            {c.flexHold ? (
+              <p className="text-[0.88rem] text-ink">
+                {display} is held in <b>{flexHoldName(c.flexHold)}</b> for Yalla Flex. The family can book {flexHoldName(c.flexHold)} days only, whatever {display}’s age, and can’t book
+                another Flex group until the hold is released.
+                {c.flexHoldSetBy ? <span className="block text-[0.78rem] text-ink-soft">Held by {c.flexHoldSetBy}{c.flexHoldSetAt ? ` on ${fmtDate(localDateOf(c.flexHoldSetAt), "d MMM yyyy")}` : ""}.</span> : null}
+              </p>
+            ) : (
+              <p className="text-[0.88rem] text-ink-soft">
+                {display} books the Flex group that fits their age on each day. For a longtime drop-in family who wants to stay with the teachers and friends they know, hold {display} in a cohort.
+              </p>
+            )}
+            {manage ? (
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <ActionForm action={flexHoldAction} className="flex flex-wrap items-end gap-3" submit={{ label: c.flexHold ? "Change hold" : "Hold in cohort", variant: "secondary" }}>
+                  <input type="hidden" name="childId" value={c.id} />
+                  <SelectField name="flexHold" label="Cohort" defaultValue={c.flexHold ?? FLEX_GROUPS[0].key} options={FLEX_GROUPS.map((g) => ({ value: g.key, label: `${g.cohort} (${g.label})` }))} />
+                </ActionForm>
+                {c.flexHold ? (
+                  <ActionForm
+                    action={flexHoldAction}
+                    className=""
+                    submit={{ label: "Release hold", variant: "primary" }}
+                    confirm={{ title: `Release ${display}’s hold in ${flexHoldName(c.flexHold)}?`, body: `${display} will book the Flex group that fits their age from now on. Days already booked stay as they are.`, confirmLabel: "Release hold" }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
+                    <input type="hidden" name="flexHold" value="" />
+                  </ActionForm>
+                ) : null}
+                {c.flexHold ? (
+                  <ActionForm
+                    action={flexHoldNoticeAction}
+                    className=""
+                    submit={{ label: "Email the family about this hold", variant: "secondary" }}
+                    confirm={{ title: `Email ${display}’s family about the hold?`, body: `Families with a Family Portal account get the email explaining that ${display} is staying in ${flexHoldName(c.flexHold)}. Families who haven’t set up their account yet get a new portal invitation that explains it.`, confirmLabel: "Send email" }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
+                  </ActionForm>
+                ) : null}
               </div>
             ) : null}
           </Card>
@@ -155,7 +205,8 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                       <td className="whitespace-nowrap">
                         {fmtDate(r.s.localDate, "EEE d MMM yyyy")}
                         <span className="block text-[0.74rem] text-ink-soft">
-                          {fmtTime(r.s.startsAt)}–{fmtTime(r.s.endsAt)}
+                          {fmtTime(r.s.startsAt)}–{fmtTime(childDay(r.p, r.s, r.i.addons).endsAt)}
+                          {childDay(r.p, r.s, r.i.addons).label ? ` · ${childDay(r.p, r.s, r.i.addons).label}` : ""}
                         </span>
                       </td>
                       <td>{r.p.name}</td>
@@ -197,6 +248,51 @@ export default async function ChildPage({ params }: { params: Promise<{ id: stri
                     </tr>
                   ))}
                 </Table>
+              )}
+            </Card>
+          ) : null}
+
+          {history ? (
+            <Card title={c.status === "archived" ? "Removed from the family" : "Remove or delete"} className="border-dashed">
+              {c.status === "archived" ? (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">{display} was removed from the family. They don’t appear in the family’s portal or booking, and their history is kept.</p>
+                  <ActionForm action={childRemovedAction} className="mt-3" submit={{ label: `Restore ${display}`, variant: "secondary" }}>
+                    <input type="hidden" name="childId" value={c.id} />
+                    <input type="hidden" name="removed" value="0" />
+                  </ActionForm>
+                </>
+              ) : history.hasHistory ? (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">
+                    {display} has history on record ({[history.bookings && `${history.bookings} booking${history.bookings === 1 ? "" : "s"}`, history.attendance && "attendance", history.forms && "forms", history.memberships && "a membership", history.documents && "documents", history.lateFees && "late fees"].filter(Boolean).join(", ")}), so they can be removed from the family but not deleted. Removing hides {display} from the family’s portal and booking; you can restore them anytime.
+                  </p>
+                  {history.upcoming || history.liveMembership ? (
+                    <p className="mt-2 text-[0.82rem] text-[#8a5212]">{history.upcoming ? `Cancel ${display}’s ${history.upcoming} upcoming booking${history.upcoming === 1 ? "" : "s"} first.` : `End ${display}’s Club Yalla membership first.`}</p>
+                  ) : (
+                    <ActionForm
+                      action={childRemovedAction}
+                      className="mt-3"
+                      submit={{ label: `Remove ${display} from the family`, variant: "secondary" }}
+                      confirm={{ title: `Remove ${display} from the family?`, body: "They’ll no longer appear in the family’s portal or booking. Their bookings, attendance and forms stay on record, and you can restore them.", confirmLabel: "Remove" }}
+                    >
+                      <input type="hidden" name="childId" value={c.id} />
+                      <input type="hidden" name="removed" value="1" />
+                    </ActionForm>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[0.86rem] text-ink-soft">{display} has no bookings, attendance or forms on record, so you can delete them for good (for example, if they were added by mistake).</p>
+                  <ActionForm
+                    action={deleteChildAction}
+                    className="mt-3"
+                    submit={{ label: `Delete ${display}`, variant: "danger" }}
+                    confirm={{ title: `Delete ${display} for good?`, body: "This can’t be undone. They’re taken off any waitlist too.", confirmLabel: "Delete", danger: true }}
+                  >
+                    <input type="hidden" name="childId" value={c.id} />
+                  </ActionForm>
+                </>
               )}
             </Card>
           ) : null}

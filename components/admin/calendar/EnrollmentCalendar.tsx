@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { loadDay, loadMonth } from "@/app/admin/(app)/calendar/actions";
 import type { CalendarChild, CalendarDaySession, CalendarProgram, CalendarSession } from "@/lib/admin/queries/calendar";
 import { monthGrid } from "@/lib/admin/calendar-grid";
-import { eachDate, fmtDate, fmtTime } from "@/lib/time";
+import { eachDate, fmtDate, fmtTime, phaseText, sessionPhase } from "@/lib/time";
 
 /**
  * The enrollment calendar. Months and days load in the background and are kept, so moving between
@@ -17,10 +17,12 @@ type Props = {
   programs: readonly Program[];
   today: string;
   initial: { month: string; program: CalendarProgram; date: string | null; sessions: CalendarSession[]; day: CalendarDaySession[] };
+  /** Show the revenue panel (staff who can see reports). */
+  showMoney?: boolean;
 };
 
 const STALE_MS = 60_000;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const KIND_DOT: Record<string, string> = { camp: "bg-blue", drop_in: "bg-[#2c6447]", happening: "bg-[#c08a3e]", parents_night: "bg-[#673e46]", nature: "bg-[#2c6447]" };
 
@@ -104,7 +106,7 @@ const ATTEND: Record<string, { label: string; cls: string } | undefined> = {
   absent: { label: "Absent", cls: "bg-[#f6e3e5] text-[#8a2333]" },
 };
 
-export function EnrollmentCalendar({ programs, today, initial }: Props) {
+export function EnrollmentCalendar({ programs, today, initial, showMoney = false }: Props) {
   const [month, setMonth] = useState(initial.month);
   const [program, setProgram] = useState<CalendarProgram>(initial.program);
   const [date, setDate] = useState<string | null>(initial.date);
@@ -171,15 +173,41 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
     if (date) void fetchDay(program, date).catch(() => {});
   }, [program, date, fetchDay]);
 
+  // Fresh numbers: when you come back to this tab (e.g. after changing a session's spots) and every
+  // minute while it's open, reload what's on screen, so manual changes show straight away.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      months.current.delete(`${program}|${month}`);
+      if (date) days.current.delete(`${program}|${date}`);
+      void fetchMonth(program, month).catch(() => {});
+      if (date) void fetchDay(program, date).catch(() => {});
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    const t = setInterval(refresh, STALE_MS);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+      clearInterval(t);
+    };
+  }, [program, month, date, fetchMonth, fetchDay]);
+
   // Keep the address bar in step without reloading, so the view can be shared or bookmarked.
   useEffect(() => {
     const p = new URLSearchParams({ month, program, ...(date ? { date } : {}) });
     window.history.replaceState(null, "", `/admin/calendar?${p}`);
   }, [month, program, date]);
 
+  // Sessions on days Yalla is closed aren't bookable: they're left out of the counts and the day shows "Closed".
   const byDate = useMemo(() => {
     const m = new Map<string, CalendarSession[]>();
-    for (const s of sessions ?? []) m.set(s.date, [...(m.get(s.date) ?? []), s]);
+    for (const s of sessions ?? []) if (!s.closure) m.set(s.date, [...(m.get(s.date) ?? []), s]);
+    return m;
+  }, [sessions]);
+  const closedOn = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of sessions ?? []) if (s.closure && !m.has(s.date)) m.set(s.date, s.closure);
     return m;
   }, [sessions]);
 
@@ -235,12 +263,16 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [goMonth, grid.prev, grid.next, today]);
 
-  const inMonth = (sessions ?? []).filter((s) => s.date >= grid.first && s.date <= grid.last);
+  const inMonth = (sessions ?? []).filter((s) => !s.closure && s.date >= grid.first && s.date <= grid.last);
+  // Spots still open only counts sessions that haven't ended: a past day's empty places can't be booked.
+  const ahead = inMonth.filter((s) => sessionPhase(s) !== "ended");
   const totals = {
     children: inMonth.reduce((n, s) => n + s.booked, 0),
-    open: inMonth.reduce((n, s) => n + s.remaining, 0),
+    open: ahead.reduce((n, s) => n + s.remaining, 0),
+    aheadDays: new Set(ahead.map((s) => s.date)).size,
+    over: inMonth.length > 0 && ahead.length === 0,
     days: new Set(inMonth.map((s) => s.date)).size,
-    full: inMonth.filter((s) => s.effectiveCapacity > 0 && s.remaining <= 0).length,
+    full: ahead.filter((s) => s.effectiveCapacity > 0 && s.remaining <= 0).length,
     paying: inMonth.reduce((n, s) => n + s.held, 0),
     waiting: inMonth.reduce((n, s) => n + s.waiting, 0),
   };
@@ -299,8 +331,15 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
       {/* The month in numbers */}
       <dl className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-ink/[0.08] shadow-[0_0_0_1px_rgba(41,44,69,0.08)] sm:grid-cols-4">
         {[
-          { label: "Children booked", value: totals.children, sub: totals.days ? `across ${totals.days} day${totals.days === 1 ? "" : "s"}` : "nothing scheduled" },
-          { label: "Spots open", value: totals.open, sub: totals.full ? `${totals.full} group${totals.full === 1 ? "" : "s"} full` : "no groups full", tone: totals.open ? "text-[#2c6447]" : "" },
+          { label: "Spots booked", value: totals.children, sub: totals.days ? `across ${totals.days} day${totals.days === 1 ? "" : "s"}` : "nothing scheduled" },
+          {
+            label: "Spots still open",
+            value: totals.open,
+            sub: totals.over
+              ? "this month’s sessions are over"
+              : `${totals.aheadDays ? `across ${totals.aheadDays} day${totals.aheadDays === 1 ? "" : "s"} to come` : "nothing to come"}${totals.full ? ` · ${totals.full} group${totals.full === 1 ? "" : "s"} full` : ""}`,
+            tone: totals.open ? "text-[#2c6447]" : "",
+          },
           { label: "Paying now", value: totals.paying, sub: "spots held at checkout" },
           { label: "Waitlist", value: totals.waiting, sub: totals.waiting ? "waiting for a spot" : "no one waiting" },
         ].map((x) => (
@@ -312,6 +351,8 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
         ))}
       </dl>
 
+      {showMoney ? <RevenuePanel sessions={inMonth} month={month} program={programs.find((p) => p.key === program)?.label ?? ""} loading={loadingMonth} /> : null}
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem]">
         {/* The month */}
         <div className="relative self-start overflow-hidden rounded-2xl bg-white shadow-[0_0_0_1px_rgba(41,44,69,0.08),0_8px_30px_-12px_rgba(41,44,69,0.12)]">
@@ -320,7 +361,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           </div>
           <div className="grid grid-cols-7 border-b border-ink/[0.07]">
             {WEEKDAYS.map((d, i) => (
-              <div key={d} className={`px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[0.12em] uppercase sm:px-3 sm:text-left ${i > 4 ? "text-ink/35" : "text-ink-soft"}`}>
+              <div key={d} className={`px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[0.12em] uppercase sm:px-3 sm:text-left ${i === 0 || i === 6 ? "text-ink/35" : "text-ink-soft"}`}>
                 {d}
               </div>
             ))}
@@ -328,6 +369,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
           <div key={`${program}|${month}`} className={`grid grid-cols-7 ${dir > 0 ? "animate-[cal-next_0.4s_var(--ease-soft)]" : dir < 0 ? "animate-[cal-prev_0.4s_var(--ease-soft)]" : "animate-[fade_0.3s_var(--ease-soft)]"}`}>
             {dates.map((d, i) => {
               const raw = byDate.get(d) ?? [];
+              const closed = raw.length ? null : (closedOn.get(d) ?? null);
               // Camp and Flex: one row per age group. Happenings and Everything: one row per time slot.
               const daySlots = slotsOf(raw, { withProgram: true, compact: true });
               const perGroup = program === "camp" || program === "flex";
@@ -342,6 +384,8 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
               // One total only makes sense when everything that day runs at the same time.
               const oneSlot = daySlots.length === 1;
               const allFull = raw.length > 0 && raw.every((s) => s.effectiveCapacity > 0 && s.remaining <= 0);
+              // A day whose sessions have all ended: its empty places can't be booked any more.
+              const dayOver = raw.length > 0 && raw.every((s) => sessionPhase(s) === "ended");
               const coming = raw.reduce((n, s) => n + s.booked, 0);
               return (
                 <button
@@ -353,7 +397,7 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                   }}
                   onMouseEnter={() => raw.length && void fetchDay(program, d).catch(() => {})}
                   aria-pressed={sel}
-                  aria-label={`${fmtDate(d, "EEEE d MMMM")}: ${raw.length ? `${coming} booked, ${open} spots open` : "nothing scheduled"}`}
+                  aria-label={`${fmtDate(d, "EEEE d MMMM")}: ${raw.length ? `${coming} booked, ${open} spots open` : closed ? `Yalla closed, ${closed}` : "nothing scheduled"}`}
                   className={`group relative flex flex-col border-ink/[0.07] p-1.5 text-left transition-colors duration-200 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-blue sm:p-2.5 ${busyWeek.has(Math.floor(i / 7)) ? "min-h-[4.25rem] sm:min-h-[8.5rem]" : "min-h-[3.25rem] sm:min-h-[4.5rem]"} ${i % 7 !== 6 ? "border-r" : ""} ${i < dates.length - 7 ? "border-b" : ""} ${
                     sel ? "z-[1] bg-blue/[0.05]" : out ? "bg-[#faf9f5]" : raw.length ? "hover:bg-[#f7f6fb]" : "hover:bg-ink/[0.015]"
                   }`}
@@ -367,15 +411,25 @@ export function EnrollmentCalendar({ programs, today, initial }: Props) {
                     >
                       {Number(d.slice(8))}
                     </span>
-                    {raw.length && !out && (oneSlot || allFull) ? (
+                    {raw.length && !out && dayOver ? (
+                      <span className="hidden rounded-full bg-ink/5 px-2 py-0.5 text-[0.66rem] font-medium whitespace-nowrap text-ink-soft tabular-nums sm:inline">{coming} booked</span>
+                    ) : closed && !out ? (
+                      <span className="hidden rounded-full bg-ink/5 px-2 py-0.5 text-[0.66rem] font-medium whitespace-nowrap text-ink-soft sm:inline">Closed</span>
+                    ) : raw.length && !out && (oneSlot || allFull) ? (
                       <span className={`hidden rounded-full px-2 py-0.5 text-[0.66rem] whitespace-nowrap font-medium tabular-nums sm:inline ${TONE_BG[tone]} ${past ? "opacity-60" : ""}`}>{tone === "full" ? "Full" : `${open} open`}</span>
                     ) : null}
                   </span>
+                  {closed ? (
+                    <span className={`mt-auto block text-[0.62rem] leading-tight text-ink-soft sm:mt-2 sm:text-[0.7rem] ${out ? "opacity-40" : ""}`}>
+                      <span className="sm:hidden">Closed</span>
+                      {closed !== "Closed" ? <span className="hidden sm:inline">{closed}</span> : null}
+                    </span>
+                  ) : null}
                   {/* Phones: one dot and the spots open. */}
                   {raw.length ? (
                     <span className={`mt-auto flex items-center gap-1 sm:hidden ${out ? "opacity-40" : ""}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${TONE_BAR[allFull ? "full" : tone]}`} />
-                      {oneSlot || allFull ? <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{allFull ? "Full" : open}</span> : <span className="text-[0.66rem] text-ink-soft">{daySlots.length}</span>}
+                      <span className={`h-1.5 w-1.5 rounded-full ${dayOver ? "bg-ink/25" : TONE_BAR[allFull ? "full" : tone]}`} />
+                      {dayOver ? <span className="text-[0.66rem] text-ink-soft tabular-nums">{coming}</span> : oneSlot || allFull ? <span className={`text-[0.66rem] tabular-nums ${TONE_TEXT[tone]}`}>{allFull ? "Full" : open}</span> : <span className="text-[0.66rem] text-ink-soft">{daySlots.length}</span>}
                     </span>
                   ) : null}
                   {rows.length ? (
@@ -449,13 +503,16 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
 }
 
 function DayPanel({ date, program, today, data }: { date: string | null; program: CalendarProgram; today: string; data: CalendarDaySession[] | undefined }) {
-  const list = data ?? [];
+  // Sessions on a day Yalla is closed can't be booked; the panel says so instead of listing open spots.
+  const closedFor = (data ?? []).find((s) => s.closure)?.closure ?? null;
+  const list = (data ?? []).filter((s) => !s.closure);
   const slots = slotsOf(list, { withProgram: program === "all" || program === "happenings" || new Set(list.map((s) => s.programName)).size > 1 });
   const [slotKeyChosen, setSlot] = useState<string | null>(null);
   const [tab, setTab] = useState<string | null>(null);
   const slot = slots.find((x) => x.key === slotKeyChosen) ?? slots[0];
   const current = slot?.sessions.find((s) => s.id === tab) ?? slot?.sessions[0];
-  const coming = list.reduce((n, s) => n + s.children.length, 0);
+  // Each child once, even when they come to two sessions that day.
+  const coming = new Set(list.flatMap((s) => s.children.map((c) => c.childId))).size;
 
   return (
     <aside className="rounded-2xl bg-white shadow-[0_0_0_1px_rgba(41,44,69,0.08),0_8px_30px_-12px_rgba(41,44,69,0.12)]">
@@ -468,8 +525,12 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
             {slots.length === 1 ? (
               <>
                 {" · "}
-                <span className={`font-medium ${slots[0].total.remaining ? "text-[#2c6447]" : "text-[#8a2333]"}`}>
-                  {slots[0].total.remaining ? `${slots[0].total.remaining} of ${slots[0].total.effectiveCapacity} spots open` : "fully booked"}
+                <span className={`font-medium ${sessionPhase(slots[0].total) === "ended" ? "text-ink-soft" : slots[0].total.remaining ? "text-[#2c6447]" : "text-[#8a2333]"}`}>
+                  {sessionPhase(slots[0].total) === "ended"
+                    ? "this session is over"
+                    : slots[0].total.remaining
+                      ? `${slots[0].total.remaining} of ${slots[0].total.effectiveCapacity} spots open`
+                      : "fully booked"}
                 </span>
               </>
             ) : (
@@ -489,6 +550,11 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
               <span className="h-3 flex-1 rounded bg-ink/[0.06]" style={{ maxWidth: `${70 - i * 10}%` }} />
             </div>
           ))}
+        </div>
+      ) : !slot && closedFor ? (
+        <div className="px-5 py-10 text-center">
+          <p className="text-[0.92rem] text-ink">{closedFor === "Closed" ? "Yalla is closed" : `Yalla is closed · ${closedFor}`}</p>
+          <p className="mt-1 text-[0.8rem] text-ink-soft">{program === "flex" ? "Yalla Flex isn’t offered this day." : "Nothing can be booked this day."} To open it, change the session’s status in the schedule.</p>
         </div>
       ) : !slot ? (
         <div className="px-5 py-10 text-center">
@@ -521,7 +587,7 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
                         {x.label}
                       </span>
                       <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${TONE_TEXT[t]}`}>
-                        {x.total.effectiveCapacity ? `${x.total.used}/${x.total.effectiveCapacity} · ${leftLabel(x.total.remaining, x.total.effectiveCapacity)}` : `${x.total.booked} booked`}
+                        {sessionPhase(x.total) === "ended" ? `${x.total.booked} booked · over` : x.total.effectiveCapacity ? `${x.total.used}/${x.total.effectiveCapacity} · ${leftLabel(x.total.remaining, x.total.effectiveCapacity)}` : `${x.total.booked} booked`}
                       </span>
                     </button>
                   );
@@ -545,13 +611,13 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
                     className={`shrink-0 rounded-xl px-3 py-2 text-left transition-all duration-200 ${active ? "bg-ink text-chalk" : "bg-ink/[0.04] text-ink hover:bg-ink/[0.08]"}`}
                   >
                     <span className="block text-[0.78rem] leading-tight font-medium whitespace-nowrap">{shortGroup(groupLabel(s))}</span>
-                    <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
+                    <span className={`block text-[0.68rem] whitespace-nowrap tabular-nums ${active ? "text-chalk/70" : TONE_TEXT[t]}`}>{sessionPhase(s) === "ended" ? `${s.booked} booked` : leftLabel(s.remaining, s.effectiveCapacity) || `${s.booked} booked`}</span>
                   </button>
                 );
               })}
             </div>
           ) : null}
-          {current ? <GroupView key={current.id} s={current} /> : null}
+          {current ? <GroupView key={current.id} s={current} today={today} /> : null}
         </>
       )}
     </aside>
@@ -561,7 +627,9 @@ function DayPanel({ date, program, today, data }: { date: string | null; program
 /** "Weekend Play · AM play session · 4 – 7 years" → "4 – 7 years". */
 const groupLabel = (s: CalendarSession) => s.title.split(" · ").pop() ?? s.title;
 
-function GroupView({ s }: { s: CalendarDaySession }) {
+function GroupView({ s, today }: { s: CalendarDaySession; today: string }) {
+  const phase = sessionPhase(s);
+  const ended = phase === "ended";
   const t = toneOf(s.remaining, s.effectiveCapacity);
   const allergies = s.children.filter((c) => c.allergies).length;
   const forms = s.children.filter((c) => c.formsMissing).length;
@@ -572,13 +640,14 @@ function GroupView({ s }: { s: CalendarDaySession }) {
           <div className="min-w-0">
             <p className="truncate text-[0.95rem] font-medium text-ink">{s.title}</p>
             <p className="text-[0.78rem] text-ink-soft">
-              {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)}
+              {fmtTime(s.startsAt)} – {fmtTime(s.endsAt)} <span className="text-ink-soft/70">Pacific</span>
+              {s.date === today ? <span className={`ml-2 font-medium ${phase === "live" ? "text-[#2c6447]" : phase === "ended" ? "text-ink-soft" : "text-blue"}`}>· {phaseText(s)}</span> : null}
             </p>
           </div>
           {s.effectiveCapacity ? (
             <p className="shrink-0 text-right">
-              <span className={`block text-[1.6rem] leading-none font-semibold tabular-nums ${TONE_TEXT[t]}`}>{s.remaining <= 0 ? "Full" : s.remaining}</span>
-              <span className="text-[0.7rem] text-ink-soft">{s.remaining <= 0 ? `${s.used} of ${s.effectiveCapacity}` : `spot${s.remaining === 1 ? "" : "s"} left of ${s.effectiveCapacity}`}</span>
+              <span className={`block text-[1.6rem] leading-none font-semibold tabular-nums ${ended ? "text-ink-soft" : TONE_TEXT[t]}`}>{ended ? s.booked : s.remaining <= 0 ? "Full" : s.remaining}</span>
+              <span className="text-[0.7rem] text-ink-soft">{ended ? `booked of ${s.effectiveCapacity} · over` : s.remaining <= 0 ? `${s.used} of ${s.effectiveCapacity}` : `spot${s.remaining === 1 ? "" : "s"} left of ${s.effectiveCapacity}`}</span>
             </p>
           ) : null}
         </div>
@@ -596,7 +665,7 @@ function GroupView({ s }: { s: CalendarDaySession }) {
       {s.children.length ? (
         <ul className="mt-4 max-h-[min(60vh,34rem)] divide-y divide-ink/[0.06] overflow-y-auto border-t border-ink/[0.07]">
           {s.children.map((c) => (
-            <ChildRow key={c.childId} c={c} />
+            <ChildRow key={c.childId} c={c} ended={ended} />
           ))}
         </ul>
       ) : (
@@ -633,8 +702,9 @@ function GroupView({ s }: { s: CalendarDaySession }) {
   );
 }
 
-function ChildRow({ c }: { c: CalendarChild }) {
-  const a = ATTEND[c.attendance];
+function ChildRow({ c, ended }: { c: CalendarChild; ended: boolean }) {
+  // Once the session is over, a child who never arrived isn't "expected" any more.
+  const a = ATTEND[c.attendance] ?? (ended && c.attendance === "expected" ? { label: "Not checked in", cls: "bg-ink/5 text-ink-soft" } : undefined);
   return (
     <li>
       <Link href={`/admin/families/${c.familyId}`} className="flex items-start gap-3 px-5 py-2.5 transition-colors hover:bg-[#f7f6fb]">
@@ -667,5 +737,97 @@ function ChildRow({ c }: { c: CalendarChild }) {
         {a ? <span className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[0.66rem] font-medium ${a.cls}`}>{a.label}</span> : null}
       </Link>
     </li>
+  );
+}
+
+const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+const moneyRange = (a: number, b: number) => (Math.round(a / 100) === Math.round(b / 100) ? money(a) : `${money(a)}–${money(b)}`);
+const STRIPE_GREEN = "repeating-linear-gradient(135deg, rgb(44 100 71 / 0.45) 0 3px, rgb(44 100 71 / 0.15) 3px 6px)";
+const STRIPE_GREY = "repeating-linear-gradient(135deg, rgb(41 44 69 / 0.18) 0 3px, transparent 3px 6px)";
+
+/**
+ * The month's revenue: what's captured (after discounts), what's still bookable on days to come (at
+ * the lowest and the full rate), and what went unfilled on days already past. "If fully booked" is
+ * captured plus everything still bookable, so a spot booked at a discount counts at what was paid.
+ */
+function RevenuePanel({ sessions, month, program, loading }: { sessions: CalendarSession[]; month: string; program: string; loading: boolean }) {
+  const withMoney = sessions.filter((s) => s.money);
+  if (!withMoney.length && !loading) return null;
+  const t = { captured: 0, unpaid: 0, booked: 0, aheadSpots: 0, aheadMin: 0, aheadMax: 0, pastSpots: 0, pastMin: 0, pastMax: 0, unpriced: 0 };
+  for (const s of withMoney) {
+    const m = s.money!;
+    t.captured += m.capturedCents;
+    t.unpaid += m.unpaidCents;
+    t.booked += s.booked;
+    if (m.unpriced && m.openSpots) t.unpriced += m.openSpots;
+    if (sessionPhase(s) === "ended") {
+      t.pastSpots += m.openSpots;
+      t.pastMin += m.openSpots * m.spotMinCents;
+      t.pastMax += m.openSpots * m.spotMaxCents;
+    } else {
+      t.aheadSpots += m.openSpots;
+      t.aheadMin += m.openSpots * m.spotMinCents;
+      t.aheadMax += m.openSpots * m.spotMaxCents;
+    }
+  }
+  const scale = Math.max(1, t.captured + t.aheadMax + t.pastMax);
+  const pct = (n: number) => `${(n / scale) * 100}%`;
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const figures = [
+    { label: "Captured", value: money(t.captured), sub: `${plural(t.booked, "booked spot")}, after discounts${t.unpaid ? ` · ${money(t.unpaid)} not yet paid` : ""}`, tone: "text-blue" },
+    { label: "Still bookable", value: moneyRange(t.aheadMin, t.aheadMax), sub: t.aheadSpots ? `${plural(t.aheadSpots, "open spot")} on days to come` : "nothing left to book", tone: "text-[#2c6447]" },
+    { label: "If fully booked", value: moneyRange(t.captured + t.aheadMin, t.captured + t.aheadMax), sub: "captured + everything still bookable", tone: "text-ink" },
+    ...(t.pastSpots ? [{ label: "Went unfilled", value: moneyRange(t.pastMin, t.pastMax), sub: `${plural(t.pastSpots, "spot")} on days already past`, tone: "text-ink-soft" }] : []),
+  ];
+  return (
+    <section aria-label="Revenue" className="mb-5 rounded-2xl bg-white p-5 shadow-[0_0_0_1px_rgba(41,44,69,0.08)]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-[0.7rem] tracking-[0.08em] text-ink-soft uppercase">
+          Revenue · {fmtDate(`${month}-01`, "MMMM yyyy")} · {program}
+        </h2>
+        <p className="text-[0.72rem] text-ink-soft">Open spots are valued from their lowest rate (e.g. a Flex half day) to their full rate. Extras aren’t counted.</p>
+      </div>
+      <dl className={`mt-3 grid grid-cols-2 gap-4 ${figures.length > 3 ? "lg:grid-cols-4" : "lg:grid-cols-3"} ${loading ? "opacity-30" : ""}`}>
+        {figures.map((f) => (
+          <div key={f.label}>
+            <dt className="text-[0.75rem] text-ink-soft">{f.label}</dt>
+            <dd className={`text-[1.45rem] leading-tight font-semibold tabular-nums ${f.tone}`}>{loading ? "–" : f.value}</dd>
+            <dd className="text-[0.72rem] text-ink-soft">{loading ? " " : f.sub}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* Captured | still bookable at the lowest rate | up to the full rate | unfilled past days */}
+      <div className={`mt-4 flex h-3 overflow-hidden rounded-full bg-ink/[0.05] ${loading ? "opacity-30" : ""}`} role="img" aria-label={`Captured ${money(t.captured)} of up to ${money(t.captured + t.aheadMax)}`}>
+        <span className="h-full bg-blue" style={{ width: pct(t.captured) }} />
+        <span className="h-full bg-[#2c6447]/55" style={{ width: pct(t.aheadMin) }} />
+        <span className="h-full" style={{ width: pct(t.aheadMax - t.aheadMin), backgroundImage: STRIPE_GREEN }} />
+        <span className="h-full" style={{ width: pct(t.pastMax), backgroundImage: STRIPE_GREY }} />
+      </div>
+      <ul className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[0.72rem] text-ink-soft">
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full bg-blue" />
+          Captured
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full bg-[#2c6447]/55" />
+          Still bookable (lowest rate)
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-2 w-4 rounded-full" style={{ backgroundImage: STRIPE_GREEN }} />
+          Up to full rate
+        </li>
+        {t.pastSpots ? (
+          <li className="flex items-center gap-1.5">
+            <span className="h-2 w-4 rounded-full" style={{ backgroundImage: STRIPE_GREY }} />
+            Went unfilled
+          </li>
+        ) : null}
+        {t.unpriced ? (
+          <li className="text-[#8a5212]">
+            {t.unpriced} open {t.unpriced === 1 ? "spot has" : "spots have"} no price set, so {t.unpriced === 1 ? "it isn’t" : "they aren’t"} counted
+          </li>
+        ) : null}
+      </ul>
+    </section>
   );
 }

@@ -27,8 +27,11 @@ const included = [
   { program: "Yalla Happenings", how: "Optional. Some Happenings offer coworking as an add-on for the grown-up who stays.", href: "/programs/yalla-happenings" },
 ];
 
+/** Linked to Our Approach wherever it appears in the amenities list. */
+const APPROACH = "Reggio Emilia and RIE approaches";
+
 const amenities = [
-  "Onsite childcare rooted in the Reggio Emilia and RIE approaches, provided by a highly qualified team of caregivers",
+  `Onsite childcare rooted in the ${APPROACH}, provided by a highly qualified team of caregivers`,
   "Communal coworking access",
   "High-speed internet",
   "Complimentary coffee and tea",
@@ -132,6 +135,20 @@ export default async function CoworkingPage() {
             ))}
           </div>
         </div>
+        {/* The common areas families work in */}
+        <div className="shell mt-20 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:mt-28">
+          {[
+            { src: "/photos/cowork-mural-desks.jpg", alt: "A long white desk with cane chairs and red lamps beneath Yalla’s hand-painted blue mural", className: "aspect-[3/4] rounded-t-[999px]", position: "object-[50%_60%]" },
+            { src: "/photos/cowork-cafe.jpg", alt: "Café tables, cane chairs and benches with orange cushions beside the mural", className: "aspect-[3/4] rounded-[28px] md:mt-16", position: "object-[50%_70%]" },
+            { src: "/photos/cowork-shared-desks.jpg", alt: "Shared desks below the white balcony in the coworking atrium", className: "aspect-[4/3] rounded-t-[999px] md:aspect-[3/4]", position: "object-[50%_65%]" },
+          ].map((img, i) => (
+            <Reveal key={img.src} delay={i * 90} className={i === 2 ? "col-span-2 md:col-span-1" : ""}>
+              <div className={`relative overflow-hidden bg-sand ${img.className}`}>
+                <Image src={img.src} alt={img.alt} fill sizes="(min-width:768px) 30vw, 50vw" className={`object-cover ${img.position}`} />
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </Section>
 
       {/* Amenities */}
@@ -152,7 +169,22 @@ export default async function CoworkingPage() {
                 <svg viewBox="0 0 16 16" aria-hidden className="mt-1 h-4 w-4 shrink-0 text-blue" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 8.5l3 3 7-7" />
                 </svg>
-                <span>{a}</span>
+                <span>
+                  {a.includes(APPROACH)
+                    ? (() => {
+                        const [before, after] = a.split(APPROACH);
+                        return (
+                          <>
+                            {before}
+                            <Link href="/approach" className="text-blue underline decoration-blue/30 underline-offset-4 transition-colors hover:decoration-blue">
+                              {APPROACH}
+                            </Link>
+                            {after}
+                          </>
+                        );
+                      })()
+                    : a}
+                </span>
               </Reveal>
             ))}
           </ul>
@@ -161,14 +193,18 @@ export default async function CoworkingPage() {
 
       {/* Included with care */}
       <Section tone="sand">
-        <div className="shell grid gap-8 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-6">
+        <div className="shell grid gap-10 lg:grid-cols-12 lg:items-center">
+          <Reveal className="lg:col-span-5">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[999px] bg-paper">
+              <Image src="/photos/cowork-lounge.jpg" alt="The lounge at Yalla, with a pale blue sofa, green velvet chairs, white tulips and a smiling member of Team Yalla carrying a plant" fill sizes="(min-width:1024px) 38vw, 90vw" className="object-cover object-[50%_60%]" />
+            </div>
+          </Reveal>
+          <div className="lg:col-span-6 lg:col-start-7">
             <Index n="03">Included with care</Index>
             <h2 className="display mt-6 text-[clamp(2.1rem,1.5rem+2vw,3.3rem)] text-balance">
-              Your workspace, <em>already included.</em>
+              Pull up a chair, <em>it’s yours.</em>
             </h2>
-          </div>
-          <p className="text-[1.05rem] text-ink-soft lg:col-span-5 lg:col-start-8">
+          <p className="mt-6 text-[1.05rem] text-ink-soft">
             Coworking in any of Yalla’s common areas, along with access to our coworking amenities, is included in the cost of{" "}
             <Link href="/programs/yalla-flex" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
               Yalla Flex sessions
@@ -177,8 +213,9 @@ export default async function CoworkingPage() {
             <Link href="/club-yalla" className="text-ink underline decoration-blue/40 underline-offset-4 hover:text-blue">
               Club Yalla membership
             </Link>
-            .
+            . Spread out at a shared desk, settle in at a café table or take a break in the lounge.
           </p>
+          </div>
         </div>
       </Section>
 

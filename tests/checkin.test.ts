@@ -22,7 +22,8 @@ async function family(name: string, kids: string[]) {
 }
 
 async function book(familyId: string, items: { sessionId: string; childId: string }[]) {
-  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true });
+  // Booked first thing in the morning, so the tests pass at any time of day.
+  const hold = await createHold(db(), owner, { familyId, items, source: "admin", acknowledgePaperwork: true, now: zonedDateTime(todayLA(), "07:00") });
   await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
 }
 

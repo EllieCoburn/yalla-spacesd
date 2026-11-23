@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Mark } from "@/components/brand/Mark";
@@ -73,7 +73,11 @@ export function Shell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const active = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/"));
+  // The item you clicked lights up at once, before the page arrives (cleared when it does).
+  const [going, setGoing] = useState<string | null>(null);
+  useEffect(() => setGoing(null), [pathname]);
+  const matches = (href: string, path: string) => (href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/"));
+  const active = (href: string) => (going ? going === href : matches(href, pathname));
   const groups = [...new Set(nav.map((n) => n.group))];
 
   const navList = (
@@ -88,13 +92,15 @@ export function Shell({
                 <li key={n.href}>
                   <Link
                     href={n.href}
+                    onClick={(e) => !(e.metaKey || e.ctrlKey || e.shiftKey) && !matches(n.href, pathname) && setGoing(n.href)}
                     aria-current={active(n.href) ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[0.86rem] transition-colors ${
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[0.86rem] transition-colors active:scale-[0.98] ${
                       active(n.href) ? "bg-ink text-chalk" : "text-ink/80 hover:bg-ink/5 hover:text-ink"
                     }`}
                   >
                     <NavIcon name={n.icon} />
-                    {n.label}
+                    <span className="flex-1">{n.label}</span>
+                    <LinkSpinner />
                   </Link>
                 </li>
               ))}
@@ -159,15 +165,25 @@ export function Shell({
         <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-9 lg:pb-16">
           {children}
         </main>
+        {going ? <div aria-hidden className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left animate-[admin-progress_8s_cubic-bezier(0.1,0.7,0.2,1)_forwards] bg-blue" /> : null}
         {/* Mobile bottom tabs for the most-used views */}
         <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-ink/10 bg-chalk/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
           {nav
             .filter((n) => n.mobile)
             .slice(0, 3)
             .map((n) => (
-              <Link key={n.href} href={n.href} aria-current={active(n.href) ? "page" : undefined} className={`flex flex-col items-center gap-0.5 py-2 text-[0.68rem] ${active(n.href) ? "text-blue" : "text-ink-soft"}`}>
+              <Link
+                key={n.href}
+                href={n.href}
+                onClick={() => !matches(n.href, pathname) && setGoing(n.href)}
+                aria-current={active(n.href) ? "page" : undefined}
+                className={`relative flex flex-col items-center gap-0.5 py-2 text-[0.68rem] active:scale-95 ${active(n.href) ? "text-blue" : "text-ink-soft"}`}
+              >
                 <NavIcon name={n.icon} />
                 {n.label}
+                <span className="absolute top-1.5 right-[calc(50%-1.1rem)]">
+                  <LinkSpinner />
+                </span>
               </Link>
             ))}
           <button onClick={() => setDrawer(true)} className="flex flex-col items-center gap-0.5 py-2 text-[0.68rem] text-ink-soft">
@@ -257,5 +273,16 @@ function Palette({ onClose, search, nav }: { onClose: () => void; search: (q: st
         </ul>
       </div>
     </div>
+  );
+}
+
+/** A small spinner inside a link while the page it opens is loading. */
+function LinkSpinner() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={`h-3 w-3 shrink-0 rounded-full border-[1.5px] border-current border-r-transparent transition-opacity duration-150 ${pending ? "animate-spin opacity-70" : "opacity-0"}`}
+    />
   );
 }

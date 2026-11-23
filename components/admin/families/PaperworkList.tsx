@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Pill, Status } from "@/components/admin/ui";
 import type { PaperworkItem } from "@/lib/ops/forms";
-import { fmtDate } from "@/lib/time";
+import { fmtDate, localDateOf } from "@/lib/time";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 
 const enforcementLabel: Record<string, string> = {
@@ -24,7 +24,7 @@ export function PaperworkList({ items, familyId, childNames, canRecord }: { item
             </p>
             <p className="text-[0.74rem] text-ink-soft">
               {enforcementLabel[i.enforcement] ?? i.enforcement}
-              {i.signedAt && i.state !== "missing" ? ` · last completed ${fmtDate(i.signedAt.toISOString().slice(0, 10), "d MMM yyyy")}` : ""}
+              {i.signedAt && i.state !== "missing" ? ` · last completed ${fmtDate(localDateOf(i.signedAt), "d MMM yyyy")}` : ""}
             </p>
             {i.submissionId && i.state !== "missing" && i.frequency !== "per_booking" ? (
               <p className={`text-[0.76rem] ${VALIDITY_CLASS[validity({ expiresOn: i.expiresOn, frequency: i.frequency, signed: true }).tone]}`}>{validity({ expiresOn: i.expiresOn, frequency: i.frequency, signed: true }).text}</p>

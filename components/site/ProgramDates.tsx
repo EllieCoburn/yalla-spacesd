@@ -22,7 +22,7 @@ export type DateGroup = {
   cohort?: string;
   priceCents: number;
 };
-type Child = { id: string; name: string; birthDate: string };
+type Child = { id: string; name: string; birthDate: string; /** Staff-set Yalla Flex cohort hold. */ flexHold?: string | null };
 type AddedChild = Child & { firstName: string; lastName: string };
 
 const fmt = (date: string, o: Intl.DateTimeFormatOptions) => {
@@ -213,6 +213,8 @@ export function ProgramDates({
     setChosenKids((k) => k.filter((x) => x !== id));
   };
   const groupOf = (c: Child, day: string) => {
+    // A child staff hold in a Flex cohort books that cohort only, whatever their age.
+    if (isFlex && c.flexHold) return groups.find((g) => g.key === c.flexHold);
     const m = ageInMonths(c.birthDate, day);
     return groups.find(
       (g) =>
@@ -570,7 +572,9 @@ export function ProgramDates({
                         <span className="text-[0.78rem] text-ink-soft">
                           {m >= 0 ? ageText(m) : "Not yet born"} ·{" "}
                           {g
-                            ? `${g.cohort ? g.label : `${g.label} group`}${from ? ` from ${fmt(from, { month: "short", day: "numeric" })}` : ""}`
+                            ? isFlex && c.flexHold
+                              ? `Staying with ${g.label}`
+                              : `${g.cohort ? g.label : `${g.label} group`}${from ? ` from ${fmt(from, { month: "short", day: "numeric" })}` : ""}`
                             : m < Math.min(...groups.map((x) => x.minAge ?? 0))
                               ? `Joins from ${ageText(Math.min(...groups.map((x) => x.minAge ?? 0)))}`
                               : "Past this program’s ages"}

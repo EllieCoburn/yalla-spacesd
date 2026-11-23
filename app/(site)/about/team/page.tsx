@@ -9,7 +9,7 @@ import { team, TEAM_PUBLIC } from "@/content/team";
 
 export const metadata: Metadata = {
   title: "Our Team",
-  description: "Meet Team Yalla: the leadership, educarers and guides behind Yalla Childcare & Coworking in Bankers Hill, San Diego.",
+  description: "Meet Team Yalla: the leadership, educarers and guides behind Yalla Coworking & Childcare in Bankers Hill, San Diego.",
 };
 
 export default function TeamPage() {

@@ -311,6 +311,24 @@ export async function familyLedger(db: Executor, familyId: string) {
   return { invoices: invs.map((i) => ({ ...i, totals: totals.get(i.id)! })), outstanding, credit: await creditBalance(db, familyId) };
 }
 
+/** What each family owes and holds in credit, for many families at once (the Families list). */
+export async function familyBalances(db: Executor, familyIds: string[]) {
+  const out = new Map<string, { outstanding: number; credit: number }>(familyIds.map((id) => [id, { outstanding: 0, credit: 0 }]));
+  if (!familyIds.length) return out;
+  const [open, creditRows] = await Promise.all([
+    db.select({ id: invoices.id, familyId: invoices.familyId }).from(invoices).where(and(inArray(invoices.familyId, familyIds), eq(invoices.status, "open"))),
+    db
+      .select({ familyId: credits.familyId, n: sql<number>`coalesce(sum(${credits.amountCents}), 0)::int` })
+      .from(credits)
+      .where(inArray(credits.familyId, familyIds))
+      .groupBy(credits.familyId),
+  ]);
+  const totals = await invoiceTotals(db, open.map((i) => i.id));
+  for (const i of open) out.get(i.familyId)!.outstanding += Math.max(totals.get(i.id)!.balance, 0);
+  for (const c of creditRows) out.get(c.familyId)!.credit = c.n;
+  return out;
+}
+
 /* ── Scheduled membership charges → invoices ── */
 
 /**
@@ -421,11 +439,14 @@ export async function saveDiscount(
     kind: "percent" | "fixed";
     value: number;
     programId?: string | null;
+    /** Several programs (none: every program). Takes the place of programId. */
+    programIds?: string[];
     active: boolean;
     startsOn?: string | null;
     endsOn?: string | null;
     maxUses?: number | null;
     oncePerFamily?: boolean;
+    firstBookingOnly?: boolean;
   },
 ) {
   if (!input.name.trim()) throw new OpsError("invalid", "Name the discount.");
@@ -442,12 +463,14 @@ export async function saveDiscount(
     name: input.name.trim(),
     kind: input.kind,
     value: input.value,
-    programId: input.programId || null,
+    programId: input.programIds ? (input.programIds.length === 1 ? input.programIds[0] : null) : input.programId || null,
+    programIds: input.programIds && input.programIds.length > 1 ? input.programIds : null,
     active: input.active,
     startsOn: input.startsOn || null,
     endsOn: input.endsOn || null,
     maxUses: input.maxUses ?? null,
     oncePerFamily: input.oncePerFamily ?? false,
+    firstBookingOnly: input.firstBookingOnly ?? false,
   };
   if (input.id) await db.update(discounts).set(values).where(eq(discounts.id, input.id));
   else await db.insert(discounts).values(values);

@@ -25,7 +25,7 @@ import {
 } from "@/lib/db/schema";
 import { invoiceTotals, type InvoiceTotals } from "@/lib/ops/billing";
 import { availabilityFor } from "@/lib/ops/capacity";
-import { paperworkStatus, type PaperworkItem } from "@/lib/ops/forms";
+import { paperworkStatus, paperworkStatusMany, type PaperworkItem } from "@/lib/ops/forms";
 import { membershipsForCohortDay } from "@/lib/ops/memberships";
 
 export type PaymentState = "none" | "unpaid" | "partial" | "paid" | "free";
@@ -212,23 +212,26 @@ export async function paperworkStates(db: Executor, bookingIds: string[]) {
     .where(and(inArray(bookingItems.bookingId, bookingIds), inArray(bookingItems.status, ["held", "confirmed"])));
   const byBooking = new Map<string, typeof rows>();
   for (const r of rows) byBooking.set(r.bookingId, [...(byBooking.get(r.bookingId) ?? []), r]);
-  for (const id of bookingIds) {
-    const rs = byBooking.get(id);
-    if (!rs?.length) {
-      out.set(id, "complete");
-      continue;
-    }
-    const status = await paperworkStatus(db, {
-      familyId: rs[0].familyId,
-      childIds: [...new Set(rs.map((r) => r.childId).filter(Boolean) as string[])],
-      programIds: [...new Set(rs.map((r) => r.programId))],
-      sessionIds: [...new Set(rs.map((r) => r.sessionId))],
-      bookingId: id,
-      onDate: rs.map((r) => r.localDate).sort()[0],
-    });
-    const issues = [...status.values()].flat().some((i) => i.state !== "complete" && i.enforcement !== "informational");
+  const withItems = bookingIds.filter((id) => byBooking.get(id)?.length);
+  for (const id of bookingIds) if (!byBooking.get(id)?.length) out.set(id, "complete");
+  const statuses = await paperworkStatusMany(
+    db,
+    withItems.map((id) => {
+      const rs = byBooking.get(id)!;
+      return {
+        familyId: rs[0].familyId,
+        childIds: [...new Set(rs.map((r) => r.childId).filter(Boolean) as string[])],
+        programIds: [...new Set(rs.map((r) => r.programId))],
+        sessionIds: [...new Set(rs.map((r) => r.sessionId))],
+        bookingId: id,
+        onDate: rs.map((r) => r.localDate).sort()[0],
+      };
+    }),
+  );
+  withItems.forEach((id, i) => {
+    const issues = [...statuses[i].values()].flat().some((x) => x.state !== "complete" && x.enforcement !== "informational");
     out.set(id, issues ? "issues" : "complete");
-  }
+  });
   return out;
 }
 
