@@ -50,7 +50,7 @@ export async function GET() {
       })),
       checkout: {
         guardian: guardian ? { firstName: guardian.firstName, lastName: guardian.lastName, email: guardian.email, phone: guardian.phone ?? null } : null,
-        savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate, flexHold: c.flexHold, ...(guardian?.canViewSensitive ? { allergies: c.allergies, medicalNotes: c.medicalNotes } : {}) })),
+        savedChildren: list.map((c) => ({ id: c.id, firstName: c.firstName, lastName: c.lastName, preferredName: c.preferredName, birthDate: c.birthDate, flexHold: c.flexHold, careOnFile: c.allergies !== null && c.medicalNotes !== null, ...(guardian?.canViewSensitive ? { allergies: c.allergies, medicalNotes: c.medicalNotes } : {}) })),
         wallet: wallet ? { passCents: wallet.passCents, creditCents: wallet.creditCents } : null,
         sibling,
       },

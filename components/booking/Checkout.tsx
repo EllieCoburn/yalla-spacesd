@@ -37,6 +37,8 @@ export type SavedChild = {
   /** "" = none known, text = details, null = not asked yet. */
   allergies?: string | null;
   medicalNotes?: string | null;
+  /** Answers are on file even if this guardian can't see them: not asked again, never overwritten. */
+  careOnFile?: boolean;
 };
 export type SignedInGuardian = {
   firstName: string;
@@ -65,6 +67,8 @@ type ChildDraft = {
   medsAnswer: "" | "no" | "yes";
   medications: string;
   include: boolean;
+  /** Allergies and medications are on file, hidden from this guardian: kept as they are. */
+  careOnFile?: boolean;
 };
 
 const NO_CARE = { allergyAnswer: "" as const, allergies: "", medsAnswer: "" as const, medications: "" };
@@ -72,6 +76,8 @@ const NO_CARE = { allergyAnswer: "" as const, allergies: "", medsAnswer: "" as c
 function careFromSaved(sc: SavedChild) {
   const a = sc.allergies ?? null;
   const m = sc.medicalNotes ?? null;
+  // On file but not visible to this guardian: nothing to answer, and nothing is sent to change it.
+  if (sc.careOnFile && a === null && m === null) return { allergyAnswer: "" as const, allergies: "", medsAnswer: "" as const, medications: "", careOnFile: true };
   return {
     allergyAnswer: a === null ? ("" as const) : a.trim() ? ("yes" as const) : ("no" as const),
     allergies: a ?? "",
@@ -80,11 +86,14 @@ function careFromSaved(sc: SavedChild) {
   };
 }
 const careDone = (k: ChildDraft) =>
+  !!k.careOnFile ||
   (k.allergyAnswer === "no" || (k.allergyAnswer === "yes" && k.allergies.trim() !== "")) && (k.medsAnswer === "no" || (k.medsAnswer === "yes" && k.medications.trim() !== ""));
 
 /** Asked for every child before payment: known allergies, and medications. */
 function CareQuestions({ child, onChange }: { child: ChildDraft; onChange: (patch: Partial<ChildDraft>) => void }) {
   const name = child.firstName.trim() || "your child";
+  if (child.careOnFile)
+    return <p className="mt-3 text-[0.85rem] text-ink-soft">{name}’s allergies and medications are on file. The parent who manages health details can update them in the Family Portal.</p>;
   const rows = [
     { q: `Does ${name} have any known allergies?`, answer: "allergyAnswer", text: "allergies", detail: "Which allergies, and how do they react?" },
     { q: `Does ${name} take any medications?`, answer: "medsAnswer", text: "medications", detail: "Which medications, and anything our team should know" },
@@ -753,8 +762,9 @@ export function Checkout({
           firstName: c.firstName,
           lastName: c.lastName,
           birthDate: c.birthDate,
-          allergies: c.allergyAnswer === "no" ? "" : c.allergies.trim(),
-          medications: c.medsAnswer === "no" ? "" : c.medications.trim(),
+          // null = keep what's on file (a guardian who can't see care details never changes them).
+          allergies: c.careOnFile ? null : c.allergyAnswer === "no" ? "" : c.allergies.trim(),
+          medications: c.careOnFile ? null : c.medsAnswer === "no" ? "" : c.medications.trim(),
         })),
         lines,
         signatures: (agreements ?? []).map((a) => ({

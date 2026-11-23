@@ -29,7 +29,8 @@ export default async function BookPage() {
         .where(and(eq(children.familyId, guardian.familyId), eq(children.status, "active")))
         .orderBy(asc(children.birthDate))
         // Allergies and medications on file are shown only to guardians who may see care details.
-        .then((rows) => rows.map((r) => (guardian.canViewSensitive ? r : { ...r, allergies: null, medicalNotes: null })))
+        // Others see only that answers are on file (so they aren't asked again or able to wipe them).
+        .then((rows) => rows.map((r) => ({ ...(guardian.canViewSensitive ? r : { ...r, allergies: null, medicalNotes: null }), careOnFile: r.allergies !== null && r.medicalNotes !== null })))
     : [];
   const testPayments = configured && paymentsStatus().provider === "test";
   const wallet = guardian ? await walletSummary(getDb(), guardian.familyId) : null;

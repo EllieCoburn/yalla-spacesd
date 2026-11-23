@@ -385,7 +385,9 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
   const lines = input.lines.filter((l) => l.childKeys.length);
   if (!lines.length) return { ok: false, code: "empty", error: "Choose at least one session and who’s coming." };
   // Every child's known allergies and medications are asked before payment.
-  if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !(careValid(c.allergies) && careValid(c.medications))))
+  // (A saved child may come with neither: that means "keep what's on file", checked below.)
+  const keepOnFile = (c: (typeof input.children)[number]) => !!c.existingId && c.allergies == null && c.medications == null;
+  if (input.children.some((c) => lines.some((l) => l.childKeys.includes(c.key)) && !keepOnFile(c) && !(careValid(c.allergies) && careValid(c.medications))))
     return { ok: false, code: "care", error: CARE_REQUIRED };
   // A family trying again (back from the payment page): their own earlier unpaid attempt at these days
   // is let go first, so it doesn't count against them in the checks below. Guests are matched by email,
@@ -475,7 +477,14 @@ export async function submitPublicBooking(db: DB, input: PublicBookingInput): Pr
         const [row] = await db.select().from(children).where(and(eq(children.id, c.existingId), eq(children.familyId, familyId)));
         if (!row) throw new OpsError("invalid", "One of the selected children isn’t part of your family.");
         childIdByKey.set(c.key, row.id);
-        await recordCareAnswers(db, actor, row.id, { allergies: c.allergies ?? "", medications: c.medications ?? "" });
+        if (keepOnFile(c)) {
+          // Nothing sent: only allowed when answers are already on file, which are then left as they are.
+          if (row.allergies === null || row.medicalNotes === null) throw new OpsError("care", CARE_REQUIRED);
+        } else if (input.signedIn && !input.signedIn.canViewSensitive && row.allergies !== null && row.medicalNotes !== null) {
+          // A guardian who can't see care details never overwrites what's on file.
+        } else {
+          await recordCareAnswers(db, actor, row.id, { allergies: c.allergies ?? "", medications: c.medications ?? "" });
+        }
       } else {
         if (!c.firstName.trim() || !c.lastName?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(c.birthDate)) throw new OpsError("invalid", "Add each child’s first name, last name and date of birth.");
         const { child } = await addChild(db, actor, familyId, { firstName: c.firstName, lastName: c.lastName.trim(), birthDate: c.birthDate });
