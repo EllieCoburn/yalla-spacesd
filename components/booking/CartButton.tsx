@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { onCartChange, readCart, removeFromCart, type CartItem } from "@/lib/booking/cart";
+import { onCartChange, readCart, removeFromCart, syncCart, type CartItem } from "@/lib/booking/cart";
 
 /**
  * The cart in the site header: shows how much a family has added, on every page, and takes them
@@ -12,6 +12,10 @@ import { onCartChange, readCart, removeFromCart, type CartItem } from "@/lib/boo
 export function CartButton({ className = "" }: { className?: string }) {
   const pathname = usePathname();
   const [items, setItems] = useState<CartItem[]>([]);
+  // Once per page load: refresh Yalla's copy of a waiting cart (links it to a family who has signed in).
+  useEffect(() => {
+    if (readCart().length) syncCart(3000);
+  }, []);
   useEffect(() => {
     const update = () => setItems(readCart());
     update();

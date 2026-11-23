@@ -50,7 +50,7 @@ export const HAPPENING_TYPES: {
       { label: "Hours", value: "9:00am – 12:00pm or 1:00 – 4:00pm" },
       { label: "Price", value: "$60 per child" },
     ],
-    notes: ["Separate age groups: 18 months – 4 years, 4 – 7 years, and 7 – 10 years."],
+    notes: ["Separate age groups: 18 months – 3 years (up to 16 children), 4 – 7 years (up to 10) and 8 – 10 years (up to 10)."],
   },
   {
     key: "evening",
@@ -67,7 +67,7 @@ export const HAPPENING_TYPES: {
     ],
     notes: [
       "Siblings: $85 for up to three children, +$25 for each additional child, applied automatically.",
-      "Separate age groups: 18 months – 4 years, 4 – 6 years, and 7 – 10 years.",
+      "Separate age groups: 18 months – 3 years (up to 16 children), 4 – 7 years (up to 10) and 8 – 10 years (up to 10).",
     ],
   },
   {

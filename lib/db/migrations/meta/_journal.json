@@ -477,6 +477,41 @@
       "when": 1795022529314,
       "tag": "0067_camp_faq_wording_2",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795067457466,
+      "tag": "0068_carts",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1795071295169,
+      "tag": "0069_weekend_play_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1795071621403,
+      "tag": "0070_after_hours_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795103134630,
+      "tag": "0071_flex_club_ops_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795104214294,
+      "tag": "0072_ops_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -6,15 +6,18 @@ import type { Permission } from "@/lib/auth/permissions";
 import { notificationsMode } from "@/lib/notify";
 import { paymentsStatus } from "@/lib/payments/provider";
 import { searchAll } from "./search-action";
+import { flexClubOnly } from "@/lib/auth/flex-club";
 
 const NAV: (NavItem & { perm: Permission | Permission[] })[] = [
   { href: "/admin", label: "Today", icon: "today", group: "Daily", perm: "dashboard.view", mobile: true },
+  { href: "/admin/flex-club", label: "Club Yalla operations", icon: "memberships", group: "Daily", perm: "flexclub.view", mobile: true },
   { href: "/admin/drop-ins", label: "Drop-ins", icon: "roster", group: "Daily", perm: "dropins.view", mobile: true },
   { href: "/admin/roster", label: "Roster", icon: "roster", group: "Daily", perm: "roster.view", mobile: true },
   { href: "/admin/calendar", label: "Calendar", icon: "roster", group: "Daily", perm: "roster.view" },
   { href: "/admin/kiosk", label: "Check-in kiosk", icon: "roster", group: "Daily", perm: "attendance.manage" },
   { href: "/admin/inbox", label: "Inbox", icon: "inbox", group: "Daily", perm: "families.view", mobile: true },
   { href: "/admin/bookings", label: "Bookings", icon: "bookings", group: "Daily", perm: "bookings.view", mobile: true },
+  { href: "/admin/carts", label: "Carts & checkouts", icon: "bookings", group: "Daily", perm: "bookings.view" },
   { href: "/admin/waitlist", label: "Waitlist", icon: "waitlist", group: "Daily", perm: "bookings.view" },
   { href: "/admin/spaces", label: "Space reservations", icon: "spaces", group: "Daily", perm: "spaces.view" },
   { href: "/admin/families", label: "Families", icon: "families", group: "People", perm: "families.view", mobile: true },
@@ -45,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </div>
   );
   return (
-    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName }} banners={banners} search={searchAll} signOut={signOut}>
+    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName }} banners={flexClubOnly(staff) ? null : banners} search={searchAll} signOut={signOut}>
       {children}
     </Shell>
   );

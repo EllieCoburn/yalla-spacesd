@@ -126,9 +126,9 @@ export default function BelongingPage() {
 
           <div className="mt-16 grid grid-cols-6 gap-3 sm:gap-5 lg:mt-24">
             {[
-              { src: "/photos/rainbow-light.jpg", alt: "A toddler standing in rainbow light on a wooden floor", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
-              { src: "/photos/collage-wall.jpg", alt: "A collaborative cardboard collage on the play garden fence", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
-              { src: "/photos/painting-wall-child.jpg", alt: "A child painting at the outdoor painting wall", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
+              { src: "/photos/chalk-together.jpg", alt: "Children side by side, drawing in chalk on one shared sheet of paper", className: "col-span-3 aspect-[3/4] rounded-t-[999px] sm:col-span-2" },
+              { src: "/photos/sunflowers.jpg", alt: "Sunflowers gathered on a long table in a Yalla play space", className: "col-span-3 aspect-[3/4] sm:col-span-2 sm:mt-16" },
+              { src: "/photos/painting.jpg", alt: "Two children painting together with bright colors on shared palettes", className: "col-span-6 aspect-[4/3] sm:col-span-2 sm:aspect-[3/4] sm:rounded-t-[999px]" },
             ].map((img, i) => (
               <Reveal key={img.src} delay={i * 90} className={`relative overflow-hidden bg-sand ${img.className}`}>
                 <Image src={img.src} alt={img.alt} fill sizes="(min-width:640px) 33vw, 50vw" className="object-cover" />
@@ -225,28 +225,6 @@ export default function BelongingPage() {
             </p>
             <p>We believe children and adults alike deserve spaces where they can learn, grow, connect, and participate as their fullest selves.</p>
             <p>Every family brings something different to Yalla, and those differences make our community stronger.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="roofline-edge bg-blue text-blue">
-        <div className="py-16 text-chalk lg:py-20">
-          <div className="shell">
-            <Reveal className="mx-auto max-w-2xl text-center">
-              <Mark name="dotsun" className="mx-auto h-7 w-7 text-chalk" />
-              <blockquote>
-                <p className="display mt-6 text-[clamp(1.3rem,1.1rem+0.8vw,1.7rem)] leading-[1.35]!">
-                  “To be human is to live among differences. <em className="text-mist!">To build community is to learn what we can make of them.</em>”
-                </p>
-                <footer className="mt-6 flex items-center justify-center gap-4 text-[0.85rem] text-chalk/80">
-                  <span className="h-px w-10 bg-chalk/40" aria-hidden="true" />
-                  <span>
-                    <span className="font-medium text-chalk">Ellie Coburn</span>, Owner &amp; Executive Director
-                  </span>
-                  <span className="h-px w-10 bg-chalk/40" aria-hidden="true" />
-                </footer>
-              </blockquote>
-            </Reveal>
           </div>
         </div>
       </section>

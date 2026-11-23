@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/admin/roster/PrintButton";
 import { PRINT_STYLES, SignedRecord } from "@/components/admin/agreements/SignedRecord";
-import { requirePermission } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
+import { canOpenSubmission, flexClubOnly } from "@/lib/auth/flex-club";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 
@@ -12,9 +13,11 @@ export const metadata = { title: "Print signed agreement" };
  * as a PDF.
  */
 export default async function PrintSubmission({ params }: { params: Promise<{ id: string }> }) {
-  const staff = await requirePermission("forms.view");
-  if (!can(staff, "forms.documents")) notFound();
+  const staff = await requireStaff();
   const { id } = await params;
+  // Club Yalla operations staff may print forms for Flex and Club Yalla families only.
+  if (!(await canOpenSubmission(getDb(), staff, id))) notFound();
+  if (!can(staff, "forms.documents") && !flexClubOnly(staff)) notFound();
   const record = await SignedRecord({ db: getDb(), submissionId: id });
   if (!record) notFound();
   return (
