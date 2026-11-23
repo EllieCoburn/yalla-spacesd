@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { Card, Empty, FilterBar, FilterField, inputCls, PageHeader, Pill, Stat, Tabs } from "@/components/admin/ui";
+import { Card, Empty, FilterBar, FilterField, inputCls, PageHeader, Pill, Stat, Status, Tabs } from "@/components/admin/ui";
 import { flexClubFamilies } from "@/lib/auth/flex-club";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
@@ -46,7 +46,7 @@ export default async function FlexClubPage({ searchParams }: { searchParams: Pro
   const activeMembers = members.filter((r) => r.m.status === "active");
   const tabs = [
     { key: "club", label: "Club Yalla", href: "/admin/flex-club", count: members.length },
-    { key: "flex", label: "Coming to Flex", href: "/admin/flex-club?tab=flex", count: dropIns.length },
+    { key: "flex", label: "Yalla Flex", href: "/admin/flex-club?tab=flex", count: dropIns.length },
     { key: "families", label: "Families", href: "/admin/flex-club?tab=families", count: scope.size },
     ...(openCounts
       ? [
@@ -137,6 +137,7 @@ function FlexTab({ rows, today, days }: { rows: DropIn[]; today: string; days: n
                               </Link>
                               <span className="text-[0.8rem] text-ink-soft">{ageLabel(r.child.birthDate, date)}</span>
                               {r.isNew ? <Pill tone="info">New Flex friend</Pill> : <Pill tone="positive">Returning</Pill>}
+                              {r.attendance !== "expected" ? <Status kind="attendance" value={r.attendance} /> : null}
                               <Link href={`/admin/families/${r.child.familyId}`} className="ml-auto text-[0.78rem] text-blue hover:underline">
                                 Family card →
                               </Link>

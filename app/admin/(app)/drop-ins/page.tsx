@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { Card, Empty, Notice, PageHeader, Pill } from "@/components/admin/ui";
+import { Card, Empty, Notice, PageHeader, Pill, Status } from "@/components/admin/ui";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
@@ -53,6 +53,7 @@ export default async function DropIns() {
                         </span>
                         {cohorts === null || mine.length > 1 ? <Pill tone="muted">{r.cohort.cohort}</Pill> : null}
                         {r.isNew ? <Pill tone="info">New Flex friend</Pill> : <Pill tone="positive">Returning Flex friend</Pill>}
+                        {r.attendance !== "expected" ? <Status kind="attendance" value={r.attendance} /> : null}
                       </div>
                       <p className="mt-1 text-[0.85rem] text-ink-soft">
                         {r.length[2].toUpperCase()}

@@ -33,6 +33,28 @@ const LEGACY_MIN_AGE: Record<number, string> = { 12: "saplings", 20: "sprouts" }
 export const flexGroupFor = (minAgeMonths: number | null | undefined) =>
   FLEX_GROUPS.find((g) => g.minAge === minAgeMonths) ?? (minAgeMonths != null && LEGACY_MIN_AGE[minAgeMonths] ? FLEX_GROUPS.find((g) => g.key === LEGACY_MIN_AGE[minAgeMonths]) ?? null : null);
 
+/**
+ * The age group for a Flex booking, never "none": the session's starting age first, then the group
+ * named in its title, then the child's own age on the day, then the age range the session covers.
+ * Lists of who's coming must never leave out a booked child just because a session's ages don't match.
+ */
+export function flexGroupForBooking(session: { minAgeMonths: number | null; maxAgeMonths?: number | null; title?: string | null }, childAgeMonths?: number | null): FlexGroup {
+  const exact = flexGroupFor(session.minAgeMonths);
+  if (exact) return exact;
+  const named = session.title ? FLEX_GROUPS.find((g) => session.title!.includes(g.label) || session.title!.includes(g.cohort)) : undefined;
+  if (named) return named;
+  if (childAgeMonths != null) {
+    const byAge = FLEX_GROUPS.find((g) => childAgeMonths >= g.minAge && childAgeMonths <= g.maxAge);
+    if (byAge) return byAge;
+  }
+  const min = session.minAgeMonths;
+  if (min != null) {
+    const covering = FLEX_GROUPS.find((g) => min >= g.minAge && min <= g.maxAge);
+    if (covering) return covering;
+  }
+  return childAgeMonths != null && childAgeMonths < FLEX_GROUPS[0].minAge ? FLEX_GROUPS[0] : FLEX_GROUPS[FLEX_GROUPS.length - 1];
+}
+
 export const flexTitle = (g: FlexGroup) => `Yalla Flex · ${g.label}`;
 
 /** Weekly standing vacancies: spots per group for Monday–Friday (index 0 = Monday). */

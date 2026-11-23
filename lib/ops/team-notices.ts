@@ -16,10 +16,10 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { bookingItems, children, programs, sessions, staffUsers, roles } from "@/lib/db/schema";
-import { EARLY_BIRD, FLEX_GROUPS, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
+import { attendanceRecords, bookingItems, children, programs, sessions, staffUsers, roles } from "@/lib/db/schema";
+import { EARLY_BIRD, FLEX_GROUPS, FLEX_SLUG, HALF_DAY, flexGroupFor, flexGroupForBooking, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { addDaysISO, fmtDate, todayLA, weekdayOf } from "@/lib/time";
+import { addDaysISO, ageInMonths, fmtDate, todayLA, weekdayOf } from "@/lib/time";
 import { getPolicy } from "./settings";
 
 export const NOTICE_TOPICS = [
@@ -175,10 +175,8 @@ async function flexItems(db: Executor, where: ReturnType<typeof and>) {
     .innerJoin(children, eq(children.id, bookingItems.childId))
     .where(and(eq(programs.slug, FLEX_SLUG), where))
     .orderBy(sessions.localDate);
-  return rows.flatMap((r) => {
-    const group = flexGroupFor(r.session.minAgeMonths);
-    return group ? [{ ...r, group }] : [];
-  });
+  // Every booked child is listed: a session whose ages don't match a group exactly still finds one.
+  return rows.map((r) => ({ ...r, group: flexGroupForBooking(r.session, ageInMonths(r.child.birthDate, r.session.localDate)) }));
 }
 
 async function cohortTeam(db: Executor, key: string) {
@@ -271,7 +269,15 @@ export async function upcomingDropIns(db: Executor, opts: { cohorts: string[] | 
     await flexItems(db, and(eq(bookingItems.status, "confirmed"), sql`${sessions.localDate} >= ${from}`, lt(sessions.localDate, until)))
   ).filter((r) => !opts.cohorts || opts.cohorts.includes(r.group.key));
   const first = await firstFlexDays(db, [...new Set(rows.map((r) => r.child.id))]);
+  // Check-in status from the kiosk or roster (expected, checked in, checked out, absent).
+  const recs = rows.length
+    ? await db
+        .select({ sessionId: attendanceRecords.sessionId, childId: attendanceRecords.childId, status: attendanceRecords.status })
+        .from(attendanceRecords)
+        .where(inArray(attendanceRecords.sessionId, [...new Set(rows.map((r) => r.session.id))]))
+    : [];
   return rows.map((r) => ({
+    attendance: recs.find((x) => x.sessionId === r.session.id && x.childId === r.child.id)?.status ?? (r.item.attendance === "absent" ? "absent" : "expected"),
     itemId: r.item.id,
     date: r.session.localDate,
     cohort: r.group,

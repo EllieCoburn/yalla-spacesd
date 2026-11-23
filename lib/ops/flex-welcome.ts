@@ -17,9 +17,9 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, families, guardians, programs, sessions, settings } from "@/lib/db/schema";
-import { EARLY_BIRD, FLEX_SLUG, HALF_DAY, flexGroupFor, type FlexGroup } from "@/lib/booking/flex";
+import { EARLY_BIRD, FLEX_SLUG, HALF_DAY, flexGroupForBooking, type FlexGroup } from "@/lib/booking/flex";
 import { trustedBaseUrl } from "@/lib/base-url";
-import { addDaysISO, fmtDate, fmtTime, todayLA, zonedDateTime } from "@/lib/time";
+import { addDaysISO, ageInMonths, fmtDate, fmtTime, todayLA, zonedDateTime } from "@/lib/time";
 import { getPolicy } from "./settings";
 import { WEEK_BLOCK_NOTE, whatToBring } from "@/content/flex-what-to-bring";
 
@@ -56,8 +56,8 @@ export async function firstVisitChildren(db: Executor, familyId: string, date: s
   const seen = new Set<string>();
   const out: WelcomeChild[] = [];
   for (const r of rows) {
-    const cohort = flexGroupFor(r.session.minAgeMonths);
-    if (!cohort || seen.has(r.child.id)) continue;
+    const cohort = flexGroupForBooking(r.session, ageInMonths(r.child.birthDate, r.session.localDate));
+    if (seen.has(r.child.id)) continue;
     seen.add(r.child.id);
     const half = r.item.addons.includes(HALF_DAY);
     const start = new Date(r.session.startsAt.getTime() - (r.item.addons.includes(EARLY_BIRD) ? 30 * 60_000 : 0));

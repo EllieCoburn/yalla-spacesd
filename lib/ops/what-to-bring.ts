@@ -5,8 +5,8 @@
 import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import type { Executor } from "@/lib/db";
 import { bookingItems, bookings, children, programs, sessions } from "@/lib/db/schema";
-import { FLEX_SLUG, HALF_DAY, flexGroupFor } from "@/lib/booking/flex";
-import { todayLA } from "@/lib/time";
+import { FLEX_SLUG, HALF_DAY, flexGroupForBooking } from "@/lib/booking/flex";
+import { ageInMonths, todayLA } from "@/lib/time";
 
 export type FlexChildList = {
   childId: string;
@@ -52,8 +52,7 @@ export async function familyFlexLists(db: Executor, familyId: string, today = to
   const out = new Map<string, FlexChildList>();
   const dates = new Map<string, string[]>();
   for (const r of rows) {
-    const g = flexGroupFor(r.session.minAgeMonths);
-    if (!g) continue;
+    const g = flexGroupForBooking(r.session, ageInMonths(r.child.birthDate, r.session.localDate));
     const half = r.item.addons.includes(HALF_DAY);
     dates.set(r.child.id, [...(dates.get(r.child.id) ?? []), r.session.localDate]);
     const cur = out.get(r.child.id);
