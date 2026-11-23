@@ -36,7 +36,7 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
   if (!(await allow(getDb(), "bookingIp", ctx.ip))) return { ok: false, code: "throttled", error: tooMany };
   if (!(await allow(getDb(), "bookingEmail", signedIn?.email ?? payload.guardian?.email))) return { ok: false, code: "throttled", error: tooMany };
   try {
-    return await submitPublicBooking(getDb(), {
+    const res = await submitPublicBooking(getDb(), {
       signedIn,
       guardian: { firstName: clip(payload.guardian.firstName, 80), lastName: clip(payload.guardian.lastName, 80), email: clip(payload.guardian.email, 200), phone: clip(payload.guardian.phone, 40) },
       children: payload.children.slice(0, 8).map((c) => ({ key: clip(c.key, 60), existingId: c.existingId ? clip(c.existingId, 60) : null, firstName: clip(c.firstName, 80), lastName: clip(c.lastName, 80), birthDate: clip(c.birthDate, 10), allergies: typeof c.allergies === "string" ? clip(c.allergies, 1000) : null, medications: typeof c.medications === "string" ? clip(c.medications, 1000) : null })),
@@ -58,6 +58,9 @@ export async function submitBookingAction(payload: BookingPayload): Promise<Publ
       baseUrl: ctx.baseUrl,
       couponCode: payload.couponCode ? clip(payload.couponCode, 40) : null,
     });
+    // Why checkouts stall, for the logs (the reason code only, never names or details).
+    if (!res.ok) console.warn("[checkout refused]", res.code, signedIn ? "signed-in" : "guest", `${payload.lines.length} line(s)`);
+    return res;
   } catch (e) {
     console.error("[public booking failed]", (e as Error).message?.slice(0, 200));
     return { ok: false, code: "error", error: "Something went wrong and nothing was booked. Please try again." };

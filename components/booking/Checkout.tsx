@@ -621,6 +621,55 @@ export function Checkout({
             phoneOk(adult.phone)
         : lines.length > 0 && !slotProblem && agreements !== null && agreementsDone;
 
+  /**
+   * Why the button can't go on yet, in plain words, and where on the page the problem is (so it can be
+   * scrolled to and highlighted). Null when everything's ready.
+   */
+  const blocker = (): { text: string; target?: string } | null => {
+    if (step === 0) {
+      if (!chosen.length) return { text: "Choose who’s coming: tick a child, or add a new one.", target: "ck-kids" };
+      if (unfinished) return { text: "Finish adding your new child: first name, last name and date of birth.", target: "ck-kids" };
+      if (chosen.length < needed) return { text: `You’ve chosen ${needed} spots, so choose or add ${needed} children (${needed - chosen.length} more to go).`, target: "ck-kids" };
+      if (ageProblem) return { text: ageProblem, target: "ck-kids" };
+      const c = chosen.find((x) => !careDone(x));
+      if (c) return { text: `Answer the allergy and medication questions for ${c.firstName || "your child"}.`, target: "ck-kids" };
+      return null;
+    }
+    if (step === 1) {
+      if (mustSignIn) return { text: "This email already has a Family Portal. Sign in above to continue.", target: "ck-details" };
+      if (checkingEmail) return { text: "One moment, checking your email…" };
+      if (guardian) return !!guardian.phone?.trim() || phoneOk(adult.phone) ? null : { text: "Add a phone number we can reach you on.", target: "ck-details" };
+      if (!adult.firstName.trim() || !adult.lastName.trim()) return { text: "Add your first and last name.", target: "ck-details" };
+      if (!/\S+@\S+\.\S+/.test(adult.email)) return { text: "Add a valid email address.", target: "ck-details" };
+      if (!phoneOk(adult.phone)) return { text: "Add a phone number we can reach you on.", target: "ck-details" };
+      return null;
+    }
+    if (!lines.length) return { text: "Your cart is empty. Go back and choose a day." };
+    if (slotProblem) return { text: slotProblem };
+    if (agreements === null) return { text: "One moment, loading the agreements…" };
+    for (const a of agreements) {
+      const k = sigKey(a);
+      const sig = signatures[k];
+      const name = `“${a.title}”${a.childKey ? ` for ${chosen.find((c) => c.key === a.childKey)?.firstName ?? "your child"}` : ""}`;
+      if (!a.completableOnline) return { text: `${name} needs a document from you. Please call us at 619.775.4008 and we’ll help.`, target: `ck-agr-${k}` };
+      const problem = agreementProblem(a);
+      if (problem) return { text: `${name}: ${problem}`, target: `ck-agr-${k}` };
+      if (a.requiresSignature && !(sig?.text.trim().length > 1)) return { text: `${name}: type your full name to sign.`, target: `ck-agr-${k}` };
+      if (!sig?.consent) return { text: `${name}: tick the box to agree.`, target: `ck-agr-${k}` };
+    }
+    return null;
+  };
+  /** Where the last "what's missing" message pointed, so that spot is outlined. */
+  const [flagged, setFlagged] = useState<string | null>(null);
+  /** True while the message shown is a "what's missing" one, which then follows what's still missing. */
+  const [missingShown, setMissingShown] = useState(false);
+  const showBlocker = (b: { text: string; target?: string }) => {
+    setError({ text: b.text });
+    setMissingShown(true);
+    setFlagged(b.target ?? null);
+    if (b.target) document.getElementById(b.target)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   function submit() {
     setError(null);
     start(async () => {
@@ -651,6 +700,8 @@ export function Checkout({
         return;
       }
       setError({ text: res.error, devLink: res.devLink });
+      setMissingShown(false);
+      setFlagged(null);
       if (res.agreements) setAgreements(res.agreements);
       if (res.code === "capacity" || res.code === "closed") onRefresh();
     });
@@ -779,12 +830,8 @@ export function Checkout({
             );
           })()}
 
-          {error ? (
-            <div
-              role="alert"
-              className="mb-6 border-l-2 border-oxblood/50 pl-4 text-[0.92rem] text-oxblood"
-            >
-              {error.text}
+          {error?.devLink ? (
+            <div className="mb-6 border-l-2 border-oxblood/50 pl-4 text-[0.92rem] text-oxblood">
               {error.devLink ? (
                 <p className="mt-2 text-[0.75rem] break-all text-ink-soft">
                   Local preview — the email was captured, not sent:{" "}
@@ -797,7 +844,7 @@ export function Checkout({
           ) : null}
 
           {step === 0 ? (
-            <div>
+            <div id="ck-kids" className="scroll-mt-6">
               <h2 className="display text-[2rem]">Who’s coming?</h2>
               <p className="mt-2 text-ink-soft">
                 {savedChildren.length
@@ -947,7 +994,7 @@ export function Checkout({
               </div>
             </div>
           ) : step === 1 ? (
-            <div>
+            <div id="ck-details" className="scroll-mt-6">
               <h2 className="display text-[2rem]">Your details</h2>
               {guardian ? (
                 <p className="mt-4 text-ink-soft">
@@ -1383,7 +1430,8 @@ export function Checkout({
                       return (
                         <div
                           key={k}
-                          className="border border-line bg-paper p-5"
+                          id={`ck-agr-${k}`}
+                          className={`scroll-mt-6 border bg-paper p-5 transition-colors ${missingShown && blocker()?.target === `ck-agr-${k}` ? "border-oxblood/60 ring-2 ring-oxblood/20" : "border-line"}`}
                         >
                           <p className="display text-[1.15rem]">
                             {a.title}
@@ -1490,17 +1538,46 @@ export function Checkout({
           )}
         </div>
 
+        {(() => {
+          // A "what's missing" message follows what's still missing (and goes once it's all done).
+          const live = missingShown ? blocker() : null;
+          const text = missingShown ? live?.text : error?.text;
+          const target = missingShown ? live?.target : null;
+          return text ? (
+          <div role="alert" className="border-t border-oxblood/20 bg-oxblood/[0.06] px-6 py-3 text-[0.88rem] leading-snug text-oxblood sm:px-10">
+            {text}
+            {target ? (
+              <button type="button" onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="ml-2 underline underline-offset-2">
+                Show me
+              </button>
+            ) : null}
+          </div>
+          ) : null;
+        })()}
         <div className="flex items-center justify-between gap-3 border-t border-line px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-10">
           <button
-            onClick={() => (step === 0 ? onClose() : setStep(step - 1))}
+            onClick={() => {
+              setError(null);
+              setMissingShown(false);
+              if (step === 0) onClose();
+              else setStep(step - 1);
+            }}
             className="h-12 px-2 text-[0.9rem] text-ink-soft hover:text-ink"
           >
             {step === 0 ? "Cancel" : "Back"}
           </button>
           <button
-            disabled={!canNext || pending}
+            disabled={pending}
+            aria-disabled={!canNext}
             onClick={async () => {
               setError(null);
+              setMissingShown(false);
+              // Not ready yet: say exactly what's missing and take them to it.
+              const b = blocker();
+              if (!canNext || b) {
+                showBlocker(b ?? { text: "Something on this step still needs your attention." });
+                return;
+              }
               // Anyone with a Family Portal signs in before going on, so they book with their saved details.
               if (step === 1 && !guardian) {
                 setCheckingEmail(true);
@@ -1514,7 +1591,7 @@ export function Checkout({
               if (step < steps.length - 1) setStep(step + 1);
               else submit();
             }}
-            className="h-12 rounded-full bg-ink px-8 text-[0.9rem] text-chalk transition-colors duration-500 hover:bg-blue disabled:cursor-not-allowed disabled:opacity-30"
+            className={`h-12 rounded-full bg-ink px-8 text-[0.9rem] text-chalk transition-colors duration-500 hover:bg-blue disabled:cursor-wait disabled:opacity-60 ${canNext ? "" : "opacity-45"}`}
           >
             {pending
               ? "Holding your spots…"
