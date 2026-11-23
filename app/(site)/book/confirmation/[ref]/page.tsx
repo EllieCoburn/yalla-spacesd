@@ -24,6 +24,12 @@ export default async function Confirmation({ params, searchParams }: { params: P
   const { ref } = await params;
   const sp = await searchParams;
   if (!isDbConfigured()) notFound();
+  // Back from Stripe: if their payment went through but Stripe's message hasn't reached us yet,
+  // ask Stripe directly so the family sees "You're all set" rather than "waiting for payment".
+  {
+    const { checkBookingPayment } = await import("@/lib/payments/check");
+    await checkBookingPayment(getDb(), String(ref).slice(0, 40)).catch(() => undefined);
+  }
   const v = await bookingStatusView(getDb(), ref);
   // Without the private link (or the family's own sign-in) nothing about the booking is shown,
   // not even whether the reference exists.

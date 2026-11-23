@@ -54,7 +54,7 @@ describe("Failed payments", () => {
     const f = await family("Declined");
     const { booking, card } = await book(f.family.id, [{ sessionId: sess.id, childId: f.children[0].id }], false);
     const before = (await db().select().from(s.bookings).where(eq(s.bookings.id, booking.id)))[0];
-    expect(before.holdExpiresAt!.getTime() - before.createdAt.getTime()).toBeLessThanOrEqual(20 * 60_000);
+    expect(before.holdExpiresAt!.getTime() - before.createdAt.getTime()).toBeLessThanOrEqual(36 * 60_000);
     await processEvent(db(), "test", { id: evt(), type: "payment.failed", checkoutRef: card!.checkoutRef!, reason: "Card declined" });
     const after = (await db().select().from(s.bookings).where(eq(s.bookings.id, booking.id)))[0];
     expect(after.status).toBe("held");

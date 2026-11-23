@@ -38,6 +38,13 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
   } catch (e) {
     console.error("[camp welcome run failed]", (e as Error).message?.slice(0, 160));
   }
+  // Before any hold lapses, ask Stripe about checkouts still waiting (in case a "paid" webhook was missed).
+  try {
+    const { checkPendingPayments } = await import("@/lib/payments/check");
+    await checkPendingPayments(db, { now });
+  } catch (e) {
+    console.error("[payment check run failed]", (e as Error).message?.slice(0, 160));
+  }
   const expiredHolds = (await expireHolds(db, now)) + (await expireSpaceHolds(db, now));
   // The Flex waitlist's safety net: close finished days, hand spots on, offer any new openings.
   {

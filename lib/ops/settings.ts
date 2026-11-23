@@ -14,8 +14,8 @@ export const POLICIES = {
   "booking.holdMinutes": {
     group: "Booking",
     label: "Checkout hold (minutes)",
-    help: "How long spots are held while a family completes checkout. Expired holds release automatically.",
-    default: 15,
+    help: "How long spots are held while a family completes checkout. Expired holds release automatically. Keep it at 35 or more: Stripe’s payment page stays open for at least 31 minutes, and a family still paying shouldn’t lose their spot.",
+    default: 35,
     decision: false,
   } as PolicyDef<number>,
   "notifications.staffEmails": {

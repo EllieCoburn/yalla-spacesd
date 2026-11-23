@@ -56,6 +56,11 @@ export interface PaymentProvider {
   }): Promise<{ checkoutRef: string; url: string }>;
   refund(input: { providerRef: string; amountCents: number; idempotencyKey: string; reason: string }): Promise<{ status: "succeeded" | "pending" | "failed"; providerRef?: string; failureReason?: string }>;
   parseWebhook(rawBody: string, headers: Headers): NormalizedEvent;
+  /**
+   * Asks the provider directly whether a checkout was paid (a backup for a delayed or missed
+   * webhook). Returns the same event the webhook would have sent, or null if not paid yet.
+   */
+  checkPayment?(checkoutRef: string): Promise<NormalizedEvent | null>;
 }
 
 /* ── Test provider ── */
@@ -126,6 +131,12 @@ export const stripeProvider: PaymentProvider = {
       { idempotencyKey: input.idempotencyKey },
     );
     return { checkoutRef: session.id, url: session.url! };
+  },
+  async checkPayment(checkoutRef) {
+    const s = await stripe().checkout.sessions.retrieve(checkoutRef);
+    if (s.mode !== "payment" || s.payment_status !== "paid") return null;
+    // Its own event id; if Stripe's webhook also arrives, the payment is already marked paid and nothing repeats.
+    return { id: `check:${s.id}`, type: "payment.succeeded", checkoutRef: s.id, providerRef: String(s.payment_intent), amountCents: s.amount_total ?? 0 };
   },
   async refund(input) {
     try {
