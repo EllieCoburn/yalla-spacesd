@@ -7,7 +7,7 @@ import { site } from "@/content/site";
 import { fmtDate } from "@/lib/time";
 import { Bebas_Neue } from "next/font/google";
 
-// Bebas Neue (free, open license) for this page's main heading only. It has no italic, so the blue words stay upright.
+// Bebas Neue (free, open license) for this page's headings. It has no italic, so the blue words stay upright.
 const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", display: "swap" });
 
 export const metadata: Metadata = {
@@ -74,13 +74,13 @@ export default function PoliciesPage() {
             {chapters.map((c, i) => (
               <section key={c.id} id={c.id} className="scroll-mt-28" aria-labelledby={`${c.id}-title`}>
                 <p className="font-serif text-ink-soft italic">{String(i + 1).padStart(2, "0")}</p>
-                <h2 id={`${c.id}-title`} className="display mt-2 text-[clamp(2rem,1.6rem+1.4vw,2.8rem)]">
+                <h2 id={`${c.id}-title`} className={`${bebas.className} mt-2 text-[clamp(2.4rem,1.9rem+1.8vw,3.4rem)] leading-[1] tracking-[0.01em]`}>
                   {c.title}
                 </h2>
                 <div className="mt-10 space-y-12">
                   {c.policies.map((p) => (
                     <article key={p.id} id={p.id} className="scroll-mt-28 border-t border-line pt-8">
-                      <h3 className="display text-[1.45rem] leading-snug!">{p.title}</h3>
+                      <h3 className={`${bebas.className} text-[1.9rem] leading-[1.05] tracking-[0.015em]`}>{p.title}</h3>
                       <div className="mt-5 max-w-2xl space-y-6 text-[1.02rem] leading-relaxed text-ink-soft">
                         {p.sections.map((s, j) => (
                           <div key={j} className="space-y-4">
@@ -98,8 +98,8 @@ export default function PoliciesPage() {
             ))}
 
             <section id="questions" className="scroll-mt-28 border border-line bg-paper p-8 lg:p-10" aria-labelledby="questions-title">
-              <h2 id="questions-title" className="display text-[clamp(1.8rem,1.4rem+1.2vw,2.4rem)]">
-                Questions or <em>support.</em>
+              <h2 id="questions-title" className={`${bebas.className} text-[clamp(2.2rem,1.7rem+1.5vw,3rem)] leading-[1] tracking-[0.01em]`}>
+                Questions or <em className="text-blue not-italic">support.</em>
               </h2>
               <p className="mt-4 max-w-xl text-ink-soft">We’re happy to help you understand a policy or find the right next step for your family.</p>
               <dl className="mt-8 grid gap-6 text-[0.95rem] sm:grid-cols-3">
