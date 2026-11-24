@@ -13,16 +13,17 @@
   --color-oxblood: #673e46;
   --color-line: #292c4526;
 
-  --font-serif: var(--font-lora), "Iowan Old Style", Georgia, serif;
-  --font-sans: var(--font-palmer), var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  /* The admin portal keeps a plain UI face for dense tables and forms. */
-  --font-ui: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  /* One family everywhere: Bebas Neue (light for text, bold for headings). "serif" is kept as a name only. */
+  --font-serif: var(--font-bebas), var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-bebas), var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   html {
+    /* Bebas has no italic: keep emphasis upright rather than a fake slant. */
+    font-synthesis-style: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -33,7 +34,15 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 16px;
-    line-height: 1.65;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  /* Headings (and the old serif accents: titles, numbers, questions) use the bold Bebas. */
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-weight: 700;
   }
   ::selection {
     background: var(--color-blue);
@@ -60,18 +69,14 @@ body,
 }
 
 @layer components {
-  .ui-font {
-    --font-sans: var(--font-ui);
-    font-family: var(--font-ui);
-  }
   .display {
     font-family: var(--font-serif);
-    font-weight: 400;
-    letter-spacing: -0.025em;
-    line-height: 1.02;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 0.98;
   }
   .display em {
-    font-style: italic;
+    font-style: normal;
     color: var(--color-blue);
   }
   .eyebrow {
@@ -85,7 +90,7 @@ body,
     font-family: var(--font-serif);
     font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.6rem);
     line-height: 1.45;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
   }
   .shell {
     width: 100%;
