@@ -5,6 +5,10 @@ import { Eyebrow } from "@/components/ui/primitives";
 import { POLICIES, POLICIES_EFFECTIVE_DATE, POLICIES_INTRO, POLICY_CHAPTERS } from "@/content/policies";
 import { site } from "@/content/site";
 import { fmtDate } from "@/lib/time";
+import { Bebas_Neue } from "next/font/google";
+
+// Bebas Neue (free, open license) for this page's main heading only. It has no italic, so the blue words stay upright.
+const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Policies & Terms",
@@ -21,8 +25,8 @@ export default function PoliciesPage() {
       <section className="pt-32 pb-14 lg:pt-44 lg:pb-16">
         <div className="shell">
           <Eyebrow>Policies &amp; Terms</Eyebrow>
-          <h1 className="display mt-7 text-[clamp(2.6rem,1.6rem+3.6vw,4.8rem)]">
-            The fine print, <em>in plain view.</em>
+          <h1 className={`${bebas.className} mt-7 text-[clamp(3.2rem,2rem+4.6vw,6.2rem)] leading-[0.95] tracking-[0.01em]`}>
+            The fine print, <em className="text-blue not-italic">in plain view.</em>
           </h1>
           <p className="lede mt-8 max-w-2xl text-ink-soft">{POLICIES_INTRO}</p>
           <p className="mt-6 text-[0.95rem] text-ink-soft">
