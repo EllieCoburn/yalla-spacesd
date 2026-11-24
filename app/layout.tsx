@@ -16,8 +16,8 @@ const palmerLake = localFont({
   display: "swap",
   // While it loads, show DM Sans (already on the page) rather than a metric-matched Arial.
   adjustFontFallback: false,
-  // Its letters are drawn small for their size (cap height 0.54 em vs DM Sans's 0.7), so scale it to read at the same size.
-  declarations: [{ prop: "size-adjust", value: "140%" }],
+  // Its letters are drawn small for their size (cap height 0.54 em vs DM Sans's 0.7), so scale it up to read at normal text size.
+  declarations: [{ prop: "size-adjust", value: "175%" }],
 });
 
 export const metadata: Metadata = {
