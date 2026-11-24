@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function AdminRoot({ children }: { children: React.ReactNode }) {
   if (!isDbConfigured()) {
     return (
-      <main id="main" className="flex min-h-screen items-center justify-center bg-chalk p-6">
+      <main id="main" className="ui-font flex min-h-screen items-center justify-center bg-chalk p-6">
         <div className="max-w-lg rounded-2xl border border-ink/10 bg-white p-8">
           <Mark name="wordmark" className="h-8 w-auto text-blue" />
           <h1 className="mt-6 font-serif text-2xl text-ink">The admin portal needs a database</h1>
@@ -40,5 +40,5 @@ export default function AdminRoot({ children }: { children: React.ReactNode }) {
       </main>
     );
   }
-  return <div className="min-h-screen bg-[#f4f2ec] text-ink">{children}</div>;
+  return <div className="ui-font min-h-screen bg-[#f4f2ec] text-ink">{children}</div>;
 }
