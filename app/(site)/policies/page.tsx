@@ -6,9 +6,12 @@ import { POLICIES, POLICIES_EFFECTIVE_DATE, POLICIES_INTRO, POLICY_CHAPTERS } fr
 import { site } from "@/content/site";
 import { fmtDate } from "@/lib/time";
 import { Bebas_Neue } from "next/font/google";
+import localFont from "next/font/local";
 
 // Bebas Neue (free, open license) for this page's headings. It has no italic, so the blue words stay upright.
 const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", display: "swap" });
+// The lighter 2010 Dharma Type "Bebas Neue Regular" (SIL Open Font License) for the policy text under each heading.
+const bebasLight = localFont({ src: "../../fonts/BebasNeue-Regular-Light.woff2", weight: "400", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Policies & Terms",
@@ -81,7 +84,7 @@ export default function PoliciesPage() {
                   {c.policies.map((p) => (
                     <article key={p.id} id={p.id} className="scroll-mt-28 border-t border-line pt-8">
                       <h3 className={`${bebas.className} text-[1.9rem] leading-[1.05] tracking-[0.015em]`}>{p.title}</h3>
-                      <div className="mt-5 max-w-2xl space-y-6 text-[1.02rem] leading-relaxed text-ink-soft">
+                      <div className={`${bebasLight.className} mt-5 max-w-2xl space-y-6 text-[1.35rem] leading-[1.35] tracking-[0.02em] text-ink-soft`}>
                         {p.sections.map((s, j) => (
                           <div key={j} className="space-y-4">
                             {s.heading ? <h4 className="eyebrow text-[0.62rem] text-ink">{s.heading}</h4> : null}
