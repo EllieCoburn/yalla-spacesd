@@ -1,24 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { SiteAnalytics } from "@/components/site/SiteAnalytics";
-import { DM_Sans } from "next/font/google";
-import localFont from "next/font/local";
+import { DM_Sans, Lora } from "next/font/google";
 import "./globals.css";
 
-// Bebas Neue everywhere: the light 2010 Dharma Type "Bebas Neue Regular" for text (weight 400) and the
-// 2019 Bebas Neue for headings and anything bold (weight 700). Both SIL Open Font License, web use allowed.
-const bebas = localFont({
-  src: [
-    { path: "./fonts/BebasNeue-Regular-Light.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/BebasNeue-Bold.woff2", weight: "700", style: "normal" },
-  ],
-  variable: "--font-bebas",
-  display: "swap",
-  // While it loads, show DM Sans rather than a metric-matched Arial.
-  adjustFontFallback: false,
-  // All capitals and narrow, so a touch larger than a normal text face to read comfortably.
-  declarations: [{ prop: "size-adjust", value: "112%" }],
-});
-// DM Sans only stands behind Bebas for the few characters it doesn't draw (the → and ← arrows).
+const lora = Lora({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-lora", display: "swap" });
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 
 export const metadata: Metadata = {
@@ -40,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bebas.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${lora.variable} ${dmSans.variable}`}>
       <body>
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[70] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-chalk">
           Skip to content

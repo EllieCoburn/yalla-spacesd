@@ -1,5 +1,5 @@
 /**
- * Yalla Admin UI kit (server-safe). Calm, legible, quick to scan: bold Bebas Neue for page titles, light Bebas Neue for
+ * Yalla Admin UI kit (server-safe). Calm, legible, quick to scan: Lora for page titles, DM Sans for
  * everything operational, hairline structure, and status pills that pair an icon shape with text.
  */
 import Link from "next/link";
