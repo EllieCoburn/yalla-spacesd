@@ -38,6 +38,8 @@ const nextConfig: NextConfig = {
   // Invoice PDFs read Yalla's fonts and logo from disk at runtime.
   outputFileTracingIncludes: { "/portal/invoices/[id]/pdf": ["./lib/billing/assets/**"], "/portal/play-pass/receipts/[id]/pdf": ["./lib/billing/assets/**"] },
   images: { formats: ["image/avif", "image/webp"] },
+  // Day-feed photos are resized in the browser (about 0.3–1MB) but can be up to 2.5MB; the server checks again.
+  experimental: { serverActions: { bodySizeLimit: "3mb" } },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

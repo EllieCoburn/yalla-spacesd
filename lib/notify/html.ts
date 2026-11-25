@@ -63,6 +63,7 @@ const HERO: Record<string, string> = {
 
 const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
+  day_feed_message: "See today and reply",
   family_confirm_email: "Confirm my email and open my portal",
   family_invite: "Create your Family Portal account",
   family_added: "Set up my account",

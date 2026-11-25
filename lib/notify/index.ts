@@ -63,7 +63,8 @@ export type TemplateKey =
   | "waitlist_update"
   | "flex_thank_you"
   | "cohort_drop_in"
-  | "cohort_drop_in_cancelled";
+  | "cohort_drop_in_cancelled"
+  | "day_feed_message";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -161,6 +162,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "Camp Yalla first-day welcome (to families)",
     subject: "Welcome to Camp Yalla! See you {{when}}",
     body: "Hi {{guardian_first_name}},\n\n{{camp_letter}}\n\nWarmly,\nTeam Yalla\n\n{{camp_details}}",
+    essential: true,
+    audience: "family",
+  },
+  day_feed_message: {
+    name: "A message from the team about a child’s day (to families)",
+    subject: "A message from Team Yalla about {{child_name}}",
+    body: "Hi {{guardian_first_name}},\n\n{{author_name}} sent you a message about {{child_name}}’s day:\n\n> {{message}}\n\nYou can see {{child_name}}’s day and reply in your Family Portal.\n\n{{link}}\n\nWarmly,\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -566,6 +574,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   flex_welcome: ["guardian_first_name", "when", "welcome_letter", "first_visit_details"],
   camp_welcome: ["guardian_first_name", "when", "camp_letter", "camp_details"],
   flex_thank_you: ["guardian_first_name", "child_names", "coupon_code", "coupon_link", "book_link"],
+  day_feed_message: ["guardian_first_name", "child_name", "author_name", "message", "link"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
   application_received: ["name", "details", "explore"],

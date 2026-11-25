@@ -8,6 +8,9 @@ import { getDb } from "@/lib/db";
 import { children, lateFees, locations, programs } from "@/lib/db/schema";
 import { ActionForm, TextField } from "@/components/admin/forms";
 import { waiveLateFeeAction } from "./actions";
+import { setSessionTeamAction } from "../my-day/actions";
+import { feedTeam, sessionTeam } from "@/lib/ops/day-feed";
+import { Checkbox } from "@/components/admin/forms";
 import { roster } from "@/lib/ops/attendance";
 import { daySessions } from "@/lib/ops/dashboard";
 import { addDaysISO, fmtDate, fmtTime, nowLA, phaseText, sessionPhase, todayLA } from "@/lib/time";
@@ -33,6 +36,8 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
   const notArrived = expected.filter((c) => !c.attendance || c.attendance.status === "expected").length;
   // The printable PDF carries parents' phone numbers and health details, so it needs both kinds of access.
   const canPdf = can(staff, "families.view") && can(staff, "children.care");
+  // The session team: who sees these children's profiles and day feed from 6pm the evening before.
+  const team = r && can(staff, "feed.manage") ? { all: await feedTeam(db), on: new Set((await sessionTeam(db, r.session.id)).map((t) => t.id)) } : null;
   const pdfHref = (extra: Record<string, string> = {}) => `/admin/export/roster-pdf?${new URLSearchParams({ date, ...(sp.program ? { program: sp.program } : {}), ...extra })}`;
 
   return (
@@ -145,6 +150,26 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                   </a>
                 </div>
               </div>
+              {team ? (
+                <details className="mb-4 rounded-xl border border-ink/10 bg-white px-4 py-3" open={team.on.size === 0 && team.all.length > 0}>
+                  <summary className="cursor-pointer text-[0.88rem] font-medium text-ink">
+                    Session team{team.on.size ? `: ${team.all.filter((t) => team.on.has(t.id)).map((t) => t.name).join(", ")}` : " · nobody assigned yet"}
+                  </summary>
+                  <p className="mt-2 text-[0.8rem] text-ink-soft">The people on this session see each child’s profile, post to their day feed and message their parents, from 6pm the evening before until 11:59pm on the day.</p>
+                  {team.all.length ? (
+                    <ActionForm key={r.session.id} action={setSessionTeamAction} className="mt-3 space-y-3" submit={{ label: "Save team", variant: "secondary" }}>
+                      <input type="hidden" name="sessionId" value={r.session.id} />
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {team.all.map((t) => (
+                          <Checkbox key={t.id} name="staffId" value={t.id} label={t.name} hint={t.role} defaultChecked={team.on.has(t.id)} />
+                        ))}
+                      </div>
+                    </ActionForm>
+                  ) : (
+                    <p className="mt-2 text-[0.8rem] text-ink-soft">Add team members in Settings → Staff & roles with the Session team role.</p>
+                  )}
+                </details>
+              ) : null}
               {!can(staff, "children.care") ? (
                 <div className="mb-4">
                   <Notice tone="info">Allergy, care and departure details are hidden for your role.</Notice>

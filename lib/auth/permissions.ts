@@ -63,6 +63,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: "Day feed",
+    items: [
+      { key: "feed.post", label: "Day feed for the sessions they’re assigned to: each child’s profile, posting photos, food, naps and potty, and messaging their parents (6pm the evening before until 11:59pm on the day)" },
+      { key: "feed.manage", label: "Every child’s day feed at any time, and assigning the team to each session" },
+    ],
+  },
+  {
     group: "Forms & waivers",
     items: [
       { key: "forms.view", label: "See paperwork status" },
@@ -170,6 +177,13 @@ export const DEFAULT_ROLES: { key: string; name: string; description: string; pe
     description:
       "Club Yalla at a glance, who’s coming to Yalla Flex, contact cards, care details and forms for Club Yalla and Flex families only, and the supplies and maintenance lists. No bookings, billing, messages or other programs.",
     permissions: ["flexclub.view", "ops.lists"],
+  },
+  {
+    key: "session_team",
+    name: "Session team",
+    description:
+      "Only the children in the sessions they’re assigned to, from 6pm the evening before until 11:59pm on the day: each child’s profile, their day feed and messages with their parents. Nothing else.",
+    permissions: ["feed.post"],
   },
   {
     key: "billing",

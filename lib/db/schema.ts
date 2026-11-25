@@ -1553,3 +1553,69 @@ export const opsRequests = pgTable(
   },
   (t) => [index("ops_requests_kind_idx").on(t.kind, t.status)],
 );
+
+/**
+ * Who's on the team for a session. A team member with the "feed.post" permission sees those children's
+ * profiles, posts to their day feed and messages their parents from 6pm the evening before the session
+ * until 11:59pm on the day (lib/ops/day-feed.ts).
+ */
+export const sessionStaff = pgTable(
+  "session_staff",
+  {
+    id: id(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    staffId: text("staff_id")
+      .notNull()
+      .references(() => staffUsers.id, { onDelete: "cascade" }),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("session_staff_unique").on(t.sessionId, t.staffId), index("session_staff_staff_idx").on(t.staffId)],
+);
+
+/**
+ * A child's day at Yalla, as families see it in the Family Portal on the day: photos, food, naps,
+ * potty and messages between the team and the family. One row per entry.
+ */
+export const dayFeedEntries = pgTable(
+  "day_feed_entries",
+  {
+    id: id(),
+    childId: text("child_id")
+      .notNull()
+      .references(() => children.id),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    sessionId: text("session_id").references(() => sessions.id),
+    /** The day it belongs to (Pacific). */
+    localDate: date("local_date").notNull(),
+    kind: text("kind").notNull(), // photo | food | nap | potty | message
+    /** When it happened (a nap's start). */
+    occurredAt: ts("occurred_at").notNull(),
+    /** Kind-specific details: food {meal, items, amount}; nap {endedAt}; potty {type, result}; message {from}. */
+    data: jsonb("data").$type<Record<string, string | null>>().notNull().default({}),
+    note: text("note"),
+    photoId: text("photo_id"),
+    authorStaffId: text("author_staff_id"),
+    authorGuardianId: text("author_guardian_id"),
+    authorName: text("author_name").notNull(),
+    createdAt: createdAt(),
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [index("day_feed_child_date_idx").on(t.childId, t.localDate), index("day_feed_family_date_idx").on(t.familyId, t.localDate)],
+);
+
+/** Feed photos, resized in the browser before upload. Served only to the child's family and their team. */
+export const dayFeedPhotos = pgTable("day_feed_photos", {
+  id: id(),
+  childId: text("child_id")
+    .notNull()
+    .references(() => children.id),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  data: bytea("data").notNull(),
+  createdAt: createdAt(),
+});

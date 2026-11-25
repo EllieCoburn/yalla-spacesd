@@ -13,6 +13,9 @@ import { ageLabel, fmtDate, fmtTime, todayLA } from "@/lib/time";
 import { signOutAction } from "../actions";
 import { familyCampLists, familyFlexLists } from "@/lib/ops/what-to-bring";
 import { ensureCheckinCode } from "@/lib/ops/checkin";
+import { familyTodayFeeds } from "@/lib/ops/day-feed";
+import { FeedTimeline } from "@/components/feed/FeedTimeline";
+import { FeedRefresh, FeedReply } from "@/components/portal/FeedReply";
 import { getGuardian } from "../session";
 
 export const metadata: Metadata = { title: "Family Portal", robots: { index: false } };
@@ -41,6 +44,8 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const flexLists = g ? await familyFlexLists(getDb(), g.familyId, today) : [];
   const campLists = g ? await familyCampLists(getDb(), g.familyId, today) : [];
   const checkinCode = g ? await ensureCheckinCode(getDb(), g.familyId) : null;
+  // On a day a child is at Yalla, their day feed shows on the Overview; the next day it's gone from here.
+  const feeds = g && tab === "overview" ? await familyTodayFeeds(getDb(), g.familyId) : [];
   const tabs = [
     { key: "overview", label: "Overview" },
     { key: "children", label: "Children" },
@@ -230,6 +235,30 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
                       {checkinCode}
                     </span>
                   </div>
+                ) : null}
+                {feeds.length ? (
+                  <section aria-labelledby="today-feed" className="mt-8 border-t border-line pt-7">
+                    <FeedRefresh />
+                    <p id="today-feed" className="display text-[1.6rem]">
+                      Today at <em>Yalla</em>
+                    </p>
+                    <div className="mt-6 space-y-10">
+                      {feeds.map((f) => (
+                        <div key={f.childId}>
+                          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4">
+                            <p className="text-[1.15rem] text-ink">{f.name}’s day</p>
+                            {f.sessions.length ? (
+                              <p className="text-[0.82rem] text-ink-soft">
+                                {f.sessions.map((x) => `${x.program} · ${fmtTime(x.startsAt)}–${fmtTime(x.endsAt)}`).join(" · ")}
+                              </p>
+                            ) : null}
+                          </div>
+                          <FeedTimeline entries={f.entries} photoBase="/portal/feed-photo/" empty={`The team will share photos, meals, naps and more about ${f.name}’s day here.`} />
+                          <FeedReply childId={f.childId} childName={f.name} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 ) : null}
                 {data.memberships.length ? (
                   <div className="mt-6 border-t border-line pt-5">

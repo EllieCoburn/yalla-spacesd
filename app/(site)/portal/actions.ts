@@ -240,3 +240,14 @@ export async function submitOnlineFormAction(_: PortalState, form: FormData): Pr
   if (res?.ok) redirect("/portal/home?tab=forms&signed=1");
   return res;
 }
+
+/** A parent's reply on their child's day feed, seen by the team that day. */
+export async function feedReplyAction(_: PortalState, form: FormData): Promise<PortalState> {
+  return run(async () => {
+    const g = await guardianOrFail();
+    const { familyReply } = await import("@/lib/ops/day-feed");
+    await familyReply(getDb(), g, String(form.get("childId") ?? ""), String(form.get("body") ?? ""));
+    revalidatePath("/portal/home");
+    return "Sent to the team.";
+  });
+}

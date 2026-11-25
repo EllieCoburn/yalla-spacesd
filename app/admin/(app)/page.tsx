@@ -20,6 +20,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // A cohort's team only has the drop-ins page.
   if (!can(me, "dashboard.view") && can(me, "flexclub.view")) redirect("/admin/flex-club");
   if (!can(me, "dashboard.view") && can(me, "dropins.view")) redirect("/admin/drop-ins");
+  if (!can(me, "dashboard.view") && can(me, "feed.post")) redirect("/admin/my-day");
   const staff = await requirePermission("dashboard.view");
   const sp = await searchParams;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? sp.date! : todayLA();
