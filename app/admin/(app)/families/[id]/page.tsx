@@ -4,7 +4,7 @@ import { EmergencyList, PickupList } from "@/components/admin/families/ContactFo
 import { GuardianFields } from "@/components/admin/families/GuardianForm";
 import { NotesPanel } from "@/components/admin/families/Notes";
 import { PaperworkList, PaperworkSummary } from "@/components/admin/families/PaperworkList";
-import { ActionForm, Checkbox, Disclosure, SelectField, TextArea, TextField } from "@/components/admin/forms";
+import { ActionForm, Checkbox, Disclosure, MoneyField, SelectField, TextArea, TextField } from "@/components/admin/forms";
 import { Card, DL, Empty, LinkButton, Money, Notice, PageHeader, Pill, Status } from "@/components/admin/ui";
 import { familyProfile } from "@/lib/admin/queries/families";
 import { requireStaff } from "@/lib/auth/session";
@@ -21,6 +21,8 @@ import { ensureCheckinCode } from "@/lib/ops/checkin";
 import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { flexHoldName } from "@/lib/booking/flex-hold";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
+import { walletActivity, walletSummary } from "@/lib/playpass/wallet";
+import { courtesyCreditAction } from "../../play-passes/actions";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const me = await requireStaff();
@@ -45,6 +47,9 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   const portal = await portalStatusByEmail(getDb(), d.guardians.map((g) => g.email));
   const primary = d.guardians.find((g) => g.isPrimary) ?? d.guardians[0];
   const checkinCode = await ensureCheckinCode(getDb(), d.family.id);
+  // The family's Yalla Wallet: what they can spend on bookings, and where staff give credit.
+  const wallet = can(staff, "billing.view") ? await walletSummary(getDb(), d.family.id) : null;
+  const walletLog = wallet ? await walletActivity(getDb(), d.family.id, 8) : [];
 
   return (
     <>
@@ -329,7 +334,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                 cols={2}
                 items={[
                   { label: "Outstanding balance", value: <span className={d.ledger.outstanding ? "font-medium text-[#8a5212]" : ""}><Money cents={d.ledger.outstanding} /></span> },
-                  { label: "Account credit", value: <Money cents={d.ledger.credit} /> },
+                  ...(d.ledger.credit ? [{ label: "Older account credit", value: <Money cents={d.ledger.credit} /> }] : []),
                 ]}
               />
               {d.ledger.invoices.length ? (
@@ -365,6 +370,47 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                 <p className="mt-3 text-[0.85rem] text-ink-soft">No invoices yet.</p>
               )}
               {d.ledger.invoices.length ? <p className="mt-3 text-[0.78rem] text-ink-soft">Open an invoice to void it (unpaid invoices) or to refund a payment.</p> : null}
+            </Card>
+          ) : null}
+
+          {wallet ? (
+            <Card title="Yalla Wallet" actions={can(staff, "playpass.view") ? <Link href={`/admin/play-passes/${d.family.id}`} className="text-blue">Full ledger →</Link> : null}>
+              <DL
+                cols={2}
+                items={[
+                  { label: "Available to spend", value: <span className="text-[1.05rem] font-medium"><Money cents={wallet.availableCents} /></span> },
+                  { label: "Yalla credit", value: <>{<Money cents={wallet.creditCents} />}{wallet.nextCreditExpiry ? <span className="block text-[0.74rem] text-ink-soft">next expiring {fmtDate(wallet.nextCreditExpiry, "d MMM yyyy")}</span> : null}</> },
+                  ...(wallet.passCents ? [{ label: "Play Pass balance", value: <Money cents={wallet.passCents} /> }] : []),
+                ]}
+              />
+              <p className="mt-3 text-[0.78rem] text-ink-soft">Cancellation credit is added here automatically. The family sees it in their Family Portal and it’s used at checkout.</p>
+              {walletLog.length ? (
+                <ul className="mt-3 divide-y divide-ink/6 border-t border-ink/8 text-[0.82rem]">
+                  {walletLog.map((e) => (
+                    <li key={e.id} className="flex items-baseline justify-between gap-3 py-2">
+                      <span className="min-w-0 truncate text-ink">{e.note ?? e.kind.replace(/_/g, " ")}</span>
+                      <span className="flex shrink-0 items-baseline gap-3">
+                        <span className="text-[0.74rem] text-ink-soft">{fmtDate(localDateOf(e.createdAt), "d MMM")}</span>
+                        <span className={e.amountCents < 0 ? "text-ink-soft" : "font-medium text-[#2c6447]"}>
+                          {e.amountCents > 0 ? "+" : ""}
+                          <Money cents={e.amountCents} />
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {can(staff, "billing.manage") ? (
+                <div className="mt-4 border-t border-ink/8 pt-4">
+                  <p className="mb-3 text-[0.86rem] font-medium text-ink">Add credit</p>
+                  <ActionForm action={courtesyCreditAction} submit={{ label: "Add to their wallet" }} resetOnSuccess confirm={{ title: "Add this credit to their Yalla Wallet?", body: "They’ll see it in their Family Portal with your reason, and can use it on any booking.", confirmLabel: "Add credit" }}>
+                    <input type="hidden" name="familyId" value={d.family.id} />
+                    <MoneyField name="amount" label="Amount" required className="max-w-[10rem]" />
+                    <TextArea name="note" label="Reason (the family sees this)" required rows={2} />
+                  </ActionForm>
+                  <p className="mt-2 text-[0.75rem] text-ink-soft">Valid 24 months, like cancellation credit.</p>
+                </div>
+              ) : null}
             </Card>
           ) : null}
 
