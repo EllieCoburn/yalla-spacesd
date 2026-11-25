@@ -29,7 +29,10 @@ import {
   previewMoveAction,
   resendAction,
   undoAbsenceAction,
+  extendCareAction,
+  applyBookingCouponAction,
 } from "../actions";
+import { bookingCoupon, extensionOptions, staffCoupons } from "@/lib/ops/extend-care";
 
 export const metadata = { title: "Booking" };
 
@@ -43,6 +46,7 @@ const EVENT_LABEL: Record<string, string> = {
   items_cancelled: "Items cancelled",
   moved: "Item moved",
   child_added: "Child added",
+  extended: "Care extended",
   note: "Note",
   confirmation_resent: "Confirmation resent",
 };
@@ -107,6 +111,12 @@ export default async function BookingDetailPage({ params, searchParams }: { para
   // Sessions this booking covers, for adding a child.
   const bookingSessions = [...new Map(active.map((i) => [i.session.id, i])).values()].filter((i) => i.session.endsAt > new Date());
   const addableKids = d.familyChildren.filter((c) => !active.some((i) => i.item.childId === c.id));
+  // Extending care in person (late stay, Early Bird, half day → full day) goes on this booking's invoice.
+  const canExtend = manage && can(staff, "billing.manage") && b.status === "confirmed";
+  const extendOpts = canExtend ? await extensionOptions(db, b.id) : [];
+  const codes = canExtend ? await staffCoupons(db) : [];
+  const ownCoupon = canExtend ? await bookingCoupon(db, b.id) : null;
+  const codeLabel = (c: { code: string | null; kind: string; value: number }) => `${c.code} · ${c.kind === "percent" ? `${c.value}% off` : `${usd(c.value)} off`}`;
   const hasHeld = active.some((i) => i.item.status === "held");
 
   return (
@@ -563,6 +573,50 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                   </li>
                 ) : null}
               </ul>
+            </Card>
+          ) : null}
+
+          {canExtend && extendOpts.length ? (
+            <Card title="Extend care">
+              <p className="mb-3 text-[0.82rem] text-ink-soft">When a family asks in person to stay longer and there’s room. It’s added to this booking’s invoice, so their invoice and PDF show it with any discount.</p>
+              <ActionForm action={extendCareAction} submit={{ label: "Add to booking" }} confirm={{ title: "Add this to the booking and its invoice?", confirmLabel: "Add it" }}>
+                <input type="hidden" name="bookingId" value={b.id} />
+                <fieldset className="space-y-2">
+                  <legend className="mb-1 text-[0.82rem] font-medium text-ink">Add for each child staying</legend>
+                  {extendOpts.map((o) => (
+                    <Checkbox key={o.value} name="pick" value={o.value} label={`${o.child} · ${o.label} (${o.time}) · ${usd(o.priceCents)}`} hint={o.session} />
+                  ))}
+                </fieldset>
+                <SelectField
+                  name="coupon"
+                  label="Discount"
+                  defaultValue={ownCoupon ? "booking" : "none"}
+                  options={[
+                    ...(ownCoupon ? [{ value: "booking", label: `Same as this booking: ${codeLabel(ownCoupon)}` }] : []),
+                    { value: "none", label: "No discount" },
+                    ...codes.filter((c) => c.id !== ownCoupon?.id).map((c) => ({ value: c.code!, label: codeLabel(c) })),
+                  ]}
+                />
+                <SelectField
+                  name="send"
+                  label="Payment"
+                  defaultValue="link"
+                  options={[
+                    { value: "link", label: "Email the family a payment link now" },
+                    { value: "account", label: "Add to their account only (collect later)" },
+                  ]}
+                />
+              </ActionForm>
+            </Card>
+          ) : null}
+
+          {canExtend && !ownCoupon && codes.length ? (
+            <Card title="Apply a discount code">
+              <p className="mb-3 text-[0.82rem] text-ink-soft">For a code the family should have had. It comes off the whole booking on its invoice. If they’ve already paid, refund or credit the difference from the invoice.</p>
+              <ActionForm action={applyBookingCouponAction} submit={{ label: "Apply code", variant: "secondary" }}>
+                <input type="hidden" name="bookingId" value={b.id} />
+                <SelectField name="code" label="Code" options={codes.map((c) => ({ value: c.code!, label: codeLabel(c) }))} />
+              </ActionForm>
             </Card>
           ) : null}
 

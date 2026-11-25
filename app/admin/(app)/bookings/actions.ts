@@ -126,3 +126,22 @@ export const confirmNowAction = adminAction("bookings.manage", async ({ db, acto
   return `Booking ${res.status === "confirmed" ? "confirmed" : res.status}.${bool("invoice") ? ` An invoice was created for the amount due.` : ""}`;
 });
 
+/** Extend a child's day after the family asks (late stay, Early Bird, half day → full day): added to the booking's invoice. */
+export const extendCareAction = adminAction(["bookings.manage", "billing.manage"], async ({ db, actor, str, all }) => {
+  const { extendCare } = await import("@/lib/ops/extend-care");
+  const send = str("send") === "account" ? "account" : "link";
+  const r = await extendCare(db, actor, { bookingId: str("bookingId"), picks: all("pick"), coupon: str("coupon") || "none", send, baseUrl: await baseUrl() });
+  const money = `$${(r.balanceCents / 100).toFixed(2)}`;
+  return `Added ${r.added} to invoice ${r.invoice.number}${r.coupon ? ` with ${r.coupon}` : ""}. ${r.balanceCents > 0 ? (r.linkSent ? `The family has been emailed a payment link for ${money}.` : `${money} is now due on their account.`) : "Nothing more is due."}`;
+});
+
+/** Apply a coupon to a whole booking after the fact. */
+export const applyBookingCouponAction = adminAction(["bookings.manage", "billing.manage"], async ({ db, actor, str }) => {
+  const { applyCouponToBooking } = await import("@/lib/ops/extend-care");
+  const r = await applyCouponToBooking(db, actor, { bookingId: str("bookingId"), code: str("code") });
+  const off = `$${(r.offCents / 100).toFixed(2)}`;
+  return r.balanceCents < 0
+    ? `${r.code} applied: ${off} off. They’d already paid, so they’re owed $${(-r.balanceCents / 100).toFixed(2)}. Refund it or add it as credit from invoice ${r.invoice.number}.`
+    : `${r.code} applied: ${off} off invoice ${r.invoice.number}.`;
+});
+

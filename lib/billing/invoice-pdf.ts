@@ -184,7 +184,8 @@ async function renderInvoice(db: Executor, { inv, lines, pays, refs, t, service,
   const facts: [string, string][] = [
     ["Date issued", day(inv.issuedAt)],
     ...(inv.dueOn ? ([["Due", fmtDate(inv.dueOn, "MMMM d, yyyy")]] as [string, string][]) : []),
-    ...(pays.length ? ([["Date paid", day(pays[pays.length - 1].succeededAt ?? pays[pays.length - 1].createdAt)]] as [string, string][]) : []),
+    // Partly paid (e.g. care extended after paying): "Last payment", since something is still due.
+    ...(pays.length ? ([[t.balance > 0 ? "Last payment" : "Date paid", day(pays[pays.length - 1].succeededAt ?? pays[pays.length - 1].createdAt)]] as [string, string][]) : []),
     ...(inv.periodStart && inv.periodEnd ? ([["Service period", `${fmtDate(inv.periodStart, "MMM d")} – ${fmtDate(inv.periodEnd, "MMM d, yyyy")}`]] as [string, string][]) : []),
   ];
   const panelH = 64;
