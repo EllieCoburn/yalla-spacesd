@@ -3,7 +3,7 @@
 import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
 import { checkIn, checkOut, markAbsent, undoAttendance } from "@/lib/ops/attendance";
-import { waiveLateFee } from "@/lib/ops/late-fees";
+import { approveLateFee, waiveLateFee } from "@/lib/ops/late-fees";
 
 const ids = (str: (k: string) => string) => {
   const sessionId = str("sessionId");
@@ -21,7 +21,7 @@ export const checkOutAction = adminAction("attendance.manage", async ({ db, acto
   if (!str("pickupId")) throw new OpsError("invalid", "Choose who is collecting the child.");
   const r = await checkOut(db, actor, { ...ids(str), pickupId: str("pickupId"), note: str("note") || undefined });
   return r.lateFee
-    ? `Checked out — collected by ${r.collectedByName}. ${r.lateFee.minutesLate} minutes after the session ended, so a $${(r.lateFee.amountCents / 100).toFixed(2)} late fee was added to the family’s account (you can waive it below).`
+    ? `Checked out — collected by ${r.collectedByName}. That’s ${r.lateFee.minutesLate} minutes after the session ended, so it’s flagged for an admin to review. Nothing has been charged and the family hasn’t been told.`
     : `Checked out — collected by ${r.collectedByName}.`;
 });
 
@@ -36,6 +36,11 @@ export const undoAction = adminAction("attendance.manage", async ({ db, actor, s
 });
 
 export const waiveLateFeeAction = adminAction("billing.manage", async ({ db, actor, str }) => {
-  await waiveLateFee(db, actor, { feeId: str("feeId"), reason: str("reason") });
-  return "Late fee waived.";
+  const fee = await waiveLateFee(db, actor, { feeId: str("feeId"), reason: str("reason") });
+  return fee.invoiceId ? "Late fee waived and its invoice voided." : "Dismissed. No fee, and the family isn’t told.";
+});
+
+export const approveLateFeeAction = adminAction("billing.manage", async ({ db, actor, str, cents }) => {
+  const fee = await approveLateFee(db, actor, { feeId: str("feeId"), amountCents: cents("amount") });
+  return `Late fee of $${(fee.amountCents / 100).toFixed(2)} charged. The family has been emailed.`;
 });

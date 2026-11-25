@@ -995,7 +995,8 @@ export const lateFees = pgTable(
     minutesLate: integer("minutes_late").notNull(),
     amountCents: integer("amount_cents").notNull(),
     invoiceId: text("invoice_id").references(() => invoices.id),
-    status: text("status").notNull().default("charged"), // charged | waived
+    /** flagged: a late sign-out for an admin to review, not charged · charged: approved and invoiced · waived: dismissed or waived. */
+    status: text("status").notNull().default("charged"), // flagged | charged | waived
     waivedBy: text("waived_by"),
     waivedReason: text("waived_reason"),
     createdAt: createdAt(),

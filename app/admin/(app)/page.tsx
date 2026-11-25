@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { inLA } from "@/lib/time";
 import { dashboard } from "@/lib/ops/dashboard";
 import { cartSummary } from "@/lib/ops/carts";
+import { flaggedLateCheckouts } from "@/lib/ops/late-fees";
 import { addDaysISO, fmtDate, fmtDateTime, fmtTime, nowLA, phaseText, sessionPhase, todayLA } from "@/lib/time";
 
 export const metadata = { title: "Today" };
@@ -38,6 +39,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const famNames = new Map((famIds.length ? await db.select().from(families).where(inArray(families.id, famIds)) : []).map((f) => [f.id, f.name]));
   const carts = can(staff, "bookings.view") && isToday ? await cartSummary(db) : null;
   const hour = Number(format(new Date(), "H", { in: inLA }));
+  const lateToReview = can(staff, "billing.view") ? (await flaggedLateCheckouts(db)).length : 0;
 
   return (
     <>
@@ -60,6 +62,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </div>
         }
       />
+      {lateToReview ? (
+        <Link href="/admin/billing/late" className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-[#8a5212]/25 bg-[#f8eedd] px-4 py-3 text-[0.88rem] text-[#8a5212] hover:border-[#8a5212]/50">
+          <span>
+            {lateToReview === 1 ? "1 late sign-out" : `${lateToReview} late sign-outs`} to review. Nothing is charged unless you approve it.
+          </span>
+          <span aria-hidden>→</span>
+        </Link>
+      ) : null}
 
       <FilterBar action="/admin">
         <FilterField label="Date">

@@ -91,7 +91,7 @@ export const POLICIES = {
   "attendance.lateFeeCents": {
     group: "Attendance",
     label: "Late fee per period (cents)",
-    help: "Charged for each late period after the grace period. 1000 = $10.",
+    help: "The suggested fee for each late period after the grace period. 1000 = $10. Late sign-outs are flagged for an admin to review (Billing → Late sign-outs); nothing is charged unless they approve it.",
     default: 1000,
     decision: false,
   } as PolicyDef<number>,

@@ -1,10 +1,10 @@
-/** Late departures: $10 for each 10 minutes after a five-minute grace period, waivable by staff. */
+/** Late departures: flagged for an admin to review; only charged ($10 per 10 minutes after a five-minute grace period) if approved. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import { checkIn, checkOut, undoAttendance } from "@/lib/ops/attendance";
 import { createHold, startCheckout } from "@/lib/ops/bookings";
-import { lateFeeFor, waiveLateFee } from "@/lib/ops/late-fees";
+import { approveLateFee, flaggedLateCheckouts, lateFeeFor, waiveLateFee } from "@/lib/ops/late-fees";
 import { processEvent } from "@/lib/payments/webhooks";
 import { db, family, owner, program, reset, session } from "./helpers";
 
@@ -50,14 +50,36 @@ describe("Signing out late", () => {
     expect(r.lateFee).toBeNull();
   });
 
-  it("invoices the family once when a child is collected 17 minutes late", async () => {
+  it("flags a 17-minute-late sign-out for review without charging or telling the family", async () => {
     const { f, sess } = await booked("drop_in");
     const r = await out(sess, f, 17);
-    expect(r.lateFee).toMatchObject({ minutesLate: 17, amountCents: 2000 });
-    const [line] = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, r.lateFee!.invoiceId!));
-    expect(line).toMatchObject({ kind: "fee", amountCents: 2000 });
-    const notes = await db().select().from(s.messages).where(eq(s.messages.templateKey, "late_fee"));
-    expect(notes).toHaveLength(1);
+    expect(r.lateFee).toMatchObject({ minutesLate: 17, amountCents: 2000, status: "flagged", invoiceId: null });
+    const before = await db().select().from(s.invoices).where(eq(s.invoices.familyId, f.family.id));
+    expect(before.every((i) => !/Late departure/.test(i.description ?? ""))).toBe(true);
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "late_fee"))).toHaveLength(0);
+    expect((await flaggedLateCheckouts(db())).map((x) => x.fee.id)).toEqual([r.lateFee!.id]);
+  });
+
+  it("an admin can approve it (invoiced once, family emailed), at a lower amount if they choose", async () => {
+    const { f, sess } = await booked("drop_in");
+    const r = await out(sess, f, 17);
+    await expect(approveLateFee(db(), owner, { feeId: r.lateFee!.id, amountCents: 5000 })).rejects.toThrow(/can’t be more than \$20.00/);
+    const fee = await approveLateFee(db(), owner, { feeId: r.lateFee!.id, amountCents: 1000 });
+    expect(fee).toMatchObject({ status: "charged", amountCents: 1000 });
+    const [line] = await db().select().from(s.invoiceLines).where(eq(s.invoiceLines.invoiceId, fee.invoiceId!));
+    expect(line).toMatchObject({ kind: "fee", amountCents: 1000 });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "late_fee"))).toHaveLength(1);
+    await expect(approveLateFee(db(), owner, { feeId: fee.id })).rejects.toThrow(/already been charged/);
+    expect(await flaggedLateCheckouts(db())).toHaveLength(0);
+  });
+
+  it("an admin can dismiss it with a reason: no invoice, no email", async () => {
+    const { f, sess } = await booked("drop_in");
+    const r = await out(sess, f, 40);
+    const fee = await waiveLateFee(db(), owner, { feeId: r.lateFee!.id, reason: "Forgot to check out at the kiosk" });
+    expect(fee).toMatchObject({ status: "waived", invoiceId: null, waivedReason: "Forgot to check out at the kiosk" });
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "late_fee"))).toHaveLength(0);
+    await expect(approveLateFee(db(), owner, { feeId: fee.id })).rejects.toThrow(/dismissed/);
   });
 
   it("counts from the end of a booked late stay", async () => {
@@ -66,12 +88,13 @@ describe("Signing out late", () => {
     expect(r.lateFee).toBeNull();
   });
 
-  it("can be waived, voiding the unpaid invoice, and is cleared if attendance is reset", async () => {
+  it("an approved fee can still be waived, voiding the unpaid invoice; a flag is cleared if attendance is reset", async () => {
     const { f, sess } = await booked("drop_in");
     const r = await out(sess, f, 30);
+    const charged = await approveLateFee(db(), owner, { feeId: r.lateFee!.id });
     const fee = await waiveLateFee(db(), owner, { feeId: r.lateFee!.id, reason: "Traffic accident on the 163" });
     expect(fee.status).toBe("waived");
-    const [inv] = await db().select().from(s.invoices).where(eq(s.invoices.id, r.lateFee!.invoiceId!));
+    const [inv] = await db().select().from(s.invoices).where(eq(s.invoices.id, charged.invoiceId!));
     expect(inv.status).toBe("void");
 
     const second = await booked("drop_in");

@@ -11,6 +11,7 @@ const TABS = [
   { href: "/admin/billing/credits", label: "Credits" },
   { href: "/admin/billing/scheduled", label: "Scheduled charges" },
   { href: "/admin/billing/discounts", label: "Discounts" },
+  { href: "/admin/billing/late", label: "Late sign-outs" },
 ];
 
 export function BillingTabs() {

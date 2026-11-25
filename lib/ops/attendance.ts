@@ -8,7 +8,7 @@ import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { Permission } from "@/lib/auth/permissions";
 import type { DB, Executor } from "@/lib/db";
 import { attendanceRecords, authorizedPickups, bookingItems, bookings, children, cohorts, emergencyContacts, guardians, lateFees, membershipExceptions, programs, sessions } from "@/lib/db/schema";
-import { chargeLateFee, waiveLateFee } from "./late-fees";
+import { flagLateCheckout, waiveLateFee } from "./late-fees";
 import { ageLabel } from "@/lib/time";
 import { paperworkStatusMany, type PaperworkItem } from "./forms";
 import { membershipsForCohortDay } from "./memberships";
@@ -212,7 +212,7 @@ export async function checkOut(db: DB, actor: Actor, input: { sessionId: string;
     .returning();
   await audit(db, actor, { action: "attendance.check_out", entityType: "child", entityId: input.childId, summary: `Checked out, collected by ${collectedBy}` });
   // Collected after the reserved time (plus the grace period): the late fee is charged.
-  const lateFee = await chargeLateFee(db, actor, { sessionId: input.sessionId, childId: input.childId });
+  const lateFee = await flagLateCheckout(db, actor, { sessionId: input.sessionId, childId: input.childId });
   return { ...r, lateFee };
 }
 
@@ -240,7 +240,7 @@ export async function undoAttendance(db: DB, actor: Actor, input: { sessionId: s
     .where(eq(attendanceRecords.id, rec.id));
   if (rec.bookingItemId) await db.update(bookingItems).set({ attendance: "expected" }).where(eq(bookingItems.id, rec.bookingItemId));
   // A sign-out recorded by mistake shouldn't leave a late fee behind.
-  const [fee] = await db.select().from(lateFees).where(and(eq(lateFees.sessionId, input.sessionId), eq(lateFees.childId, input.childId), eq(lateFees.status, "charged")));
+  const [fee] = await db.select().from(lateFees).where(and(eq(lateFees.sessionId, input.sessionId), eq(lateFees.childId, input.childId), inArray(lateFees.status, ["flagged", "charged"])));
   if (fee) await waiveLateFee(db, actor, { feeId: fee.id, reason: "Attendance reset" }).catch(() => undefined);
   await audit(db, actor, { action: "attendance.reset", entityType: "child", entityId: input.childId, summary: "Reset attendance" });
 }

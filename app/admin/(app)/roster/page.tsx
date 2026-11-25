@@ -6,8 +6,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { children, lateFees, locations, programs } from "@/lib/db/schema";
-import { ActionForm, TextField } from "@/components/admin/forms";
-import { waiveLateFeeAction } from "./actions";
+import { ActionForm } from "@/components/admin/forms";
+import { LateFeeReview } from "@/components/admin/late/LateFeeReview";
 import { setSessionTeamAction } from "../my-day/actions";
 import { feedTeam, sessionTeam } from "@/lib/ops/day-feed";
 import { Checkbox } from "@/components/admin/forms";
@@ -205,20 +205,12 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
               ) : null}
               {fees.length ? (
                 <div className="mt-6">
-                  <Card title="Late departures">
-                    <ul className="space-y-3 text-[0.85rem]">
+                  <Card title="Late sign-outs">
+                    <p className="mb-4 text-[0.8rem] text-ink-soft">Flagged for review only. Nothing is charged, and the family isn’t told, unless an admin approves it.</p>
+                    <ul className="space-y-5">
                       {fees.map((f) => (
-                        <li key={f.fee.id} className="flex flex-wrap items-center justify-between gap-3">
-                          <span>
-                            {f.child} · {f.fee.minutesLate} minutes late{can(staff, "billing.view") ? ` · $${(f.fee.amountCents / 100).toFixed(2)}` : ""}
-                            {f.fee.status === "waived" ? <span className="text-ink-soft"> · waived by {f.fee.waivedBy}: {f.fee.waivedReason}</span> : null}
-                          </span>
-                          {f.fee.status === "charged" && can(staff, "billing.manage") ? (
-                            <ActionForm action={waiveLateFeeAction} submit={{ label: "Waive", variant: "ghost" }} className="flex items-end gap-2">
-                              <input type="hidden" name="feeId" value={f.fee.id} />
-                              <TextField name="reason" label="Reason" required />
-                            </ActionForm>
-                          ) : null}
+                        <li key={f.fee.id}>
+                          <LateFeeReview fee={f.fee} who={f.child} canManage={can(staff, "billing.manage")} showMoney={can(staff, "billing.view")} />
                         </li>
                       ))}
                     </ul>
