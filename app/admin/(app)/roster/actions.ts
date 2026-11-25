@@ -2,7 +2,10 @@
 
 import { adminAction } from "@/lib/admin/action";
 import { OpsError } from "@/lib/audit";
-import { checkIn, checkOut, markAbsent, undoAttendance } from "@/lib/ops/attendance";
+import { eq } from "drizzle-orm";
+import { checkIn, checkOut, correctTimes, markAbsent, undoAttendance } from "@/lib/ops/attendance";
+import { sessions } from "@/lib/db/schema";
+import { zonedDateTime } from "@/lib/time";
 import { approveLateFee, waiveLateFee } from "@/lib/ops/late-fees";
 
 const ids = (str: (k: string) => string) => {
@@ -19,7 +22,17 @@ export const checkInAction = adminAction("attendance.manage", async ({ db, actor
 
 export const checkOutAction = adminAction("attendance.manage", async ({ db, actor, str }) => {
   if (!str("pickupId")) throw new OpsError("invalid", "Choose who is collecting the child.");
-  const r = await checkOut(db, actor, { ...ids(str), pickupId: str("pickupId"), note: str("note") || undefined });
+  // "Left at": staff can record an earlier time when they're signing a child out after the fact.
+  let at: Date | undefined;
+  const t = str("time");
+  if (t) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) throw new OpsError("invalid", "Enter the time they left, like 2:55 PM.");
+    const [s] = await db.select({ localDate: sessions.localDate }).from(sessions).where(eq(sessions.id, ids(str).sessionId));
+    if (!s) throw new OpsError("not_found", "Session not found.");
+    at = zonedDateTime(s.localDate, t);
+    if (at.getTime() > Date.now() + 60_000) throw new OpsError("invalid", "The time they left can’t be in the future.");
+  }
+  const r = await checkOut(db, actor, { ...ids(str), pickupId: str("pickupId"), note: str("note") || undefined, at });
   return r.lateFee
     ? `Checked out — collected by ${r.collectedByName}. That’s ${r.lateFee.minutesLate} minutes after the session ended, so it’s flagged for an admin to review. Nothing has been charged and the family hasn’t been told.`
     : `Checked out — collected by ${r.collectedByName}.`;
@@ -38,6 +51,13 @@ export const undoAction = adminAction("attendance.manage", async ({ db, actor, s
 export const waiveLateFeeAction = adminAction("billing.manage", async ({ db, actor, str }) => {
   const fee = await waiveLateFee(db, actor, { feeId: str("feeId"), reason: str("reason") });
   return fee.invoiceId ? "Late fee waived and its invoice voided." : "Dismissed. No fee, and the family isn’t told.";
+});
+
+export const correctTimesAction = adminAction("attendance.manage", async ({ db, actor, str }) => {
+  const r = await correctTimes(db, actor, { ...ids(str), inTime: str("inTime") || null, outTime: str("outTime") || null });
+  if (!r.changed) return "Times unchanged.";
+  if (r.chargedFee) return `Times corrected. A $${(r.chargedFee.amountCents / 100).toFixed(2)} late fee was already charged for this day; waive it in Billing → Late sign-outs or on the roster if it no longer applies.`;
+  return r.lateFee ? `Times corrected. Still ${r.lateFee.minutesLate} minutes late, so it stays flagged for review (not charged).` : "Times corrected. No late sign-out.";
 });
 
 export const approveLateFeeAction = adminAction("billing.manage", async ({ db, actor, str, cents }) => {

@@ -9,7 +9,7 @@ import type { Permission } from "@/lib/auth/permissions";
 import type { DB, Executor } from "@/lib/db";
 import { attendanceRecords, authorizedPickups, bookingItems, bookings, children, cohorts, emergencyContacts, guardians, lateFees, membershipExceptions, programs, sessions } from "@/lib/db/schema";
 import { flagLateCheckout, waiveLateFee } from "./late-fees";
-import { ageLabel } from "@/lib/time";
+import { ageLabel, fmtTime, zonedDateTime } from "@/lib/time";
 import { paperworkStatusMany, type PaperworkItem } from "./forms";
 import { membershipsForCohortDay } from "./memberships";
 import { getPolicy } from "./settings";
@@ -205,15 +205,52 @@ export async function checkOut(db: DB, actor: Actor, input: { sessionId: string;
     collectedBy = pk.name;
     pickupId = pk.id;
   }
+  if (input.at && rec.checkedInAt && input.at < rec.checkedInAt) throw new OpsError("invalid", `They can’t leave before they arrived (${fmtTime(rec.checkedInAt)}).`);
   const [r] = await db
     .update(attendanceRecords)
     .set({ status: "checked_out", checkedOutAt: input.at ?? new Date(), checkedOutBy: actor.name, collectedByPickupId: pickupId, collectedByName: collectedBy, notes: input.note ?? rec.notes, updatedAt: new Date() })
     .where(eq(attendanceRecords.id, rec.id))
     .returning();
-  await audit(db, actor, { action: "attendance.check_out", entityType: "child", entityId: input.childId, summary: `Checked out, collected by ${collectedBy}` });
-  // Collected after the reserved time (plus the grace period): the late fee is charged.
+  await audit(db, actor, { action: "attendance.check_out", entityType: "child", entityId: input.childId, summary: `Checked out${input.at ? ` (left at ${fmtTime(input.at)})` : ""}, collected by ${collectedBy}` });
+  // Collected after the reserved time (plus the grace period): flagged for an admin to review, not charged.
   const lateFee = await flagLateCheckout(db, actor, { sessionId: input.sessionId, childId: input.childId });
   return { ...r, lateFee };
+}
+
+/**
+ * Fixes recorded times: when a child was signed out late by mistake (they left at 2:55 but were signed
+ * out at 4:00), or arrived earlier than recorded. Times are on the session's day, Pacific. A late
+ * sign-out still waiting for review is worked out again; one already charged is left for an admin.
+ */
+export async function correctTimes(db: DB, actor: Actor, input: { sessionId: string; childId: string; inTime?: string | null; outTime?: string | null }) {
+  const [s] = await db.select().from(sessions).where(eq(sessions.id, input.sessionId));
+  if (!s) throw new OpsError("not_found", "Session not found.");
+  const [rec] = await db.select().from(attendanceRecords).where(and(eq(attendanceRecords.sessionId, input.sessionId), eq(attendanceRecords.childId, input.childId)));
+  if (!rec?.checkedInAt) throw new OpsError("invalid", "There’s no check-in to correct.");
+  const parse = (t: string | null | undefined) => {
+    if (!t) return null;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) throw new OpsError("invalid", "Enter a time like 2:55 PM.");
+    return zonedDateTime(s.localDate, t);
+  };
+  const newIn = parse(input.inTime) ?? rec.checkedInAt;
+  const newOut = rec.checkedOutAt ? (parse(input.outTime) ?? rec.checkedOutAt) : null;
+  if (input.outTime && !rec.checkedOutAt) throw new OpsError("invalid", "Check them out first, then you can change the time.");
+  if (newIn.getTime() > Date.now() + 60_000 || (newOut && newOut.getTime() > Date.now() + 60_000)) throw new OpsError("invalid", "Times can’t be in the future.");
+  if (newOut && newOut <= newIn) throw new OpsError("invalid", "They have to leave after they arrived.");
+  const changes: string[] = [];
+  if (newIn.getTime() !== rec.checkedInAt.getTime()) changes.push(`arrived ${fmtTime(rec.checkedInAt)} → ${fmtTime(newIn)}`);
+  if (newOut && rec.checkedOutAt && newOut.getTime() !== rec.checkedOutAt.getTime()) changes.push(`left ${fmtTime(rec.checkedOutAt)} → ${fmtTime(newOut)}`);
+  if (!changes.length) return { changed: false, lateFee: null, chargedFee: null };
+  await db.update(attendanceRecords).set({ checkedInAt: newIn, checkedOutAt: newOut, updatedAt: new Date() }).where(eq(attendanceRecords.id, rec.id));
+  await audit(db, actor, { action: "attendance.time_corrected", entityType: "child", entityId: input.childId, summary: `Corrected times: ${changes.join(", ")}` });
+  if (!newOut) return { changed: true, lateFee: null, chargedFee: null };
+  // Work out the late sign-out again from the corrected time.
+  const [fee] = await db.select().from(lateFees).where(and(eq(lateFees.sessionId, input.sessionId), eq(lateFees.childId, input.childId)));
+  if (fee?.status === "charged") return { changed: true, lateFee: null, chargedFee: fee };
+  if (fee?.status === "waived") return { changed: true, lateFee: null, chargedFee: null };
+  if (fee?.status === "flagged") await db.delete(lateFees).where(eq(lateFees.id, fee.id));
+  const lateFee = await flagLateCheckout(db, actor, { sessionId: input.sessionId, childId: input.childId });
+  return { changed: true, lateFee, chargedFee: null };
 }
 
 /** Records an absence. Never cancels, refunds or (unless policy allows) releases a member's spot. */

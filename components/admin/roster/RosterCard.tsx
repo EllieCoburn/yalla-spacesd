@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { absentAction, checkInAction, checkOutAction, undoAction } from "@/app/admin/(app)/roster/actions";
+import { absentAction, checkInAction, checkOutAction, correctTimesAction, undoAction } from "@/app/admin/(app)/roster/actions";
 import type { ActionState } from "@/lib/admin/action";
 import type { RosterChild } from "@/lib/ops/attendance";
 import { Pill, Status, inputCls } from "@/components/admin/ui";
@@ -37,9 +37,17 @@ function Mini({ action, sessionId, childId, children }: { action: Act; sessionId
 }
 
 const time = (d: Date | string | null | undefined) => (d ? new Date(d).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" }) : "");
+/** "HH:MM" in Pacific time, for time inputs. */
+const hhmm = (d: Date | string) => new Intl.DateTimeFormat("en-GB", { timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d));
 
 export function RosterCard({ c, sessionId, canManage, showBookings, ended = false }: { c: RosterChild; sessionId: string; canManage: boolean; showBookings: boolean; ended?: boolean }) {
-  const [mode, setMode] = useState<"idle" | "checkout" | "absent">("idle");
+  const [mode, setMode] = useState<"idle" | "checkout" | "absent" | "times">("idle");
+  // The time pickers start at "now" (Pacific) when the form opens; staff change it if the child left earlier.
+  const [nowTime, setNowTime] = useState("");
+  const open = (m: "checkout" | "times") => {
+    setNowTime(hhmm(new Date()));
+    setMode(m);
+  };
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const status = c.attendance?.status ?? (c.expected ? "expected" : "absent");
   // After the session ends, a child who never arrived isn't "expected" any more (staff can still record a late check-in).
@@ -197,9 +205,40 @@ export function RosterCard({ c, sessionId, canManage, showBookings, ended = fals
                     ))}
                   </select>
                   {!c.pickups ? <p className="text-[0.8rem] text-ink-soft">You can’t see departure details. Ask a colleague with care access to check this child out.</p> : null}
+                  <label className="block text-[0.8rem] font-medium text-ink" htmlFor={`out-${c.childId}`}>
+                    Left at <span className="font-normal text-ink-soft">· change it if they actually left earlier</span>
+                  </label>
+                  <input id={`out-${c.childId}`} type="time" name="time" defaultValue={nowTime} key={nowTime} required className={`${inputCls} min-h-12 max-w-[11rem] text-[0.95rem]`} />
                   <input name="note" placeholder="Note (optional)" className={`${inputCls} min-h-12`} />
                   <div className="flex gap-2">
                     <Big>Confirm check-out</Big>
+                    <button type="button" className="min-h-12 rounded-xl px-4 text-[0.9rem] text-ink-soft hover:bg-ink/5" onClick={() => setMode("idle")}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Mini>
+          ) : mode === "times" ? (
+            <Mini action={correctTimesAction} sessionId={sessionId} childId={c.childId}>
+              {(s) => (
+                <div className="w-full space-y-2">
+                  {report(s)}
+                  <div className="flex flex-wrap gap-3">
+                    <label className="block text-[0.8rem] font-medium text-ink">
+                      Arrived
+                      <input type="time" name="inTime" defaultValue={c.attendance?.checkedInAt ? hhmm(c.attendance.checkedInAt) : ""} className={`${inputCls} mt-1 min-h-12 w-[11rem] text-[0.95rem]`} />
+                    </label>
+                    {c.attendance?.checkedOutAt ? (
+                      <label className="block text-[0.8rem] font-medium text-ink">
+                        Left
+                        <input type="time" name="outTime" defaultValue={hhmm(c.attendance.checkedOutAt)} className={`${inputCls} mt-1 min-h-12 w-[11rem] text-[0.95rem]`} />
+                      </label>
+                    ) : null}
+                  </div>
+                  <p className="text-[0.78rem] text-ink-soft">The change is recorded in the audit trail. A late sign-out still waiting for review is worked out again from the new time.</p>
+                  <div className="flex gap-2">
+                    <Big>Save times</Big>
                     <button type="button" className="min-h-12 rounded-xl px-4 text-[0.9rem] text-ink-soft hover:bg-ink/5" onClick={() => setMode("idle")}>
                       Cancel
                     </button>
@@ -236,8 +275,13 @@ export function RosterCard({ c, sessionId, canManage, showBookings, ended = fals
                 </Mini>
               ) : null}
               {status === "checked_in" ? (
-                <button onClick={() => setMode("checkout")} className="inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-xl bg-ink px-4 text-[0.92rem] font-medium text-chalk hover:bg-blue">
+                <button onClick={() => open("checkout")} className="inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-xl bg-ink px-4 text-[0.92rem] font-medium text-chalk hover:bg-blue">
                   Check out
+                </button>
+              ) : null}
+              {status === "checked_in" || status === "checked_out" ? (
+                <button onClick={() => open("times")} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-ink/20 bg-white px-4 text-[0.92rem] text-ink hover:border-ink/50">
+                  Fix times
                 </button>
               ) : null}
               {status === "expected" ? (

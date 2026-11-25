@@ -104,3 +104,51 @@ describe("Signing out late", () => {
     expect(after.status).toBe("waived");
   });
 });
+
+describe("Recording the real time a child left", () => {
+  /** A booked Flex day moved to yesterday, so times on it are in the past. */
+  async function yesterday() {
+    const { addDaysISO, todayLA, zonedDateTime } = await import("@/lib/time");
+    const { f, sess } = await booked("drop_in");
+    const d = addDaysISO(todayLA(), -1);
+    const [moved] = await db().update(s.sessions).set({ localDate: d, startsAt: zonedDateTime(d, "09:00"), endsAt: zonedDateTime(d, "15:00") }).where(eq(s.sessions.id, sess.id)).returning();
+    const at = (t: string) => zonedDateTime(d, t);
+    const ids = { sessionId: moved.id, childId: f.children[0].id };
+    await checkIn(db(), owner, { ...ids, at: at("09:00") });
+    return { f, ids, at };
+  }
+
+  it("checking out after the fact with the real time (2:55pm) flags nothing", async () => {
+    const { f, ids, at } = await yesterday();
+    const r = await checkOut(db(), owner, { ...ids, pickupId: `guardian:${f.guardian.id}`, at: at("14:55") });
+    expect(r.checkedOutAt!.getTime()).toBe(at("14:55").getTime());
+    expect(r.lateFee).toBeNull();
+    await expect(checkOut(db(), owner, { ...ids, pickupId: `guardian:${f.guardian.id}`, at: at("08:00") })).rejects.toThrow();
+  });
+
+  it("fixing a 4:00pm sign-out to 2:55pm clears the late flag; to 3:30pm re-flags it at 30 minutes", async () => {
+    const { correctTimes } = await import("@/lib/ops/attendance");
+    const { f, ids, at } = await yesterday();
+    const r = await checkOut(db(), owner, { ...ids, pickupId: `guardian:${f.guardian.id}`, at: at("16:00") });
+    expect(r.lateFee).toMatchObject({ minutesLate: 60, status: "flagged" });
+    const fixed = await correctTimes(db(), owner, { ...ids, outTime: "14:55" });
+    expect(fixed).toMatchObject({ changed: true, lateFee: null });
+    expect(await db().select().from(s.lateFees)).toHaveLength(0);
+    const [rec] = await db().select().from(s.attendanceRecords).where(eq(s.attendanceRecords.childId, ids.childId));
+    expect(rec.checkedOutAt!.getTime()).toBe(at("14:55").getTime());
+    expect((await correctTimes(db(), owner, { ...ids, outTime: "15:30" })).lateFee).toMatchObject({ minutesLate: 30, status: "flagged" });
+    // Not before they arrived, and not in the future.
+    await expect(correctTimes(db(), owner, { ...ids, outTime: "08:30" })).rejects.toThrow(/leave after they arrived/);
+    const audit = await db().select().from(s.auditLog).where(eq(s.auditLog.action, "attendance.time_corrected"));
+    expect(audit[0].summary).toContain("left 4:00pm → 2:55pm");
+  });
+
+  it("an already-charged fee is left for an admin to waive", async () => {
+    const { correctTimes } = await import("@/lib/ops/attendance");
+    const { f, ids, at } = await yesterday();
+    const r = await checkOut(db(), owner, { ...ids, pickupId: `guardian:${f.guardian.id}`, at: at("16:00") });
+    await approveLateFee(db(), owner, { feeId: r.lateFee!.id });
+    const fixed = await correctTimes(db(), owner, { ...ids, outTime: "14:55" });
+    expect(fixed.chargedFee).toMatchObject({ status: "charged" });
+  });
+});
