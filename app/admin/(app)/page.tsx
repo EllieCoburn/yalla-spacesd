@@ -158,7 +158,20 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
-          <Card title={`${isToday ? "Today’s" : fmtDate(date, "EEE d MMM")} sessions`} actions={can(staff, "roster.view") ? <Link href={`/admin/roster${q({ date })}`} className="text-blue">Open roster →</Link> : null} padded={false}>
+          <Card title={`${isToday ? "Today’s" : fmtDate(date, "EEE d MMM")} sessions`} actions={
+              can(staff, "roster.view") ? (
+                <span className="flex items-center gap-4">
+                  {can(staff, "families.view") && can(staff, "children.care") && d.today.length ? (
+                    <a href={`/admin/export/roster-pdf${q({ date })}`} className="text-blue">
+                      Roster PDF ↓
+                    </a>
+                  ) : null}
+                  <Link href={`/admin/roster${q({ date })}`} className="text-blue">
+                    Open roster →
+                  </Link>
+                </span>
+              ) : null
+            } padded={false}>
             {d.today.length === 0 ? (
               <div className="p-5">
                 <Empty title="No sessions on this day">Choose another date, or add sessions from the schedule.</Empty>

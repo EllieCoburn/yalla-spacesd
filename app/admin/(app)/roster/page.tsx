@@ -31,6 +31,9 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
   const canManage = can(staff, "attendance.manage");
   const ended = r ? sessionPhase(r.session) === "ended" : false;
   const notArrived = expected.filter((c) => !c.attendance || c.attendance.status === "expected").length;
+  // The printable PDF carries parents' phone numbers and health details, so it needs both kinds of access.
+  const canPdf = can(staff, "families.view") && can(staff, "children.care");
+  const pdfHref = (extra: Record<string, string> = {}) => `/admin/export/roster-pdf?${new URLSearchParams({ date, ...(sp.program ? { program: sp.program } : {}), ...extra })}`;
 
   return (
     <>
@@ -39,6 +42,11 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
         subtitle={`${fmtDate(date, "EEEE d MMMM yyyy")} · ${date === todayLA() ? `it’s ${nowLA()} Pacific` : "times are Pacific"}`}
         actions={
           <div className="flex items-center gap-1">
+            {canPdf && list.some((l) => l.expected > 0) ? (
+              <a className="mr-2 inline-flex items-center rounded-lg bg-ink px-3.5 py-2 text-[0.82rem] font-medium text-white hover:bg-ink/85" href={pdfHref()} title="Every child booked today, with parents, phone numbers, allergies and medications">
+                Download day roster (PDF)
+              </a>
+            ) : null}
             <Link className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-[0.82rem] hover:border-ink/40" href={q({ date: addDaysISO(date, -1) })} aria-label="Previous day">
               ←
             </Link>
@@ -126,6 +134,11 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {canPdf ? (
+                    <a className="inline-flex h-9 items-center rounded-lg border border-ink/15 bg-white px-3.5 text-[0.84rem] font-medium hover:border-ink/40" href={pdfHref({ session: r.session.id })}>
+                      Roster PDF
+                    </a>
+                  ) : null}
                   <LinkButton href={`/admin/roster/${r.session.id}/print`}>Print</LinkButton>
                   <a className="inline-flex h-9 items-center rounded-lg border border-ink/15 bg-white px-3.5 text-[0.84rem] font-medium hover:border-ink/40" href={`/admin/export/roster/${r.session.id}`}>
                     Export CSV

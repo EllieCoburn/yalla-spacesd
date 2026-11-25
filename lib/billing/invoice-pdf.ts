@@ -34,14 +34,14 @@ const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone: "America/Los_
 
 /** Fonts and the logo, read once per server instance. */
 let assets: Promise<{ lora: Buffer; loraItalic: Buffer; sans: Buffer; logo: Buffer }> | null = null;
-function loadAssets() {
+export function loadAssets() {
   const dir = path.join(process.cwd(), "lib/billing/assets");
   assets ??= Promise.all(["Lora-Variable.ttf", "Lora-Italic-Variable.ttf", "DMSans-Variable.ttf", "yalla-logo.png"].map((f) => readFile(path.join(dir, f)))).then(([lora, loraItalic, sans, logo]) => ({ lora, loraItalic, sans, logo }));
   return assets;
 }
 
 /** Any character a font can't draw becomes a plain stand-in rather than breaking the PDF. */
-function clean(s: string, font: PDFFont) {
+export function clean(s: string, font: PDFFont) {
   const swapped = s.replace(/ /g, " ");
   let out = "";
   for (const ch of swapped) {
@@ -55,7 +55,7 @@ function clean(s: string, font: PDFFont) {
   return out;
 }
 
-function wrap(text: string, font: PDFFont, size: number, width: number) {
+export function wrap(text: string, font: PDFFont, size: number, width: number) {
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = "";
