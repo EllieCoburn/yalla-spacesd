@@ -1,6 +1,6 @@
 /** Coupon codes at checkout: the invoice and the card charge carry the reduced price. */
 import { beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import * as s from "@/lib/db/schema";
 import { invoiceTotals } from "@/lib/ops/billing";
 import { submitPublicBooking } from "@/lib/ops/public-booking";
@@ -8,7 +8,7 @@ import { processEvent } from "@/lib/payments/webhooks";
 import { plainText } from "@/lib/notify/html";
 import { invoicePdf } from "@/lib/billing/invoice-pdf";
 import { PDFDocument } from "pdf-lib";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { db, program, reset, session } from "./helpers";
 
 beforeEach(reset);
@@ -190,5 +190,41 @@ describe("Coupon codes", () => {
     await processEvent(db(), "test", { id: "evt_nf2", type: "payment.succeeded", checkoutRef: earlier.payment.checkoutRef!, providerRef: "pi_nf2", amountCents: earlier.payment.amountCents });
     await expect(findCoupon(db(), "NEWFRIENDS", [campDay.id], { familyId: earlier.booking.familyId })).rejects.toThrow(/first Camp Yalla or Yalla Flex booking/);
   });
-});
 
+  it("NEWTOYALLA: 20% off a new family's first booking of anything, once; not for families already with Yalla", async () => {
+    const { findCoupon } = await import("@/lib/ops/coupons");
+    const flex = await program({ slug: "yalla-flex", kind: "drop_in", name: "Yalla Flex", priceCents: 15000 });
+    const camp = await program({ slug: "camp-yalla", kind: "camp", name: "Camp Yalla", priceCents: 16000 });
+    const hap = await program({ slug: "yalla-weekends", kind: "happening", name: "Weekend Play", priceCents: 5000 });
+    // The real migration that adds the code.
+    await db().execute(sql.raw(readFileSync("lib/db/migrations/0083_newtoyalla_coupon.sql", "utf8")));
+    const [d] = await db().select().from(s.discounts).where(eq(s.discounts.code, "NEWTOYALLA"));
+    expect(d).toMatchObject({ kind: "percent", value: 20, programId: null, programIds: null, oncePerFamily: true, firstBookingOnly: true, active: true });
+    const campDay = await session(camp.id, { capacity: 4 }, 11);
+    const hapDay = await session(hap.id, { capacity: 4 }, 12);
+    const flexDay = await session(flex.id, { capacity: 4 }, 9);
+
+    // Works on any program for a brand-new family: camp, Happenings.
+    expect((await book("brand.new@example.com", campDay.id, "newtoyalla")).ok).toBe(true);
+    const first = await invoiceFor("brand.new@example.com");
+    expect(first.totals.total).toBe(12800);
+    await processEvent(db(), "test", { id: "evt_nty1", type: "payment.succeeded", checkoutRef: first.payment.checkoutRef!, providerRef: "pi_nty1", amountCents: first.payment.amountCents });
+    expect((await book("also.new@example.com", hapDay.id, "NewToYalla")).ok).toBe(true);
+    expect((await invoiceFor("also.new@example.com")).totals.total).toBe(4000);
+
+    // One time: the same family can't use it again.
+    await expect(findCoupon(db(), "NEWTOYALLA", [flexDay.id], { familyId: first.booking.familyId })).rejects.toThrow(/already used this code/);
+
+    // A family with an earlier confirmed booking isn't new.
+    expect((await book("been.before@example.com", flexDay.id)).ok).toBe(true);
+    const earlier = await invoiceFor("been.before@example.com");
+    await processEvent(db(), "test", { id: "evt_nty2", type: "payment.succeeded", checkoutRef: earlier.payment.checkoutRef!, providerRef: "pi_nty2", amountCents: earlier.payment.amountCents });
+    await expect(findCoupon(db(), "NEWTOYALLA", [campDay.id], { familyId: earlier.booking.familyId })).rejects.toThrow(/first Yalla booking/);
+
+    // Nor is a Play Pass family who has never booked a session.
+    const [pf] = await db().insert(s.families).values({ name: "Pass family" }).returning();
+    const [plan] = await db().insert(s.playPassPlans).values({ tier: "test", name: "Test pass", priceCents: 10000, allocationCents: 10000, minExperiences: 1 }).returning();
+    await db().insert(s.playPassSubscriptions).values({ familyId: pf.id, planId: plan.id, status: "active", provider: "test", startDate: "2026-11-01", prorationDays: 30, monthDays: 30, initialChargeCents: 10000, initialAllocationCents: 10000, termsVersion: "test", termsAcceptedAt: new Date(), termsAcceptedBy: "Test" });
+    await expect(findCoupon(db(), "NEWTOYALLA", [campDay.id], { familyId: pf.id })).rejects.toThrow(/first Yalla booking/);
+  });
+});

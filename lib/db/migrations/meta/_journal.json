@@ -582,6 +582,13 @@
       "when": 1795312297559,
       "tag": "0082_checkout_hold_35",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1795312298559,
+      "tag": "0083_newtoyalla_coupon",
+      "breakpoints": true
     }
   ]
 }

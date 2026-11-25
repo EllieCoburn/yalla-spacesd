@@ -6,7 +6,7 @@
 import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { OpsError } from "@/lib/audit";
 import type { Executor } from "@/lib/db";
-import { bookingItems, bookings, discounts, programs, sessions } from "@/lib/db/schema";
+import { bookingItems, bookings, discounts, memberships, playPassSubscriptions, programs, sessions } from "@/lib/db/schema";
 import { todayLA } from "@/lib/time";
 import type { LineInput } from "./billing";
 
@@ -68,7 +68,20 @@ export async function findCoupon(db: Executor, rawCode: string, sessionIds: stri
         ),
       )
       .limit(1);
-    if (before) {
+    // A code for a family's first Yalla booking of anything: Club Yalla members and Play Pass families aren't new either.
+    const known =
+      before ??
+      (covered
+        ? undefined
+        : ((await db.select({ id: memberships.id }).from(memberships).where(eq(memberships.familyId, opts.familyId)).limit(1))[0] ??
+          (
+            await db
+              .select({ id: playPassSubscriptions.id })
+              .from(playPassSubscriptions)
+              .where(and(eq(playPassSubscriptions.familyId, opts.familyId), inArray(playPassSubscriptions.status, ["active", "past_due", "canceled"])))
+              .limit(1)
+          )[0]));
+    if (known) {
       const names = covered ? (await db.select({ name: programs.name }).from(programs).where(inArray(programs.id, covered))).map((p) => p.name).sort() : [];
       throw new OpsError("coupon", `That code is for a family’s first ${names.length ? names.join(" or ") : "Yalla"} booking.`);
     }
