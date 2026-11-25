@@ -589,6 +589,13 @@
       "when": 1795312298559,
       "tag": "0083_newtoyalla_coupon",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1795312299559,
+      "tag": "0084_camp_typical_day_faq",
+      "breakpoints": true
     }
   ]
 }
