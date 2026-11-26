@@ -63,7 +63,15 @@ export const adjustmentAction = adminAction("billing.manage", async ({ db, actor
 export const voidAction = adminAction("billing.manage", async ({ db, actor, str }) => {
   if (!str("reason")) throw new OpsError("invalid", "Give a reason for voiding.");
   await voidInvoice(db, actor, str("invoiceId"), str("reason"));
-  return "Invoice voided.";
+  // A late-fee invoice voided here also marks that late fee as waived, so the roster and Late sign-outs agree.
+  const { lateFees } = await import("@/lib/db/schema");
+  const { and, eq } = await import("drizzle-orm");
+  const waived = await db
+    .update(lateFees)
+    .set({ status: "waived", waivedBy: actor.name, waivedReason: str("reason") })
+    .where(and(eq(lateFees.invoiceId, str("invoiceId")), eq(lateFees.status, "charged")))
+    .returning();
+  return waived.length ? "Invoice voided and the late fee waived. The family isn’t notified." : "Invoice voided.";
 });
 
 export const paymentLinkAction = adminAction("billing.manage", async ({ db, actor, str }) => {
