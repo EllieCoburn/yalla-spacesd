@@ -79,3 +79,10 @@ export const recordOfferChoiceAction = adminAction("billing.refund", async ({ db
   await resolveOffer(db, actor, { offerId: str("offerId"), choice });
   return choice === "credit" ? "Credit added to the family’s Yalla Wallet." : "Refund sent to the original payment method.";
 });
+
+/** Send the "added to your Yalla Wallet" email for a credit that didn't get one (e.g. added before the email existed). */
+export const emailForCreditAction = adminAction("billing.manage", async ({ db, str, form }) => {
+  const { emailForCredit } = await import("@/lib/ops/wallet-credit-email");
+  await emailForCredit(db, { familyId: str("familyId"), entryId: str("entryId"), reason: String(form.get("note") ?? "") });
+  return "Email sent to the family’s primary account email.";
+});

@@ -22,7 +22,8 @@ import { FLEX_GROUPS } from "@/lib/booking/flex";
 import { flexHoldName } from "@/lib/booking/flex-hold";
 import { validity, VALIDITY_CLASS } from "@/components/admin/agreements/validity";
 import { walletActivity, walletSummary } from "@/lib/playpass/wallet";
-import { courtesyCreditAction } from "../../play-passes/actions";
+import { courtesyCreditAction, emailForCreditAction } from "../../play-passes/actions";
+import { creditsWithoutEmail } from "@/lib/ops/wallet-credit-email";
 
 export default async function FamilyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const me = await requireStaff();
@@ -50,6 +51,8 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
   // The family's Yalla Wallet: what they can spend on bookings, and where staff give credit.
   const wallet = can(staff, "billing.view") ? await walletSummary(getDb(), d.family.id) : null;
   const walletLog = wallet ? await walletActivity(getDb(), d.family.id, 8) : [];
+  // Credits that never got their "added to your Yalla Wallet" email (e.g. added before the email existed).
+  const unemailed = wallet ? await creditsWithoutEmail(getDb(), d.family.id, walletLog) : new Set<string>();
 
   return (
     <>
@@ -387,15 +390,26 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
               {walletLog.length ? (
                 <ul className="mt-3 divide-y divide-ink/6 border-t border-ink/8 text-[0.82rem]">
                   {walletLog.map((e) => (
-                    <li key={e.id} className="flex items-baseline justify-between gap-3 py-2">
-                      <span className="min-w-0 truncate text-ink">{e.note ?? e.kind.replace(/_/g, " ")}</span>
-                      <span className="flex shrink-0 items-baseline gap-3">
-                        <span className="text-[0.74rem] text-ink-soft">{fmtDate(localDateOf(e.createdAt), "d MMM")}</span>
-                        <span className={e.amountCents < 0 ? "text-ink-soft" : "font-medium text-[#2c6447]"}>
-                          {e.amountCents > 0 ? "+" : ""}
-                          <Money cents={e.amountCents} />
+                    <li key={e.id} className="py-2">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-ink">{e.note ?? e.kind.replace(/_/g, " ")}</span>
+                        <span className="flex shrink-0 items-baseline gap-3">
+                          <span className="text-[0.74rem] text-ink-soft">{fmtDate(localDateOf(e.createdAt), "d MMM")}</span>
+                          <span className={e.amountCents < 0 ? "text-ink-soft" : "font-medium text-[#2c6447]"}>
+                            {e.amountCents > 0 ? "+" : ""}
+                            <Money cents={e.amountCents} />
+                          </span>
                         </span>
-                      </span>
+                      </div>
+                      {unemailed.has(e.id) && can(staff, "billing.manage") ? (
+                        <Disclosure label="No email was sent for this credit. Send it now">
+                          <ActionForm action={emailForCreditAction} submit={{ label: "Send the email" }} confirm={{ title: "Email the family about this credit?", body: "It goes to their primary account email with the reason below.", confirmLabel: "Send" }}>
+                            <input type="hidden" name="familyId" value={d.family.id} />
+                            <input type="hidden" name="entryId" value={e.id} />
+                            <TextArea name="note" label="Reason shared with the family" required rows={4} defaultValue={e.note ?? ""} hint="Emailed exactly as you write it, with your line breaks." />
+                          </ActionForm>
+                        </Disclosure>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

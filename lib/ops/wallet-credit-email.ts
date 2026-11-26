@@ -118,6 +118,35 @@ export async function sendWalletCreditEmails(db: DB, opts: { baseUrl: string; no
   return sent;
 }
 
+/**
+ * Wallet credits for a family that never had an email (e.g. added before this email existed), by ledger
+ * entry id. A credit counts as emailed if a notice exists for that entry, or one for the same amount was
+ * recorded within a few minutes of it.
+ */
+export async function creditsWithoutEmail(db: DB, familyId: string, entries: { id: string; amountCents: number; kind: string; createdAt: Date }[]) {
+  const credits = entries.filter((e) => e.amountCents > 0 && (e.kind === "credit" || e.kind === "adjustment" || e.kind === "booking_refund"));
+  if (!credits.length) return new Set<string>();
+  const notices = await db.select().from(walletCreditNotices).where(eq(walletCreditNotices.familyId, familyId));
+  const near = (a: Date, b: Date) => Math.abs(a.getTime() - b.getTime()) < 10 * 60_000;
+  return new Set(
+    credits
+      .filter((e) => !notices.some((n) => n.transactionKey === `entry:${e.id}` || (n.amountCents === e.amountCents && near(n.createdAt, e.createdAt))))
+      .map((e) => e.id),
+  );
+}
+
+/** Staff sending the "added to your Yalla Wallet" email for a credit that didn't get one. Once per credit. */
+export async function emailForCredit(db: DB, input: { familyId: string; entryId: string; reason: string }) {
+  const { walletEntries } = await import("@/lib/db/schema");
+  const [e] = await db.select().from(walletEntries).where(eq(walletEntries.id, input.entryId));
+  if (!e || e.familyId !== input.familyId || e.amountCents <= 0) throw new OpsError("not_found", "That credit isn’t on this family’s wallet.");
+  const reason = input.reason.replace(/\r/g, "").trim();
+  if (!reason) throw new OpsError("invalid", "Enter the reason shared with the family. It’s in the email they get.");
+  const row = await recordWalletCredit(db, { familyId: input.familyId, transactionKey: `entry:${e.id}`, amountCents: e.amountCents, reason });
+  if (!row) throw new OpsError("invalid", "An email for this credit was already sent.");
+  return row;
+}
+
 /** Best-effort send after an action that may have added credit; never fails the action. */
 export async function flushWalletCreditEmails(db: DB, baseUrl: string) {
   try {

@@ -165,3 +165,25 @@ describe("Credits issued automatically", () => {
     expect(m.body).not.toContain("internal");
   });
 });
+
+describe("Credits added before the email existed", () => {
+  it("are listed as not emailed, staff can send the email once, then they're not listed", async () => {
+    const { creditsWithoutEmail, emailForCredit } = await import("@/lib/ops/wallet-credit-email");
+    const { walletActivity } = await import("@/lib/playpass/wallet");
+    const f = await family("Kim");
+    // A credit with no email recorded (as before this feature).
+    await issueCredit(db(), { familyId: f.family.id, amountCents: 11200, sourceRef: "courtesy:old", note: REASON, createdBy: "Owner" });
+    const log = await walletActivity(db(), f.family.id);
+    const missing = await creditsWithoutEmail(db(), f.family.id, log);
+    expect(missing.size).toBe(1);
+    const [entryId] = [...missing];
+    await emailForCredit(db(), { familyId: f.family.id, entryId, reason: REASON });
+    expect(await sendWalletCreditEmails(db(), { baseUrl: BASE })).toBe(1);
+    const [m] = await emails(f.family.id);
+    expect(m.subject).toBe("$112.00 was added to your Yalla Wallet");
+    expect(plainText(m.body)).toContain(REASON);
+    expect(plainText(m.body)).toContain("Your available wallet balance · $112.00");
+    await expect(emailForCredit(db(), { familyId: f.family.id, entryId, reason: REASON })).rejects.toThrow(/already sent/);
+    expect((await creditsWithoutEmail(db(), f.family.id, log)).size).toBe(0);
+  });
+});
