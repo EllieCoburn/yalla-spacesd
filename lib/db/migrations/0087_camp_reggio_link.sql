@@ -1,0 +1,2 @@
+-- Link "Reggio Emilia approach" in the first camp question ("What does a typical day at Camp Yalla look like?"); a saved Admin copy too.
+UPDATE "faq_entries" SET "answer" = replace("answer", 'rooted in the Reggio Emilia approach.', 'rooted in the [Reggio Emilia approach](https://www.reggiochildren.it/en/reggio-emilia-approach/).') WHERE "id" = 'camp-day' AND "answer" NOT LIKE '%reggiochildren.it%';

@@ -610,6 +610,13 @@
       "when": 1795651566173,
       "tag": "0086_wallet_credit_email",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795651567173,
+      "tag": "0087_camp_reggio_link",
+      "breakpoints": true
     }
   ]
 }
