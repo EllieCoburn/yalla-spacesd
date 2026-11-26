@@ -348,9 +348,15 @@ export function Checkout({
   // Age, or for Yalla Flex a staff-set cohort hold (lib/booking/flex-hold.ts).
   const eligible = (s: PublicSession, k: ChildDraft) =>
     flexEligibility({ isFlex: s.programSlug === FLEX_SLUG, minAge: s.ages.min, ages: s.ages, age: ageInMonths(k.birthDate, s.localDate), hold: k.flexHold }).ok;
+  // Before the last step assigns each spot, estimate it the same way (the first children who fit), so the
+  // total and the sibling discount are right from the moment children are chosen.
+  const previewSlots = (sid: string) => {
+    const s = sorted.find((x) => x.id === sid);
+    return s ? chosen.filter((c) => eligible(s, c)).slice(0, spotsOf(sid)).map((c) => c.key) : [];
+  };
   const isOn = (sid: string, key: string) =>
     spotsOf(sid) > 0
-      ? (slots[sid] ?? []).includes(key)
+      ? (slots[sid] ?? previewSlots(sid)).includes(key)
       : (assign[sid] ?? chosen.map((c) => c.key)).includes(key);
   // A Happening with several age groups arrives as one session per group: show only the groups
   // a chosen child fits, and say which chosen sessions none of the children can attend.
@@ -861,7 +867,14 @@ export function Checkout({
                       {dates.length > 1 ? ` · ${dates.length} dates` : ""}
                     </span>
                     <span className="flex items-center gap-2 text-[0.85rem] text-ink-soft">
-                      {usd(subtotal)}
+                      {siblingSaving > 0 ? (
+                        <>
+                          <span className="line-through opacity-70">{usd(subtotal)}</span>
+                          <span className="text-ink">{usd(subtotal - siblingSaving)}</span>
+                        </>
+                      ) : (
+                        usd(subtotal)
+                      )}
                       <svg viewBox="0 0 12 12" aria-hidden className={`h-3 w-3 transition-transform ${cartOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.4">
                         <path d="M2 4.5l4 4 4-4" />
                       </svg>
@@ -1075,6 +1088,19 @@ export function Checkout({
                   <p className="border-l-2 border-oxblood/40 pl-3 text-[0.88rem] text-oxblood">Add a first name and date of birth for each child, or remove the extra form.</p>
                 ) : null}
               </div>
+              {/* The sibling discount, from the moment a second child is chosen. */}
+              {sibling.percent > 0 ? (
+                siblingSaving > 0 ? (
+                  <div className="mt-6 rounded-xl border border-[#2c6447]/25 bg-[#e6f0ea] px-4 py-3 text-[0.9rem] text-[#2c6447]" aria-live="polite">
+                    <p>
+                      <span className="font-medium">Sibling discount applied:</span> {sibling.percent}% off each additional child on the same day. You save {usd(siblingSaving)}.
+                    </p>
+                    <p className="mt-1 text-[0.82rem]">It works with coupon codes too: add yours on the last step.</p>
+                  </div>
+                ) : chosen.length === 1 ? (
+                  <p className="mt-5 text-[0.85rem] text-ink-soft">Bringing a sibling too? Each additional child gets {sibling.percent}% off, on top of any coupon code.</p>
+                ) : null
+              ) : null}
             </div>
           ) : step === 1 ? (
             <div id="ck-details" className="scroll-mt-6">
@@ -1679,6 +1705,13 @@ export function Checkout({
           >
             {step === 0 ? "Cancel" : "Back"}
           </button>
+          {chosen.length && step < steps.length - 1 ? (
+            <div className="min-w-0 flex-1 text-right text-[0.85rem] leading-snug" aria-live="polite">
+              <span className="text-ink-soft">Total </span>
+              <span className="font-medium text-ink">{usd(total)}</span>
+              {siblingSaving > 0 ? <span className="block text-[0.75rem] text-[#2c6447]">includes sibling discount −{usd(siblingSaving)}</span> : null}
+            </div>
+          ) : null}
           <button
             disabled={pending}
             aria-disabled={!canNext}

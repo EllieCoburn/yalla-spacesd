@@ -306,6 +306,8 @@ export function ProgramDates({
   const spotCount = new Map<string, number>();
   const fullFor: string[] = [];
   let total = 0;
+  const siblingPct = ctx.sibling.percent;
+  let siblingSaving = 0;
   for (const d of picked) {
     const prices: number[] = [];
     const c = countsOn(d);
@@ -327,6 +329,9 @@ export function ProgramDates({
     total += familyRate
       ? familyRateTotal(prices)
       : prices.reduce((a, b) => a + b, 0);
+    // Sibling discount: each additional child that day (the highest price pays in full), as at checkout.
+    if (!familyRate && siblingPct > 0)
+      siblingSaving += [...prices].sort((a, b) => b - a).slice(1).reduce((sum, p) => sum + Math.round((p * siblingPct) / 100), 0);
     if (prices.length)
       total += forFamily
         .filter((a) => stay.includes(a.key))
@@ -708,6 +713,16 @@ export function ProgramDates({
             </p>
           </>
         )}
+        {siblingPct > 0 && !familyRate ? (
+          children >= 2 ? (
+            <p className="mt-4 rounded-xl border border-[#2c6447]/25 bg-[#e6f0ea] px-4 py-3 text-[0.88rem] text-[#2c6447]" aria-live="polite">
+              <span className="font-medium">Sibling discount applied:</span> {siblingPct}% off each additional child on the same day
+              {siblingSaving > 0 ? `, so you save ${usd(siblingSaving)}` : ""}. It works with coupon codes too.
+            </p>
+          ) : (
+            <p className="mt-3 text-[0.8rem] text-ink-soft">Bringing a sibling? Each additional child gets {siblingPct}% off, on top of any coupon code.</p>
+          )
+        ) : null}
         {isFlex ? null : familyBoxes}
         {isFlex ? (
           <div className="mt-6 space-y-3">
@@ -849,11 +864,23 @@ export function ProgramDates({
                   <span className="text-ink-soft">
                     {" "}
                     · {children} {children === 1 ? "child" : "children"} ·{" "}
-                    {usd(total)}
+                    {siblingSaving > 0 ? (
+                      <>
+                        <span className="text-ink-soft/70 line-through">{usd(total)}</span>{" "}
+                        <span className="font-medium text-ink">{usd(total - siblingSaving)}</span>
+                      </>
+                    ) : (
+                      usd(total)
+                    )}
                   </span>
                 ) : (
                   <span className="text-ink-soft"> · add who’s coming</span>
                 )}
+                {children && siblingSaving > 0 ? (
+                  <span className="block text-[0.78rem] text-[#2c6447]">
+                    Includes the sibling discount: −{usd(siblingSaving)} ({siblingPct}% off each additional child)
+                  </span>
+                ) : null}
               </p>
             ) : (
               <p className="text-ink-soft">
