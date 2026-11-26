@@ -18,6 +18,7 @@ import { createInvoice, invoiceTotals, refreshInvoiceStatus, sendInvoicePaymentL
 import { couponLine, couponPrograms, normalizeCode, type Coupon } from "./coupons";
 import { priceFor } from "./bookings";
 import { getPolicy } from "./settings";
+import { payInvoiceFromWallet } from "@/lib/playpass/wallet";
 
 export type ExtensionOption = { value: string; itemId: string; key: string; child: string; session: string; label: string; time: string; priceCents: number };
 
@@ -100,7 +101,7 @@ async function addLines(db: DB, actor: Actor, invoiceId: string, lines: LineInpu
 export async function extendCare(
   db: DB,
   actor: Actor,
-  input: { bookingId: string; picks: string[]; coupon?: "booking" | "none" | string; send: "link" | "account"; baseUrl: string },
+  input: { bookingId: string; picks: string[]; coupon?: "booking" | "none" | string; send: "wallet" | "link" | "account"; baseUrl: string; idempotencyKey?: string },
 ) {
   const [b] = await db.select().from(bookings).where(eq(bookings.id, input.bookingId));
   if (!b) throw new OpsError("not_found", "Booking not found.");
@@ -145,6 +146,12 @@ export async function extendCare(
     }
   }
   await refreshInvoiceStatus(db, inv.id);
+  // Paid from the Yalla Wallet: up to what this extension costs (after any coupon), never the card.
+  let walletCents = 0;
+  if (input.send === "wallet") {
+    const extension = lines.reduce((s, l) => s + (l.quantity ?? 1) * l.unitCents, 0);
+    walletCents = await payInvoiceFromWallet(db, actor, { invoiceId: inv.id, idempotencyKey: `extend:${b.id}:${input.idempotencyKey ?? chosen.map((o) => o.value).sort().join(",")}`, maxCents: extension });
+  }
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
   const summary = chosen.map((o) => `${o.child}: ${o.key === FULL_DAY ? "full day" : o.label.toLowerCase()}`).join(", ");
   await db.insert(bookingEvents).values({ bookingId: b.id, actorName: actor.name, type: "extended", detail: { added: chosen.map((o) => ({ itemId: o.itemId, key: o.key, priceCents: o.priceCents })), coupon: d?.code ?? null } });
@@ -155,7 +162,7 @@ export async function extendCare(
     await sendInvoicePaymentLink(db, actor, inv.id, input.baseUrl);
     linkSent = true;
   }
-  return { invoice: inv, added: chosen.length, balanceCents: t.balance, linkSent, coupon: d?.code ?? null };
+  return { invoice: inv, added: chosen.length, balanceCents: t.balance, linkSent, walletCents, coupon: d?.code ?? null };
 }
 
 /**

@@ -366,6 +366,40 @@ export async function restoreWalletPayment(tx: Executor, input: { paymentId: str
   }
 }
 
+/**
+ * Staff paying what's owed on an invoice from the family's Yalla Wallet (e.g. care extended in person).
+ * Yalla credit covers anything; Play Pass funds only the parts of a booking they're eligible for. Never more
+ * than the invoice owes or the wallet holds; anything left stays owed. Idempotent per `idempotencyKey`.
+ */
+export async function payInvoiceFromWallet(db: DB, actor: Actor, input: { invoiceId: string; idempotencyKey: string; maxCents?: number }) {
+  return db.transaction(async (tx) => {
+    const [inv] = await tx.select().from(invoices).where(eq(invoices.id, input.invoiceId));
+    if (!inv || inv.status === "void") throw new OpsError("invalid", "Invoice not found.");
+    await lockFamily(tx, inv.familyId);
+    const key = `wallet-pay:${input.idempotencyKey}`;
+    const [done] = await tx.select().from(payments).where(eq(payments.idempotencyKey, key));
+    if (done) return done.amountCents;
+    const { invoiceTotals } = await import("@/lib/ops/billing");
+    const t = (await invoiceTotals(tx, [inv.id])).get(inv.id)!;
+    const due = Math.min(t.balance, input.maxCents ?? t.balance);
+    if (due <= 0) return 0;
+    const w = await walletSummary(tx, inv.familyId);
+    const passEligible = inv.bookingId && w.passCents ? await eligibleInvoiceCents(tx, inv.bookingId, inv.id) : 0;
+    const pass = Math.min(w.passCents, passEligible, due);
+    const credit = Math.min(w.creditCents, due - pass);
+    const amount = pass + credit;
+    if (amount <= 0) return 0;
+    const [pay] = await tx
+      .insert(payments)
+      .values({ invoiceId: inv.id, familyId: inv.familyId, amountCents: amount, method: "wallet", status: "succeeded", provider: "wallet", idempotencyKey: key, recordedBy: actor.name, succeededAt: new Date() })
+      .returning();
+    await debit(tx, { familyId: inv.familyId, amountCents: amount, passMax: pass, kind: "booking_debit", key: `debit:${key}`, bookingId: inv.bookingId ?? undefined, invoiceId: inv.id, paymentId: pay.id, note: inv.description ? `${inv.description} (${inv.number})` : inv.number, createdBy: actor.name });
+    await audit(tx, actor, { action: "playpass.wallet_spent", entityType: "invoice", entityId: inv.id, summary: `${usd(amount)} from the Yalla Wallet applied to ${inv.number}` });
+    await refreshInvoiceStatus(tx, inv.id);
+    return amount;
+  });
+}
+
 /** A documented correction by an administrator. Positive adds funds; negative removes available funds. */
 export async function adjustWallet(db: DB, actor: Actor, input: { familyId: string; amountCents: number; note: string; idempotencyKey: string }) {
   if (!input.note.trim()) throw new OpsError("invalid", "Say why the balance is being adjusted.");

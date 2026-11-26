@@ -8,6 +8,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { fmtDate, fmtDateTime, localDateOf } from "@/lib/time";
+import { walletSummary } from "@/lib/playpass/wallet";
+import { payFromWalletAction } from "../../../bookings/actions";
 import { adjustmentAction, applyCreditAction, deleteInvoiceAction, offlinePaymentAction, paymentLinkAction, voidAction } from "../../actions";
 
 export const metadata = { title: "Invoice" };
@@ -28,6 +30,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   for (const r of d.refunds) if (r.status === "succeeded" || r.status === "pending") refundedByPayment.set(r.paymentId, (refundedByPayment.get(r.paymentId) ?? 0) + r.amountCents);
   const open = i.status === "open";
   const pendingCheckout = d.payments.find((p) => p.status === "pending");
+  const walletAvailable = manage && open && t.balance > 0 ? (await walletSummary(getDb(), i.familyId)).availableCents : 0;
 
   return (
     <>
@@ -283,6 +286,17 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                   </Disclosure>
                 ) : null}
               </div>
+            </Card>
+          ) : null}
+
+          {walletAvailable > 0 ? (
+            <Card title="Pay from their Yalla Wallet">
+              <p className="mb-3 text-[0.85rem] text-ink-soft">
+                They have <Money cents={walletAvailable} /> in their Yalla Wallet. This pays up to <Money cents={Math.min(walletAvailable, t.balance)} /> of the <Money cents={t.balance} /> due. No card is charged.
+              </p>
+              <ActionForm action={payFromWalletAction} submit={{ label: "Use Yalla Wallet" }} confirm={{ title: "Pay this from their Yalla Wallet?", confirmLabel: "Use wallet" }}>
+                <input type="hidden" name="invoiceId" value={i.id} />
+              </ActionForm>
             </Card>
           ) : null}
 

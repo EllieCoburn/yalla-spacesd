@@ -100,3 +100,34 @@ describe("Applying a code to a whole booking afterwards", () => {
     await expect(applyCouponToBooking(db(), owner, { bookingId: booking.id, code: "NEWTOYALLA" })).rejects.toThrow(/already has a coupon/);
   });
 });
+
+describe("Paying for extended care from the Yalla Wallet", () => {
+  it("comes out of their wallet credit, never a card; nothing is emailed for payment", async () => {
+    const { issueCredit, walletSummary, payInvoiceFromWallet } = await import("@/lib/playpass/wallet");
+    const { booking, invoice, f } = await paidBooking("camp", { coupon: "FRIENDSOFYALLA" });
+    await issueCredit(db(), { familyId: f.family.id, amountCents: 11200, sourceRef: "courtesy:test", note: "Thanks", createdBy: "test" });
+    const late = (await extensionOptions(db(), booking.id)).find((o) => o.key === "late")!;
+    const cardsBefore = (await db().select().from(s.payments).where(eq(s.payments.method, "card"))).length;
+    const r = await extendCare(db(), owner, { bookingId: booking.id, picks: [late.value], coupon: "booking", send: "wallet", baseUrl: "http://test", idempotencyKey: "form-1" });
+    expect(r).toMatchObject({ walletCents: 2550, balanceCents: 0, linkSent: false });
+    expect((await walletSummary(db(), f.family.id)).availableCents).toBe(11200 - 2550);
+    expect((await db().select().from(s.payments).where(eq(s.payments.method, "card"))).length).toBe(cardsBefore);
+    const [w] = await db().select().from(s.payments).where(and(eq(s.payments.invoiceId, invoice.id), eq(s.payments.method, "wallet")));
+    expect(w.amountCents).toBe(2550);
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "payment_request"))).toHaveLength(0);
+    const [inv] = await db().select().from(s.invoices).where(eq(s.invoices.id, invoice.id));
+    expect(inv.status).toBe("paid");
+    // Paying again with the same key (a double click) takes nothing more.
+    expect(await payInvoiceFromWallet(db(), owner, { invoiceId: invoice.id, idempotencyKey: `extend:${booking.id}:form-1` })).toBe(2550);
+    expect((await walletSummary(db(), f.family.id)).availableCents).toBe(11200 - 2550);
+  });
+
+  it("if the wallet doesn't cover it all, the rest stays owed", async () => {
+    const { issueCredit } = await import("@/lib/playpass/wallet");
+    const { booking, f } = await paidBooking("camp");
+    await issueCredit(db(), { familyId: f.family.id, amountCents: 1000, sourceRef: "courtesy:small", note: "x", createdBy: "test" });
+    const late = (await extensionOptions(db(), booking.id)).find((o) => o.key === "late")!;
+    const r = await extendCare(db(), owner, { bookingId: booking.id, picks: [late.value], coupon: "none", send: "wallet", baseUrl: "http://test" });
+    expect(r).toMatchObject({ walletCents: 1000, balanceCents: 2000 });
+  });
+});

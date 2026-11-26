@@ -33,6 +33,7 @@ import {
   applyBookingCouponAction,
 } from "../actions";
 import { bookingCoupon, extensionOptions, staffCoupons } from "@/lib/ops/extend-care";
+import { walletSummary } from "@/lib/playpass/wallet";
 
 export const metadata = { title: "Booking" };
 
@@ -116,6 +117,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
   const extendOpts = canExtend ? await extensionOptions(db, b.id) : [];
   const codes = canExtend ? await staffCoupons(db) : [];
   const ownCoupon = canExtend ? await bookingCoupon(db, b.id) : null;
+  const walletAvailable = canExtend ? (await walletSummary(db, b.familyId)).availableCents : 0;
   const codeLabel = (c: { code: string | null; kind: string; value: number }) => `${c.code} · ${c.kind === "percent" ? `${c.value}% off` : `${usd(c.value)} off`}`;
   const hasHeld = active.some((i) => i.item.status === "held");
 
@@ -600,12 +602,14 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                 <SelectField
                   name="send"
                   label="Payment"
-                  defaultValue="link"
+                  defaultValue={walletAvailable > 0 ? "wallet" : "link"}
                   options={[
-                    { value: "link", label: "Email the family a payment link now" },
+                    ...(walletAvailable > 0 ? [{ value: "wallet", label: `Pay from their Yalla Wallet (${usd(walletAvailable)} available), no card charge` }] : []),
+                    { value: "link", label: "Email the family a card payment link now" },
                     { value: "account", label: "Add to their account only (collect later)" },
                   ]}
                 />
+                {walletAvailable > 0 ? <p className="text-[0.75rem] text-ink-soft">If the wallet doesn’t cover all of it, the rest stays owed on their account.</p> : null}
               </ActionForm>
             </Card>
           ) : null}
