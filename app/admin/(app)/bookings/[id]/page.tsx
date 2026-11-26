@@ -599,17 +599,20 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                     ...codes.filter((c) => c.id !== ownCoupon?.id).map((c) => ({ value: c.code!, label: codeLabel(c) })),
                   ]}
                 />
+                {walletAvailable > 0 ? (
+                  <p className="rounded-lg bg-[#e6f0ea] px-3 py-2 text-[0.8rem] text-[#2c6447]">
+                    Paid from their Yalla Wallet first ({usd(walletAvailable)} available). Only anything left over is charged.
+                  </p>
+                ) : null}
                 <SelectField
                   name="send"
-                  label="Payment"
-                  defaultValue={walletAvailable > 0 ? "wallet" : "link"}
+                  label={walletAvailable > 0 ? "If the wallet doesn’t cover it all" : "Payment"}
+                  defaultValue="link"
                   options={[
-                    ...(walletAvailable > 0 ? [{ value: "wallet", label: `Pay from their Yalla Wallet (${usd(walletAvailable)} available), no card charge` }] : []),
-                    { value: "link", label: "Email the family a card payment link now" },
-                    { value: "account", label: "Add to their account only (collect later)" },
+                    { value: "link", label: "Email the family a card payment link for what’s left" },
+                    { value: "account", label: "Leave what’s left on their account (collect later)" },
                   ]}
                 />
-                {walletAvailable > 0 ? <p className="text-[0.75rem] text-ink-soft">If the wallet doesn’t cover all of it, the rest stays owed on their account.</p> : null}
               </ActionForm>
             </Card>
           ) : null}

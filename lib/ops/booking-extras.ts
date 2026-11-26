@@ -18,6 +18,7 @@ import { activeProvider } from "@/lib/payments/provider";
 import { invoiceStatusPath } from "@/lib/links";
 import { ageInMonths, fmtDate, fmtTime } from "@/lib/time";
 import { createInvoice, invoiceTotals, usd } from "./billing";
+import { payInvoiceFromWallet, walletSummary } from "@/lib/playpass/wallet";
 
 export type ExtraOffer = { key: string; label: string; time: string; priceCents: number; perFamily: boolean; prompt?: string; note?: string };
 export type DayExtras = {
@@ -125,9 +126,21 @@ export async function startExtrasCheckout(db: DB, actor: Actor, input: { familyI
     familyId: input.familyId,
     description: `Extras for ${fmtDate(input.date, "EEE d MMM")}`,
     lines: lines.map(({ key: _k, ...l }) => l),
+    // Extras join the booking only once paid, so the wallet is used below (when it covers them), not here.
+    applyWallet: false,
   });
   await db.insert(bookingExtras).values(lines.map((l) => ({ bookingItemId: l.bookingItemId, addonKey: l.key, priceCents: l.unitCents, invoiceId: inv.id })));
-  const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  let t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  // Their Yalla Wallet pays when it covers everything: the extras are added straight away, no card.
+  if (t.balance > 0 && (await walletSummary(db, input.familyId)).creditCents >= t.balance) {
+    await payInvoiceFromWallet(db, actor, { invoiceId: inv.id, idempotencyKey: `extras:${inv.id}` });
+    await applyPaidExtras(db, inv.id);
+    t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  }
+  if (t.balance <= 0) {
+    await audit(db, actor, { action: "booking.extras_wallet", entityType: "invoice", entityId: inv.id, summary: `Extras for ${input.date} paid from the Yalla Wallet` });
+    return { invoice: inv, url: `${input.baseUrl}${invoiceStatusPath(inv.number)}` };
+  }
   const provider = activeProvider();
   const paymentId = crypto.randomUUID();
   const [g] = await db.select().from(guardians).where(and(eq(guardians.familyId, input.familyId), eq(guardians.isPrimary, true)));

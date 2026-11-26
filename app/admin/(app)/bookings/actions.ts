@@ -129,10 +129,10 @@ export const confirmNowAction = adminAction("bookings.manage", async ({ db, acto
 /** Extend a child's day after the family asks (late stay, Early Bird, half day → full day): added to the booking's invoice. */
 export const extendCareAction = adminAction(["bookings.manage", "billing.manage"], async ({ db, actor, str, all }) => {
   const { extendCare } = await import("@/lib/ops/extend-care");
-  const send = str("send") === "account" ? "account" : str("send") === "link" ? "link" : "wallet";
+  const send = str("send") === "account" ? "account" : "link";
   const r = await extendCare(db, actor, { bookingId: str("bookingId"), picks: all("pick"), coupon: str("coupon") || "none", send, baseUrl: await baseUrl(), idempotencyKey: str("idempotencyKey") });
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
-  const paid = r.walletCents ? ` ${money(r.walletCents)} was paid from their Yalla Wallet, so nothing was charged to a card.` : send === "wallet" ? " Their Yalla Wallet had nothing to use." : "";
+  const paid = r.walletCents ? ` ${money(r.walletCents)} was paid from their Yalla Wallet.` : "";
   const due = r.balanceCents > 0 ? (r.linkSent ? ` The family has been emailed a payment link for ${money(r.balanceCents)}.` : ` ${money(r.balanceCents)} is still due on their account.`) : " Nothing more is due.";
   return `Added ${r.added} to invoice ${r.invoice.number}${r.coupon ? ` with ${r.coupon}` : ""}.${paid}${due}`;
 });

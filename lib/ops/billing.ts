@@ -12,7 +12,7 @@
 import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
-import { issueCredit, restoreWalletPayment } from "@/lib/playpass/wallet";
+import { autoApplyWallet, issueCredit, restoreWalletPayment } from "@/lib/playpass/wallet";
 import { recordWalletCredit } from "@/lib/playpass/credit-notice";
 import { credits, discounts, guardians, invoiceLines, invoices, payments, refunds, scheduledCharges } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
@@ -91,7 +91,18 @@ export type LineInput = { kind: "charge" | "discount" | "fee" | "tax" | "adjustm
 export async function createInvoice(
   db: Executor,
   actor: Actor,
-  input: { familyId: string; bookingId?: string | null; membershipId?: string | null; description: string; dueOn?: string | null; periodStart?: string | null; periodEnd?: string | null; lines: LineInput[] },
+  input: {
+    familyId: string;
+    bookingId?: string | null;
+    membershipId?: string | null;
+    description: string;
+    dueOn?: string | null;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    lines: LineInput[];
+    /** Yalla Wallet first (default): only false where a checkout sets wallet funds aside itself until it's paid. */
+    applyWallet?: boolean;
+  },
 ) {
   const [inv] = await db
     .insert(invoices)
@@ -128,6 +139,8 @@ export async function createInvoice(
     );
   await audit(db, actor, { action: "billing.invoice_create", entityType: "invoice", entityId: inv.id, summary: `Created invoice ${inv.number}` });
   await refreshInvoiceStatus(db, inv.id);
+  // The family's Yalla Wallet pays first; only what's left is ever charged by card.
+  if (input.applyWallet !== false) await autoApplyWallet(db, actor, inv.id);
   return inv;
 }
 
@@ -396,8 +409,13 @@ export async function skipScheduledCharge(db: Executor, actor: Actor, chargeId: 
 export async function sendInvoicePaymentLink(db: DB, actor: Actor, invoiceId: string, baseUrl: string) {
   const [inv] = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
   if (!inv || inv.status !== "open") throw new OpsError("invalid", "Payment links can only be sent for unpaid invoices.");
+  // Their Yalla Wallet pays first; the link is only for what's left.
+  const fromWallet = await autoApplyWallet(db, actor, invoiceId);
   const t = (await invoiceTotals(db, [invoiceId])).get(invoiceId)!;
-  if (t.balance <= 0) throw new OpsError("invalid", "This invoice has no balance due.");
+  if (t.balance <= 0) {
+    if (fromWallet) return { url: "", provider: "wallet" as const, walletCents: fromWallet, paidInFull: true };
+    throw new OpsError("invalid", "This invoice has no balance due.");
+  }
   const provider = activeProvider();
   const idem = `invoice-link:${inv.id}:${t.balance}:${new Date().toISOString().slice(0, 10)}`;
   const [existing] = await db.select().from(payments).where(eq(payments.idempotencyKey, idem));
@@ -442,7 +460,7 @@ export async function sendInvoicePaymentLink(db: DB, actor: Actor, invoiceId: st
     createdBy: actor.name,
   });
   await audit(db, actor, { action: "billing.payment_link", entityType: "invoice", entityId: inv.id, summary: `Sent a payment link for ${usd(t.balance)} on ${inv.number}` });
-  return { url, provider: provider.name };
+  return { url, provider: provider.name, walletCents: fromWallet, paidInFull: false };
 }
 
 /* ── Discounts & promo codes ── */

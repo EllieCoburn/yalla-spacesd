@@ -34,6 +34,7 @@ import { createInvoice, invoiceTotals, usd, voidInvoice } from "@/lib/ops/billin
 import { getPolicy } from "@/lib/ops/settings";
 import { activeProvider } from "@/lib/payments/provider";
 import { addDaysISO, fmtDate, fmtTime, todayLA, weekdayOf, zonedDateTime } from "@/lib/time";
+import { payInvoiceFromWallet, walletSummary } from "@/lib/playpass/wallet";
 import {
   BOOKING_TYPE_LABEL,
   CATEGORY_LABEL,
@@ -472,6 +473,8 @@ export async function reserveInTx(tx: Executor, actor: Actor, input: ReserveInpu
       familyId: opts.familyId,
       description: `Workspace ${group.reference}`,
       lines: [{ kind: "charge", description: describeGroupLine(ws, input.bookingType, q.intervals), unitCents: q.priceCents }],
+      // A reservation still waiting for its card payment isn't confirmed, so its wallet isn't spent yet.
+      applyWallet: status !== "held",
     });
     await tx.update(invoices).set({ spaceGroupId: group.id }).where(eq(invoices.id, inv.id));
   }
@@ -519,7 +522,12 @@ export async function startSpaceCheckout(db: DB, actor: Actor, groupId: string, 
   if (!g.holdExpiresAt || g.holdExpiresAt <= new Date()) throw new OpsError("expired", "Your hold has expired. Please choose your time again.");
   const [inv] = await db.select().from(invoices).where(and(eq(invoices.spaceGroupId, g.id), ne(invoices.status, "void")));
   if (!inv) throw new OpsError("invalid", "No payment is due for this reservation.");
-  const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  let t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  // Their Yalla Wallet pays when it covers the whole reservation (then no card at all).
+  if (t.balance > 0 && (await walletSummary(db, g.familyId)).creditCents >= t.balance) {
+    await payInvoiceFromWallet(db, actor, { invoiceId: inv.id, idempotencyKey: `space:${g.id}:${t.total}` });
+    t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  }
   if (t.balance <= 0) {
     await confirmSpaceGroup(db, actor, g.id, { reason: "No payment due" });
     return { url: confirmUrl, free: true };

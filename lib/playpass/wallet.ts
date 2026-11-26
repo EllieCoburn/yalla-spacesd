@@ -371,8 +371,8 @@ export async function restoreWalletPayment(tx: Executor, input: { paymentId: str
  * Yalla credit covers anything; Play Pass funds only the parts of a booking they're eligible for. Never more
  * than the invoice owes or the wallet holds; anything left stays owed. Idempotent per `idempotencyKey`.
  */
-export async function payInvoiceFromWallet(db: DB, actor: Actor, input: { invoiceId: string; idempotencyKey: string; maxCents?: number }) {
-  return db.transaction(async (tx) => {
+export async function payInvoiceFromWallet(db: Executor, actor: Actor, input: { invoiceId: string; idempotencyKey: string; maxCents?: number }) {
+  return (db as DB).transaction(async (tx) => {
     const [inv] = await tx.select().from(invoices).where(eq(invoices.id, input.invoiceId));
     if (!inv || inv.status === "void") throw new OpsError("invalid", "Invoice not found.");
     await lockFamily(tx, inv.familyId);
@@ -398,6 +398,25 @@ export async function payInvoiceFromWallet(db: DB, actor: Actor, input: { invoic
     await refreshInvoiceStatus(tx, inv.id);
     return amount;
   });
+}
+
+/**
+ * Wallet first, automatically: whatever the family has in their Yalla Wallet goes toward what an invoice owes
+ * the moment it's created (or added to); only what's left is ever charged by card. Not for Club Yalla dues
+ * (membership invoices), which are handled manually. Skipped while a card checkout for the invoice is open, so
+ * nothing is collected twice. Idempotent per invoice total.
+ */
+export async function autoApplyWallet(db: Executor, actor: Actor, invoiceId: string) {
+  const [inv] = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+  if (!inv || inv.status === "void" || inv.membershipId) return 0;
+  const { invoiceTotals } = await import("@/lib/ops/billing");
+  const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
+  if (t.balance <= 0) return 0;
+  const [pendingCard] = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.invoiceId, inv.id), eq(payments.status, "pending")));
+  if (pendingCard) return 0;
+  const w = await walletSummary(db, inv.familyId);
+  if (w.availableCents <= 0) return 0;
+  return payInvoiceFromWallet(db, actor, { invoiceId: inv.id, idempotencyKey: `auto:${inv.id}:${t.total}` });
 }
 
 /** A documented correction by an administrator. Positive adds funds; negative removes available funds. */

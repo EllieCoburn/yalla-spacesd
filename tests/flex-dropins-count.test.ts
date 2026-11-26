@@ -4,7 +4,7 @@ import * as s from "@/lib/db/schema";
 import { confirmAdminBooking, createHold } from "@/lib/ops/bookings";
 import { upcomingDropIns } from "@/lib/ops/team-notices";
 import { flexGroupForBooking } from "@/lib/booking/flex";
-import { addDaysISO, todayLA } from "@/lib/time";
+import { addDaysISO, todayLA, zonedDateTime } from "@/lib/time";
 import { db, owner, program, reset, session } from "./helpers";
 
 beforeEach(reset);
@@ -20,7 +20,7 @@ describe("Flex drop-ins today", () => {
     const [a] = await db().insert(s.children).values({ familyId: f.id, firstName: "Ada", lastName: "Two", birthDate: addDaysISO(today, -Math.round(41 * 30.44)) }).returning();
     const [b] = await db().insert(s.children).values({ familyId: f.id, firstName: "Ben", lastName: "Two", birthDate: addDaysISO(today, -Math.round(40 * 30.44)) }).returning();
     for (const [sess, c] of [[wild, a], [odd, b]] as const) {
-      const hold = await createHold(db(), owner, { familyId: f.id, items: [{ sessionId: sess.id, childId: c.id }], source: "admin", acknowledgePaperwork: true });
+      const hold = await createHold(db(), owner, { familyId: f.id, items: [{ sessionId: sess.id, childId: c.id }], source: "admin", acknowledgePaperwork: true, now: zonedDateTime(today, "07:00") });
       await confirmAdminBooking(db(), owner, hold.booking.id, { createInvoice: false, notify: false });
     }
     const rows = (await upcomingDropIns(db(), { cohorts: null, days: 1 })).filter((r) => r.date === today);

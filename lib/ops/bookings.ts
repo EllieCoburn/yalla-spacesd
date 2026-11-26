@@ -511,7 +511,7 @@ export async function checkoutLabel(db: Executor, bookingId: string, opts: { wal
   return { name, details };
 }
 
-async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) {
+async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string, opts: { applyWallet?: boolean } = {}) {
   const [b] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
   const rows = (await bookingLines(db, bookingId)).filter((r) => r.item.status !== "cancelled" && r.item.status !== "moved");
   const unpriced = rows.filter((r) => r.item.priceCents == null);
@@ -536,7 +536,7 @@ async function invoiceForBooking(db: Executor, actor: Actor, bookingId: string) 
     const line = d ? couponLine(d, lines, eligible) : null;
     if (line) lines.push(line);
   }
-  return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines });
+  return createInvoice(db, actor, { familyId: b.familyId, bookingId, description: `Booking ${b.reference}`, lines, applyWallet: opts.applyWallet });
 }
 
 /* ── Checkout (public & payment links) ── */
@@ -567,10 +567,11 @@ export async function startCheckout(db: DB, actor: Actor, bookingId: string, url
     if (blocked) throw new OpsError(blocked.code, blocked.message);
   }
   let [inv] = await db.select().from(invoices).where(and(eq(invoices.bookingId, b.id), ne(invoices.status, "void")));
-  if (!inv) inv = await invoiceForBooking(db, actor, b.id);
+  // At checkout the wallet is set aside (below) and only spent once the booking is paid, so not applied here.
+  if (!inv) inv = await invoiceForBooking(db, actor, b.id, { applyWallet: false });
   const t = (await invoiceTotals(db, [inv.id])).get(inv.id)!;
-  // Play Pass funds are set aside first; the card pays only what's left.
-  const fromWallet = b.source !== "admin" && t.balance > 0 ? await reserveForBooking(db, b.id, inv.id, t.balance) : 0;
+  // The Yalla Wallet is set aside first, for every booking (including ones staff make); the card pays only what's left.
+  const fromWallet = t.balance > 0 ? await reserveForBooking(db, b.id, inv.id, t.balance) : 0;
   const due = t.balance - fromWallet;
   if (due <= 0) {
     await confirmBooking(db, actor, b.id, { reason: fromWallet ? "Paid from Play Pass" : "No payment due" });

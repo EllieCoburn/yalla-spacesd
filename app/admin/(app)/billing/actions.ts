@@ -76,7 +76,9 @@ export const voidAction = adminAction("billing.manage", async ({ db, actor, str 
 
 export const paymentLinkAction = adminAction("billing.manage", async ({ db, actor, str }) => {
   const res = await sendInvoicePaymentLink(db, actor, str("invoiceId"), await baseUrl());
-  return { message: res.provider === "test" ? "Payment request captured (test mode — nothing was emailed). The family’s link uses the test checkout." : "Payment request sent.", data: res };
+  const wallet = res.walletCents ? `$${(res.walletCents / 100).toFixed(2)} was paid from their Yalla Wallet first. ` : "";
+  if (res.paidInFull) return { message: `${wallet}Nothing is left to pay, so no payment link was sent.`, data: res };
+  return { message: `${wallet}${res.provider === "test" ? "Payment request for the rest captured (test mode — nothing was emailed). The family’s link uses the test checkout." : "Payment request sent for what’s left."}`, data: res };
 });
 
 export const grantCreditAction = adminAction("billing.manage", async ({ db, actor, str, cents }) => {
