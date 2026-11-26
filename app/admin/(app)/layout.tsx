@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </div>
   );
   return (
-    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName }} banners={flexClubOnly(staff) ? null : banners} search={searchAll} signOut={signOut}>
+    <Shell nav={nav} user={{ name: staff.name, role: staff.roleName, version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null }} banners={flexClubOnly(staff) ? null : banners} search={searchAll} signOut={signOut}>
       {children}
     </Shell>
   );

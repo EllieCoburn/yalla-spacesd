@@ -48,7 +48,7 @@ export function Shell({
   signOut,
 }: {
   nav: NavItem[];
-  user: { name: string; role: string };
+  user: { name: string; role: string; version?: string | null };
   banners: ReactNode;
   children: ReactNode;
   search: (q: string) => Promise<SearchResult[]>;
@@ -122,6 +122,10 @@ export function Shell({
           <button className="rounded-md px-2 py-1 text-[0.78rem] text-ink-soft hover:bg-ink/5 hover:text-ink">Sign out</button>
         </form>
       </div>
+      {/* Which commit is live, so it can be checked against the one promoted in Vercel. */}
+      <p className="mt-2 px-3 text-[0.7rem] text-ink-soft/80" title="The version of the site that's running">
+        Version {user.version ?? "local"}
+      </p>
     </div>
   );
 

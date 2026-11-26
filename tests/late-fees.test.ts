@@ -152,3 +152,26 @@ describe("Recording the real time a child left", () => {
     expect(fixed.chargedFee).toMatchObject({ status: "charged" });
   });
 });
+
+describe("Never charged or emailed automatically", () => {
+  it("only an admin with billing access can charge; nobody else, and no other code sends the late-fee email", async () => {
+    const { readFileSync, readdirSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { f, sess } = await booked("drop_in");
+    const r = await out(sess, f, 45);
+    expect(r.lateFee).toMatchObject({ status: "flagged", invoiceId: null });
+    for (const actor of [
+      { type: "system" as const, name: "Housekeeping" },
+      { type: "staff" as const, id: "kiosk", name: "Lobby kiosk", permissions: ["attendance.manage"] },
+      { type: "family" as const, id: "g", name: "A parent" },
+    ])
+      await expect(approveLateFee(db(), actor, { feeId: r.lateFee!.id })).rejects.toThrow(/Only an admin/);
+    expect(await db().select().from(s.messages).where(eq(s.messages.templateKey, "late_fee"))).toHaveLength(0);
+    // The late-fee email is sent from exactly one place: approveLateFee.
+    const files: string[] = [];
+    const walk = (d: string) => readdirSync(d).forEach((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : /\.tsx?$/.test(n) && files.push(join(d, n))));
+    ["lib", "app", "components"].forEach(walk);
+    const senders = files.filter((p) => /key:\s*"late_fee"/.test(readFileSync(p, "utf8")));
+    expect(senders).toEqual(["lib/ops/late-fees.ts"]);
+  });
+});

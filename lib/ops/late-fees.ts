@@ -69,6 +69,8 @@ export async function flagLateCheckout(db: DB, actor: Actor, input: { sessionId:
 
 /** An admin approves a flagged late fee: it's invoiced and the family is emailed. The amount can be lowered. */
 export async function approveLateFee(db: DB, actor: Actor, input: { feeId: string; amountCents?: number | null }) {
+  // Only a person, signed in to Admin with billing access, ever charges a late fee. Never a sign-out, the kiosk or a job.
+  if (actor.type !== "staff" || !actor.permissions?.includes("billing.manage")) throw new OpsError("forbidden", "Only an admin with billing access can charge a late fee.");
   const [fee] = await db.select().from(lateFees).where(eq(lateFees.id, input.feeId));
   if (!fee) throw new OpsError("not_found", "Late fee not found.");
   if (fee.status !== "flagged") throw new OpsError("invalid", fee.status === "charged" ? "This fee has already been charged." : "This late sign-out was dismissed.");
