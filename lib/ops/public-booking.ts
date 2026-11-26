@@ -998,6 +998,8 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
   const hoursAhead = (x.s.startsAt.getTime() - now.getTime()) / 3600_000;
   if (hoursAhead <= 0) throw new OpsError("started", "This session has already started. Please contact Yalla.");
   const cutoff = await getPolicy(db, "booking.creditCutoffHours");
+  const kid = x.i.childId ? (await db.select({ first: children.firstName, preferred: children.preferredName }).from(children).where(eq(children.id, x.i.childId)))[0] : undefined;
+  const childName = kid ? kid.preferred || kid.first : null;
   await cancelBooking(db, guardianActor(g), { bookingId: x.b.id, itemIds: [itemId], reason: "Cancelled by family in the portal", notify: false });
   const credited =
     hoursAhead >= cutoff
@@ -1008,6 +1010,7 @@ export async function familyCancelItem(db: DB, g: GuardianContext, itemId: strin
             key: `family-cancel:${x.i.id}`,
             reason: "Cancelled by the family",
             to: "wallet",
+            familyReason: `You cancelled ${x.s.title ?? x.p.name} on ${fmtDate(x.s.localDate, "EEEE, MMMM d")}${childName ? ` for ${childName}` : ""} at least ${cutoff} hours before it began, so what you paid for it was returned to your Yalla Wallet.`,
           })
         ).total
       : 0;

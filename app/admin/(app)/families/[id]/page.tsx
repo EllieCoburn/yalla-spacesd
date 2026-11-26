@@ -406,7 +406,7 @@ export default async function FamilyPage({ params, searchParams }: { params: Pro
                   <ActionForm action={courtesyCreditAction} submit={{ label: "Add to their wallet" }} resetOnSuccess confirm={{ title: "Add this credit to their Yalla Wallet?", body: "They’ll see it in their Family Portal with your reason, and can use it on any booking.", confirmLabel: "Add credit" }}>
                     <input type="hidden" name="familyId" value={d.family.id} />
                     <MoneyField name="amount" label="Amount" required className="max-w-[10rem]" />
-                    <TextArea name="note" label="Reason (the family sees this)" required rows={2} />
+                    <TextArea name="note" label="Reason shared with the family" required rows={4} hint="Emailed to the family exactly as you write it, with your line breaks." />
                   </ActionForm>
                   <p className="mt-2 text-[0.75rem] text-ink-soft">Valid 24 months, like cancellation credit.</p>
                 </div>

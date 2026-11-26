@@ -52,6 +52,13 @@ export async function runHousekeeping(db: DB, opts: { baseUrl: string; now?: Dat
     await advanceWaitlistChains(db, { now, baseUrl: opts.baseUrl }).catch((e) => console.error("[flex waitlist]", (e as Error).message?.slice(0, 160)));
   }
   const expiredOffers = (await expireOffers(db, now)).length;
+  // Wallet-credit emails not yet sent (e.g. delivery failed earlier): try again.
+  try {
+    const { sendWalletCreditEmails } = await import("@/lib/ops/wallet-credit-email");
+    await sendWalletCreditEmails(db, { baseUrl: opts.baseUrl, now });
+  } catch (e) {
+    console.error("[wallet credit emails]", (e as Error).message?.slice(0, 160));
+  }
   const membershipChanges = await applyDueChanges(db, SYSTEM);
   // Cancellation credits are valid 24 months; record any that have lapsed.
   await expireCredits(db);

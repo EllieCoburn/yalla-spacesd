@@ -13,6 +13,7 @@ import type { DB, Executor } from "@/lib/db";
 import { bookingItems, invoices, payments, refunds } from "@/lib/db/schema";
 import { addonsFor } from "@/lib/booking/addons";
 import { refundPayment } from "./billing";
+import { recordWalletCredit } from "@/lib/playpass/credit-notice";
 
 /** What one booked item cost: its price plus its add-ons. */
 export function itemValue(item: Pick<typeof bookingItems.$inferSelect, "priceCents" | "addons">, kind: string, slug: string) {
@@ -53,15 +54,28 @@ export async function returnableCents(db: Executor, opts: { bookingId?: string; 
 export async function returnPaid(
   db: DB,
   actor: Actor,
-  input: { bookingId?: string; invoiceIds?: string[]; amountCents: number; key: string; reason: string; to: "wallet" | "original" },
+  input: {
+    bookingId?: string;
+    invoiceIds?: string[];
+    amountCents: number;
+    key: string;
+    reason: string;
+    to: "wallet" | "original";
+    /** The reason in the family's "added to your Yalla Wallet" email (defaults to `reason`). */
+    familyReason?: string | null;
+    /** False when the caller sends one combined wallet email itself. */
+    walletEmail?: boolean;
+  },
 ) {
   let want = input.amountCents;
+  let familyId: string | null = null;
   let toWallet = 0;
   let toCard = 0;
   for (const { p, left } of await returnablePayments(db, input)) {
     if (want <= 0) break;
     const amount = Math.min(want, left);
     const walletish = p.method === "wallet" || p.method === "credit";
+    familyId ??= p.familyId;
     await refundPayment(db, actor, {
       paymentId: p.id,
       amountCents: amount,
@@ -69,10 +83,14 @@ export async function returnPaid(
       reduceAmountOwed: true,
       idempotencyKey: `${input.key}:${p.id}`,
       toWallet: !walletish && input.to === "wallet",
+      // One email for the whole return (below), however many payments it came from.
+      walletEmail: false,
     });
     if (walletish || input.to === "wallet") toWallet += amount;
     else toCard += amount;
     want -= amount;
   }
+  if (toWallet > 0 && familyId && input.walletEmail !== false)
+    await recordWalletCredit(db, { familyId, transactionKey: `return:${input.key}`, amountCents: toWallet, reason: input.familyReason?.trim() || input.reason });
   return { toWallet, toCard, total: toWallet + toCard };
 }

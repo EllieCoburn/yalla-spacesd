@@ -9,14 +9,16 @@ import { processEvent } from "@/lib/payments/webhooks";
 import { newPlanVersion, setProgramEligibility } from "@/lib/playpass/admin";
 import { renewalAmount } from "@/lib/playpass/changes";
 import { adjustWallet, issueCredit } from "@/lib/playpass/wallet";
+import { giveWalletCredit } from "@/lib/ops/wallet-credit-email";
 import { resolveOffer } from "@/lib/ops/yalla-cancellations";
 import { audit } from "@/lib/audit";
 
 /** A documented correction to a family's Play Pass balance (positive adds, negative removes). */
-export const adjustWalletAction = adminAction("playpass.manage", async ({ db, actor, str, cents }) => {
+export const adjustWalletAction = adminAction("playpass.manage", async ({ db, actor, str, cents, form }) => {
   const amount = cents("amount");
   if (amount == null || amount === 0) throw new OpsError("invalid", "Enter an amount, e.g. 25 to add or -25 to remove.");
-  await adjustWallet(db, actor, { familyId: str("familyId"), amountCents: amount, note: str("note"), idempotencyKey: str("idempotencyKey") || randomToken(8) });
+  // A positive adjustment emails the family this reason exactly as written.
+  await adjustWallet(db, actor, { familyId: str("familyId"), amountCents: amount, note: String(form.get("note") ?? "").replace(/\r/g, "").trim(), idempotencyKey: str("idempotencyKey") || randomToken(8) });
   return `Balance ${amount > 0 ? "increased" : "reduced"} by $${(Math.abs(amount) / 100).toFixed(2)}.`;
 });
 
@@ -63,14 +65,11 @@ export const simulateRenewalAction = adminAction("playpass.manage", async ({ db,
 });
 
 /** A courtesy Yalla credit (e.g. a late cancellation because a child was unwell). Valid 24 months. */
-export const courtesyCreditAction = adminAction("billing.manage", async ({ db, actor, str, cents }) => {
+export const courtesyCreditAction = adminAction("billing.manage", async ({ db, actor, str, cents, form }) => {
   const amount = cents("amount");
-  if (!amount || amount <= 0) throw new OpsError("invalid", "Enter the credit amount.");
-  if (!str("note")) throw new OpsError("invalid", "Say why the credit is being given. The family sees it.");
-  const key = str("idempotencyKey") || randomToken(8);
-  const added = await issueCredit(db, { familyId: str("familyId"), amountCents: amount, sourceRef: `courtesy:${key}`, note: str("note"), createdBy: actor.name });
-  if (added) await audit(db, actor, { action: "billing.courtesy_credit", entityType: "family", entityId: str("familyId"), summary: `Courtesy credit of $${(amount / 100).toFixed(2)}: ${str("note")}` });
-  return `Added $${(amount / 100).toFixed(2)} Yalla credit, valid 24 months.`;
+  // The reason is emailed to the family exactly as written (keep its line breaks).
+  await giveWalletCredit(db, actor, { familyId: str("familyId"), amountCents: amount ?? 0, reason: String(form.get("note") ?? ""), idempotencyKey: str("idempotencyKey") || randomToken(8) });
+  return `Added $${((amount ?? 0) / 100).toFixed(2)} Yalla credit, valid 24 months. The family has been emailed.`;
 });
 
 /** Record a family's choice after Yalla cancelled (e.g. they called in). */

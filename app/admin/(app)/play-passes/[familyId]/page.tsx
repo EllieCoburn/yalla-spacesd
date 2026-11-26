@@ -104,7 +104,7 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
             <ActionForm action={adjustWalletAction} submit={{ label: "Record adjustment" }} resetOnSuccess confirm={{ title: "Record this adjustment?", body: "It’s added to the family’s ledger and the audit trail.", confirmLabel: "Record" }}>
               <input type="hidden" name="familyId" value={familyId} />
               <MoneyField name="amount" label="Amount" hint="Positive adds funds; use a minus sign to remove them (e.g. -15)." required />
-              <TextArea name="note" label="Reason" required rows={2} />
+              <TextArea name="note" label="Reason shared with the family" required rows={3} hint="When money is added, the family is emailed this exactly as you write it." />
             </ActionForm>
           </Card>
         ) : null}
@@ -141,7 +141,7 @@ export default async function FamilyPlayPass({ params }: { params: Promise<{ fam
               <ActionForm action={courtesyCreditAction} submit={{ label: "Add credit" }} resetOnSuccess confirm={{ title: "Add this Yalla credit?", confirmLabel: "Add credit" }}>
                 <input type="hidden" name="familyId" value={familyId} />
                 <MoneyField name="amount" label="Amount" required />
-                <TextArea name="note" label="Reason (the family sees this)" required rows={2} />
+                <TextArea name="note" label="Reason shared with the family" required rows={4} hint="Emailed to the family exactly as you write it, with your line breaks." />
               </ActionForm>
             </div>
           ) : null}

@@ -64,6 +64,7 @@ const HERO: Record<string, string> = {
 const BUTTON: Record<string, string> = {
   family_sign_in: "Sign in to the Family Portal",
   day_feed_message: "See today and reply",
+  wallet_credit: "View your Yalla Wallet",
   family_confirm_email: "Confirm my email and open my portal",
   family_invite: "Create your Family Portal account",
   family_added: "Set up my account",
@@ -96,16 +97,54 @@ const SIGN_OFF = /^(yalla|warmly,?|thank you,?|with love,?|we can.t wait to play
 
 const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 
+/**
+ * Words a person wrote for the family (e.g. the reason for a wallet credit), shown exactly as written:
+ * each line is prefixed "|| " and a line of just "||" is a paragraph break. No formatting is applied, so
+ * dashes, asterisks, colons, dollar amounts and dates stay as typed.
+ */
+export function verbatim(text: string) {
+  return text
+    .replace(/\r/g, "")
+    .trim()
+    .split("\n")
+    .map((l) => (l.trim() ? `|| ${l.trim()}` : "||"))
+    .join("\n")
+    .replace(/(\n\|\|)+(?=\n)/g, "\n||");
+}
+const VERBATIM = /^\|\|(?: (.*))?$/;
+
 /** The text version: "[words](link)" becomes "words: link". */
 export function plainText(body: string) {
-  return body
+  // Verbatim lines are set aside so none of the formatting below touches them.
+  const kept: string[] = [];
+  const marked = body.replace(/^\|\|(?: (.*))?$/gm, (_, t: string | undefined) => {
+    kept.push(t ?? "");
+    return `\u0001${kept.length - 1}\u0001`;
+  });
+  return marked
     .replace(/^%%\s+(\S+)\s*\|\s*(\S+)$/gm, "Your code: $1 (copy it here: $2)")
     .replace(/^\$\$=\s+(.+?)\s*\|\s*(.+)$/gm, "$1: $2")
     .replace(/^\$\$-?\s+(.+?)\s*\|\s*(.+)$/gm, "$1 · $2")
     .replace(/^>>\s+/gm, "")
     .replace(/^~~\s+/gm, "")
     .replace(/^!!\s+(.+?)\s*\|\s*(.+)$/gm, "$1 $2")
-    .replace(/^!!\s+/gm, "").replace(MD_LINK, "$1: $2").replace(/^#{1,3}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
+    .replace(/^!!\s+/gm, "").replace(MD_LINK, "$1: $2").replace(/^#{1,3}\s+/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\n{3,}/g, "\n\n").trim()
+    .replace(/\u0001(\d+)\u0001/g, (_, i: string) => kept[Number(i)]);
+}
+
+/** A verbatim block: a soft card with the words exactly as written (escaped; links, emails and phones tappable). */
+function verbatimCard(lines: string[]) {
+  const paras: string[][] = [[]];
+  for (const l of lines) {
+    const t = l.match(VERBATIM)?.[1];
+    if (t == null || t === "") paras.push([]);
+    else paras[paras.length - 1].push(linkify(esc(t)));
+  }
+  const html = paras
+    .filter((x) => x.length)
+    .map((x, i, all) => `<p style="margin:0 0 ${i === all.length - 1 ? 0 : 14}px;font-family:${SANS};font-size:16px;line-height:1.65;color:${C.ink};">${x.join("<br>")}</p>`)
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;"><tr><td style="padding:16px 20px;background:${C.mist};border-left:3px solid ${C.blue};border-radius:4px 14px 14px 4px;">${html}</td></tr></table>`;
 }
 
 /** A template can start with "# Headline" to use a headline other than the subject. */
@@ -249,6 +288,10 @@ export function bodyHtml(body: string, key: string) {
       else push(`<p style="margin:34px 0 4px;padding-top:26px;border-top:1px solid ${C.line};font-family:${SERIF};font-size:23px;line-height:1.3;color:${C.ink};">${esc(line.replace(/^##\s+/, ""))}</p>`);
     }
     if (!b.length) return;
+    if (b.every((l) => VERBATIM.test(l))) {
+      push(verbatimCard(b));
+      return;
+    }
     // A sign-off in the middle of an email (a letter followed by more details).
     if (b.length === 2 && SIGN_OFF.test(b[0]) && /^team yalla$/i.test(b[1])) {
       push(

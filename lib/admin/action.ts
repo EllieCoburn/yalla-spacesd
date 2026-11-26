@@ -8,6 +8,21 @@ import { assertCan, staffActor, staffReady, type StaffContext } from "@/lib/auth
 import { getDb, type DB } from "@/lib/db";
 import type { Actor } from "@/lib/audit";
 
+/** Sends any "added to your Yalla Wallet" emails recorded by the action that just finished. Never fails the action. */
+export async function sendSavedWalletCreditEmails() {
+  try {
+    const { flushWalletCreditEmails } = await import("@/lib/ops/wallet-credit-email");
+    const { trustedBaseUrl } = await import("@/lib/base-url");
+    let base = "";
+    try {
+      base = trustedBaseUrl();
+    } catch {}
+    await flushWalletCreditEmails(getDb(), base);
+  } catch (e) {
+    console.error("[wallet credit email]", (e as Error).message?.slice(0, 160));
+  }
+}
+
 export type ActionState =
   | {
       ok: boolean;
@@ -51,6 +66,8 @@ export function adminAction(
         return Math.round(n * 100);
       };
       const res = await fn({ staff, actor: staffActor(staff), db: getDb(), form, str, num, bool: (k) => form.get(k) === "on" || form.get(k) === "true", cents, all: (k) => form.getAll(k).map(String) });
+      // Anything that just added money to a family's Yalla Wallet is emailed now that it's saved.
+      await sendSavedWalletCreditEmails();
       revalidatePath("/admin", "layout");
       if (typeof res === "string") return { ok: true, message: res, at: Date.now() };
       return { ok: true, message: res?.message, data: res?.data, at: Date.now() };

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ActionForm, MoneyField, SelectField, TextField } from "@/components/admin/forms";
+import { ActionForm, MoneyField, SelectField, TextArea } from "@/components/admin/forms";
 import { Card, Empty, Money, PageHeader, Table } from "@/components/admin/ui";
 import { creditLedger, familyOptions } from "@/lib/admin/queries/billing";
 import { requirePermission } from "@/lib/auth/session";
@@ -27,7 +27,7 @@ export default async function CreditsPage() {
               <ActionForm action={courtesyCreditAction} submit={{ label: "Add to their wallet" }} resetOnSuccess confirm={{ title: "Add this credit to their Yalla Wallet?", body: "They’ll see it in their Family Portal with your reason.", confirmLabel: "Add credit" }}>
                 <SelectField name="familyId" label="Family" required options={[{ value: "", label: "Choose a family…" }, ...fams.map((f) => ({ value: f.id, label: f.name }))]} />
                 <MoneyField name="amount" label="Amount" required />
-                <TextField name="note" label="Reason (the family sees this)" required hint="e.g. A thank-you for your patience this week." />
+                <TextArea name="note" label="Reason shared with the family" required rows={4} hint="Emailed to the family exactly as you write it, with your line breaks." />
               </ActionForm>
               <p className="mt-2 text-[0.75rem] text-ink-soft">Valid 24 months.</p>
             </Card>

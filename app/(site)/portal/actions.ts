@@ -144,6 +144,9 @@ export async function signOutAction() {
 async function run(fn: () => Promise<string>): Promise<PortalState> {
   try {
     const message = await fn();
+    // e.g. a cancellation returned money to the Yalla Wallet: the email goes now that it's saved.
+    const { sendSavedWalletCreditEmails } = await import("@/lib/admin/action");
+    await sendSavedWalletCreditEmails();
     revalidatePath("/portal/home");
     return { ok: true, message, at: Date.now() };
   } catch (e) {

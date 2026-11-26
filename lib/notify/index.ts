@@ -64,7 +64,8 @@ export type TemplateKey =
   | "flex_thank_you"
   | "cohort_drop_in"
   | "cohort_drop_in_cancelled"
-  | "day_feed_message";
+  | "day_feed_message"
+  | "wallet_credit";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: string; body: string; essential: boolean; audience: "family" | "billing" | "staff" }> = {
   playpass_welcome: {
@@ -162,6 +163,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, { name: string; subject: str
     name: "Camp Yalla first-day welcome (to families)",
     subject: "Welcome to Camp Yalla! See you {{when}}",
     body: "Hi {{guardian_first_name}},\n\n{{camp_letter}}\n\nWarmly,\nTeam Yalla\n\n{{camp_details}}",
+    essential: true,
+    audience: "family",
+  },
+  wallet_credit: {
+    name: "Money added to the Yalla Wallet (to families)",
+    subject: "${{credit_amount}} was added to your Yalla Wallet",
+    body: "Hi {{parent_first_name}},\n\nWe added ${{credit_amount}} to your Yalla Wallet. It’s available to use at checkout the next time you book.\n\n**Why we added this credit**\n\n{{credit_reason}}\n\n**Your available wallet balance** · ${{wallet_balance}}\n\nWhen you’re signed in to your Family Portal, your wallet balance is applied automatically at checkout.\n\n{{link}}\n\nSee you at Yalla!\nTeam Yalla",
     essential: true,
     audience: "family",
   },
@@ -575,6 +583,7 @@ export const TEMPLATE_VARIABLES: Record<TemplateKey, string[]> = {
   camp_welcome: ["guardian_first_name", "when", "camp_letter", "camp_details"],
   flex_thank_you: ["guardian_first_name", "child_names", "coupon_code", "coupon_link", "book_link"],
   day_feed_message: ["guardian_first_name", "child_name", "author_name", "message", "link"],
+  wallet_credit: ["parent_first_name", "credit_amount", "credit_reason", "wallet_balance", "link"],
   cohort_drop_in: ["team", "cohort", "child_name", "when", "details", "link"],
   cohort_drop_in_cancelled: ["team", "cohort", "child_name", "when", "details", "link"],
   application_received: ["name", "details", "explore"],

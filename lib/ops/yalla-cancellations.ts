@@ -14,13 +14,23 @@ import type { DB, Executor } from "@/lib/db";
 import { bookingItems, bookings, cancellationOffers, invoices, programs, sessions, spaceReservationGroups, spaceReservations, workspaces } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { issueCredit, usd } from "@/lib/playpass/wallet";
+import { recordWalletCredit } from "@/lib/playpass/credit-notice";
 import { fmtDate } from "@/lib/time";
 import { cancelBooking } from "./bookings";
 import { itemValue, returnableCents, returnPaid } from "./credits";
 import { getPolicy } from "./settings";
 import { cancelSpaceGroup } from "@/lib/spaces/engine";
 
-export type StaffCancelMode = "family_policy" | "family_courtesy" | "family_none" | "yalla";
+/** "Camp Yalla on Wednesday, November 25 and Yalla Flex on Friday, November 27", for families. */
+function sessionList(rows: { s: typeof sessions.$inferSelect; p: typeof programs.$inferSelect }[]) {
+  const parts = [...new Set(rows.map((r) => `${r.s.title ?? r.p.name} on ${fmtDate(r.s.localDate, "EEEE, MMMM d")}`))];
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+}
+
+/** An offer's description without the booking reference ("YL-ABC123: Camp Yalla, Wed Nov 25" → "Camp Yalla, Wed Nov 25"). */
+const offerWhat = (description: string) => `your booking for ${description.replace(/^[A-Z]{2}-[A-Z0-9]+:\s*/, "")}`;
+
+export type StaffCancelMode ="family_policy" | "family_courtesy" | "family_none" | "yalla";
 
 export const STAFF_CANCEL_MODES: { value: StaffCancelMode; label: string }[] = [
   { value: "yalla", label: "Yalla is cancelling: the family chooses credit + 5% or a full refund" },
@@ -160,6 +170,11 @@ async function staffCancelBookingInner(db: DB, actor: Actor, input: { bookingId:
     key: `staff-cancel:${eligible.map((e) => e.i.id).sort().join(",")}`,
     reason: input.mode === "family_courtesy" ? `Courtesy credit: ${input.reason}` : `Cancelled by the family: ${input.reason}`,
     to: "wallet",
+    // What the family reads in their "added to your Yalla Wallet" email (the staff note above stays internal).
+    familyReason:
+      input.mode === "family_courtesy"
+        ? `Your booking for ${sessionList(eligible)} was cancelled, and Team Yalla returned what you paid for it to your Yalla Wallet as a courtesy credit.`
+        : `Your booking for ${sessionList(eligible)} was cancelled at least ${cutoff} hours before it began, so what you paid for it was returned to your Yalla Wallet.`,
   });
   return { credited: r.total, offered: 0 };
 }
@@ -217,11 +232,26 @@ export async function resolveOffer(db: DB, actor: Actor, input: { offerId: strin
   const o = claimed;
   const target = o.bookingId ? { bookingId: o.bookingId } : { invoiceIds: (await db.select({ id: invoices.id }).from(invoices).where(eq(invoices.spaceGroupId, o.spaceGroupId!))).map((i) => i.id) };
   try {
-    const r = await returnPaid(db, actor, { ...target, amountCents: o.amountCents, key: `yalla-cancel:${o.id}`, reason: `Yalla cancelled: ${o.reason}`, to: input.choice === "credit" ? "wallet" : "original" });
+    const r = await returnPaid(db, actor, {
+      ...target,
+      amountCents: o.amountCents,
+      key: `yalla-cancel:${o.id}`,
+      reason: `Yalla cancelled: ${o.reason}`,
+      to: input.choice === "credit" ? "wallet" : "original",
+      // Credit: one email below with the credit and the thank-you together. Refund: only Play Pass or wallet funds come back to the wallet.
+      walletEmail: input.choice !== "credit",
+      familyReason: `Yalla cancelled ${offerWhat(o.description)}. What you paid from your Yalla Wallet was returned to it, and the rest was refunded to your original payment method.\n\nWhy it was cancelled: ${o.reason}`,
+    });
     let bonus = 0;
     if (input.choice === "credit") {
       bonus = bonusFor(r.total, o.bonusPercent);
       if (bonus > 0) await issueCredit(db, { familyId: o.familyId, amountCents: bonus, sourceRef: `yalla-cancel-bonus:${o.id}`, note: `Thank-you for your flexibility (${o.bonusPercent}%)`, createdBy: actor.name });
+      await recordWalletCredit(db, {
+        familyId: o.familyId,
+        transactionKey: `yalla-cancel:${o.id}`,
+        amountCents: r.total + bonus,
+        reason: `Yalla cancelled ${offerWhat(o.description)}. You chose Yalla Wallet credit, so we returned the ${usd(r.total)} you paid${bonus > 0 ? ` and added ${usd(bonus)} (${o.bonusPercent}%) as a thank-you for your flexibility` : ""}.\n\nWhy it was cancelled: ${o.reason}`,
+      });
     }
     const [done] = await db
       .update(cancellationOffers)

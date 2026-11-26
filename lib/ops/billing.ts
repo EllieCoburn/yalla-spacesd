@@ -13,6 +13,7 @@ import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { audit, OpsError, type Actor } from "@/lib/audit";
 import type { DB, Executor } from "@/lib/db";
 import { issueCredit, restoreWalletPayment } from "@/lib/playpass/wallet";
+import { recordWalletCredit } from "@/lib/playpass/credit-notice";
 import { credits, discounts, guardians, invoiceLines, invoices, payments, refunds, scheduledCharges } from "@/lib/db/schema";
 import { notifyFamily } from "@/lib/notify";
 import { activeProvider, providerFor } from "@/lib/payments/provider";
@@ -232,8 +233,23 @@ export async function refundPayment(
     idempotencyKey: string;
     /** Return a card or offline payment as Yalla Wallet credit (valid 24 months) instead of to the card. */
     toWallet?: boolean;
+    /** When money goes back to the Yalla Wallet: the reason in the family's email (defaults to `reason`). */
+    familyReason?: string | null;
+    /** False when the caller sends one combined wallet email itself (e.g. a credit plus a thank-you bonus). */
+    walletEmail?: boolean;
   },
 ) {
+  // Money returned to the Yalla Wallet is emailed to the family once per refund transaction.
+  const walletNotice = async (transactionKey: string, familyId: string, invoiceId: string) => {
+    if (input.walletEmail === false) return;
+    // Staff refund notes are internal, so without a family reason the email says what was returned from which invoice.
+    let reason = input.familyReason?.trim();
+    if (!reason) {
+      const [inv] = await db.select({ number: invoices.number, description: invoices.description }).from(invoices).where(eq(invoices.id, invoiceId));
+      reason = `We returned ${usd(input.amountCents)} to your Yalla Wallet from ${inv?.description ? `${inv.description} (invoice ${inv.number})` : `invoice ${inv?.number ?? ""}`.trim()}.`;
+    }
+    await recordWalletCredit(db, { familyId, transactionKey, amountCents: input.amountCents, reason });
+  };
   const [p] = await db.select().from(payments).where(eq(payments.id, input.paymentId));
   if (!p || p.status !== "succeeded") throw new OpsError("invalid", "Only successful payments can be refunded.");
   if (!input.reason.trim()) throw new OpsError("invalid", "Give a reason for the refund.");
@@ -259,6 +275,7 @@ export async function refundPayment(
     // Play Pass funds go back to the family's wallet, to the allocations they came from.
     await restoreWalletPayment(db, { paymentId: p.id, amountCents: input.amountCents, key: `restore:${input.idempotencyKey}`, note: `Returned: ${input.reason}`, createdBy: actor.name });
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date() }).where(eq(refunds.id, refund.id)).returning();
+    await walletNotice(`restore:${input.idempotencyKey}`, p.familyId, p.invoiceId);
   } else if (p.method === "credit") {
     // Credit applications are reversed back to the family's credit balance.
     await db.insert(credits).values({ familyId: p.familyId, amountCents: input.amountCents, reason: `Reversed credit: ${input.reason}`, invoiceId: p.invoiceId, createdBy: actor.name });
@@ -266,6 +283,7 @@ export async function refundPayment(
   } else if (input.toWallet) {
     await issueCredit(db, { familyId: p.familyId, amountCents: input.amountCents, sourceRef: `refund:${refund.id}`, note: input.reason, createdBy: actor.name });
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date(), providerRef: "yalla_wallet" }).where(eq(refunds.id, refund.id)).returning();
+    await walletNotice(`refund:${refund.id}`, p.familyId, p.invoiceId);
   } else if (p.provider === "offline") {
     // Offline refunds are recorded as given by staff (cash/check returned).
     [refund] = await db.update(refunds).set({ status: "succeeded", completedAt: new Date(), providerRef: "offline" }).where(eq(refunds.id, refund.id)).returning();

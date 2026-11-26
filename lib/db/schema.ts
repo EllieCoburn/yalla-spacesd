@@ -1609,6 +1609,33 @@ export const dayFeedEntries = pgTable(
   (t) => [index("day_feed_child_date_idx").on(t.childId, t.localDate), index("day_feed_family_date_idx").on(t.familyId, t.localDate)],
 );
 
+/**
+ * One "money was added to your Yalla Wallet" email per credit transaction (lib/ops/wallet-credit-email.ts).
+ * Recorded with the credit, keyed by the transaction (a retried request has the same key, so no second
+ * email), and sent once the credit is saved. A failed send is retried; each attempt is logged in Messages.
+ */
+export const walletCreditNotices = pgTable(
+  "wallet_credit_notices",
+  {
+    id: id(),
+    familyId: text("family_id")
+      .notNull()
+      .references(() => families.id),
+    /** The credit transaction: the wallet allocation's source, the refund, or the cancellation offer. */
+    transactionKey: text("transaction_key").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    /** Shown to the family exactly as written. */
+    reason: text("reason").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    claimedAt: ts("claimed_at"),
+    sentAt: ts("sent_at"),
+    messageId: text("message_id"),
+    lastError: text("last_error"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("wallet_credit_notices_key_idx").on(t.transactionKey), index("wallet_credit_notices_pending_idx").on(t.sentAt)],
+);
+
 /** Feed photos, resized in the browser before upload. Served only to the child's family and their team. */
 export const dayFeedPhotos = pgTable("day_feed_photos", {
   id: id(),

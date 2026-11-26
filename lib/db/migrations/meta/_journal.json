@@ -603,6 +603,13 @@
       "when": 1795622588298,
       "tag": "0085_day_feed",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795651566173,
+      "tag": "0086_wallet_credit_email",
+      "breakpoints": true
     }
   ]
 }

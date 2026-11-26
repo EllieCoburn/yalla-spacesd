@@ -18,6 +18,7 @@ import type { DB, Executor } from "@/lib/db";
 import { bookingItems, bookings, families, invoiceLines, invoices, payments, programs, sessions, walletAllocations, walletEntries, walletReservations } from "@/lib/db/schema";
 import { refreshInvoiceStatus } from "@/lib/ops/billing";
 import { addDaysISO, todayLA } from "@/lib/time";
+import { recordWalletCredit } from "./credit-notice";
 
 /** Cancellation credits are valid for 24 months from the date they're issued. */
 export const creditExpiry = (issued = todayLA()) => {
@@ -376,6 +377,8 @@ export async function adjustWallet(db: DB, actor: Actor, input: { familyId: stri
     if (input.amountCents > 0) {
       const added = await allocate(tx, { familyId: input.familyId, kind: "adjustment", amountCents: input.amountCents, sourceRef: `adjust:${input.idempotencyKey}`, createdBy: actor.name, note: input.note });
       if (!added) return; // the same adjustment was already recorded
+      // The family is emailed that money was added, with this reason.
+      await recordWalletCredit(tx, { familyId: input.familyId, transactionKey: `adjust:${input.idempotencyKey}`, amountCents: input.amountCents, reason: input.note });
     } else {
       const { availableCents } = await walletSummary(tx, input.familyId);
       if (-input.amountCents > availableCents) throw new OpsError("invalid", `Only ${usd(availableCents)} is available to remove.`);
