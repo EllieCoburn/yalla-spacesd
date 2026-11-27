@@ -9,4 +9,4 @@ npm run build
 ```
 
 Deploys on Vercel with zero configuration (framework preset: Next.js).
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the brand system and booking architecture.
+**Software guide:** [docs/handoff/README.md](docs/handoff/README.md) explains how everything works, with screenshots, for anyone building on or adapting this system.

@@ -1,5 +1,7 @@
 # Yalla — site & booking architecture
 
+> **Historical:** this is the original stage-1 plan. For how the software works today, see [`docs/handoff/README.md`](handoff/README.md).
+
 ## Stack
 - **Next.js (App Router) + TypeScript + Tailwind v4**, deployed on Vercel.
 - **Postgres** (e.g. Neon via the Vercel Marketplace) with **Drizzle ORM** — schema in `lib/db/schema.ts`.
